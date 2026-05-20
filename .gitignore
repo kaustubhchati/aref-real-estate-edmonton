@@ -1,0 +1,64 @@
+# ---- Confidential data ----
+# Defensive: the 2023 oracle xlsx lives outside the repo at ~/Desktop/RA/
+# conf_2023_test.xlsx and must NEVER enter any commit. Block all .xlsx as
+# belt-and-braces — see CLAUDE.md §2.1 / §4.3 / §7.1.
+*.xlsx
+*.xls
+
+# ---- R / RStudio ----
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+.Rproj.user/
+
+# R session temp files
+.RDataTmp
+
+# ---- macOS junk ----
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+
+# ---- Large regenerable API snapshots ----
+# Edmonton Property Information API (dkk9-cj3x) — refetch via the loader script.
+/data/raw/property_info_*.csv
+
+# Large derived outputs — regenerable from scripts 01, 03, 06.
+# Excluded for size (GitHub 100 MB hard limit) and to keep the
+# validation export out of public distribution.
+/data/processed/assess_2026_no_parking.csv
+/data/processed/assess_2026_clean.csv
+/data/validation/edmonton_row_labels_2023.csv
+
+# ---- Credentials / secrets ----
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+credentials.json
+secrets.json
+
+# ---- Archives / large binary blobs ----
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# ---- Logs ----
+*.log
+
+# ---- Editor / IDE ----
+.vscode/
+.idea/
+*.swp
+
+# Claude Code user-local settings
+.claude/settings.local.json

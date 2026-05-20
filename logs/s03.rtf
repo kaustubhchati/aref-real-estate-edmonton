@@ -1,0 +1,566 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2821
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 > dir.create("output",                showWarnings = FALSE, recursive = TRUE)\
+> # If 01 hasn't been run this session, load the persisted version\
+> if (!exists("assess_clean")) \{\
++   message("assess_clean not in env \'97 reading from disk")\
++   assess_clean <- read_csv("data/processed/assess_2026_no_parking.csv")\
++ \}\
+> cat("Parking-cleaned public rows:", nrow(assess_clean), "\\n")\
+Parking-cleaned public rows: 394492 \
+> url_info_current <- "https://data.edmonton.ca/api/views/dkk9-cj3x/rows.csv?accessType=DOWNLOAD"\
+> info_raw <- read_csv(url_info_current) |>\
++   rename(\
++     info_Neighbourhood     = Neighbourhood,\
++     `info_Neighbourhood ID` = `Neighbourhood ID`,\
++     info_Ward              = Ward,\
++     info_Latitude          = Latitude,\
++     info_Longitude         = Longitude,\
++     info_Suite             = Suite,\
++     `info_House Number`    = `House Number`,\
++     `info_Street Name`     = `Street Name`,\
++     `info_Point Location`  = `Point Location`\
++   )\
+Rows: 439769 Columns: 16                                                                           \
+\uc0\u9472 \u9472  Column specification \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \
+Delimiter: ","\
+chr (7): Suite, Street Name, legal_description, zoning, Neighbourhood, Ward, Point Location\
+dbl (8): Account Number, House Number, lot_size, Total Gross Area, year_built, Neighbourhood ID, ...\
+lgl (1): garage\
+\
+\uc0\u8505  Use `spec()` to retrieve the full column specification for this data.\
+\uc0\u8505  Specify the column types or set `show_col_types = FALSE` to quiet this message.\
+> # Inspect\
+> cat("\\n--- Property Information ---\\n")\
+\
+--- Property Information ---\
+> cat("Rows:", nrow(info_raw), "  Cols:", ncol(info_raw), "\\n")\
+Rows: 439769   Cols: 16 \
+> # Should now have zero columns that collide with assess_clean\
+> collisions <- intersect(names(assess_clean), names(info_raw))\
+> cat("Columns in both files (should be just 'Account Number'):\\n")\
+Columns in both files (should be just 'Account Number'):\
+> print(collisions)\
+[1] "Account Number"\
+> # ============================================================\
+> # A.3 \'97 Merge Property Information into parking-cleaned data\
+> # ============================================================\
+> assess_full <- assess_clean |>\
++   left_join(info_raw, by = "Account Number")\
+> cat("\\n--- Merged frame ---\\n")\
+\
+--- Merged frame ---\
+> cat("Rows:", nrow(assess_full),\
++     " (expected:", nrow(assess_clean), ")\\n")\
+Rows: 394492  (expected: 394492 )\
+> cat("Cols:", ncol(assess_full), "\\n")\
+Cols: 34 \
+> assess_full <- assess_clean |>\
++   left_join(info_raw, by = "Account Number")\
+> cat("\\n--- Merged frame ---\\n")\
+\
+--- Merged frame ---\
+> cat("Rows:", nrow(assess_full),\
++     " (expected:", nrow(assess_clean), ")\\n")\
+Rows: 394492  (expected: 394492 )\
+> cat("Cols:", ncol(assess_full), "\\n")\
+Cols: 34 \
+> # Sanity: how many rows got Information features?\
+> # Pick any Information-only column. "Lot Size" is in the expected list below;\
+> # if it doesn't exist under that exact name, the variant search a few lines\
+> # down will surface what it's actually called.\
+> info_only_cols <- setdiff(names(info_raw), names(assess_clean))\
+> if (length(info_only_cols) > 0) \{\
++   probe_col <- info_only_cols[1]\
++   n_with_info <- sum(!is.na(assess_full[[probe_col]]))\
++   cat("Rows with Information match (via '", probe_col, "'): ",\
++       n_with_info, " / ", nrow(assess_full),\
++       " (", scales::percent(n_with_info / nrow(assess_full), 0.1), ")\\n",\
++       sep = "")\
++ \}\
+Rows with Information match (via 'info_Suite'): 83961 / 394492 (21.3%)\
+> expected_info_fields <- c(\
++   "Lot Size",\
++   "Year Built",\
++   "Total Gross Area",\
++   "Zoning",\
++   "Legal Description",\
++   "Suite",\
++   "Garage"\
++ )\
+> cat("\\n--- Expected Information fields presence check ---\\n")\
+\
+--- Expected Information fields presence check ---\
+> for (col in expected_info_fields) \{\
++   present <- col %in% names(assess_full)\
++   cat(if (present) "  found:    " else "  MISSING:  ", col, "\\n", sep = "")\
++ \}\
+  MISSING:  Lot Size\
+  MISSING:  Year Built\
+  found:    Total Gross Area\
+  MISSING:  Zoning\
+  MISSING:  Legal Description\
+  found:    Suite\
+  found:    Garage\
+> # If a field is missing under the expected name, check for variants\
+> cat("\\n--- Variant search for any missing fields ---\\n")\
+\
+--- Variant search for any missing fields ---\
+> for (col in expected_info_fields) \{\
++   if (!(col %in% names(assess_full))) \{\
++     keyword <- tolower(strsplit(col, " ")[[1]][1])\
++     matches <- names(assess_full)[grepl(keyword, names(assess_full),\
++                                         ignore.case = TRUE)]\
++     cat("  '", col, "' missing \'97 similar columns: ",\
++         paste(matches, collapse = ", "), "\\n", sep = "")\
++   \}\
++ \}\
+  'Lot Size' missing \'97 similar columns: lot_size\
+  'Year Built' missing \'97 similar columns: year_built\
+  'Zoning' missing \'97 similar columns: zoning\
+  'Legal Description' missing \'97 similar columns: legal_description\
+> confidential_path <- "/Users/kaustubhchati/Desktop/RA/conf_2023_test.xlsx"\
+> # read_excel will throw type-guessing warnings for col O/P \'97 ignorable.\
+> conf_full <- read_excel(confidential_path, skip = 3)\
+There were 50 or more warnings (use warnings() to see the first 50)\
+> cat("\\nConfidential raw rows:", nrow(conf_full), "\\n")\
+\
+Confidential raw rows: 421004 \
+> conf_clean <- conf_full |>\
++   transmute(\
++     acc_id          = as.numeric(`Acc Id`),\
++     luc_1_desc      = `Luc 1 Description`,\
++     luc_1_pct       = as.numeric(`Luc 1 Percent`),\
++     primary_mbc     = `Primary Mbc Code`,\
++     mill_class_1    = `Mill Class 1`,\
++     actual_zone     = `Actual Zone`,\
++     total_asmt_conf = as.numeric(`Total Asmt`),\
++     nbhd_desc_conf  = `Nghb Description`\
++   ) |>\
++   filter(!is.na(acc_id))\
+> cat("Confidential cleaned rows:", nrow(conf_clean), "\\n")\
+Confidential cleaned rows: 421004 \
+> target_luc <- c(\
++   # target 1\
++   "Single-family, detached house",\
++   # target 2\
++   "Semi-detached residence in duplex",\
++   # target 3\
++   "Row house condominium",\
++   # target 4\
++   "Lowrise condominium",\
++   "Highrise condominium",\
++   # target 5\
++   "Residential bare land condominium (land and building)",\
++   "Carriage home condominium",\
++   "Semi-detached residence in multiplex (four and more)",\
++   "Semi-detached residence in triplex",\
++   "Duplex",\
++   "Fourplex",\
++   "Triplex"\
++ )\
+> conf_with_label <- conf_clean |>\
++   mutate(\
++     is_5class = luc_1_desc %in% target_luc,\
++     is_parking_conf = luc_1_desc %in% c(\
++       "Residential condominium parking stall",\
++       "Accessory structure in residential condominium complex",\
++       "Non-residential condominium parking stall"\
++     )\
++   )\
+> # Quick distribution check\
+> cat("\\n--- Confidential row label distribution ---\\n")\
+\
+--- Confidential row label distribution ---\
+> conf_with_label |>\
++   count(is_5class, is_parking_conf) |>\
++   mutate(pct = scales::percent(n / sum(n), accuracy = 0.1)) |>\
++   arrange(desc(n)) |>\
++   print()\
+# A tibble: 3 \'d7 4\
+  is_5class is_parking_conf      n pct  \
+  <lgl>     <lgl>            <int> <chr>\
+1 TRUE      FALSE           340083 80.8%\
+2 FALSE     TRUE             44116 10.5%\
+3 FALSE     FALSE            36805 8.7% \
+> assess_full_labelled <- assess_full |>\
++   inner_join(conf_with_label,\
++              by = c("Account Number" = "acc_id"))\
+> cat("\\n--- Labelled, parking-cleaned, Information-merged frame ---\\n")\
+\
+--- Labelled, parking-cleaned, Information-merged frame ---\
+> cat("Rows:", nrow(assess_full_labelled), "\\n")\
+Rows: 371244 \
+> cat("(public parking-cleaned:", nrow(assess_clean), ")\\n")\
+(public parking-cleaned: 394492 )\
+> cat("(confidential labelled: ", nrow(conf_with_label), ")\\n")\
+(confidential labelled:  421004 )\
+> # Label distribution in the joined frame\
+> cat("\\n--- is_5class distribution in joined frame ---\\n")\
+\
+--- is_5class distribution in joined frame ---\
+> assess_full_labelled |>\
++   count(is_5class) |>\
++   mutate(pct = scales::percent(n / sum(n), accuracy = 0.1)) |>\
++   print()\
+# A tibble: 2 \'d7 3\
+  is_5class      n pct  \
+  <lgl>      <int> <chr>\
+1 FALSE      33325 9.0% \
+2 TRUE      337919 91.0%\
+> row_labels <- assess_full_labelled |>\
++   transmute(\
++     `Account Number`,\
++     is_5class,\
++     is_parking_conf,\
++     luc_1_desc,\
++     primary_mbc,\
++     luc_1_pct\
++   )\
+> write_csv(row_labels, "data/validation/edmonton_row_labels_2023.csv")\
+> cat("\\nWrote: data/validation/edmonton_row_labels_2023.csv \'97",                                   \
++     nrow(row_labels), "rows\\n")\
+\
+Wrote: data/validation/edmonton_row_labels_2023.csv \'97 371244 rows\
+> nbhd_col <- if ("Neighbourhood" %in% names(assess_full_labelled)) \{\
++   "Neighbourhood"\
++ \} else if ("Neighbourhood.x" %in% names(assess_full_labelled)) \{\
++   warning("Neighbourhood collision detected \'97 A.2 rename missed a column. ",\
++           "Using Neighbourhood.x (Assessment-side).")\
++   "Neighbourhood.x"\
++ \} else \{\
++   stop("No Neighbourhood column found in assess_full_labelled.")\
++ \}\
+> nbhd_truth <- assess_full_labelled |>\
++   filter(is_5class) |>\
++   group_by(.data[[nbhd_col]]) |>\
++   summarise(\
++     n_5class_rows         = n(),\
++     mean_assessed_value   = mean(`Assessed Value`, na.rm = TRUE),\
++     median_assessed_value = median(`Assessed Value`, na.rm = TRUE),\
++     sd_assessed_value     = sd(`Assessed Value`, na.rm = TRUE),\
++     .groups = "drop"\
++   ) |>\
++   rename(Neighbourhood = !!nbhd_col)\
+> write_csv(nbhd_truth, "data/validation/edmonton_neighbourhood_truth_2023.csv")\
+                                                                                                   \
+> cat("Wrote: data/validation/edmonton_neighbourhood_truth_2023.csv \'97",\
++     nrow(nbhd_truth), "neighbourhoods\\n")\
+Wrote: data/validation/edmonton_neighbourhood_truth_2023.csv \'97 298 neighbourhoods\
+> # Quick sanity check on the output\
+> cat("\\n--- First 10 neighbourhoods (alphabetical) ---\\n")\
+\
+--- First 10 neighbourhoods (alphabetical) ---\
+> nbhd_truth |>\
++   arrange(Neighbourhood) |>\
++   slice_head(n = 10) |>\
++   print()\
+# A tibble: 10 \'d7 5\
+   Neighbourhood  n_5class_rows mean_assessed_value median_assessed_value sd_assessed_value\
+   <chr>                  <int>               <dbl>                 <dbl>             <dbl>\
+ 1 ABBOTTSFIELD             376             169149.                165500            10637.\
+ 2 ALBANY                   578             400527.                326000           212395.\
+ 3 ALBERTA AVENUE          2229             288447.                264000            99227.\
+ 4 ALDERGROVE              1585             365407.                419500           128761.\
+ 5 ALLARD                  2557             508608.                493500           215415.\
+ 6 ALLENDALE                931             517305.                463500           185983.\
+ 7 AMBLESIDE               2537             478364.                483500           224537.\
+ 8 ARGYLL                   332             517095.                486000           118220.\
+ 9 ASPEN GARDENS            641             637000                 624000           408529.\
+10 ASTER                    311             575159.                574500           120839.\
+> cat("\\n--- 5 largest neighbourhoods by N ---\\n")\
+\
+--- 5 largest neighbourhoods by N ---\
+> nbhd_truth |>\
++   arrange(desc(n_5class_rows)) |>\
++   slice_head(n = 5) |>\
++   print()\
+# A tibble: 5 \'d7 5\
+  Neighbourhood n_5class_rows mean_assessed_value median_assessed_value sd_assessed_value\
+  <chr>                 <int>               <dbl>                 <dbl>             <dbl>\
+1 W\'ceHKW\'caNT\'d4WIN           7443             216560.                167500           170542.\
+2 DOWNTOWN               5740             244597.                214500           199037.\
+3 SUMMERSIDE             4940             567950.                519000           278329.\
+4 WINDERMERE             4586             702922.                577500           563182.\
+5 WALKER                 4438             468065.                456250           163969.\
+> # ============================================================\
+> # Section B \'97 Profile contamination in public features\
+> #\
+> # Inputs (in env from Section A):\
+> #   - assess_full_labelled: 371,244 rows\
+> #\
+> # Output: stdout only \'97 exploratory, no files written\
+> # ============================================================\
+> # --- Section B prep: snake_case aliases for ergonomic referencing ---\
+> assess_full_labelled <- assess_full_labelled |>\
++   mutate(\
++     lot_size          = `Lot Size`,\
++     year_built        = `Year Built`,\
++     zoning            = Zoning,\
++     legal_description = `Legal Description`\
++   )\
+Error in `mutate()`:\
+\uc0\u8505  In argument: `lot_size = Lot Size`.\
+Caused by error:\
+! object 'Lot Size' not found\
+Run `rlang::last_trace()` to see where the error occurred.\
+\
+> # --- B.1 \'97 What's in the contamination? ---------------------\
+> cat("\\n=== B.1 \'97 Luc 1 inventory of contamination (non-5class rows) ===\\n")\
+\
+=== B.1 \'97 Luc 1 inventory of contamination (non-5class rows) ===\
+> contamination_inventory <- assess_full_labelled |>\
++   filter(!is_5class) |>\
++   count(luc_1_desc, sort = TRUE) |>\
++   mutate(pct = scales::percent(n / sum(n), accuracy = 0.1))\
+> print(contamination_inventory, n = 30)\
+# A tibble: 161 \'d7 3\
+   luc_1_desc                                              n pct  \
+   <chr>                                               <int> <chr>\
+ 1 Medium warehouse                                     3677 11.0%\
+ 2 Lowrise apartment building                           2946 8.8% \
+ 3 Warehouse condominium                                2655 8.0% \
+ 4 Small warehouse                                      2353 7.1% \
+ 5 Manufactured home (building only)                    2224 6.7% \
+ 6 Row house                                            1410 4.2% \
+ 7 Retail condominium                                   1300 3.9% \
+ 8 Large warehouse                                      1214 3.6% \
+ 9 Mixed-use retail building                            1184 3.6% \
+10 Plaza                                                 981 2.9% \
+11 Acreage for residential use (building and land)       871 2.6% \
+12 Office in condominium complex                         828 2.5% \
+13 Suburban office                                       792 2.4% \
+14 Power centre                                          736 2.2% \
+15 Neighbourhood shopping centre                         732 2.2% \
+16 Religious venue                                       727 2.2% \
+17 Two-storey retail building                            619 1.9% \
+18 Paved/fenced parking lot for non-residential use      499 1.5% \
+19 Self-storage facility                                 445 1.3% \
+20 Gas station with car wash                             344 1.0% \
+21 Social/cultural community facility                    341 1.0% \
+22 Gas station without car wash                          321 1.0% \
+23 Manufacturing plant                                   315 0.9% \
+24 Duplex with lower-level self-contained suites         299 0.9% \
+25 Free-standing restaurant/bar                          241 0.7% \
+26 Auto service                                          231 0.7% \
+27 Elementary school                                     227 0.7% \
+28 Residential condominium parking stall                 224 0.7% \
+29 Detached residence with three self-contained suites   220 0.7% \
+30 Fenced storage                                        220 0.7% \
+# \uc0\u8505  131 more rows\
+# \uc0\u8505  Use `print(n = ...)` to see more rows\
+> cat("\\nTotal contamination rows:",\
++     sum(contamination_inventory$n), "\\n")\
+\
+Total contamination rows: 33325 \
+> cat("Distinct Luc 1 types in contamination:",\
++     nrow(contamination_inventory), "\\n")\
+Distinct Luc 1 types in contamination: 161 \
+> # --- B.2 \'97 Public-side numeric feature contrast --------------\
+> cat("\\n=== B.2 \'97 Numeric features by is_5class ===\\n")\
+\
+=== B.2 \'97 Numeric features by is_5class ===\
+> # Note the mixed quoting \'97 TitleCase needs backticks, snake_case doesn't\
+> numeric_features <- c("Assessed Value", "Total Gross Area", "lot_size", "year_built")\
+> for (col in numeric_features) \{\
++   cat("\\n---", col, "---\\n")\
++   result <- assess_full_labelled |>\
++     group_by(is_5class) |>\
++     summarise(\
++       n         = n(),\
++       n_missing = sum(is.na(.data[[col]])),\
++       median    = median(.data[[col]], na.rm = TRUE),\
++       q25       = quantile(.data[[col]], 0.25, na.rm = TRUE),\
++       q75       = quantile(.data[[col]], 0.75, na.rm = TRUE),\
++       .groups   = "drop"\
++     )\
++   print(result)\
++ \}\
+\
+--- Assessed Value ---\
+# A tibble: 2 \'d7 6\
+  is_5class      n n_missing  median    q25     q75\
+  <lgl>      <int>     <int>   <dbl>  <dbl>   <dbl>\
+1 FALSE      33325         0 1744500 534500 5297000\
+2 TRUE      337919         0  419500 293500  532500\
+\
+--- Total Gross Area ---\
+# A tibble: 2 \'d7 6\
+  is_5class      n n_missing median   q25   q75\
+  <lgl>      <int>     <int>  <dbl> <dbl> <dbl>\
+1 FALSE      33325      9087   560. 140.  2231.\
+2 TRUE      337919         0   117.  96.0  161.\
+\
+--- lot_size ---\
+# A tibble: 2 \'d7 6\
+  is_5class      n n_missing median   q25    q75\
+  <lgl>      <int>     <int>  <dbl> <dbl>  <dbl>\
+1 FALSE      33325      2244  3518.  697. 13092.\
+2 TRUE      337919         0   397.  239.   569.\
+\
+--- year_built ---\
+# A tibble: 2 \'d7 6\
+  is_5class      n n_missing median   q25   q75\
+  <lgl>      <int>     <int>  <dbl> <dbl> <dbl>\
+1 FALSE      33325       288   1985  1975  2002\
+2 TRUE      337919       591   1994  1974  2010\
+> cat("\\n=== B.3 \'97 Assessment Class 1 by is_5class ===\\n")\
+\
+=== B.3 \'97 Assessment Class 1 by is_5class ===\
+> assess_full_labelled |>\
++   count(is_5class, `Assessment Class 1`) |>\
++   pivot_wider(names_from = is_5class, values_from = n, values_fill = 0) |>\
++   rename(contam_FALSE = `FALSE`, clean_TRUE = `TRUE`) |>\
++   mutate(\
++     total = contam_FALSE + clean_TRUE,\
++     pct_contam = scales::percent(\
++       contam_FALSE / total, accuracy = 0.1\
++     )\
++   ) |>\
++   arrange(desc(total)) |>\
++   print()\
+# A tibble: 6 \'d7 5\
+  `Assessment Class 1`           contam_FALSE clean_TRUE  total pct_contam\
+  <chr>                                 <int>      <int>  <int> <chr>     \
+1 RESIDENTIAL                            4361     336793 341154 1.3%      \
+2 COMMERCIAL                            23447         97  23544 99.6%     \
+3 OTHER RESIDENTIAL                      5452        782   6234 87.5%     \
+4 MA DERELICT RESIDENTIAL                  43        247    290 14.8%     \
+5 FARMLAND                                 18          0     18 100.0%    \
+6 NONRES MUNICIPAL/RES EDUCATION            4          0      4 100.0%    \
+> # --- B.4 \'97 Zoning by is_5class (top 15 zones) ---------------\
+> cat("\\n=== B.4 \'97 zoning by is_5class (top 15 by volume) ===\\n")\
+\
+=== B.4 \'97 zoning by is_5class (top 15 by volume) ===\
+> assess_full_labelled |>\
++   filter(!is.na(zoning)) |>\
++   count(is_5class, zoning) |>\
++   pivot_wider(names_from = is_5class, values_from = n, values_fill = 0) |>\
++   rename(contam = `FALSE`, clean = `TRUE`) |>\
++   mutate(\
++     total = contam + clean,\
++     pct_contam = round(contam / total, 3)\
++   ) |>\
++   arrange(desc(total)) |>\
++   slice_head(n = 15) |>\
++   print()\
+# A tibble: 15 \'d7 5\
+   zoning contam  clean  total pct_contam\
+   <chr>   <int>  <int>  <int>      <dbl>\
+ 1 RS       1096 141381 142477      0.008\
+ 2 RSF        47  81168  81215      0.001\
+ 3 RSM       885   5122   6007      0.147\
+ 4 RM       3270   2340   5610      0.583\
+ 5 IM       4856     18   4874      0.996\
+ 6 DC1       537   3365   3902      0.138\
+ 7 BE       3305     14   3319      0.996\
+ 8 MU       2377     98   2475      0.96 \
+ 9 DC2      1538    912   2450      0.628\
+10 CG       1111      4   1115      0.996\
+11 GLDF        4    916    920      0.004\
+12 AG        781     91    872      0.896\
+13 PLD         1    728    729      0.001\
+14 IH        725      3    728      0.996\
+15 CN        679     34    713      0.952\
+> # --- B.5 \'97 Value per square metre (mvalue_psm) --------------\
+> cat("\\n=== B.5 \'97 Value per sqm by is_5class ===\\n")\
+\
+=== B.5 \'97 Value per sqm by is_5class ===\
+> mvalue_check <- assess_full_labelled |>\
++   filter(`Total Gross Area` > 0, !is.na(`Total Gross Area`)) |>\
++   mutate(mvalue_psm = `Assessed Value` / `Total Gross Area`) |>\
++   group_by(is_5class) |>\
++   summarise(\
++     n          = n(),\
++     median_psm = median(mvalue_psm, na.rm = TRUE),\
++     q10_psm    = quantile(mvalue_psm, 0.10, na.rm = TRUE),\
++     q25_psm    = quantile(mvalue_psm, 0.25, na.rm = TRUE),\
++     q75_psm    = quantile(mvalue_psm, 0.75, na.rm = TRUE),\
++     q90_psm    = quantile(mvalue_psm, 0.90, na.rm = TRUE),\
++     .groups    = "drop"\
++   )\
+> print(mvalue_check)\
+# A tibble: 2 \'d7 7\
+  is_5class      n median_psm q10_psm q25_psm q75_psm q90_psm\
+  <lgl>      <int>      <dbl>   <dbl>   <dbl>   <dbl>   <dbl>\
+1 FALSE      23231      1917.    732.   1270.   3649.   7737.\
+2 TRUE      337158      3207.   2039.   2685.   3743.   4409.\
+> # --- B.6 \'97 unit_present derived from legal_description -------\
+> cat("\\n=== B.6 \'97 unit_present by is_5class ===\\n")\
+\
+=== B.6 \'97 unit_present by is_5class ===\
+> assess_full_labelled |>\
++   mutate(\
++     legal_low = tolower(legal_description),\
++     unit_present = !is.na(legal_low) & grepl("unit:", legal_low, fixed = TRUE)\
++   ) |>\
++   count(is_5class, unit_present) |>\
++   pivot_wider(names_from = is_5class, values_from = n, values_fill = 0) |>\
++   rename(contam = `FALSE`, clean = `TRUE`) |>\
++   mutate(pct_contam = round(contam / (contam + clean), 3)) |>\
++   print()\
+# A tibble: 2 \'d7 4\
+  unit_present contam  clean pct_contam\
+  <lgl>         <int>  <int>      <dbl>\
+1 FALSE         27512 238412      0.103\
+2 TRUE           5813  99507      0.055\
+> cat("\\n=== B.7 \'97 Top 5 contaminant Luc types: public-side profile ===\\n")\
+\
+=== B.7 \'97 Top 5 contaminant Luc types: public-side profile ===\
+> top_contam_types <- contamination_inventory |>\
++   slice_head(n = 5) |>\
++   pull(luc_1_desc)\
+> for (luc_type in top_contam_types) \{\
++   cat("\\n---", luc_type, "---\\n")\
++   assess_full_labelled |>\
++     filter(luc_1_desc == luc_type) |>\
++     summarise(\
++       n              = n(),\
++       median_value   = median(`Assessed Value`, na.rm = TRUE),\
++       median_area    = median(`Total Gross Area`, na.rm = TRUE),\
++       median_lot     = median(lot_size, na.rm = TRUE),\
++       pct_oresid     = round(mean(`Assessment Class 1` == "OTHER RESIDENTIAL",\
++                                   na.rm = TRUE), 3),\
++       pct_resid      = round(mean(`Assessment Class 1` == "RESIDENTIAL",\
++                                   na.rm = TRUE), 3),\
++       pct_unit_legal = round(mean(grepl("unit:", tolower(legal_description),\
++                                         fixed = TRUE), na.rm = TRUE), 3),\
++       pct_with_zone  = round(mean(!is.na(zoning)), 3)\
++     ) |>\
++     print()\
++ \}\
+\
+--- Medium warehouse ---\
+# A tibble: 1 \'d7 8\
+      n median_value median_area median_lot pct_oresid pct_resid pct_unit_legal pct_with_zone\
+  <int>        <dbl>       <dbl>      <dbl>      <dbl>     <dbl>          <dbl>         <dbl>\
+1  3677      3475000       2891.      7038.          0     0.001              0         0.999\
+\
+--- Lowrise apartment building ---\
+# A tibble: 1 \'d7 8\
+      n median_value median_area median_lot pct_oresid pct_resid pct_unit_legal pct_with_zone\
+  <int>        <dbl>       <dbl>      <dbl>      <dbl>     <dbl>          <dbl>         <dbl>\
+1  2946      2410500       1574.      1395.      0.993         0          0.024         0.975\
+\
+--- Warehouse condominium ---\
+# A tibble: 1 \'d7 8\
+      n median_value median_area median_lot pct_oresid pct_resid pct_unit_legal pct_with_zone\
+  <int>        <dbl>       <dbl>      <dbl>      <dbl>     <dbl>          <dbl>         <dbl>\
+1  2655       424000        301.       504.          0         0              1             0\
+\
+--- Small warehouse ---\
+# A tibble: 1 \'d7 8\
+      n median_value median_area median_lot pct_oresid pct_resid pct_unit_legal pct_with_zone\
+  <int>        <dbl>       <dbl>      <dbl>      <dbl>     <dbl>          <dbl>         <dbl>\
+1  2353      1447000        426.      3125.          0         0              0         0.998\
+\
+--- Manufactured home (building only) ---\
+# A tibble: 1 \'d7 8\
+      n median_value median_area median_lot pct_oresid pct_resid pct_unit_legal pct_with_zone\
+  <int>        <dbl>       <dbl>      <dbl>      <dbl>     <dbl>          <dbl>         <dbl>\
+1  2224        78000        113.          0          0         1              0             0}

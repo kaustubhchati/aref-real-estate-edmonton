@@ -1,0 +1,9 @@
+rule_id,rule_slug,rule_label,year,metric,value
+r1,residential_class,Assessment Class 1 == 'RESIDENTIAL',2023,precision,0.9872169167003758
+r1,residential_class,Assessment Class 1 == 'RESIDENTIAL',2023,recall,0.996667840517994
+r1,residential_class,Assessment Class 1 == 'RESIDENTIAL',2023,f1,0.9919198672307691
+r1,residential_class,Assessment Class 1 == 'RESIDENTIAL',2023,true_pos,336793
+r1,residential_class,Assessment Class 1 == 'RESIDENTIAL',2023,false_pos,4361
+r1,residential_class,Assessment Class 1 == 'RESIDENTIAL',2023,false_neg,1126
+r1,residential_class,Assessment Class 1 == 'RESIDENTIAL',2023,true_neg,28964
+r1,residential_class,Assessment Class 1 == 'RESIDENTIAL',2023,rows_scored,371244

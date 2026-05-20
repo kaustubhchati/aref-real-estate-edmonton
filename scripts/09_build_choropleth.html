@@ -1,0 +1,842 @@
+<!doctype html>
+<!--
+  09_build_choropleth.html — Edmonton neighbourhood choropleth, 2026 median assessed value.
+  Consumes: ../output/neighbourhoods_2026_recovered.geojson  (402 polygons, post-08b rescue)
+  Colour-scale domain: locked to PHASE1_STATUS.md §5 — min $103,500 / Q25 $352,625 /
+  median $425,125 / Q75 $496,188 / max $1,226,000.
+
+  Serve from project root (the relative GeoJSON fetch needs it):
+      python3 -m http.server 8000
+      open http://localhost:8000/scripts/09_build_choropleth.html
+
+  Tested in Safari 17+, Chrome, Firefox.  No build step, no dependencies beyond
+  the MapLibre CDN bundle.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Edmonton residential assessment, 2026 — choropleth</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <style>
+    :root {
+      --sidebar-w: 300px;
+      --bg: #fafaf8;
+      --ink: #1f1f24;
+      --muted: #6b6b73;
+      --rule: #e6e4dd;
+      --accent: #2b5797;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      color: var(--ink);
+      overflow: hidden;
+    }
+    /* ---- layout ---- */
+    #app { position: absolute; inset: 0; display: flex; }
+    #sidebar {
+      width: var(--sidebar-w);
+      flex: 0 0 var(--sidebar-w);
+      background: var(--bg);
+      border-right: 1px solid var(--rule);
+      overflow-y: auto;
+      padding: 18px 18px 24px 18px;
+      transition: margin-left 220ms ease, width 220ms ease;
+      font-size: 12.5px;
+    }
+    #sidebar.collapsed { margin-left: calc(-1 * var(--sidebar-w)); }
+    #map-wrap { position: relative; flex: 1 1 auto; min-width: 0; }
+    #map { position: absolute; inset: 0; }
+    #sidebar-toggle {
+      position: absolute; top: 12px; left: 12px; z-index: 5;
+      background: white; border: 1px solid var(--rule);
+      width: 30px; height: 30px; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 16px; color: var(--ink);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+      padding: 0;
+    }
+    #sidebar-toggle:hover { background: #f4f4f1; }
+
+    /* ---- sidebar contents ---- */
+    .sb-title {
+      font-size: 15px; font-weight: 600; line-height: 1.3;
+      margin: 0 0 4px 0;
+    }
+    .sb-sub { color: var(--muted); font-size: 11.5px; line-height: 1.45; margin-bottom: 16px; }
+    .sb-section { margin-bottom: 18px; }
+    .sb-section h2 {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--muted); font-weight: 600;
+      margin: 0 0 8px 0;
+    }
+    #search {
+      width: 100%; padding: 7px 9px;
+      border: 1px solid var(--rule); border-radius: 4px;
+      font-size: 12.5px; font-family: inherit;
+      background: white; color: var(--ink);
+    }
+    #search:focus { outline: none; border-color: var(--accent); }
+    #search-hint { font-size: 10.5px; color: var(--muted); margin-top: 4px; }
+
+    /* ---- legend ---- */
+    .leg-row { display: flex; align-items: center; margin: 3px 0; gap: 8px; }
+    .leg-sw {
+      width: 26px; height: 14px; border: 1px solid rgba(0,0,0,0.12);
+      flex: 0 0 26px; border-radius: 2px;
+    }
+    .leg-lab { font-size: 11.5px; color: var(--ink); line-height: 1.3; }
+    .leg-lab small { color: var(--muted); }
+    .leg-divider {
+      border-top: 1px dashed var(--rule);
+      margin: 10px 0 8px 0; padding-top: 8px;
+      font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;
+    }
+
+    /* ---- ref text ---- */
+    .ref {
+      font-size: 10.5px; color: var(--muted); line-height: 1.5;
+      border-top: 1px solid var(--rule); padding-top: 10px;
+    }
+    .ref code { font-size: 10px; color: #444; background: white; padding: 1px 3px; border-radius: 2px; }
+
+    /* ---- status banner ---- */
+    #status {
+      position: absolute; top: 12px; right: 60px; z-index: 5;
+      background: white; border: 1px solid var(--rule); border-radius: 4px;
+      padding: 6px 10px; font-size: 11px; color: var(--muted);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      max-width: 320px;
+    }
+    #status.err { color: #b94a48; border-color: #e0b4b4; background: #fdf5f5; }
+    #status.ok  { color: #2c662d; border-color: #c8e6c9; background: #f4f9f4; }
+    #status.hidden { display: none; }
+
+    /* ---- popups ---- */
+    .maplibregl-popup-content {
+      padding: 10px 12px;
+      font-size: 12px;
+      border-radius: 4px;
+      min-width: 230px;
+      max-width: 280px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+    }
+    .maplibregl-popup-content .pop-name { font-weight: 600; font-size: 13px; margin-bottom: 1px; color: var(--ink); }
+    .maplibregl-popup-content .pop-district { color: var(--muted); font-size: 10.5px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .maplibregl-popup-content .pop-state {
+      display: inline-block; padding: 2px 6px; border-radius: 2px;
+      font-size: 10.5px; font-weight: 500;
+      background: #efece4; color: #555;
+      margin-bottom: 8px;
+    }
+    .maplibregl-popup-content .pop-state.aggregated { background: #e6f1de; color: #3a6b2d; }
+    .maplibregl-popup-content .pop-row {
+      display: flex; justify-content: space-between; gap: 14px;
+      line-height: 1.5; padding: 1px 0;
+    }
+    .maplibregl-popup-content .pop-row.headline {
+      border-top: 1px solid #eee; border-bottom: 1px solid #eee;
+      padding: 4px 0; margin: 4px 0;
+    }
+    .maplibregl-popup-content .pop-row.headline .pop-v { font-weight: 600; }
+    .pop-k { color: var(--muted); }
+    .pop-v { font-variant-numeric: tabular-nums; color: var(--ink); }
+    .pop-pinned-hint { font-size: 10px; color: var(--muted); margin-top: 6px; padding-top: 6px; border-top: 1px solid #f0f0f0; font-style: italic; }
+
+    /* MapLibre default popup tip & close button polish */
+    .maplibregl-popup-close-button { font-size: 16px; padding: 2px 6px; }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <aside id="sidebar">
+    <h1 class="sb-title">Edmonton — median residential assessment, 2026</h1>
+    <div class="sb-sub">
+      Layer&nbsp;1a-cleaned (parking&nbsp;+&nbsp;R1&nbsp;+&nbsp;R3), neighbourhood aggregates over 365,406 properties. 402 polygons.
+      Hover any polygon for detail; click to pin.
+    </div>
+
+    <div class="sb-section">
+      <h2>Search neighbourhood</h2>
+      <input id="search" list="nbhd-list" autocomplete="off" placeholder="Type a name…" />
+      <datalist id="nbhd-list"></datalist>
+      <div id="search-hint">Press Enter to fly to it.</div>
+    </div>
+
+    <div class="sb-section">
+      <h2>Median assessed value</h2>
+      <div id="legend-scale"></div>
+      <div class="leg-divider">Non-aggregated polygons</div>
+      <div id="legend-states"></div>
+    </div>
+
+    <div class="ref">
+      Colour scale locked to <code>PHASE1_STATUS.md §5</code>: min&nbsp;$103,500&nbsp;·
+      Q25&nbsp;$352,625&nbsp;· median&nbsp;$425,125&nbsp;· Q75&nbsp;$496,188&nbsp;·
+      max&nbsp;$1,226,000.  ~10× spread, tight IQR, long tail.
+    </div>
+  </aside>
+
+  <div id="map-wrap">
+    <button id="sidebar-toggle" title="Toggle sidebar" aria-label="Toggle sidebar">≡</button>
+    <div id="status">Initialising…</div>
+    <div id="map"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* =========================================================================
+ *  Constants — colour-scale stops, state metadata, formatters
+ * ========================================================================= */
+var STOPS = [
+  { v:  103500, c: '#ffffcc', label: 'min'    },
+  { v:  352625, c: '#fed976', label: 'Q25'    },
+  { v:  425125, c: '#feb24c', label: 'median' },
+  { v:  496188, c: '#fd8d3c', label: 'Q75'    },
+  { v: 1226000, c: '#bd0026', label: 'max'    }
+];
+
+/* Four non-aggregated polygon states get distinct visual treatments so the
+ * legend is honest — different greys + a stripe / dot pattern on the two
+ * "structurally non-residential" categories, dashed/dotted outlines on the
+ * data-quality categories. */
+var STATE_STYLE = {
+  aggregated: {
+    label: 'Aggregated (N ≥ 100)',
+    legendFill: null,            // shown as the colour ramp instead
+    fillColor: null,
+    pattern: null,
+    outlineColor: '#ffffff',
+    outlineWidth: 0.4,
+    outlineDash: null
+  },
+  suppressed_low_n: {
+    label: 'Suppressed (N < 100)',
+    legendFill: '#d8d4cc',
+    fillColor: '#d8d4cc',
+    pattern: null,
+    outlineColor: '#7a7468',
+    outlineWidth: 0.7,
+    outlineDash: [2, 2]
+  },
+  non_residential: {
+    label: 'No residential properties',
+    legendFill: '#c9c4ba',
+    fillColor: '#c9c4ba',
+    pattern: 'stripes',
+    outlineColor: '#888173',
+    outlineWidth: 0.5,
+    outlineDash: null
+  },
+  manufactured_home_community: {
+    label: 'Manufactured home community',
+    legendFill: '#b8b3a8',
+    fillColor: '#b8b3a8',
+    pattern: 'dots',
+    outlineColor: '#7a7468',
+    outlineWidth: 0.6,
+    outlineDash: null
+  },
+  no_data: {
+    label: 'No data (legitimately empty)',
+    legendFill: '#a8a39a',
+    fillColor: '#a8a39a',
+    pattern: null,
+    outlineColor: '#5a554c',
+    outlineWidth: 0.8,
+    outlineDash: [1, 2]
+  }
+};
+
+var GREY_STATES = ['suppressed_low_n', 'non_residential', 'manufactured_home_community', 'no_data'];
+
+var fmtCurrency = function (v) { return (v == null || isNaN(+v)) ? '—' : '$' + Math.round(+v).toLocaleString(); };
+var fmtNumber   = function (v) { return (v == null || isNaN(+v)) ? '—' : Math.round(+v).toLocaleString(); };
+var fmtPct      = function (v) { return (v == null || isNaN(+v)) ? '—' : (+v).toFixed(1) + '%'; };
+var fmtYear     = function (v) { return (v == null || isNaN(+v)) ? '—' : String(Math.round(+v)); };
+var fmtArea     = function (v) { return (v == null || isNaN(+v)) ? '—' : Math.round(+v).toLocaleString() + ' m²'; };
+
+/* Aggregate-column rows for the popup.  Order matters — median_assessvalue
+ * is the headline figure (matches the colour-scale variable). */
+var POPUP_ROWS = [
+  ['median_assessvalue',           'Median assessed',          fmtCurrency, true ],
+  ['n_properties',                 'N properties',             fmtNumber,   false],
+  ['avall_public',                 'Mean assessed (all)',      fmtCurrency, false],
+  ['sd_assessedvalue',             'SD assessed',              fmtCurrency, false],
+  ['median_yearbuilt',             'Median year built',        fmtYear,     false],
+  ['pct_with_unit',                '% with unit (condo)',      fmtPct,      false],
+  ['avg_assessvalue_without_unit', 'Mean assessed (non-unit)', fmtCurrency, false],
+  ['avg_lotsize',                  'Mean lot size',            fmtArea,     false]
+];
+
+var GEOJSON_URL = '../output/neighbourhoods_2026_recovered.geojson';
+
+/* =========================================================================
+ *  Map setup — CARTO Voyager (full vector style)
+ * ========================================================================= */
+var map = new maplibregl.Map({
+  container: 'map',
+  style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+  center: [-113.4938, 53.5461],
+  zoom: 9.6,
+  minZoom: 7,
+  maxZoom: 17,
+  hash: false,
+  attributionControl: true
+});
+
+map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+map.addControl(new maplibregl.ScaleControl({ unit: 'metric', maxWidth: 100 }), 'bottom-right');
+
+/* =========================================================================
+ *  Status reporting — never let a failure be silent
+ * ========================================================================= */
+var statusEl = document.getElementById('status');
+function setStatus(msg, kind) {
+  statusEl.textContent = msg;
+  statusEl.classList.remove('err', 'ok', 'hidden');
+  if (kind === 'err') statusEl.classList.add('err');
+  else if (kind === 'ok') statusEl.classList.add('ok');
+  console.log('[choropleth]', msg);
+}
+function clearStatus(after) {
+  if (after) setTimeout(function () { statusEl.classList.add('hidden'); }, after);
+}
+
+map.on('error', function (e) {
+  var err = e && e.error;
+  var msg = (err && (err.message || String(err))) || 'unknown map error';
+  console.error('[choropleth] map error:', err || e);
+  setStatus('Map error: ' + msg, 'err');
+});
+
+/* =========================================================================
+ *  Pattern image generation — diagonal stripes + dots
+ *  Generated as ImageData for broad browser compat (Safari included).
+ * ========================================================================= */
+function makeStripePattern(size, lineColor, bgColor) {
+  size = size || 8;
+  var canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  var ctx = canvas.getContext('2d');
+  ctx.fillStyle = bgColor || 'rgba(0,0,0,0)';
+  ctx.fillRect(0, 0, size, size);
+  ctx.strokeStyle = lineColor || 'rgba(0,0,0,0.35)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  for (var off = -size; off <= size * 2; off += 4) {
+    ctx.moveTo(off, 0);
+    ctx.lineTo(off + size, size);
+  }
+  ctx.stroke();
+  return ctx.getImageData(0, 0, size, size);
+}
+
+function makeDotPattern(size, dotColor, bgColor) {
+  size = size || 10;
+  var canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  var ctx = canvas.getContext('2d');
+  ctx.fillStyle = bgColor || 'rgba(0,0,0,0)';
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = dotColor || 'rgba(0,0,0,0.45)';
+  ctx.beginPath();
+  ctx.arc(size / 2, size / 2, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+  return ctx.getImageData(0, 0, size, size);
+}
+
+/* =========================================================================
+ *  Fill-colour expression — aggregated → interpolate over the locked stops,
+ *  everything else → its state-specific grey shade.
+ * ========================================================================= */
+var fillColourExpr = [
+  'case',
+  ['==', ['get', 'polygon_state'], 'aggregated'],
+  [
+    'interpolate', ['linear'],
+    ['number', ['get', 'median_assessvalue'], 0]
+  ].concat(STOPS.reduce(function (acc, s) { acc.push(s.v, s.c); return acc; }, [])),
+
+  ['==', ['get', 'polygon_state'], 'suppressed_low_n'],            STATE_STYLE.suppressed_low_n.fillColor,
+  ['==', ['get', 'polygon_state'], 'non_residential'],             STATE_STYLE.non_residential.fillColor,
+  ['==', ['get', 'polygon_state'], 'manufactured_home_community'], STATE_STYLE.manufactured_home_community.fillColor,
+  ['==', ['get', 'polygon_state'], 'no_data'],                     STATE_STYLE.no_data.fillColor,
+  '#cccccc'  /* fallback */
+];
+
+/* =========================================================================
+ *  Helpers — geometry bbox for fly-to
+ * ========================================================================= */
+function bboxOfGeom(geom) {
+  var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  function walk(c) {
+    if (typeof c[0] === 'number') {
+      if (c[0] < minX) minX = c[0];
+      if (c[0] > maxX) maxX = c[0];
+      if (c[1] < minY) minY = c[1];
+      if (c[1] > maxY) maxY = c[1];
+    } else {
+      for (var i = 0; i < c.length; i++) walk(c[i]);
+    }
+  }
+  walk(geom.coordinates);
+  return [[minX, minY], [maxX, maxY]];
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+  });
+}
+
+/* =========================================================================
+ *  Popup rendering
+ * ========================================================================= */
+function buildPopupHtml(p, pinned) {
+  var state = p.polygon_state;
+  var meta = STATE_STYLE[state] || { label: state };
+  var parts = [
+    '<div class="pop-name">' + escapeHtml(p.display_name) + '</div>'
+  ];
+  if (p.district) {
+    parts.push('<div class="pop-district">' + escapeHtml(p.district) + ' district</div>');
+  }
+  parts.push('<div class="pop-state ' + state + '">' + escapeHtml(meta.label) + '</div>');
+
+  if (state === 'aggregated') {
+    for (var i = 0; i < POPUP_ROWS.length; i++) {
+      var key = POPUP_ROWS[i][0];
+      var lab = POPUP_ROWS[i][1];
+      var fmt = POPUP_ROWS[i][2];
+      var headline = POPUP_ROWS[i][3];
+      parts.push(
+        '<div class="pop-row' + (headline ? ' headline' : '') + '">' +
+          '<span class="pop-k">' + lab + '</span>' +
+          '<span class="pop-v">' + fmt(p[key]) + '</span>' +
+        '</div>'
+      );
+    }
+  } else if (state === 'suppressed_low_n') {
+    // Per spec: value suppressed, count still informative
+    parts.push(
+      '<div class="pop-row">' +
+        '<span class="pop-k">N properties</span>' +
+        '<span class="pop-v">' + fmtNumber(p.n_properties) + '</span>' +
+      '</div>',
+      '<div class="pop-row">' +
+        '<span class="pop-k">Median assessed</span>' +
+        '<span class="pop-v" style="color:#999">suppressed</span>' +
+      '</div>'
+    );
+  }
+
+  if (!pinned) {
+    parts.push('<div class="pop-pinned-hint">Click to pin · click polygon to zoom in.</div>');
+  }
+  return parts.join('');
+}
+
+/* =========================================================================
+ *  Main load sequence — fetch GeoJSON, add patterns, add layers below labels
+ * ========================================================================= */
+map.on('load', function () {
+  setStatus('Map style ready. Fetching ' + GEOJSON_URL + '…');
+
+  /* Register pattern images for the two pattern states. */
+  try {
+    map.addImage('stripes', makeStripePattern(8, 'rgba(60,55,42,0.55)'));
+    map.addImage('dots',    makeDotPattern(10, 'rgba(60,55,42,0.55)'));
+  } catch (err) {
+    console.warn('[choropleth] pattern add failed', err);
+  }
+
+  fetch(GEOJSON_URL)
+    .then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + res.statusText);
+      return res.json();
+    })
+    .then(function (gj) {
+      if (!gj || !Array.isArray(gj.features)) {
+        throw new Error('Invalid GeoJSON: no features array');
+      }
+      var total = gj.features.length;
+      var agg = gj.features.filter(function (f) {
+        return f.properties && f.properties.polygon_state === 'aggregated';
+      }).length;
+      setStatus('Loaded ' + total + ' polygons · ' + agg + ' aggregated · ' + (total - agg) + ' grey', 'ok');
+      clearStatus(3500);
+      installLayers(gj);
+      installSearch(gj);
+    })
+    .catch(function (err) {
+      setStatus('Failed to load polygons: ' + err.message, 'err');
+    });
+});
+
+/* ---------------------------------------------------------------------- */
+function findFirstSymbolLayerId() {
+  var layers = map.getStyle().layers || [];
+  for (var i = 0; i < layers.length; i++) {
+    if (layers[i].type === 'symbol') return layers[i].id;
+  }
+  return undefined;
+}
+
+function installLayers(gj) {
+  map.addSource('nbhd', {
+    type: 'geojson',
+    data: gj,
+    promoteId: 'Neighbourhood ID'
+  });
+
+  /* Insert all choropleth layers BELOW the first basemap symbol layer, so
+   * Sherwood Park / St. Albert / road labels render on top of the polygons.
+   * MapLibre's `beforeId` does exactly that — see
+   * https://maplibre.org/maplibre-gl-js/docs/API/classes/Map/#addlayer  */
+  var beforeId = findFirstSymbolLayerId();
+
+  /* Layer 1: fill colour (all states). */
+  map.addLayer({
+    id: 'nbhd-fill',
+    type: 'fill',
+    source: 'nbhd',
+    paint: {
+      'fill-color': fillColourExpr,
+      'fill-opacity': [
+        'case',
+        ['boolean', ['feature-state', 'hover'], false], 0.88,
+        ['boolean', ['feature-state', 'pinned'], false], 0.88,
+        0.74
+      ]
+    }
+  }, beforeId);
+
+  /* Layer 2: pattern overlay (only the two pattern states, via filter). */
+  map.addLayer({
+    id: 'nbhd-pattern',
+    type: 'fill',
+    source: 'nbhd',
+    filter: ['in', ['get', 'polygon_state'], ['literal', ['non_residential', 'manufactured_home_community']]],
+    paint: {
+      'fill-pattern': [
+        'match', ['get', 'polygon_state'],
+        'non_residential', 'stripes',
+        'manufactured_home_community', 'dots',
+        'stripes'
+      ],
+      'fill-opacity': 0.7
+    }
+  }, beforeId);
+
+  /* Layer 3: solid outlines for aggregated + structurally-grey states. */
+  map.addLayer({
+    id: 'nbhd-outline-solid',
+    type: 'line',
+    source: 'nbhd',
+    filter: ['in', ['get', 'polygon_state'], ['literal', ['aggregated', 'non_residential', 'manufactured_home_community']]],
+    paint: {
+      'line-color': [
+        'match', ['get', 'polygon_state'],
+        'non_residential',             STATE_STYLE.non_residential.outlineColor,
+        'manufactured_home_community', STATE_STYLE.manufactured_home_community.outlineColor,
+        STATE_STYLE.aggregated.outlineColor
+      ],
+      'line-width': [
+        'match', ['get', 'polygon_state'],
+        'non_residential',             STATE_STYLE.non_residential.outlineWidth,
+        'manufactured_home_community', STATE_STYLE.manufactured_home_community.outlineWidth,
+        STATE_STYLE.aggregated.outlineWidth
+      ]
+    }
+  }, beforeId);
+
+  /* Layer 4: dashed outline for suppressed_low_n. */
+  map.addLayer({
+    id: 'nbhd-outline-suppressed',
+    type: 'line',
+    source: 'nbhd',
+    filter: ['==', ['get', 'polygon_state'], 'suppressed_low_n'],
+    paint: {
+      'line-color': STATE_STYLE.suppressed_low_n.outlineColor,
+      'line-width': STATE_STYLE.suppressed_low_n.outlineWidth,
+      'line-dasharray': STATE_STYLE.suppressed_low_n.outlineDash
+    }
+  }, beforeId);
+
+  /* Layer 5: dotted outline for no_data. */
+  map.addLayer({
+    id: 'nbhd-outline-nodata',
+    type: 'line',
+    source: 'nbhd',
+    filter: ['==', ['get', 'polygon_state'], 'no_data'],
+    paint: {
+      'line-color': STATE_STYLE.no_data.outlineColor,
+      'line-width': STATE_STYLE.no_data.outlineWidth,
+      'line-dasharray': STATE_STYLE.no_data.outlineDash
+    }
+  }, beforeId);
+
+  /* Layer 6: hover / pinned highlight — sits below labels too. */
+  map.addLayer({
+    id: 'nbhd-highlight',
+    type: 'line',
+    source: 'nbhd',
+    paint: {
+      'line-color': [
+        'case',
+        ['boolean', ['feature-state', 'pinned'], false], '#0f0f12',
+        ['boolean', ['feature-state', 'hover'],  false], '#2a2a30',
+        'rgba(0,0,0,0)'
+      ],
+      'line-width': [
+        'case',
+        ['boolean', ['feature-state', 'pinned'], false], 2.4,
+        ['boolean', ['feature-state', 'hover'],  false], 1.6,
+        0
+      ]
+    }
+  }, beforeId);
+
+  /* ---------- hover + click interactions ---------- */
+  installInteractions(gj);
+}
+
+/* =========================================================================
+ *  Hover popup + click-to-pin
+ * ========================================================================= */
+var hoverPopup = new maplibregl.Popup({
+  closeButton: false, closeOnClick: false, offset: 8, maxWidth: '320px'
+});
+var pinnedPopup = new maplibregl.Popup({
+  closeButton: true, closeOnClick: false, offset: 8, maxWidth: '320px'
+});
+
+var hoveredId = null;
+var pinnedId  = null;
+
+function clearHover() {
+  if (hoveredId !== null) {
+    map.setFeatureState({ source: 'nbhd', id: hoveredId }, { hover: false });
+    hoveredId = null;
+  }
+  hoverPopup.remove();
+  map.getCanvas().style.cursor = '';
+}
+function clearPinned() {
+  if (pinnedId !== null) {
+    map.setFeatureState({ source: 'nbhd', id: pinnedId }, { pinned: false });
+    pinnedId = null;
+  }
+  pinnedPopup.remove();
+}
+
+function installInteractions(gj) {
+  /* Use the fill layer as the interaction target. */
+  map.on('mousemove', 'nbhd-fill', function (e) {
+    if (!e.features || !e.features.length) return;
+    map.getCanvas().style.cursor = 'pointer';
+    var f = e.features[0];
+    /* Hide hover popup if pinned is showing for the same feature. */
+    if (pinnedId !== null && pinnedId === f.id) {
+      hoverPopup.remove();
+      return;
+    }
+    if (hoveredId !== null && hoveredId !== f.id) {
+      map.setFeatureState({ source: 'nbhd', id: hoveredId }, { hover: false });
+    }
+    hoveredId = f.id;
+    map.setFeatureState({ source: 'nbhd', id: hoveredId }, { hover: true });
+    hoverPopup.setLngLat(e.lngLat).setHTML(buildPopupHtml(f.properties, false)).addTo(map);
+  });
+
+  map.on('mouseleave', 'nbhd-fill', function () {
+    clearHover();
+  });
+
+  /* Click → pin popup + fly to polygon. */
+  map.on('click', 'nbhd-fill', function (e) {
+    if (!e.features || !e.features.length) return;
+    var f = e.features[0];
+
+    /* Look up the original feature from the geojson to get full geometry
+     * for fitBounds — promoteId rewrites f.id to the property value. */
+    var fullFeat = findFeatureById(gj, f.id);
+
+    /* Hide hover, clear previous pin */
+    clearHover();
+    clearPinned();
+
+    pinnedId = f.id;
+    map.setFeatureState({ source: 'nbhd', id: pinnedId }, { pinned: true });
+
+    pinnedPopup
+      .setLngLat(e.lngLat)
+      .setHTML(buildPopupHtml(f.properties, true))
+      .addTo(map);
+
+    pinnedPopup.on('close', function () {
+      if (pinnedId !== null) {
+        map.setFeatureState({ source: 'nbhd', id: pinnedId }, { pinned: false });
+        pinnedId = null;
+      }
+    });
+
+    if (fullFeat) {
+      map.fitBounds(bboxOfGeom(fullFeat.geometry), {
+        padding: { top: 80, bottom: 80, left: 60, right: 60 },
+        duration: 900,
+        maxZoom: 14
+      });
+    }
+  });
+
+  /* Background click clears the pinned popup. */
+  map.on('click', function (e) {
+    var hits = map.queryRenderedFeatures(e.point, { layers: ['nbhd-fill'] });
+    if (!hits.length) clearPinned();
+  });
+}
+
+function findFeatureById(gj, id) {
+  /* promoteId uses the property value as the feature id. Match by string
+   * comparison because numeric ids and string ids both end up here. */
+  for (var i = 0; i < gj.features.length; i++) {
+    var p = gj.features[i].properties;
+    if (p && String(p['Neighbourhood ID']) === String(id)) return gj.features[i];
+  }
+  return null;
+}
+
+/* =========================================================================
+ *  Search input — datalist autocomplete, Enter to fly
+ * ========================================================================= */
+function installSearch(gj) {
+  var input = document.getElementById('search');
+  var list  = document.getElementById('nbhd-list');
+
+  /* Index by display_name (de-duplicated, sorted). */
+  var byName = {};
+  var names = [];
+  for (var i = 0; i < gj.features.length; i++) {
+    var p = gj.features[i].properties;
+    if (!p || !p.display_name) continue;
+    if (!byName[p.display_name]) {
+      byName[p.display_name] = gj.features[i];
+      names.push(p.display_name);
+    }
+  }
+  names.sort();
+
+  var html = '';
+  for (var j = 0; j < names.length; j++) {
+    html += '<option value="' + escapeHtml(names[j]) + '"></option>';
+  }
+  list.innerHTML = html;
+
+  function flyToName(name) {
+    var feat = byName[(name || '').trim().toUpperCase()] || byName[name];
+    if (!feat) return false;
+    /* Find by case-insensitive match if the user typed lowercase. */
+    if (!feat) {
+      var hit = null;
+      for (var k = 0; k < names.length; k++) {
+        if (names[k].toLowerCase() === (name || '').toLowerCase()) { hit = byName[names[k]]; break; }
+      }
+      feat = hit;
+    }
+    if (!feat) return false;
+
+    map.fitBounds(bboxOfGeom(feat.geometry), {
+      padding: { top: 80, bottom: 80, left: 60, right: 60 },
+      duration: 1100,
+      maxZoom: 14
+    });
+
+    /* Pin popup at polygon's bbox centre. */
+    var bb = bboxOfGeom(feat.geometry);
+    var centre = [(bb[0][0] + bb[1][0]) / 2, (bb[0][1] + bb[1][1]) / 2];
+    clearPinned();
+    pinnedId = feat.properties['Neighbourhood ID'];
+    /* Convert to whatever promoteId stored. promoteId stores the property
+     * value verbatim, so this matches feature state. */
+    map.setFeatureState({ source: 'nbhd', id: pinnedId }, { pinned: true });
+    pinnedPopup
+      .setLngLat(centre)
+      .setHTML(buildPopupHtml(feat.properties, true))
+      .addTo(map);
+    return true;
+  }
+
+  input.addEventListener('change', function () {
+    flyToName(input.value);
+  });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      if (flyToName(input.value)) input.blur();
+    }
+  });
+}
+
+/* =========================================================================
+ *  Sidebar toggle
+ * ========================================================================= */
+document.getElementById('sidebar-toggle').addEventListener('click', function () {
+  var sb = document.getElementById('sidebar');
+  sb.classList.toggle('collapsed');
+  /* Resize the map after the CSS transition so it doesn't end up letterboxed. */
+  setTimeout(function () { map.resize(); }, 260);
+});
+
+/* =========================================================================
+ *  Legend rendering
+ * ========================================================================= */
+(function buildLegend() {
+  var scaleEl = document.getElementById('legend-scale');
+  var statesEl = document.getElementById('legend-states');
+
+  var s = '';
+  for (var i = 0; i < STOPS.length; i++) {
+    var st = STOPS[i];
+    s += '<div class="leg-row">' +
+           '<div class="leg-sw" style="background:' + st.c + '"></div>' +
+           '<div class="leg-lab">' + fmtCurrency(st.v) + ' <small>· ' + st.label + '</small></div>' +
+         '</div>';
+  }
+  scaleEl.innerHTML = s;
+
+  var t = '';
+  for (var k = 0; k < GREY_STATES.length; k++) {
+    var key = GREY_STATES[k];
+    var meta = STATE_STYLE[key];
+    var swatchBg = 'background:' + meta.legendFill + ';';
+    /* Visual hint for pattern / dash on swatch */
+    var swatchExtra = '';
+    if (meta.pattern === 'stripes') {
+      swatchExtra = ' background-image:repeating-linear-gradient(45deg,' +
+        'rgba(60,55,42,0.55) 0 1.4px, transparent 1.4px 4px);';
+    } else if (meta.pattern === 'dots') {
+      swatchExtra = ' background-image:radial-gradient(rgba(60,55,42,0.55) 1px, transparent 1.4px); background-size:5px 5px;';
+    }
+    var borderStyle = meta.outlineDash
+      ? (meta.outlineDash[1] >= meta.outlineDash[0] * 1.5 ? 'dotted' : 'dashed')
+      : 'solid';
+    var borderCss = 'border:1px ' + borderStyle + ' ' + (meta.outlineColor || 'rgba(0,0,0,0.2)') + ';';
+    t += '<div class="leg-row">' +
+           '<div class="leg-sw" style="' + swatchBg + swatchExtra + ' ' + borderCss + '"></div>' +
+           '<div class="leg-lab">' + meta.label + '</div>' +
+         '</div>';
+  }
+  statesEl.innerHTML = t;
+})();
+</script>
+
+</body>
+</html>

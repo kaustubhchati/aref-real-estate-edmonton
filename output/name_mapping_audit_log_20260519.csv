@@ -1,0 +1,9 @@
+assessment_name,n_properties_in_aggregate,resolved_to_shapefile_id,mapping_reason,status
+ANTHONY HENDAY SOUTHEAST,17,6665,compound_name_spacing,rescued
+CHAPPELLE AREA,5533,5462,area_suffix_developing,rescued
+HERITAGE VALLEY TOWN CENTRE AREA,577,5464,area_suffix_developing,rescued
+LEWIS FARMS INDUSTRIAL,27,4485,exact_match,rescued
+RAPPERSWIL,1121,3370,assessment_side_typo,rescued
+RIVER VALLEY WINDEMERE,5,5405,assessment_side_typo,rescued
+SOUTHEAST (ANNEXED) INDUSTRIAL,2,6690,annexation_suffix,rescued
+WESTBROOK ESTATE,339,5540,assessment_side_typo,rescued

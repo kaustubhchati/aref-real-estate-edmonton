@@ -1,0 +1,9 @@
+rule_id,rule_slug,rule_label,year,metric,value
+r3,manufactured_homes,"is.na(lot_size) [Property Information join, dkk9-cj3x]",2023,precision,1
+r3,manufactured_homes,"is.na(lot_size) [Property Information join, dkk9-cj3x]",2023,recall,0.9493127147766323
+r3,manufactured_homes,"is.na(lot_size) [Property Information join, dkk9-cj3x]",2023,f1,0.9739973556632878
+r3,manufactured_homes,"is.na(lot_size) [Property Information join, dkk9-cj3x]",2023,true_pos,2210
+r3,manufactured_homes,"is.na(lot_size) [Property Information join, dkk9-cj3x]",2023,false_pos,0
+r3,manufactured_homes,"is.na(lot_size) [Property Information join, dkk9-cj3x]",2023,false_neg,118
+r3,manufactured_homes,"is.na(lot_size) [Property Information join, dkk9-cj3x]",2023,true_neg,338826
+r3,manufactured_homes,"is.na(lot_size) [Property Information join, dkk9-cj3x]",2023,rows_scored,341154

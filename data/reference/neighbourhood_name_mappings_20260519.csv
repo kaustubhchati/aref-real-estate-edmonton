@@ -1,0 +1,9 @@
+shapefile_name,shapefile_id,assessment_name,reason,source,date_curated,curated_by
+ANTHONY HENDAY SOUTH EAST,6665,ANTHONY HENDAY SOUTHEAST,compound_name_spacing,"Real estate consensus: RE/MAX, REALTOR.ca, REW, Local Logic all use 'Anthony Henday South East' with space",2026-05-19,KC
+CHAPPELLE,5462,CHAPPELLE AREA,area_suffix_developing,"City convention: 'AREA' suffix applied to developing neighbourhoods, dropped at finalization. Wikipedia editor consensus + 2014 Census CSV at data.edmonton.ca",2026-05-19,KC
+HERITAGE VALLEY TOWN CENTRE,5464,HERITAGE VALLEY TOWN CENTRE AREA,area_suffix_developing,"City convention: 'AREA' suffix applied to developing neighbourhoods. Wikipedia editor consensus + 2014 Census CSV at data.edmonton.ca",2026-05-19,KC
+LEWIS FARMS INDUSTRIAL,4485,LEWIS FARMS INDUSTRIAL,exact_match,Exact string match; needs fallback because assessment-side row has Neighbourhood ID = 'NA',2026-05-19,KC
+RAPPERSWILL,3370,RAPPERSWIL,assessment_side_typo,"'Rapperswill' with double-L is canonical per Wikipedia article title and 2010 Rapperswill Neighbourhood Structure Plan. Assessment-side single-L is the typo.",2026-05-19,KC
+RIVER VALLEY WINDERMERE,5405,RIVER VALLEY WINDEMERE,assessment_side_typo,"'Windermere' (with R) is canonical English Lake District spelling per Wikipedia. Assessment-side 'Windemere' is the typo.",2026-05-19,KC
+SOUTHEAST INDUSTRIAL,6690,SOUTHEAST (ANNEXED) INDUSTRIAL,annexation_suffix,"Shapefile descriptiv field describes this as non-residential industrial; '(ANNEXED)' added to assessment-side post-2022 annexation",2026-05-19,KC
+WESTBROOK ESTATES,5540,WESTBROOK ESTATE,assessment_side_typo,"'Westbrook Estates' (plural) is canonical per shapefile descriptio field's full sentence beginning 'Westbrook Estates was designed to appeal to individua...'. Assessment-side singular is the typo.",2026-05-19,KC

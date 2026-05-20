@@ -1,0 +1,24 @@
+rule_id,rule_slug,luc_1_desc,n,error_type
+r1,residential_class,Manufactured home (building only),2224,false_positive
+r1,residential_class,Acreage for residential use (building and land),851,false_positive
+r1,residential_class,Residential condominium parking stall,224,false_positive
+r1,residential_class,Common area in residential condominium complex,219,false_positive
+r1,residential_class,Detached residence with three self-contained suites,208,false_positive
+r1,residential_class,Accessory structure in residential condominium complex,136,false_positive
+r1,residential_class,Co-op non-profit row house,104,false_positive
+r1,residential_class,Manufactured home (building and land),104,false_positive
+r1,residential_class,Residential garage/accessory building,52,false_positive
+r1,residential_class,Farm-use buildings and structures,51,false_positive
+r1,residential_class,Derelict building on residential land,29,false_positive
+r1,residential_class,Co-op non-profit lowrise apartment building,20,false_positive
+r1,residential_class,Rural land adjacent to water and sewer,20,false_positive
+r1,residential_class,Residential development land,18,false_positive
+r1,residential_class,Two or three detached residences on one lot or parcel,16,false_positive
+r1,residential_class,"Single-family, detached house",717,false_negative
+r1,residential_class,Fourplex,280,false_negative
+r1,residential_class,Lowrise condominium,63,false_negative
+r1,residential_class,Duplex,48,false_negative
+r1,residential_class,Semi-detached residence in duplex,14,false_negative
+r1,residential_class,Highrise condominium,2,false_negative
+r1,residential_class,Semi-detached residence in multiplex (four and more),1,false_negative
+r1,residential_class,Triplex,1,false_negative

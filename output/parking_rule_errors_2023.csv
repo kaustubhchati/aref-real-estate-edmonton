@@ -1,0 +1,8 @@
+luc_1_desc,n,error_type
+Manufactured home (building only),408,false_positive
+Lowrise condominium,104,false_positive
+Highrise condominium,79,false_positive
+Common area in residential condominium complex,25,false_positive
+Residential condominium parking stall,224,false_negative
+Accessory structure in residential condominium complex,142,false_negative
+Non-residential condominium parking stall,4,false_negative

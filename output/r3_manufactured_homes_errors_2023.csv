@@ -1,0 +1,3 @@
+rule_id,rule_slug,luc_1_desc,n,error_type
+r3,manufactured_homes,Manufactured home (building and land),104,false_negative
+r3,manufactured_homes,Manufactured home (building only),14,false_negative
