@@ -54,6 +54,11 @@ p  { margin: 0 0 0.75rem; }
   max-width: 1100px;
   margin: 0 auto;
   padding: 2rem 1.25rem;
+  /* Flex column so a map page child can flex-fill the remaining height
+     between Nav and Footer. Text-page children fall back to natural size
+     (default `flex: 0 1 auto`), so this doesn't change their layout. */
+  display: flex;
+  flex-direction: column;
 }
 
 /* ---- Header -------------------------------------------------------------- */
@@ -203,61 +208,152 @@ p  { margin: 0 0 0.75rem; }
 
 /* ---- Map pages ----------------------------------------------------------- */
 
-/* Map pages stretch wider than text pages — overrides the .shell-main cap.
-   Scoped to .content-map so text pages keep their narrow column. */
+/* Open layout matching pipeline/property-assessment/scripts/09_build_choropleth.html:
+   left sidebar + flex-filling map. Full-bleed within shell-main's max-width
+   (negative margins cancel its 2rem/1.25rem padding) and flex-1 so the map
+   takes whatever vertical space sits between Nav and Footer. */
 .content-map {
   max-width: none;
-}
-
-.content-map-head { margin-bottom: 1rem; }
-.content-map-sub  { color: var(--text-muted); margin-bottom: 0.5rem; }
-
-/* Two-column layout: map fills the row, legend is fixed-width on the right.
-   Wraps to single column under 720px so the legend doesn't squeeze the map. */
-.content-map-row {
+  flex: 1;
   display: flex;
-  gap: 1rem;
-  align-items: stretch;
+  margin: -2rem -1.25rem;
+  min-height: 0;       /* let flex children shrink instead of overflowing */
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
 }
 
-.content-map-canvas {
+/* ----- Sidebar ----- */
+
+.sb {
+  flex: 0 0 300px;
+  background: #fafaf8;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 18px 18px 24px 18px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text);
+  transition: margin-left 220ms ease;
+}
+.sb.collapsed { margin-left: -300px; }
+
+.sb-title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0 0 4px;
+  color: var(--text);
+}
+
+.sb-sub {
+  color: var(--text-muted);
+  font-size: 11.5px;
+  line-height: 1.45;
+  margin: 0 0 16px;
+}
+
+.sb-section { margin: 0 0 18px; }
+
+.sb-ref {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin: 8px 0 0;
+}
+.sb-ref code {
+  font-size: 10px;
+  color: #444;
+  background: #fff;
+  padding: 1px 3px;
+  border-radius: 2px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+
+/* ----- Map canvas ----- */
+
+.canvas-wrap {
+  position: relative;
   flex: 1 1 auto;
-  min-width: 0;       /* allow the map to actually shrink in flex */
-  height: 70svh;
-  min-height: 480px;
+  min-width: 0;        /* allow shrinking in flex */
+}
+
+.canvas {
+  /* MapLibre needs a sized container; absolute-fill the wrap so the map
+     covers the full open area, edge-to-edge, like 09. */
+  position: absolute;
+  inset: 0;
+}
+
+/* ≡ toggle button — overlays top-left of the map, matches 09's affordance. */
+.sb-toggle {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
   border: 1px solid var(--border);
   border-radius: 4px;
-  overflow: hidden;
+  font-size: 16px;
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  padding: 0;
+  font-family: inherit;
 }
+.sb-toggle:hover { background: #f4f4f1; }
 
-@media (max-width: 720px) {
-  .content-map-row {
-    flex-direction: column;
-  }
-  .content-map-canvas { height: 60svh; }
-}
-
-/* MapView's outer div has no intrinsic size — the consumer-passed class
-   (e.g. .content-map-canvas above) is responsible for width + height.
-   This keeps MapView reusable: a future overlay-style map can be 300px square
-   without fighting cascade-order. */
-
-/* ---- Legend -------------------------------------------------------------- */
-
-.legend {
-  background: var(--bg-soft);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0.875rem 1rem;
-  font-size: 0.85rem;
-}
-
-.legend-title {
-  font-size: 0.75rem;
+/* ---- Search (rendered inside .sb-section) -------------------------------- */
+.search { display: block; }
+.search-label {
+  display: block;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
-  margin: 0 0 0.5rem;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.search-input {
+  width: 100%;
+  padding: 7px 9px;
+  font-size: 12.5px;
+  font-family: inherit;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.search-input:focus { outline: none; border-color: var(--accent); }
+.search-hint {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ---- Legend (rendered inside .sb-section, no panel border) --------------- */
+
+.legend {
+  /* No background/border — the sidebar already provides the surface; the
+     legend is just one of several stacked sections. */
+  font-size: 11.5px;
+  color: var(--text);
+}
+
+.legend-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin: 0 0 8px;
 }
 
 .legend-list {
@@ -269,8 +365,8 @@ p  { margin: 0 0 0.75rem; }
 .legend-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin: 0.2rem 0;
+  gap: 8px;
+  margin: 3px 0;
 }
 
 .legend-sw {
@@ -281,52 +377,17 @@ p  { margin: 0 0 0.75rem; }
   /* Inline styles from Legend.jsx supply background/border/pattern per row. */
 }
 
-.legend-lab     { line-height: 1.3; }
+.legend-lab       { line-height: 1.3; }
 .legend-lab small { color: var(--text-muted); }
 
 .legend-divider {
   border-top: 1px dashed var(--border);
-  margin: 0.75rem 0 0.5rem;
-  padding-top: 0.5rem;
-  font-size: 0.7rem;
+  margin: 10px 0 8px;
+  padding-top: 8px;
+  font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
-}
-
-/* ---- Side panel (search + legend stacked) -------------------------------- */
-.content-map-side {
-  flex: 0 0 240px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-/* ---- Search input -------------------------------------------------------- */
-.search { display: block; }
-.search-label {
-  display: block;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  margin-bottom: 0.35rem;
-}
-.search-input {
-  width: 100%;
-  padding: 0.45rem 0.6rem;
-  font-size: 0.9rem;
-  font-family: inherit;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-}
-.search-input:focus { outline: none; border-color: var(--accent); }
-.search-hint {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  margin-top: 0.25rem;
 }
 
 /* ---- Map popups ---------------------------------------------------------- */

@@ -1,20 +1,22 @@
 // =============================================================================
 // PropertyAssessmentMap.jsx
 //
-// The Property Assessment route. Three pieces:
-//   1. <MapView /> — section-agnostic MapLibre canvas (components/MapView.jsx)
-//   2. <SearchInput /> — name-driven fly-to (components/SearchInput.jsx)
-//   3. <Legend /> — data-driven from the same tables the map paints from
+// The Property Assessment route. Layout mirrors
+// pipeline/property-assessment/scripts/09_build_choropleth.html:
 //
-// Wiring:
-//   • We fetch the GeoJSON ourselves once so we can index it for search and
-//     pull geometry for fitBounds. MapView still loads it via URL into its
-//     own source — modern browsers serve the second fetch from cache, so the
-//     duplicate is cheap and lets MapView stay narrow.
-//   • MapView calls onLoad(map) once layers are installed; we drop the map
-//     instance into state. When BOTH map and gj are ready, the
-//     useChoroplethInteractions hook attaches handlers (and cleans them up
-//     on unmount or re-load).
+//   ┌──── .content-map (flex row, full-bleed within shell-main) ────┐
+//   │ ┌─ .sb (300px) ─┐ ┌────── .canvas-wrap (flex 1) ──────────┐ │
+//   │ │  Title       │ │  ≡  (toggle, overlays top-left)         │ │
+//   │ │  Subtitle    │ │                                          │ │
+//   │ │  ░ Search    │ │            MapView fills inset:0         │ │
+//   │ │  ░ Legend    │ │                                          │ │
+//   │ │  Ref note    │ │                                          │ │
+//   │ └──────────────┘ └──────────────────────────────────────────┘ │
+//   └────────────────────────────────────────────────────────────────┘
+//
+// Sidebar collapses via `.collapsed` (margin-left: -300px). After the CSS
+// transition, we call map.resize() so MapLibre reflows its canvas — same
+// pattern as 09's setTimeout(map.resize, 260).
 // =============================================================================
 
 import { useEffect, useMemo, useState } from "react";
@@ -32,19 +34,20 @@ import {
   choroplethLayers,
   choroplethImages,
 } from "./choroplethStyle.js";
-import { fmtCurrency } from "../../utils/format.js";
 import {
   useChoroplethInteractions,
   indexNamesForSearch,
 } from "./interactions.js";
+import { fmtCurrency } from "../../utils/format.js";
+
+const SIDEBAR_TRANSITION_MS = 260;
 
 export default function PropertyAssessmentMap() {
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
   const [fetchError, setFetchError] = useState(null);
+  const [collapsed, setCollapsed] = useState(false);
 
-  // Fetch the GeoJSON once for our own indexing. Cancellation guard avoids a
-  // late setState if the user navigates away mid-fetch.
   useEffect(() => {
     let cancelled = false;
     fetch(GEOJSON_URL)
@@ -60,30 +63,24 @@ export default function PropertyAssessmentMap() {
   const names = useMemo(() => (gj ? indexNamesForSearch(gj) : []), [gj]);
   const flyAndPinByName = useChoroplethInteractions(map, gj);
 
+  function toggleSidebar() {
+    setCollapsed((v) => !v);
+    // Wait for the CSS transition so the new container width is settled
+    // before MapLibre re-measures (otherwise the canvas letterboxes).
+    if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS);
+  }
+
   return (
     <article className="content-map">
-      <header className="content-map-head">
-        <h1>Edmonton — median residential assessment, 2026</h1>
-        <p className="content-map-sub">
+      <aside className={`sb${collapsed ? " collapsed" : ""}`} aria-label="Map sidebar">
+        <h1 className="sb-title">Edmonton — median residential assessment, 2026</h1>
+        <p className="sb-sub">
           Layer 1a-cleaned (parking + R1 + R3), neighbourhood aggregates over
-          365,406 properties. 402 polygons. Hover any polygon for detail; click to pin.
+          365,406 properties. 402 polygons. Hover any polygon for detail;
+          click to pin.
         </p>
-      </header>
 
-      <div className="content-map-row">
-        <MapView
-          className="content-map-canvas"
-          basemapStyle={BASEMAP_STYLE}
-          geojsonUrl={GEOJSON_URL}
-          view={MAP_VIEW}
-          sourceId="nbhd"
-          promoteId="Neighbourhood ID"
-          layers={choroplethLayers()}
-          images={choroplethImages()}
-          onLoad={setMap}
-        />
-
-        <div className="content-map-side">
+        <section className="sb-section">
           <SearchInput
             label="Search neighbourhood"
             placeholder="Type a name…"
@@ -97,6 +94,9 @@ export default function PropertyAssessmentMap() {
             names={names}
             onSelect={flyAndPinByName}
           />
+        </section>
+
+        <section className="sb-section">
           <Legend
             title="Median assessed value"
             stops={STOPS}
@@ -104,7 +104,37 @@ export default function PropertyAssessmentMap() {
             greyTitle="Non-aggregated polygons"
             greyStates={GREY_STATES.map((k) => STATE_STYLE[k])}
           />
-        </div>
+        </section>
+
+        <p className="sb-ref">
+          Colour scale locked to <code>PHASE1_STATUS.md §5</code>:
+          min&nbsp;$103,500 · Q25&nbsp;$352,625 · median&nbsp;$425,125 ·
+          Q75&nbsp;$496,188 · max&nbsp;$1,226,000. ~10× spread, tight IQR,
+          long tail.
+        </p>
+      </aside>
+
+      <div className="canvas-wrap">
+        <button
+          type="button"
+          className="sb-toggle"
+          onClick={toggleSidebar}
+          aria-label={collapsed ? "Show sidebar" : "Hide sidebar"}
+          title="Toggle sidebar"
+        >
+          ≡
+        </button>
+        <MapView
+          className="canvas"
+          basemapStyle={BASEMAP_STYLE}
+          geojsonUrl={GEOJSON_URL}
+          view={MAP_VIEW}
+          sourceId="nbhd"
+          promoteId="Neighbourhood ID"
+          layers={choroplethLayers()}
+          images={choroplethImages()}
+          onLoad={setMap}
+        />
       </div>
     </article>
   );
