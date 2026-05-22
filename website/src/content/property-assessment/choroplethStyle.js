@@ -91,10 +91,100 @@ export const GREY_STATES = [
   "no_data",
 ];
 
-// ---- Currency formatter (legend labels + future popups) --------------------
+// ---- Formatters (legend labels + popup rows) -------------------------------
 export function fmtCurrency(v) {
   if (v == null || isNaN(+v)) return "—";
   return "$" + Math.round(+v).toLocaleString();
+}
+export function fmtNumber(v) {
+  if (v == null || isNaN(+v)) return "—";
+  return Math.round(+v).toLocaleString();
+}
+export function fmtPct(v) {
+  if (v == null || isNaN(+v)) return "—";
+  return (+v).toFixed(1) + "%";
+}
+export function fmtYear(v) {
+  if (v == null || isNaN(+v)) return "—";
+  return String(Math.round(+v));
+}
+export function fmtArea(v) {
+  if (v == null || isNaN(+v)) return "—";
+  return Math.round(+v).toLocaleString() + " m²";
+}
+
+// ---- Popup rows ------------------------------------------------------------
+// One row per aggregate column shown for an `aggregated` polygon. The first
+// entry is the headline (border-emphasised) and matches the choropleth
+// variable. Suppressed_low_n polygons show only n_properties + a "suppressed"
+// note; the other three states show only their label badge.
+//
+// Tuple format: [propertyKey, displayLabel, formatter, isHeadline]
+export const POPUP_ROWS = [
+  ["median_assessvalue",           "Median assessed",          fmtCurrency, true ],
+  ["n_properties",                 "N properties",             fmtNumber,   false],
+  ["avall_public",                 "Mean assessed (all)",      fmtCurrency, false],
+  ["sd_assessedvalue",             "SD assessed",              fmtCurrency, false],
+  ["median_yearbuilt",             "Median year built",        fmtYear,     false],
+  ["pct_with_unit",                "% with unit (condo)",      fmtPct,      false],
+  ["avg_assessvalue_without_unit", "Mean assessed (non-unit)", fmtCurrency, false],
+  ["avg_lotsize",                  "Mean lot size",            fmtArea,     false],
+];
+
+// HTML-escape a string for safe interpolation into a setHTML() call.
+// Tiny on purpose — popup content is the only place we hand-build HTML.
+function escapeHtml(s) {
+  if (s == null) return "";
+  return String(s).replace(/[&<>"']/g, (c) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+  ));
+}
+
+// Build the popup body for one feature. `pinned=true` suppresses the
+// "click to pin" footnote (the popup is already pinned).
+//
+// This lives in the section's style file — not in interactions.js — because
+// the row table + state labels are the section's visual contract. Changing
+// a label or adding a row is a one-file edit here.
+export function buildPopupHtml(p, pinned) {
+  const state = p.polygon_state;
+  const meta = STATE_STYLE[state] || { label: state };
+
+  const parts = [
+    `<div class="pop-name">${escapeHtml(p.display_name)}</div>`,
+  ];
+  if (p.district) {
+    parts.push(`<div class="pop-district">${escapeHtml(p.district)} district</div>`);
+  }
+  parts.push(`<div class="pop-state ${state}">${escapeHtml(meta.label)}</div>`);
+
+  if (state === "aggregated") {
+    for (const [key, label, fmt, headline] of POPUP_ROWS) {
+      parts.push(
+        `<div class="pop-row${headline ? " headline" : ""}">` +
+          `<span class="pop-k">${label}</span>` +
+          `<span class="pop-v">${fmt(p[key])}</span>` +
+        `</div>`
+      );
+    }
+  } else if (state === "suppressed_low_n") {
+    // Count is informative; value itself is suppressed per the aggregation rule.
+    parts.push(
+      `<div class="pop-row">` +
+        `<span class="pop-k">N properties</span>` +
+        `<span class="pop-v">${fmtNumber(p.n_properties)}</span>` +
+      `</div>`,
+      `<div class="pop-row">` +
+        `<span class="pop-k">Median assessed</span>` +
+        `<span class="pop-v pop-v-muted">suppressed</span>` +
+      `</div>`
+    );
+  }
+
+  if (!pinned) {
+    parts.push(`<div class="pop-pinned-hint">Click to pin · click polygon to zoom in.</div>`);
+  }
+  return parts.join("");
 }
 
 // ---- Pattern image factories ----------------------------------------------
@@ -151,13 +241,19 @@ function buildFillColourExpression() {
 // (first = bottom). MapView inserts them all below the basemap's labels.
 export function choroplethLayers() {
   return [
-    // 1. Fill colour for every polygon.
+    // 1. Fill colour for every polygon. Opacity lifts on hover or when pinned
+    //    so the user can confirm which polygon their popup is describing.
     {
       id: "nbhd-fill",
       type: "fill",
       paint: {
         "fill-color": buildFillColourExpression(),
-        "fill-opacity": 0.74,
+        "fill-opacity": [
+          "case",
+          ["boolean", ["feature-state", "hover"], false], 0.88,
+          ["boolean", ["feature-state", "pinned"], false], 0.88,
+          0.74,
+        ],
       },
     },
     // 2. Stripes / dots overlay, restricted to the two pattern states.
@@ -223,6 +319,26 @@ export function choroplethLayers() {
         "line-color":     STATE_STYLE.no_data.outlineColor,
         "line-width":     STATE_STYLE.no_data.outlineWidth,
         "line-dasharray": STATE_STYLE.no_data.outlineDash,
+      },
+    },
+    // 6. Highlight outline — invisible by default, darkens on hover, darker
+    //    + thicker when pinned. Sits below the basemap labels via beforeId.
+    {
+      id: "nbhd-highlight",
+      type: "line",
+      paint: {
+        "line-color": [
+          "case",
+          ["boolean", ["feature-state", "pinned"], false], "#0f0f12",
+          ["boolean", ["feature-state", "hover"],  false], "#2a2a30",
+          "rgba(0,0,0,0)",
+        ],
+        "line-width": [
+          "case",
+          ["boolean", ["feature-state", "pinned"], false], 2.4,
+          ["boolean", ["feature-state", "hover"],  false], 1.6,
+          0,
+        ],
       },
     },
   ];

@@ -744,15 +744,6 @@ function installSearch(gj) {
   function flyToName(name) {
     var feat = byName[(name || '').trim().toUpperCase()] || byName[name];
     if (!feat) return false;
-    /* Find by case-insensitive match if the user typed lowercase. */
-    if (!feat) {
-      var hit = null;
-      for (var k = 0; k < names.length; k++) {
-        if (names[k].toLowerCase() === (name || '').toLowerCase()) { hit = byName[names[k]]; break; }
-      }
-      feat = hit;
-    }
-    if (!feat) return false;
 
     map.fitBounds(bboxOfGeom(feat.geometry), {
       padding: { top: 80, bottom: 80, left: 60, right: 60 },

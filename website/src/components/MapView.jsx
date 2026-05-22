@@ -9,6 +9,12 @@
 //   • promoteId     — optional property name to use as the feature id
 //   • layers        — array of MapLibre layer specs to add (source filled in)
 //   • images        — optional [{ id, make: () => ImageData }] for fill-pattern
+//   • onLoad        — optional (map) => void; called once after images +
+//                     source + layers are installed. Section files use this
+//                     to wire their own interactions (popups, search) against
+//                     the live map instance. Intentionally the ONLY hook
+//                     MapView exposes — we'll only generalise once a second
+//                     section actually needs the same wiring.
 //
 // The component is intentionally dumb: it knows nothing about choropleths,
 // stops, or property-assessment — those live in the section's style file
@@ -32,9 +38,15 @@ export default function MapView({
   promoteId,
   layers,
   images = [],
+  onLoad,
   className = "",
 }) {
   const containerRef = useRef(null);
+
+  // onLoad is read from a ref so it can change between renders (e.g. when
+  // the section closes over fresh state) without re-mounting the map.
+  const onLoadRef = useRef(onLoad);
+  onLoadRef.current = onLoad;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -79,6 +91,10 @@ export default function MapView({
       for (const layer of layers) {
         map.addLayer({ ...layer, source: sourceId }, beforeId);
       }
+
+      // Section-specific wiring (popups, search, etc.) runs last so it can
+      // assume every source + layer it expects is already on the map.
+      if (onLoadRef.current) onLoadRef.current(map);
     });
 
     return () => map.remove();
