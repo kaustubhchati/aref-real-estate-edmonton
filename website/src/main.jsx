@@ -25,6 +25,7 @@ import Download from "./content/pages/Download.jsx";
 import Feedback from "./content/pages/Feedback.jsx";
 import ResearchCompetition from "./content/pages/ResearchCompetition.jsx";
 import Placeholder from "./content/Placeholder.jsx";
+import PropertyAssessmentMap from "./content/property-assessment/PropertyAssessmentMap.jsx";
 
 import "./index.css";
 
@@ -43,7 +44,7 @@ createRoot(document.getElementById("root")).render(
           {/* Map routes — placeholders until each section is built */}
           <Route path="/data-collection/neighbourhood-profile"  element={<Placeholder title="Neighbourhood Profile"      kind="map" />} />
           <Route path="/properties/properties"                  element={<Placeholder title="Properties"                 kind="map" />} />
-          <Route path="/properties/property-assessment"         element={<Placeholder title="Property Assessment"        kind="map" />} />
+          <Route path="/properties/property-assessment"         element={<PropertyAssessmentMap />} />
           <Route path="/building/dwelling-units"                element={<Placeholder title="Dwelling Units"             kind="map" />} />
           <Route path="/building/construction-improvement"      element={<Placeholder title="Construction & Improvement" kind="map" />} />
           <Route path="/real-estate/land-transfers"             element={<Placeholder title="Land Transfers"             kind="map" />} />

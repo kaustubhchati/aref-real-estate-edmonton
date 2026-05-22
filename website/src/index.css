@@ -200,3 +200,97 @@ p  { margin: 0 0 0.75rem; }
   border-radius: 3px;
   color: var(--text-muted);
 }
+
+/* ---- Map pages ----------------------------------------------------------- */
+
+/* Map pages stretch wider than text pages — overrides the .shell-main cap.
+   Scoped to .content-map so text pages keep their narrow column. */
+.content-map {
+  max-width: none;
+}
+
+.content-map-head { margin-bottom: 1rem; }
+.content-map-sub  { color: var(--text-muted); margin-bottom: 0.5rem; }
+
+/* Two-column layout: map fills the row, legend is fixed-width on the right.
+   Wraps to single column under 720px so the legend doesn't squeeze the map. */
+.content-map-row {
+  display: flex;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.content-map-canvas {
+  flex: 1 1 auto;
+  min-width: 0;       /* allow the map to actually shrink in flex */
+  height: 70svh;
+  min-height: 480px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+@media (max-width: 720px) {
+  .content-map-row {
+    flex-direction: column;
+  }
+  .content-map-canvas { height: 60svh; }
+}
+
+/* MapView's outer div has no intrinsic size — the consumer-passed class
+   (e.g. .content-map-canvas above) is responsible for width + height.
+   This keeps MapView reusable: a future overlay-style map can be 300px square
+   without fighting cascade-order. */
+
+/* ---- Legend -------------------------------------------------------------- */
+
+.legend {
+  flex: 0 0 220px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.875rem 1rem;
+  font-size: 0.85rem;
+}
+
+.legend-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 0 0 0.5rem;
+}
+
+.legend-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.2rem 0;
+}
+
+.legend-sw {
+  flex: 0 0 26px;
+  width: 26px;
+  height: 14px;
+  border-radius: 2px;
+  /* Inline styles from Legend.jsx supply background/border/pattern per row. */
+}
+
+.legend-lab     { line-height: 1.3; }
+.legend-lab small { color: var(--text-muted); }
+
+.legend-divider {
+  border-top: 1px dashed var(--border);
+  margin: 0.75rem 0 0.5rem;
+  padding-top: 0.5rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
