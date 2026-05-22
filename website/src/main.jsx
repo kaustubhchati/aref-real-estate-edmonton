@@ -26,6 +26,7 @@ import Feedback from "./content/pages/Feedback.jsx";
 import ResearchCompetition from "./content/pages/ResearchCompetition.jsx";
 import Placeholder from "./content/Placeholder.jsx";
 import PropertyAssessmentMap from "./content/property-assessment/PropertyAssessmentMap.jsx";
+import ReportCard from "./content/report-card/ReportCard.jsx";
 
 import "./index.css";
 
@@ -56,8 +57,8 @@ createRoot(document.getElementById("root")).render(
           <Route path="/businesses/business-licences"           element={<Placeholder title="Business Licences"          kind="map" />} />
           <Route path="/businesses/business-counts"             element={<Placeholder title="Business Counts"            kind="map" />} />
 
-          {/* Tables placeholder */}
-          <Route path="/report-card" element={<Placeholder title="Neighbourhood Report Card" kind="tables" />} />
+          {/* Report Card — Edmonton table; Calgary will join when its pipeline lands. */}
+          <Route path="/report-card" element={<ReportCard />} />
 
           {/* Catch-all */}
           <Route path="*" element={<Placeholder title="Page not found" kind="404" />} />

@@ -396,3 +396,80 @@ p  { margin: 0 0 0.75rem; }
   border-top: 1px solid #f0f0f0;
   font-style: italic;
 }
+
+/* ---- Report Card --------------------------------------------------------- */
+
+/* Page widens past the text-page max so 9 columns + tabular numerics
+   actually fit without horizontal scroll on a laptop. */
+.report-card { max-width: 1100px; }
+
+.report-card-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0 0.75rem;
+}
+.report-card-controls .search-input { flex: 0 0 280px; }
+.report-card-count {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.report-card-table-wrap {
+  /* Sticky <th> only sticks if its containing block scrolls — wrap the
+     table in a scroll box (≤70svh tall + horizontally scrollable on narrow
+     screens) so the header pins to the top when scanning long lists. */
+  max-height: 70svh;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.report-card-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.report-card-table thead th {
+  background: var(--bg-soft);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+.report-card-table thead th.numeric { text-align: right; }
+.report-card-table thead th:hover { background: var(--accent-soft); }
+
+.report-card-table .sort-ind {
+  display: inline-block;
+  margin-left: 0.3rem;
+  font-size: 0.65rem;
+  color: var(--border);
+}
+.report-card-table .sort-ind.active { color: var(--accent); }
+
+.report-card-table tbody td {
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.report-card-table tbody td.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.report-card-table tbody tr:nth-child(even) { background: rgba(0, 0, 0, 0.015); }
+.report-card-table tbody tr:hover { background: var(--accent-soft); }
+
+.report-card-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 2rem;
+  font-style: italic;
+}

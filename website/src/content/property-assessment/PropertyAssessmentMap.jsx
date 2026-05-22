@@ -29,10 +29,10 @@ import {
   STOPS,
   STATE_STYLE,
   GREY_STATES,
-  fmtCurrency,
   choroplethLayers,
   choroplethImages,
 } from "./choroplethStyle.js";
+import { fmtCurrency } from "../../utils/format.js";
 import {
   useChoroplethInteractions,
   indexNamesForSearch,

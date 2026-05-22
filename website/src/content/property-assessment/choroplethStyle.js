@@ -11,6 +11,8 @@
 // Locked colour-scale domain: PHASE1_STATUS.md §5 — DO NOT recompute per refresh.
 // =============================================================================
 
+import { fmtCurrency, fmtNumber, fmtPct, fmtYear, fmtArea } from "../../utils/format.js";
+
 // ---- Public path served by Vite from website/public/ -----------------------
 export const GEOJSON_URL =
   "/data/property-assessment/neighbourhoods_2026_recovered.geojson";
@@ -90,28 +92,6 @@ export const GREY_STATES = [
   "manufactured_home_community",
   "no_data",
 ];
-
-// ---- Formatters (legend labels + popup rows) -------------------------------
-export function fmtCurrency(v) {
-  if (v == null || isNaN(+v)) return "—";
-  return "$" + Math.round(+v).toLocaleString();
-}
-export function fmtNumber(v) {
-  if (v == null || isNaN(+v)) return "—";
-  return Math.round(+v).toLocaleString();
-}
-export function fmtPct(v) {
-  if (v == null || isNaN(+v)) return "—";
-  return (+v).toFixed(1) + "%";
-}
-export function fmtYear(v) {
-  if (v == null || isNaN(+v)) return "—";
-  return String(Math.round(+v));
-}
-export function fmtArea(v) {
-  if (v == null || isNaN(+v)) return "—";
-  return Math.round(+v).toLocaleString() + " m²";
-}
 
 // ---- Popup rows ------------------------------------------------------------
 // One row per aggregate column shown for an `aggregated` polygon. The first
