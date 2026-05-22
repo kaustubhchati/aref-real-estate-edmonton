@@ -310,6 +310,69 @@ p  { margin: 0 0 0.75rem; }
 }
 .sb-toggle:hover { background: #f4f4f1; }
 
+/* ---- Empty state (shown when (city, year) has no data URL) -------------- */
+.canvas-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-soft);
+  padding: 2rem;
+}
+.canvas-empty-card {
+  max-width: 28rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+.canvas-empty-card h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 0.5rem;
+}
+.canvas-empty-card p { margin: 0; line-height: 1.5; }
+
+/* ---- OptionToggle (segmented control used by city / year etc.) ---------- */
+.opt-toggle { margin: 0 0 12px; }
+.opt-toggle:last-child { margin-bottom: 0; }
+
+.opt-toggle-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+
+.opt-toggle-buttons {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.opt-toggle-btn {
+  flex: 1 1 0;             /* equal widths regardless of label length */
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text);
+  background: #fff;
+  border: 0;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.opt-toggle-btn:last-child { border-right: 0; }
+.opt-toggle-btn:hover { background: #f4f4f1; }
+.opt-toggle-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
 /* ---- Search (rendered inside .sb-section) -------------------------------- */
 .search { display: block; }
 .search-label {

@@ -2,21 +2,24 @@
 // PropertyAssessmentMap.jsx
 //
 // The Property Assessment route. Layout mirrors
-// pipeline/property-assessment/scripts/09_build_choropleth.html:
+// pipeline/property-assessment/scripts/09_build_choropleth.html (09).
 //
 //   ┌──── .content-map (flex row, full-bleed within shell-main) ────┐
 //   │ ┌─ .sb (300px) ─┐ ┌────── .canvas-wrap (flex 1) ──────────┐ │
 //   │ │  Title       │ │  ≡  (toggle, overlays top-left)         │ │
 //   │ │  Subtitle    │ │                                          │ │
-//   │ │  ░ Search    │ │            MapView fills inset:0         │ │
+//   │ │  ░ City      │ │   MapView (when url resolves)            │ │
+//   │ │  ░ Year      │ │      OR                                   │ │
+//   │ │  ░ Search    │ │   EmptyState (when url is null)          │ │
 //   │ │  ░ Legend    │ │                                          │ │
 //   │ │  Ref note    │ │                                          │ │
 //   │ └──────────────┘ └──────────────────────────────────────────┘ │
 //   └────────────────────────────────────────────────────────────────┘
 //
-// Sidebar collapses via `.collapsed` (margin-left: -300px). After the CSS
-// transition, we call map.resize() so MapLibre reflows its canvas — same
-// pattern as 09's setTimeout(map.resize, 260).
+// Data source seam: city + year drive a single URL via dataSources.js.
+// Today only (Edmonton, 2026) resolves; (Calgary, *) and (*, 2025) etc
+// resolve to null → EmptyState. Adding a real dataset later is one row
+// in DATA_SOURCES.
 // =============================================================================
 
 import { useEffect, useMemo, useState } from "react";
@@ -24,9 +27,10 @@ import { useEffect, useMemo, useState } from "react";
 import MapView from "../../components/MapView.jsx";
 import Legend from "../../components/Legend.jsx";
 import SearchInput from "../../components/SearchInput.jsx";
+import OptionToggle from "../../components/OptionToggle.jsx";
+import EmptyState from "../../components/EmptyState.jsx";
 import {
   BASEMAP_STYLE,
-  GEOJSON_URL,
   MAP_VIEW,
   STOPS,
   STATE_STYLE,
@@ -34,6 +38,14 @@ import {
   choroplethLayers,
   choroplethImages,
 } from "./choroplethStyle.js";
+import {
+  CITIES,
+  YEARS,
+  DEFAULT_CITY,
+  DEFAULT_YEAR,
+  resolveDataUrl,
+  describeEmpty,
+} from "./dataSources.js";
 import {
   useChoroplethInteractions,
   indexNamesForSearch,
@@ -43,14 +55,29 @@ import { fmtCurrency } from "../../utils/format.js";
 const SIDEBAR_TRANSITION_MS = 260;
 
 export default function PropertyAssessmentMap() {
+  const [city, setCity] = useState(DEFAULT_CITY);
+  const [year, setYear] = useState(DEFAULT_YEAR);
+  const url = resolveDataUrl(city, year);
+
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
   const [fetchError, setFetchError] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
 
+  // Single effect on [url]: reset all derived state, then fetch if there's a
+  // real URL. When url is null we leave gj/map null and the JSX renders
+  // EmptyState instead of MapView — no fetch attempted, no errors logged.
+  // setMap(null) is safe even mid-flight: MapView is keyed by url, so it
+  // unmounts cleanly and map.remove() inside its useEffect cleanup destroys
+  // the old MapLibre instance.
   useEffect(() => {
+    setMap(null);
+    setGj(null);
+    setFetchError(null);
+    if (!url) return undefined;
+
     let cancelled = false;
-    fetch(GEOJSON_URL)
+    fetch(url)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
         return r.json();
@@ -58,17 +85,17 @@ export default function PropertyAssessmentMap() {
       .then((data) => { if (!cancelled) setGj(data); })
       .catch((err) => { if (!cancelled) setFetchError(err.message); });
     return () => { cancelled = true; };
-  }, []);
+  }, [url]);
 
   const names = useMemo(() => (gj ? indexNamesForSearch(gj) : []), [gj]);
   const flyAndPinByName = useChoroplethInteractions(map, gj);
 
   function toggleSidebar() {
     setCollapsed((v) => !v);
-    // Wait for the CSS transition so the new container width is settled
-    // before MapLibre re-measures (otherwise the canvas letterboxes).
     if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS);
   }
+
+  const empty = url ? null : describeEmpty(city, year);
 
   return (
     <article className="content-map">
@@ -81,15 +108,32 @@ export default function PropertyAssessmentMap() {
         </p>
 
         <section className="sb-section">
+          <OptionToggle
+            label="City"
+            options={CITIES}
+            value={city}
+            onChange={setCity}
+          />
+          <OptionToggle
+            label="Year"
+            options={YEARS}
+            value={year}
+            onChange={setYear}
+          />
+        </section>
+
+        <section className="sb-section">
           <SearchInput
             label="Search neighbourhood"
             placeholder="Type a name…"
             hint={
               fetchError
                 ? `Search unavailable: ${fetchError}`
-                : gj
-                  ? "Press Enter to fly to it."
-                  : "Loading…"
+                : !url
+                  ? "Search will return when data lands."
+                  : gj
+                    ? "Press Enter to fly to it."
+                    : "Loading…"
             }
             names={names}
             onSelect={flyAndPinByName}
@@ -124,17 +168,27 @@ export default function PropertyAssessmentMap() {
         >
           ≡
         </button>
-        <MapView
-          className="canvas"
-          basemapStyle={BASEMAP_STYLE}
-          geojsonUrl={GEOJSON_URL}
-          view={MAP_VIEW}
-          sourceId="nbhd"
-          promoteId="Neighbourhood ID"
-          layers={choroplethLayers()}
-          images={choroplethImages()}
-          onLoad={setMap}
-        />
+        {url ? (
+          // key={url} forces a clean MapView remount when the data URL
+          // changes (e.g. switching cities, or future year switches that
+          // hit different files). MapLibre destroys the old map in its
+          // cleanup; the new instance fires onLoad and useChoroplethInteractions
+          // reattaches handlers to it.
+          <MapView
+            key={url}
+            className="canvas"
+            basemapStyle={BASEMAP_STYLE}
+            geojsonUrl={url}
+            view={MAP_VIEW}
+            sourceId="nbhd"
+            promoteId="Neighbourhood ID"
+            layers={choroplethLayers()}
+            images={choroplethImages()}
+            onLoad={setMap}
+          />
+        ) : (
+          <EmptyState title={empty.title} body={empty.body} />
+        )}
       </div>
     </article>
   );

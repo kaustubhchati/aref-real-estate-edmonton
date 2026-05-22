@@ -13,11 +13,9 @@
 
 import { fmtCurrency, fmtNumber, fmtPct, fmtYear, fmtArea } from "../../utils/format.js";
 
-// ---- Public path served by Vite from website/public/ -----------------------
-export const GEOJSON_URL =
-  "/data/property-assessment/neighbourhoods_2026_recovered.geojson";
-
 // ---- Map view defaults (Edmonton, matches 09_build_choropleth.html) --------
+// (Data URL no longer lives here — single source of truth is dataSources.js,
+// which the page resolves from the (city, year) controls.)
 export const MAP_VIEW = {
   center: [-113.4938, 53.5461],
   zoom: 9.6,
