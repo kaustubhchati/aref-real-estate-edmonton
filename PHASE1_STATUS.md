@@ -6,9 +6,18 @@
 
 ---
 
+> **Context (2026-05-21):** `CLAUDE.md` (v1.0) is the current authoritative project context and
+> supersedes the v0.3 cited below by section number — this report's `CLAUDE.md §x.x` references map
+> to the v1.0 invariants in §4–§5. The website is a **static replication**; "Sanity Agent"
+> references here are the parked future-platform vision, not the current site. The repo is being
+> reorganised per CLAUDE.md §3 (pipeline files move under `pipeline/property-assessment/`); paths
+> below reflect the pre-reorg flat layout.
+
+---
+
 ## 0. Temporal asymmetry (read first)
 
-Public assessment data is **2026** (q7d6-ambg snapshot, fetched May 19, 2026). Confidential oracle is **2023** (xlsx, validation-only). The 3-year gap is intentional per CLAUDE.md §5.5 — it's the test of methodology durability. Rules that score F1 ≥ 0.97 across a 3-year gap pass the year-invariance contract.
+Public assessment data is **2026** (q7d6-ambg snapshot, fetched May 19, 2026). Confidential oracle is **2023** (xlsx, validation-only). The 3-year gap is intentional per CLAUDE.md's temporal-asymmetry / year-invariance invariant (§4.3, §5) — it's the test of methodology durability. Rules that score F1 ≥ 0.97 across a 3-year gap pass the year-invariance contract.
 
 **Consequence for Layer 2:** aggregates computed from current 2026 cleaned data will NOT numerically match the previous RA's 2023 Stata3 outputs. Acceptance criteria for Layer 2 are reformulated (see §5).
 
@@ -68,7 +77,7 @@ Script 07 ports the previous RA's Stata3 aggregate formulas to R/SQL. Per-neighb
 - `avg_assessvalue_without_unit` — mean restricted to non-unit rows
 - `avg_lotsize` — mean lot size, non-unit rows only
 
-**Sanity gate applied:** values (not rows) suppressed when N < 100, per CLAUDE.md §2.6 and the previous RA's Stata3 gate at lines 120-128. The 10% public-vs-internal divergence gate from Stata3 line 121 is **NOT applied** — it would require running aggregates over confidential data and breach the §2.1 methodology boundary. Deferred to Phase 2 Sanity Agent.
+**Sanity gate applied:** values (not rows) suppressed when N < 100, per CLAUDE.md's suppression gate and the previous RA's Stata3 gate at lines 120-128. The 10% public-vs-internal divergence gate from Stata3 line 121 is **NOT applied** — it would require running aggregates over confidential data and breach CLAUDE.md's methodology boundary (§4.1). Deferred to Phase 2 Sanity Agent.
 
 **Output:** `output/neighbourhood_aggregates_2026.csv`, 346 rows (338 with numeric IDs + 8 NA-id rows for developing fringe neighbourhoods).
 
