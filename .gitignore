@@ -25,14 +25,15 @@
 
 # ---- Large regenerable API snapshots ----
 # Edmonton Property Information API (dkk9-cj3x) — refetch via the loader script.
-/data/raw/property_info_*.csv
+# Patterns use **/data/... so they match at any section depth
+# (e.g. pipeline/property-assessment/data/...) per CLAUDE.md §3.
+**/data/raw/property_info_*.csv
 
 # Large derived outputs — regenerable from scripts 01, 03, 06.
 # Excluded for size (GitHub 100 MB hard limit) and to keep the
 # validation export out of public distribution.
-/data/processed/assess_2026_no_parking.csv
-/data/processed/assess_2026_clean.csv
-/data/validation/edmonton_row_labels_2023.csv
+**/data/processed/assess_*.csv
+**/data/validation/edmonton_row_labels_2023.csv
 
 # ---- Credentials / secrets ----
 .env
