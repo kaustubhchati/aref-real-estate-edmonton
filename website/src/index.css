@@ -1,0 +1,202 @@
+/* ============================================================================
+   index.css
+   Shell-wide styles. One file on purpose — small enough to scan top to bottom,
+   one section per shell component. No CSS framework, no preprocessor.
+
+   Convention: class names are prefixed by the part of the shell they belong to
+   (.shell-, .shell-nav-, .shell-footer-, .content-). If you find yourself
+   reaching for a deeply nested selector, give the element a class instead.
+   ============================================================================ */
+
+/* ---- Base ---------------------------------------------------------------- */
+
+:root {
+  --text:        #1f2937;
+  --text-muted:  #6b7280;
+  --bg:          #ffffff;
+  --bg-soft:     #f7f7f5;
+  --border:      #e5e7eb;
+  --accent:      #2b6cb0;
+  --accent-soft: #ebf4fb;
+
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  font: 16px/1.5 var(--sans);
+  color: var(--text);
+  background: var(--bg);
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; }
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+h1 { font-size: 1.75rem; margin: 0 0 0.75rem; }
+h2 { font-size: 1.25rem; margin: 1.25rem 0 0.5rem; }
+p  { margin: 0 0 0.75rem; }
+
+/* ---- Shell layout -------------------------------------------------------- */
+
+.shell {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+}
+
+/* ---- Header -------------------------------------------------------------- */
+
+.shell-header {
+  background: var(--bg-soft);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 1.25rem;
+}
+
+.shell-header-title {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.2;
+  color: var(--text);
+}
+.shell-header-title:hover { text-decoration: none; }
+
+.shell-header-centre {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.shell-header-org {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* ---- Nav ----------------------------------------------------------------- */
+
+.shell-nav {
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 0 1.25rem;
+}
+
+.shell-nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.shell-nav-item { position: relative; }
+
+.shell-nav-link {
+  display: inline-block;
+  padding: 0.65rem 0.9rem;
+  color: var(--text);
+  font-size: 0.95rem;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.shell-nav-link:hover {
+  background: var(--accent-soft);
+  text-decoration: none;
+}
+.shell-nav-link.is-active,
+.shell-nav-link.active {
+  /* react-router v6/v7 NavLink toggles .active by default */
+  border-bottom-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Group dropdown — native <details>/<summary>, styled to look like the
+   other links. The marker is hidden because the row of summary text is
+   the affordance. */
+.shell-nav-group { display: inline-block; }
+
+.shell-nav-summary {
+  list-style: none;
+  user-select: none;
+}
+.shell-nav-summary::-webkit-details-marker { display: none; }
+.shell-nav-summary::after {
+  content: " ▾";
+  font-size: 0.7em;
+  color: var(--text-muted);
+}
+
+.shell-nav-sublist {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 10;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  min-width: 14rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+.shell-nav-sublist .shell-nav-link {
+  display: block;
+  padding: 0.5rem 1rem;
+  border-bottom: none;
+}
+.shell-nav-sublist .shell-nav-link.is-active,
+.shell-nav-sublist .shell-nav-link.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* ---- Footer -------------------------------------------------------------- */
+
+.shell-footer {
+  background: var(--bg-soft);
+  border-top: 1px solid var(--border);
+  padding: 1.5rem 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.shell-footer-logo {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+}
+
+.shell-footer-line { margin: 0.25rem 0; }
+.shell-footer-territorial { font-style: italic; }
+.shell-footer-copy { margin-top: 0.5rem; }
+
+/* ---- Content pages ------------------------------------------------------- */
+
+.content-page,
+.content-placeholder {
+  max-width: 48rem;
+}
+
+.content-placeholder-kind {
+  display: inline-block;
+  margin: 0 0 1rem;
+  padding: 0.15rem 0.5rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-muted);
+}
