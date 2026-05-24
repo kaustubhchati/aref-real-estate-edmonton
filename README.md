@@ -41,3 +41,26 @@ open http://localhost:8000/pipeline/property-assessment/scripts/09_build_choropl
 ```
 
 This standalone HTML is the reference the React build (`website/`) ports from.
+
+## Deploying the site
+
+The site is a static build hosted on Cloudflare Pages (free tier), connected to this
+repo. Pages rebuilds automatically on every push to `main`.
+
+Cloudflare Pages build settings:
+
+| Setting                | Value                          |
+| ---------------------- | ------------------------------ |
+| Root directory         | `website`                      |
+| Build command          | `npm install && npm run build` |
+| Build output directory | `dist`                         |
+| Environment variable   | `NODE_VERSION` = `20`          |
+
+Note: the output directory is **relative to the root directory** (`website`), so it is
+`dist`, not `website/dist`. `website/public/_redirects` (`/*  /index.html  200`) handles
+single-page-app routing so deep links survive a refresh.
+
+Live: https://aref-real-estate-edmonton.pages.dev/
+
+A University of Alberta server is the intended long-term home; the Cloudflare deploy is
+the free-tier proof and demo.
