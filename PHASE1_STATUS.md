@@ -208,14 +208,58 @@ In Phase 2, this becomes a Sanity Agent capability that runs every refresh, comp
 
 ---
 
-## 9. Recommendation
+## 9. Repository and Infrastructure State (May 22-28, 2026)
 
-The cleaning pipeline is complete end-to-end: raw API → row rules (Layer 1a) → aggregation (Layer 2) → spatial join (Layer 2) → GeoJSON. The choropleth is unblocked.
+Recorded for handover. The data workstream is unchanged from sections 1 to 8; this
+section captures what happened around the website and repository in the same week.
 
-**For Friday demo:**
+### Website
+- **v1.0 live** on Cloudflare Pages free tier: https://aref-real-estate-edmonton.pages.dev/
+- Static replication of the Tableau dashboards, built with React, Vite, and MapLibre.
+- Cloudflare build settings documented in the README (Deploying section).
+- A self-managed University of Alberta VM is the long-term production target.
 
-1. **Write script 09 (MapLibre HTML)** — the one remaining piece. Consumes `output/neighbourhoods_2026_recovered.geojson`, locked colour-scale domain, renders the full 402-polygon city map with hover tooltips.
-2. **Update `YEAR_DRIFT_FINDINGS.md`** to reflect §6.1 cross-product naming finding (the prior §3.2 framing about NA-id rows having no polygons is now superseded).
-3. **Optional cleanup** — items #8 and #9.
+### Repository
+- MIT licence in place (KC as holder, to revisit with the Prof).
+- About box completed: description, website URL, topics.
+- Social preview card uploaded; `v1.0` release tagged.
+- Old `.rtf` results log removed from the current tree.
+- 7 Issues opened for the running backlog: broken pipe in `08_build_geojson.R`,
+  MapLibre chunk split, GeoJSON double-fetch, site-identity placeholder in
+  `siteConfig.js`, structured logging, RA runbook, repo transfer.
+- Discussions enabled with four categories: Announcements, Decisions, Q&A, Ideas.
+  Welcome post pinned in Announcements.
+- Profile README repo created.
+- 2FA enabled on the maintainer account.
 
-The data-cleaning workstream arc: "concept proven" → "three rules validated" → "Layer 2 aggregated" → "spatial join with cross-product reconciliation operational." That's the full Phase 1 data-side delivery. Script 09 is presentation; the engineering is done.
+### Environment and RA-readiness
+- `.vscode/` workspace config committed: `settings.json` (Prettier-on-save for
+  web files, search exclusions, Git autofetch, R files left alone) and
+  `extensions.json` (recommended set: Prettier, ESLint, GitHub Pull Requests,
+  Claude Code, React snippets, Rainbow CSV, Markdown All in One, Live Server).
+  Frontend-only on purpose — the R pipeline stays in RStudio.
+- `.gitignore` updated to share the workspace config explicitly: `.vscode/*`
+  ignored, then `!settings.json` and `!extensions.json` re-included. Personal
+  editor files still excluded; shared config travels with the repo.
+- Local dev loop verified on the maintainer machine: `git pull`, then
+  `cd website && npm install && npm run dev` boots Vite at
+  `http://localhost:5173/` with hot-reload against the v1.0 site. The same
+  steps reproduce the environment on any fresh clone (§7 clone-and-run made
+  concrete).
+- Toolchain split locked: VS Code (and any of its forks — Kiro, Cursor,
+  Windsurf — all honour the committed `.vscode/` config) for the website;
+  RStudio remains the R pipeline environment.
+- Settings Sync enabled on the maintainer editor account; the setup follows
+  across machines and survives reinstalls.
+
+### Deferred to the Prof meeting
+- Add Olivia (Write) and Prof. Huang as collaborators.
+- Transfer ownership to the Prof or a UAlberta organisation.
+- Turn on branch protection on `main` once Olivia is reviewing.
+- Confirm LICENSE holder with the Prof.
+
+### Documents delivered to the Prof
+- `Prof_Handover_Guide.pdf`: vertical-flowchart guide to the system and the two
+  workflows (refresh data, edit site), with the Prof as the approval gate.
+- `AREF_Cost_Comparison.pdf`: free-tier stack vs Tableau (~$2,000/year), every
+  tool explained.
