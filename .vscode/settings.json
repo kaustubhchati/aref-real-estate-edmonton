@@ -1,0 +1,43 @@
+{
+  // ── AREF workspace settings (front-end / website only) ──────────────────
+  // VS Code is the editor for website/ (React + Vite). The R pipeline lives in
+  // RStudio, so there is no R tooling here. Kept small on purpose
+  // (CLAUDE.md §6: legibility over cleverness) — each line has a reason.
+
+  // Clean diffs: leave every saved file tidy so PRs show only real changes.
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "editor.formatOnSave": true,
+  "editor.tabSize": 2,
+
+  // Web files → Prettier, 2-space (matches 09_build_choropleth.html).
+  // One formatter = no style arguments = readable diffs for Olivia's review.
+  "[javascript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[javascriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[css]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[html]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[json]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[jsonc]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+
+  // Docs are hand-tuned (CLAUDE.md, PHASE1_STATUS, README) — wrap, don't reflow.
+  "[markdown]": { "editor.formatOnSave": false, "editor.wordWrap": "on" },
+
+  // Keep the explorer + search on code, not bulk data, build output, or R bits.
+  "files.exclude": {
+    "**/.Rproj.user": true,
+    "**/node_modules": true,
+    "**/dist": true
+  },
+  "search.exclude": {
+    "**/data/raw/**": true, // large source CSVs (gitignored, and an RStudio concern)
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/*.pmtiles": true
+  },
+
+  // Stay current with Olivia's merges to main without manual fetch.
+  "git.autofetch": true,
+
+  // Soft 100-char guide line. Not enforced — just a visual cue.
+  "editor.rulers": [100]
+}

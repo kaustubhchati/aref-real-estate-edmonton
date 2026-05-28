@@ -1,0 +1,23 @@
+{
+  // ── Recommended extensions for website/ (front-end work) ────────────────
+  // VS Code prompts anyone opening this repo to install these, so KC, Olivia,
+  // and future RAs land on the same setup. Front-end only — R stays in RStudio.
+  // Lean by design (CLAUDE.md §6). The comment on each line is WHY it's here.
+  "recommendations": [
+    // The core four — install these first
+    "esbenp.prettier-vscode", // auto-tidies code on save → clean, reviewable diffs
+    "dbaeumer.vscode-eslint", // underlines real mistakes as you type (unused/undefined vars)
+    "github.vscode-pull-request-github", // open & review PRs inside VS Code (Olivia's review gate, §7)
+    "anthropic.claude-code", // the AI helper; auto-reads CLAUDE.md as context
+    // ^ if VS Code doesn't prompt for Claude Code, the ID may differ — just search
+    //   "Claude Code" in Extensions and install the one published by Anthropic.
+
+    // Learner aid
+    "dsznajder.es7-react-js-snippets", // type "rfc" + Tab to scaffold a React component
+
+    // Also handy
+    "mechatroner.rainbow-csv", // colour CSV columns → eyeball the data the map reads
+    "yzhang.markdown-all-in-one", // preview + table of contents for the doc-heavy repo
+    "ritwickdey.LiveServer" // one-click serve of 09_build_choropleth.html (the reference)
+  ]
+}

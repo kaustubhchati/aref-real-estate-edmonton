@@ -57,7 +57,10 @@ secrets.json
 *.log
 
 # ---- Editor / IDE ----
-.vscode/
+# VS Code: ignore personal settings, share the workspace config we want everyone to have
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 *.swp
 
