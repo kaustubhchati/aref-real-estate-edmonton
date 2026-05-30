@@ -66,3 +66,5 @@ secrets.json
 
 # Claude Code user-local settings
 .claude/settings.local.json
+# Edmonton General Building Permits raw snapshots (regenerable via 02_build_permits.R)
+**/data/raw/General_Building_Permits_*.csv
