@@ -1,0 +1,13 @@
+job_category,group,rationale,source,date_curated,curated_by
+Home Improvement,residential,"~96% on dwellings (80% Single Detached); descriptions = basements, garages, solar, suites. 01b Check 4.",Curated from 01b_inspect_decisions.R composition checks (BUILDING_TYPE + JOB_DESCRIPTION distributions),2026-05-29,KC
+"Single, Semi-detached & Rowhousing",residential,Category name is explicitly residential housing forms.,Curated from 01b_inspect_decisions.R composition checks (BUILDING_TYPE + JOB_DESCRIPTION distributions),2026-05-29,KC
+House Combination,residential,House permit bundle; residential by definition.,Curated from 01b_inspect_decisions.R composition checks (BUILDING_TYPE + JOB_DESCRIPTION distributions),2026-05-29,KC
+Uncovered Deck Combination,residential,Decks are residential accessory work; 01b shows house building types.,Curated from 01b_inspect_decisions.R composition checks (BUILDING_TYPE + JOB_DESCRIPTION distributions),2026-05-29,KC
+Accessory Building Combination,residential,94% Detached Garage; garages attach to dwellings. 01b bonus.,Curated from 01b_inspect_decisions.R composition checks (BUILDING_TYPE + JOB_DESCRIPTION distributions),2026-05-29,KC
+Other Miscellaneous Building,residential,69% Single Detached + 15% garages = residential-dominant. 01b bonus.,Curated from 01b_inspect_decisions.R composition checks (BUILDING_TYPE + JOB_DESCRIPTION distributions),2026-05-29,KC
+Mobile Home Move On,residential,Mobile/manufactured home = a dwelling. JUDGEMENT CALL — review.,Curated from 01b_inspect_decisions.R composition checks (BUILDING_TYPE + JOB_DESCRIPTION distributions),2026-05-29,KC
+Commercial Final,commercial,Explicitly commercial.,Curated from 01b_inspect_decisions.R composition checks (BUILDING_TYPE + JOB_DESCRIPTION distributions),2026-05-29,KC
+Commercial Footing / Foundation,commercial,Explicitly commercial.,Curated from 01b_inspect_decisions.R composition checks (BUILDING_TYPE + JOB_DESCRIPTION distributions),2026-05-29,KC
+Commercial Demolition,commercial,Explicitly commercial.,Curated from 01b_inspect_decisions.R composition checks (BUILDING_TYPE + JOB_DESCRIPTION distributions),2026-05-29,KC
+Commercial Structural Framing,commercial,Explicitly commercial.,Curated from 01b_inspect_decisions.R composition checks (BUILDING_TYPE + JOB_DESCRIPTION distributions),2026-05-29,KC
+Commercial Excavation,commercial,Explicitly commercial.,Curated from 01b_inspect_decisions.R composition checks (BUILDING_TYPE + JOB_DESCRIPTION distributions),2026-05-29,KC

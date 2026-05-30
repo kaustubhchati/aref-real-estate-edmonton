@@ -39,5 +39,6 @@
   "git.autofetch": true,
 
   // Soft 100-char guide line. Not enforced — just a visual cue.
-  "editor.rulers": [100]
+  "editor.rulers": [100],
+  "files.autoSave": "afterDelay"
 }
