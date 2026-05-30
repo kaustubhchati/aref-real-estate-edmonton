@@ -67,7 +67,7 @@ secrets.json
 # Claude Code user-local settings
 .claude/settings.local.json
 
-
 # Building permits — raw snapshots + geojson intermediate (regenerable via 02_build_permits.R + tippecanoe)
 **/data/raw/General_Building_Permits_*.csv
 **/building-permits/output/permits.geojson
+
