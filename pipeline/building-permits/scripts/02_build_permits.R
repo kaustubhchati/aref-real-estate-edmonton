@@ -12,8 +12,9 @@
 #   1. Download Socrata bulk CSV (dataset 24uj-dj8v) -> data/raw/ (dated name)
 #   2. Parse CONSTRUCTION_VALUE to numeric; flag coords + value
 #   3. Join the curated residential/commercial grouping (latest in reference/)
-#   4. Emit output/permits.geojson      (mappable points only — Stage B -> PMTiles)
+#   4. Emit output/permits.geojson (mappable points — Stage B -> PMTiles)
 #      Emit output/permits_coverage.csv (per-year mapped / no-coord / no-value)
+#      Emit output/permits_category_counts.csv (per-(year, category) counts)
 #
 # Stage B (separate, run by hand after this script): tippecanoe turns the
 # GeoJSON into PMTiles. Run from pipeline/building-permits/:
@@ -48,6 +49,7 @@
 #   - data/raw/General_Building_Permits_<YYYYMMDD>.csv
 #   - output/permits.geojson
 #   - output/permits_coverage.csv
+#   - output/permits_category_counts.csv
 # ============================================================
 
 # --- Setup --------------------------------------------------
@@ -234,6 +236,26 @@ cat(sprintf("Wrote %s (%.1f MB, %s features)\n",
 
 
 # ============================================================
+# 4c — Per-(year, job_category) counts (frontend empty-state)
+# ============================================================
+# WHY: several job_category values are legacy taxonomy with GENUINELY ZERO
+# permits in recent years. The frontend's year × category filter can land on
+# such a pair and render an empty map; this table lets it say "No permits in
+# this category for <year>" — distinguishing a real empty selection from a
+# broken one. Counted from permits_grouped (ALL permits), not the mapped subset:
+# whether the category exists that year is independent of whether rows have
+# coordinates. count() emits only pairs that occur (n > 0); the frontend treats
+# any absent pair as zero. No year/category literals — both come from the data.
+category_counts <- permits_grouped |>
+  count(year, job_category, name = "n") |>
+  arrange(year, desc(n))
+
+write_csv(category_counts, "output/permits_category_counts.csv")
+cat(sprintf("\nWrote output/permits_category_counts.csv (%s pairs)\n",
+            comma(nrow(category_counts))))
+
+
+# ============================================================
 # Run summary
 # ============================================================
 cat("\n--- Run summary ---\n")
@@ -245,6 +267,8 @@ cat(sprintf("Mapped points:  %s (%.1f%%)\n",
             100 * nrow(points) / nrow(permits_grouped)))
 cat(sprintf("Not mapped:     %s (no coordinates)\n",
             comma(sum(!permits_grouped$has_coord))))
+cat(sprintf("Category pairs: %s -> output/permits_category_counts.csv\n",
+            comma(nrow(category_counts))))
 cat("\nNext (Stage B): tippecanoe output/permits.geojson -> .pmtiles\n")
 cat("  tippecanoe -o output/permits.pmtiles --force --layer=permits \\\n")
 cat("    --minimum-zoom=9 --maximum-zoom=14 \\\n")
