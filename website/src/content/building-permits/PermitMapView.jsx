@@ -39,7 +39,17 @@ maplibregl.addProtocol("pmtiles", protocol.tile);
 // the circle layer's colour/size — lives in permitStyle.js; this file only wires
 // the data source into the map.) The source-layer name lives in the layer spec.
 const SOURCE_ID = "permits";
-const PERMITS_URL = "pmtiles:///data/building-permits/permits.pmtiles";
+
+// The permits .pmtiles is hosted on Cloudflare R2, NOT served from the site's own
+// /public assets. WHY: PMTiles reads tiles by HTTP range request (byte ranges into
+// the single .pmtiles file). Cloudflare Pages does NOT honor range requests on
+// static assets — it returns the whole file — so pmtiles:// fails there. R2 does
+// honor them, so the tile must live in an R2 bucket exposed at this public URL.
+const R2_BASE_URL = "https://pub-600ea350470345bbb93a035ad72875d5.r2.dev";
+
+// The pmtiles:// prefix is required: it routes the URL through the registered
+// PMTiles protocol handler (see addProtocol above) instead of a plain fetch.
+const PERMITS_URL = `pmtiles://${R2_BASE_URL}/building-permits/permits.pmtiles`;
 
 export default function PermitMapView({ className = "", onLoad }) {
   const containerRef = useRef(null);
