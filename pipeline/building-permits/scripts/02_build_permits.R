@@ -15,7 +15,23 @@
 #   4. Emit output/permits.geojson      (mappable points only — Stage B -> PMTiles)
 #      Emit output/permits_coverage.csv (per-year mapped / no-coord / no-value)
 #
-# Stage B (separate, documented): tippecanoe turns the GeoJSON into PMTiles.
+# Stage B (separate, run by hand after this script): tippecanoe turns the
+# GeoJSON into PMTiles. Run from pipeline/building-permits/:
+#
+#   tippecanoe -o output/permits.pmtiles --force \
+#     --layer=permits --minimum-zoom=6 --maximum-zoom=14 \
+#     -r1 --no-tile-size-limit --no-feature-limit \
+#     output/permits.geojson
+#
+# WHY -r1 (keep every point at every zoom) and NOT --drop-densest-as-needed:
+# this map is FILTERED client-side by year + job_category. --drop-densest drops
+# points weighted by spatial density, so at city zoom the dense residential
+# categories all but vanish while sparse commercial ones survive — a filtered
+# view then looks empty for most categories even though the filter is correct.
+# Keeping all points (~38 MB vs ~9 MB) is the cost of making every filtered
+# combination render honestly. Only revisit dropping if the file size becomes a
+# hosting problem, and if so drop ONLY at the lowest zooms (below where users
+# filter), never across the board.
 #
 # Inputs:
 #   - Edmonton Open Data, dataset 24uj-dj8v (streamed; no local input needed)
@@ -223,3 +239,8 @@ cat(sprintf("Mapped points:  %s (%.1f%%)\n",
 cat(sprintf("Not mapped:     %s (no coordinates)\n",
             comma(sum(!permits_grouped$has_coord))))
 cat("\nNext (Stage B): tippecanoe output/permits.geojson -> output/permits.pmtiles\n")
+cat("  tippecanoe -o output/permits.pmtiles --force --layer=permits \\\n")
+cat("    --minimum-zoom=6 --maximum-zoom=14 -r1 --no-tile-size-limit \\\n")
+cat("    --no-feature-limit output/permits.geojson\n")
+cat("  (-r1 keeps every point so year/category filters render at all zooms;\n")
+cat("   see this script's header for why NOT --drop-densest.)\n")

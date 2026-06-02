@@ -12,8 +12,12 @@
 // MapView's lifecycle shape — single create-on-mount useEffect, map.remove()
 // teardown, StrictMode-safe, honest error surfacing — but loads a vector source.
 //
-// Scope of THIS file (step 2): protocol + vector source + one uniform circle
-// layer that proves the points render. No styling, filters, popups, or legend.
+// Props:
+//   • className — extra class on the canvas div.
+//   • onLoad    — optional (map) => void, called once after the source + layer
+//                 are installed. The page uses this to grab the map instance so
+//                 it can drive live filters (year / job category) via setFilter.
+//                 Same single hook the shared MapView exposes, same reason.
 // =============================================================================
 
 import { useEffect, useRef } from "react";
@@ -37,8 +41,13 @@ maplibregl.addProtocol("pmtiles", protocol.tile);
 const SOURCE_ID = "permits";
 const PERMITS_URL = "pmtiles:///data/building-permits/permits.pmtiles";
 
-export default function PermitMapView({ className = "" }) {
+export default function PermitMapView({ className = "", onLoad }) {
   const containerRef = useRef(null);
+
+  // onLoad is read from a ref so the page can pass a fresh callback between
+  // renders without re-mounting the map (same trick as the shared MapView).
+  const onLoadRef = useRef(onLoad);
+  onLoadRef.current = onLoad;
 
   // Single effect: create on mount, remove on unmount. Same shape as MapView.
   useEffect(() => {
@@ -75,6 +84,9 @@ export default function PermitMapView({ className = "" }) {
       // construction_value. The spec is returned without `source`; we fill it in
       // here so the style file stays agnostic about what the source is named.
       map.addLayer({ ...permitCircleLayer(), source: SOURCE_ID });
+
+      // Hand the live map to the page (last, so the layer it filters exists).
+      if (onLoadRef.current) onLoadRef.current(map);
     });
 
     // StrictMode double-mounts effects in dev; map.remove() teardown handles it.

@@ -33,6 +33,10 @@ export const MAP_VIEW = {
 // "source-layer" MUST equal this or the source loads but renders nothing.
 export const SOURCE_LAYER = "permits";
 
+// The id of the circle layer we add to the map. Exported so the page can target
+// it with map.setFilter(LAYER_ID, …) without restating the string.
+export const LAYER_ID = "permits-circles";
+
 // ---- Colour by job_group ---------------------------------------------------
 // The mix is ~84% residential / 16% commercial. If both were the same hot
 // colour the map would read as a single mass; if commercial were the muted one
@@ -94,7 +98,7 @@ function buildRadiusExpression() {
 // so individual dots stay distinct where they pile up.
 export function permitCircleLayer() {
   return {
-    id: "permits-circles",
+    id: LAYER_ID,
     type: "circle",
     "source-layer": SOURCE_LAYER,
     paint: {
