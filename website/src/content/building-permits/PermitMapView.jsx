@@ -25,7 +25,13 @@ import maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import { BASEMAP_STYLE, MAP_VIEW, permitCircleLayer } from "./permitStyle.js";
+import {
+  BASEMAP_STYLE,
+  MAP_VIEW,
+  LAYER_ID,
+  permitCircleLayer,
+  buildPermitPopupHtml,
+} from "./permitStyle.js";
 
 // Register the PMTiles protocol ONCE at module load, not inside the effect.
 // WHY: MapLibre only knows http(s) URLs out of the box. PMTiles needs a protocol
@@ -50,6 +56,39 @@ const R2_BASE_URL = "https://pub-600ea350470345bbb93a035ad72875d5.r2.dev";
 // The pmtiles:// prefix is required: it routes the URL through the registered
 // PMTiles protocol handler (see addProtocol above) instead of a plain fetch.
 const PERMITS_URL = `pmtiles://${R2_BASE_URL}/building-permits/permits.pmtiles`;
+
+// Click a dot → show a popup at that point; pointer cursor while hovering a dot.
+// WHY one shared Popup instance: re-clicking another dot just repositions and
+// refills it (setLngLat/setHTML/addTo), so we never leak popups. No explicit
+// teardown is needed — the effect's map.remove() disposes the popup and these
+// handlers together with the map.
+function wirePermitPopup(map) {
+  const popup = new maplibregl.Popup({
+    closeButton: true,
+    closeOnClick: false,
+    offset: 10,
+    maxWidth: "300px",
+  });
+
+  map.on("click", LAYER_ID, (e) => {
+    if (!e.features?.length) return;
+    const f = e.features[0];
+    // Anchor on the dot's own coordinates (point geometry), not the click pixel,
+    // so the popup tip sits exactly on the permit.
+    popup
+      .setLngLat(f.geometry.coordinates)
+      .setHTML(buildPermitPopupHtml(f.properties))
+      .addTo(map);
+  });
+
+  // A pointer cursor signals the dots are clickable.
+  map.on("mouseenter", LAYER_ID, () => {
+    map.getCanvas().style.cursor = "pointer";
+  });
+  map.on("mouseleave", LAYER_ID, () => {
+    map.getCanvas().style.cursor = "";
+  });
+}
 
 export default function PermitMapView({ className = "", onLoad }) {
   const containerRef = useRef(null);
@@ -94,6 +133,9 @@ export default function PermitMapView({ className = "", onLoad }) {
       // construction_value. The spec is returned without `source`; we fill it in
       // here so the style file stays agnostic about what the source is named.
       map.addLayer({ ...permitCircleLayer(), source: SOURCE_ID });
+
+      // Click-popup + hover cursor on the dots (step 4b).
+      wirePermitPopup(map);
 
       // Hand the live map to the page (last, so the layer it filters exists).
       if (onLoadRef.current) onLoadRef.current(map);

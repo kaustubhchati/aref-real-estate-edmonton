@@ -13,8 +13,11 @@
 //   • job_group         — "residential" | "commercial"  → colour
 //   • construction_value — raw $CAD, NULL for no-value rows → radius
 //
-// Scope of step 3: colour + size only. No filters, popups, or legend yet.
+// Scope: colour + size (step 3), plus the click-popup contract (step 4b) — see
+// PERMIT_POPUP_ROWS / buildPermitPopupHtml at the bottom.
 // =============================================================================
+
+import { fmtCurrency } from "../../utils/format.js";
 
 // ---- Map view defaults (Edmonton, matches the choropleth) ------------------
 // Moved here from PermitMapView so the basemap/view live beside the layer paint,
@@ -109,4 +112,45 @@ export function permitCircleLayer() {
       "circle-stroke-color": "rgba(40,40,45,0.5)",
     },
   };
+}
+
+// ---- Click-popup contract (step 4b) ----------------------------------------
+// One row per field shown when a permit dot is clicked, IN DISPLAY ORDER.
+// Tuple: [propertyKey, displayLabel, formatter]. Mirrors choroplethStyle.js's
+// POPUP_ROWS so both sections' popups read and edit the same way — adding or
+// reordering a field is a one-line edit here, consumed by the loop below.
+//
+// `asText` is the section's null convention: null / undefined / "" render as the
+// project em-dash "—" (the same placeholder fmtCurrency already returns), so the
+// loop never has to special-case missing values.
+const asText = (v) => (v == null || v === "" ? "—" : String(v));
+
+export const PERMIT_POPUP_ROWS = [
+  ["job_category",       "Job category",       asText],
+  ["building_type",      "Building type",      asText],
+  ["work_type",          "Work type",          asText],
+  ["construction_value", "Construction value", fmtCurrency],
+  ["year",               "Year",               asText],
+  ["address",            "Address",            asText],
+];
+
+// HTML-escape before interpolating into setHTML() — popup content is the only
+// place we hand-build HTML. (Same tiny helper as choroplethStyle.js; the two
+// sections don't yet share enough popup code to justify extracting it.)
+function escapeHtml(s) {
+  if (s == null) return "";
+  return String(s).replace(/[&<>"']/g, (c) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+  ));
+}
+
+// Build the popup body for one clicked permit feature, row by row from the
+// table above. Reuses the global .pop-row / .pop-k / .pop-v CSS (no new styles).
+export function buildPermitPopupHtml(p) {
+  return PERMIT_POPUP_ROWS.map(([key, label, fmt]) => (
+    `<div class="pop-row">` +
+      `<span class="pop-k">${label}</span>` +
+      `<span class="pop-v">${escapeHtml(fmt(p[key]))}</span>` +
+    `</div>`
+  )).join("");
 }
