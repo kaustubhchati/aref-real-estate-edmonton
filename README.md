@@ -1,5 +1,5 @@
 # Open Data Centre for Alberta Urban Real Estate
-
+# MAP FEATURe LIVE: Property Assessment. Building Permits. 
 A **free-tier, static replication** of the public real-estate data website at
 `realestatedata.srv.ualberta.ca` — the Tableau Public dashboards rebuilt as our own maps and
 pages, fed by an R data pipeline. Phase 1 delivers Edmonton property-assessment cleaning
