@@ -489,12 +489,12 @@ p  { margin: 0 0 0.75rem; }
 }
 
 .legend-title {
-  font-size: 11px;
+  font-size: 0.68rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
-  font-weight: 600;
-  margin: 0 0 8px;
+  margin: 0 0 6px;
 }
 
 .legend-list {
@@ -503,25 +503,43 @@ p  { margin: 0 0 0.75rem; }
   padding: 0;
 }
 
-/* display:flex + align-items kept (the provided rule omitted them — the row
-   must stay a flex row of swatch + label). */
-.legend-row { display:flex; align-items:center; gap:6px; margin:2px 0;
-  font-size:0.78rem; }
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 3px 0;
+  font-size: 0.78rem;
+  line-height: 1;
+}
 
 /* Inline styles from Legend.jsx supply background/border/pattern per row. */
-.legend-sw { flex:0 0 22px; width:22px; height:12px; border-radius:3px; }
+.legend-sw {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 11px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
 
-.legend-lab       { line-height: 1.3; }
-.legend-lab small { color: var(--text-muted); }
+.legend-lab {
+  line-height: 1.3;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.legend-lab small {
+  color: var(--text-subtle);
+  font-size: 0.68rem;
+}
 
 .legend-divider {
-  border-top: 1px dashed var(--border);
-  margin: 10px 0 8px;
-  padding-top: 8px;
-  font-size: 10.5px;
+  border-top: 1px solid var(--border-soft);
+  margin: 8px 0 6px;
+  padding-top: 6px;
+  font-size: 0.64rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  color: var(--text-subtle);
 }
 
 /* ---- Map popups ---------------------------------------------------------- */
