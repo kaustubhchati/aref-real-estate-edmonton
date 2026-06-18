@@ -1,3 +1,8 @@
+> **PHASE 1 CLOSED — June 18, 2026**
+> All pipeline and frontend work for Phase 1 is complete.
+> Open items carried forward to PHASE2_STATUS.md.
+> This file is now read-only / archive.
+
 # Status Report — Property Assessment Cleaning (Edmonton)
 
 **Reassessed:** May 19, 2026 (fourth pass — supersedes all prior reports)
@@ -188,13 +193,13 @@ In Phase 2, this becomes a Sanity Agent capability that runs every refresh, comp
 | 4 | ~~Port Stata3 aggregates to SQL/R~~ | ✅ Closed — script 07 |
 | 5 | ~~Spatial join against shapefile~~ | ✅ Closed — script 08 |
 | 6 | ~~Resolve NA-id developing neighbourhoods~~ | ✅ Closed — script 08b + mapping CSV |
-| 7 | **Script 09 — MapLibre HTML choropleth** | **Next.** Inputs locked: `neighbourhoods_2026_recovered.geojson` + colour-scale domain at §5. Est. 60-90 min. |
-| 8 | Backfill R1's `notes` field in scoreboard — currently NA | Cosmetic. Pre-Friday cleanup. |
-| 9 | Delete the stale 0-byte `scripts_04_validate_residential_class_rule.R` | Cosmetic. |
-| 10 | R1 vs `Assessment Class % 1 ≥ 90` head-to-head | Open. Worth resolving for Tableau parity, deferred. |
-| 11 | Layer 1b (LISA I spatial outliers) | Open. Phase 1 stretch goal. |
-| 12 | Email UAlberta Library data services for canonical 2026 boundary shapefile | Pending. The Jan 2023 shapefile works for Friday; 2026 source identification is a parallel track. |
-| 13 | Optional R3b for ~104 building-and-land manufactured home FNs | Open. Probably unnecessary. |
+| 7 | Script 09 — MapLibre HTML choropleth | ✅ Closed — choropleth shipped to production (Cloudflare Pages), per-metric palettes, gradient legend, popup standard, YoY diverging scale. Frontend complete. |
+| 8 | Backfill R1's `notes` field in scoreboard — currently NA | ↗ Carried to Phase 2 |
+| 9 | Delete the stale 0-byte `scripts_04_validate_residential_class_rule.R` | ✅ Closed |
+| 10 | R1 vs `Assessment Class % 1 ≥ 90` head-to-head | ↗ Carried to Phase 2 |
+| 11 | Layer 1b (LISA I spatial outliers) | ↗ Carried to Phase 2 |
+| 12 | Email UAlberta Library data services for canonical 2026 boundary shapefile | ✅ Closed — new City of Edmonton Neighbourhoods CSV (65fr-66s6, 407 rows, WKT/WGS84) adopted as boundary source. Scripts 08 and 08b updated to read_csv + st_as_sf. |
+| 13 | Optional R3b for ~104 building-and-land manufactured home FNs | ↗ Carried to Phase 2 (low priority) |
 
 ---
 
@@ -395,3 +400,49 @@ non-aggregated states, a custom green basemap, and a full UAlberta-green design
 system across header / nav / footer / controls / popup / legend / sidebar —
 plus mobile and a11y passes. Building Permits shares the shell, tokens, and
 `MapSkeleton`.
+
+---
+
+## 12. Phase 1 Frontend — Final State (June 18, 2026)
+
+### Property Assessment map
+- [x] Choropleth live: 407-polygon boundary (65fr-66s6),
+      per-year colour scales, 5-metric toggle
+- [x] Per-metric palettes: Lajolla ($ value), amber-sienna
+      (lot size), OrRd reversed (year built), RdBu (YoY)
+- [x] Gradient legend bar replacing discrete swatches
+- [x] Non-aggregated polygon rows removed from sidebar
+- [x] Popup matches standard: name, district, badge,
+      headline value, rows, pinned hint
+- [x] Sidebar: count-up stat, tab title, scroll shadow,
+      active metric accent, tightened sb-ref
+- [x] YoY stops accentuated: navy/orange-red, not pastel
+
+### Building Permits map
+- [x] PMTiles on R2 (z9–14, 226,184 features, 10 fields)
+- [x] Nested baseline legend, coloured filter chips
+- [x] Popup: address header, value headline, badge,
+      capitalised type, hover shows value not address
+- [x] Sidebar: count-up stat, tab title, scroll shadow,
+      coverage warning, sb-ref
+
+### Site-wide
+- [x] Popup fade-in (120ms, reduced-motion aware)
+- [x] Green focus rings on map controls
+- [x] Tabular-nums on legend labels
+- [x] MapSkeleton on both maps
+
+### Deferred from Phase 1 frontend (carried to Phase 2)
+- [ ] Neighbourhood search — custom combobox
+      (currently native <datalist>)
+- [ ] Map fly-to easing refinement
+- [ ] Point layers: ETS bus stops, LRT, police,
+      libraries, attractions (Pattern A output)
+- [ ] Permit Neighbourhoods choropleth (18-year GeoJSONs
+      built, route wired, pending QA)
+- [ ] Zoning choropleth (nav leaf exists, no data yet)
+- [ ] Business Counts choropleth
+- [ ] Salary Ranges table
+- [ ] Neighbourhood Report Card (parked)
+- [ ] Map scrollytelling / guided tour
+- [ ] Mobile layout polish
