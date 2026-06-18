@@ -15,7 +15,6 @@ import { useEffect, useState } from "react";
 
 import PermitMapView from "./PermitMapView.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
-import OptionToggle from "../../components/OptionToggle.jsx";
 import {
   LAYER_ID,
   COLOURS,
@@ -27,7 +26,6 @@ import {
 import {
   YEARS,
   DEFAULT_YEAR,
-  JOB_GROUPS,
   DEFAULT_GROUP,
   MONTHS,
   DEFAULT_MONTH,
@@ -45,11 +43,11 @@ function coverageForYear(rows, year) {
   return rows.find((r) => Number(r.year) === year) || null;
 }
 
-// Sidebar legend. Display-only colour chips (mirror the active permit-type
-// OptionToggle) above an interactive construction-value size legend: nested
-// proportional circles on a shared baseline (the cartographic convention),
-// coloured to the active permit type, clickable + keyboard-accessible. Reuses
-// existing classes + tokens (no new CSS).
+// The construction-value size legend: nested proportional circles on a shared
+// baseline (the cartographic convention), coloured to the active permit type
+// (activeGroup → dotColour), clickable + keyboard-accessible. Permit-type colour
+// is communicated by the filter chips in the sidebar above (no chip row here).
+// Reuses existing classes + tokens (no new CSS).
 function PermitLegend({
   activeBuckets, onToggle, onReset, activeGroup
 }) {
@@ -73,61 +71,6 @@ function PermitLegend({
 
   return (
     <div className="legend">
-
-      {/* ── Colour key chips ─────────────────────────
-          Display-only mirror of active group.
-          Coloured so user can connect chip → map dot.
-          pointer-events: none — OptionToggle above
-          is the actual control. */}
-      <div style={{
-        display: "flex", gap: 7,
-        marginBottom: 12, flexWrap: "wrap",
-      }}>
-        {[
-          { key: "Residential", colour: COLOURS.residential },
-          { key: "Commercial",  colour: COLOURS.commercial  },
-        ].map(({ key, colour }) => {
-          const isActive =
-            activeGroup === "All" || activeGroup === key;
-          return (
-            <span
-              key={key}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                padding: "3px 9px",
-                borderRadius: 999,
-                border: `1.5px solid ${
-                  isActive ? colour : "var(--border)"
-                }`,
-                background: isActive
-                  ? colour + "18" : "transparent",
-                color: isActive
-                  ? colour : "var(--text-muted)",
-                fontSize: "0.75rem",
-                fontWeight: isActive ? 600 : 400,
-                opacity: isActive ? 1 : 0.5,
-                transition:
-                  "background 200ms, opacity 200ms",
-                pointerEvents: "none",
-                userSelect: "none",
-              }}
-            >
-              <svg width="7" height="7"
-                viewBox="0 0 7 7" aria-hidden="true">
-                <circle
-                  cx="3.5" cy="3.5" r="3"
-                  fill={isActive ? colour : "none"}
-                  stroke={colour}
-                  strokeWidth="1"
-                />
-              </svg>
-              {key}
-            </span>
-          );
-        })}
-      </div>
 
       {/* ── Construction value header ─────────────── */}
       <div style={{
@@ -386,12 +329,71 @@ export default function BuildingPermitsMap() {
             </select>
           </div>
 
-          <OptionToggle
-            label="Permit type"
-            options={JOB_GROUPS}
-            value={group}
-            onChange={setGroup}
-          />
+          {/* Permit type — colour-coded filter chips (the real control). Each
+              chip carries the same hue as its map dots, so selecting one reads
+              directly: "show the orange/violet dots". */}
+          <div style={{ marginBottom: 12 }}>
+            <div className="opt-toggle-label">Permit type</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {[
+                { key: "All",         colour: null },
+                { key: "Residential", colour: COLOURS.residential },
+                { key: "Commercial",  colour: COLOURS.commercial  },
+              ].map(({ key, colour }) => {
+                const isActive = group === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setGroup(key)}
+                    aria-pressed={isActive}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: colour ? 5 : 0,
+                      padding: "4px 11px",
+                      borderRadius: 999,
+                      border: `1.5px solid ${
+                        isActive && colour ? colour
+                        : isActive        ? "var(--accent)"
+                        :                   "var(--border)"
+                      }`,
+                      background: isActive && colour
+                        ? colour + "18"
+                        : isActive
+                          ? "var(--accent-soft)"
+                          : "transparent",
+                      color: isActive && colour
+                        ? colour
+                        : isActive
+                          ? "var(--accent-dark)"
+                          : "var(--text-muted)",
+                      fontSize: "0.78rem",
+                      fontWeight: isActive ? 600 : 400,
+                      fontFamily: "inherit",
+                      cursor: "pointer",
+                      lineHeight: 1.5,
+                      transition:
+                        "background 150ms, border-color 150ms, color 150ms",
+                    }}
+                  >
+                    {colour && (
+                      <svg width="8" height="8" viewBox="0 0 8 8"
+                        aria-hidden="true">
+                        <circle
+                          cx="4" cy="4" r="3.5"
+                          fill={isActive ? colour : "none"}
+                          stroke={colour}
+                          strokeWidth="1.2"
+                        />
+                      </svg>
+                    )}
+                    {key}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           <div className="sb-select-field">
             <span className="sb-select-label">Month</span>
