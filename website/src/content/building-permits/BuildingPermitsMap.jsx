@@ -63,12 +63,13 @@ function PermitLegend({
     COLOURS.residential; // "All" → show residential orange
                          // as the dominant colour (84%)
 
-  // Layout: 5 columns, 44px each = 220px total.
-  // Fits inside 300px sidebar with 16px padding each side.
-  const COL_W  = 44;
+  // Layout: 5 columns, 48px each = 240px total. Wider columns give bucket
+  // labels room at legible font sizes. Fits inside the 300px sidebar (18px
+  // padding each side → 264px usable, 24px clearance).
+  const COL_W  = 48;
   const MAX_R  = VALUE_BUCKETS[4].radius; // 19
   const SVG_H  = MAX_R * 2 + 4;          // 42px
-  const SVG_W  = VALUE_BUCKETS.length * COL_W; // 220px
+  const SVG_W  = VALUE_BUCKETS.length * COL_W; // 240px
 
   return (
     <div className="legend">
@@ -79,7 +80,7 @@ function PermitLegend({
           pointer-events: none — OptionToggle above
           is the actual control. */}
       <div style={{
-        display: "flex", gap: 6,
+        display: "flex", gap: 7,
         marginBottom: 12, flexWrap: "wrap",
       }}>
         {[
@@ -104,7 +105,7 @@ function PermitLegend({
                   ? colour + "18" : "transparent",
                 color: isActive
                   ? colour : "var(--text-muted)",
-                fontSize: "0.70rem",
+                fontSize: "0.75rem",
                 fontWeight: isActive ? 600 : 400,
                 opacity: isActive ? 1 : 0.5,
                 transition:
@@ -135,8 +136,7 @@ function PermitLegend({
         justifyContent: "space-between",
         marginBottom: 8,
       }}>
-        <span className="legend-title"
-          style={{ margin: 0 }}>
+        <span className="legend-title">
           Construction value
         </span>
         {!allActive && (
@@ -259,13 +259,13 @@ function PermitLegend({
                 cursor: "pointer",
                 padding: "2px 1px 0",
                 textAlign: "center",
-                fontSize: "0.60rem",
+                fontSize: "0.72rem",
                 color: active
                   ? "var(--text)"
-                  : "var(--text-subtle)",
+                  : "var(--text-muted)",
                 fontFamily: "inherit",
                 lineHeight: 1.3,
-                opacity: active ? 1 : 0.4,
+                opacity: active ? 1 : 0.55,
                 transition: "opacity 150ms",
               }}
             >
@@ -276,11 +276,10 @@ function PermitLegend({
       </div>
 
       <p style={{
-        fontSize: "0.66rem",
-        color: "var(--text-subtle)",
+        fontSize: "0.72rem",
+        color: "var(--text-muted)",
         marginTop: 7,
-        lineHeight: 1.4,
-        fontStyle: "italic",
+        lineHeight: 1.45,
       }}>
         Click any circle or label to show/hide that tier.
       </p>
@@ -413,7 +412,7 @@ export default function BuildingPermitsMap() {
             coordinates. ⚠ prefix + warning styling (existing tokens, no new CSS). */}
         {nNoCoord > 0 && (
           <p style={{
-            fontSize: "0.72rem",
+            fontSize: "0.75rem",
             color: "var(--text-muted)",
             lineHeight: 1.45,
             margin: "4px 0 10px",
