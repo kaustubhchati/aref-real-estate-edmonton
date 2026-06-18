@@ -269,6 +269,10 @@ export function choroplethLayers(stops = STOPS) {
           ["boolean", ["feature-state", "pinned"], false], 0.88,
           0.74,
         ],
+        // Spec-compliant paint-level transition. Note: MapLibre does not
+        // animate feature-state-driven changes (hover/pinned) through this —
+        // it applies to data/zoom-driven opacity updates only.
+        "fill-opacity-transition": { duration: 150, delay: 0 },
       },
     },
     // 2. Stripes / dots overlay, restricted to the two pattern states.
@@ -288,6 +292,7 @@ export function choroplethLayers(stops = STOPS) {
           "stripes",
         ],
         "fill-opacity": 0.7,
+        "fill-opacity-transition": { duration: 150, delay: 0 },
       },
     },
     // 3. Solid outline for aggregated + structurally-grey states.
