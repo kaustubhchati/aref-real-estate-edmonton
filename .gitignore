@@ -87,3 +87,4 @@ pipeline/property-assessment/data/reference/neighbourhood_name_merges_*.csv
 # reference downloads) — large, re-downloaded at refresh. Shared CODE under
 # pipeline/shared/ stays committable; only its data/ is excluded (CLAUDE.md §3).
 pipeline/shared/data/
+**/building-permits/output/permits.pmtiles
