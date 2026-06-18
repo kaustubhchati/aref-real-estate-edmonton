@@ -141,9 +141,10 @@ for (yr in years_found) {
 # ============================================================
 
 manifest <- list(
-  version   = "1.0",
-  generated = format(Sys.Date(), "%Y-%m-%d"),
-  cities    = list(
+  version      = "1.0",
+  generated    = format(Sys.Date(), "%Y-%m-%d"),
+  last_updated = format(Sys.Date(), "%Y-%m-%d"),
+  cities       = list(
     Edmonton = list(
       assessment = list(
         years             = as.list(years_found),
