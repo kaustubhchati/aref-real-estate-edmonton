@@ -453,6 +453,27 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
         "text-halo-width": 1.5,
       },
     },
+    // 8. N-count label on suppressed (N < 100) polygons. These carry no value
+    //    on the ramp, so showing the count makes the suppression legible rather
+    //    than just grey. Zoom 11+ like the name labels, to keep the wide view
+    //    uncluttered.
+    {
+      id: "nbhd-suppressed-count",
+      type: "symbol",
+      filter: ["==", ["get", "polygon_state"], "suppressed_low_n"],
+      minzoom: 11,
+      layout: {
+        "text-field": ["concat", "N=", ["to-string", ["get", "n_properties"]]],
+        "text-size": 9,
+        "text-font": ["Noto Sans Regular"],
+        "text-anchor": "center",
+      },
+      paint: {
+        "text-color": "#7a7468",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.2,
+      },
+    },
   ];
 }
 
