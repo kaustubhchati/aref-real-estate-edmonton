@@ -21,10 +21,8 @@ import MapSkeleton from "../../components/MapSkeleton.jsx";
 import OptionToggle from "../../components/OptionToggle.jsx";
 import {
   LAYER_ID,
-  HEATMAP_LAYER_ID,
   COLOURS,
   buildPermitFilter,
-  buildHeatmapFilter,
   VALUE_BUCKETS,
   ALL_BUCKET_IDS,
   DEFAULT_ACTIVE_BUCKETS,
@@ -206,16 +204,16 @@ export default function BuildingPermitsMap() {
     if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS);
   }
 
-  // Re-apply BOTH layers' filters whenever the map is ready or a control changes.
-  // setFilter is instant — it re-evaluates the already-loaded tiles, no network.
-  // The dot layer also honours the active value tiers; the heatmap intentionally
-  // does NOT take the bucket filter (it's a density-context layer), but it still
-  // tracks year + permit-type + month so it stays in sync with the selection.
-  // Guard on `map` so we don't call setFilter before onLoad hands us the instance.
+  // Re-apply the dot layer's filter whenever the map is ready or a control
+  // changes (year, permit type, month, or the active value tiers). setFilter is
+  // instant — it re-evaluates the already-loaded tiles, no network. Guard on
+  // `map` so we don't call setFilter before onLoad hands us the instance.
   useEffect(() => {
     if (!map) return;
-    map.setFilter(LAYER_ID, buildPermitFilter(year, group, month, activeBuckets));
-    map.setFilter(HEATMAP_LAYER_ID, buildHeatmapFilter(year, group, month));
+    map.setFilter(
+      LAYER_ID,
+      buildPermitFilter(year, group, month, activeBuckets)
+    );
   }, [map, year, group, month, activeBuckets]);
 
   // Load the coverage table ONCE on mount. It's supplementary to the map, so a

@@ -44,10 +44,6 @@ export const SOURCE_LAYER = "permits";
 // it with map.setFilter(LAYER_ID, …) without restating the string.
 export const LAYER_ID = "permits-circles";
 
-// The id of the heatmap layer (shown at low zoom, fades out as the circles take
-// over around z10–12). Exported for the same reason — the page filters it by id.
-export const HEATMAP_LAYER_ID = "permits-heat";
-
 // ---- Colour by job_group ---------------------------------------------------
 // Orange (residential) vs blue (commercial) — the classic complementary,
 // colourblind-safe pair (~180° apart). Both are SATURATED enough to stand off
@@ -146,56 +142,6 @@ export function permitCircleLayer() {
       ],
       "circle-stroke-color": "rgba(255,255,255,0.85)",
       "circle-stroke-opacity": 1.0,
-    },
-  };
-}
-
-// ---- The heatmap layer spec ------------------------------------------------
-// A density CONTEXT layer at the city overview (maxzoom 12): equal weight per
-// point so it shows where permit ACTIVITY concentrates (not where the money is),
-// in a neutral lavender→deep-purple ramp that reads as background and doesn't
-// compete with the amber/violet dots that fade in at z11+.
-export function heatmapLayer() {
-  return {
-    id: HEATMAP_LAYER_ID,
-    type: "heatmap",
-    "source-layer": SOURCE_LAYER,
-    maxzoom: 12,
-    paint: {
-      // Equal weight per point — density only, no value bias.
-      // WHY: construction_value weighting made commercial
-      // towers dominate the heatmap. Equal weight shows where
-      // permit ACTIVITY is concentrated, not where money is.
-      "heatmap-weight": 1,
-
-      "heatmap-intensity": [
-        "interpolate", ["linear"], ["zoom"],
-        9, 0.4,
-        12, 1.2,
-      ],
-      // Neutral lavender-purple ramp: absent from Voyager,
-      // reads as "background density context" not foreground.
-      "heatmap-color": [
-        "interpolate", ["linear"], ["heatmap-density"],
-        0,    "rgba(0,0,0,0)",
-        0.1,  "rgba(196,180,220,0.3)",
-        0.3,  "rgba(160,130,200,0.55)",
-        0.6,  "rgba(120,80,170,0.75)",
-        0.85, "rgba(90,30,140,0.88)",
-        1.0,  "rgba(50,0,100,0.95)",
-      ],
-      "heatmap-radius": [
-        "interpolate", ["linear"], ["zoom"],
-        9,  14,
-        12, 22,
-      ],
-      // Full at z9, gone by z12 (dots take over at z11).
-      "heatmap-opacity": [
-        "interpolate", ["linear"], ["zoom"],
-        9,  0.85,
-        11, 0.55,
-        12, 0.0,
-      ],
     },
   };
 }

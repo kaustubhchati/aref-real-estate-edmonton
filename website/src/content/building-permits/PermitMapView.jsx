@@ -30,7 +30,6 @@ import {
   MAP_VIEW,
   LAYER_ID,
   permitCircleLayer,
-  heatmapLayer,
   buildPermitPopupHtml,
   buildPermitHoverHtml,
 } from "./permitStyle.js";
@@ -163,11 +162,9 @@ export default function PermitMapView({ className = "", onLoad }) {
         url: PERMITS_URL,
       });
 
-      // Two layers from permitStyle.js, both reading this one source. Heatmap
-      // FIRST (added below the circles in MapLibre's draw order) so the circles
-      // render on top during the z10–12 crossover; each spec is returned without
-      // `source`, filled in here so the style file stays source-agnostic.
-      map.addLayer({ ...heatmapLayer(), source: SOURCE_ID });
+      // One circle layer from permitStyle.js, reading this source. The spec is
+      // returned without `source`; we fill it in here so the style file stays
+      // source-agnostic.
       map.addLayer({ ...permitCircleLayer(), source: SOURCE_ID });
 
       // Click-popup + hover cursor on the dots (step 4b).
