@@ -60,8 +60,6 @@ import {
   indexNamesForSearch,
 } from "./interactions.js";
 
-const SIDEBAR_TRANSITION_MS = 260;
-
 export default function PropertyAssessmentMap() {
   // The manifest is the source of truth for which years exist. Until it loads,
   // we show a loading state; if it fails, an error state. year is null until
@@ -75,7 +73,6 @@ export default function PropertyAssessmentMap() {
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
   const [fetchError, setFetchError] = useState(null);
-  const [collapsed, setCollapsed] = useState(false);
 
   // Load the manifest once on mount. We seed the year in the SAME update as the
   // manifest so there's no frame where the manifest is loaded but no year is
@@ -174,11 +171,6 @@ export default function PropertyAssessmentMap() {
   const names = useMemo(() => (gj ? indexNamesForSearch(gj) : []), [gj]);
   const flyAndPinByName = useChoroplethInteractions(map, gj, year);
 
-  function toggleSidebar() {
-    setCollapsed((v) => !v);
-    if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS);
-  }
-
   // All hooks above run every render; only now do we branch the output, so the
   // loading/error short-circuits never change hook order.
   if (manifestError) {
@@ -208,7 +200,7 @@ export default function PropertyAssessmentMap() {
 
   return (
     <article className="content-map">
-      <aside className={`sb${collapsed ? " collapsed" : ""}`} aria-label="Map sidebar">
+      <aside className="sb" aria-label="Map sidebar">
         <h1 className="sb-title">
           {city} — residential assessment{year != null ? `, ${year}` : ""}
         </h1>
@@ -296,15 +288,6 @@ export default function PropertyAssessmentMap() {
       </aside>
 
       <div className="canvas-wrap">
-        <button
-          type="button"
-          className="sb-toggle"
-          onClick={toggleSidebar}
-          aria-label={collapsed ? "Show sidebar" : "Hide sidebar"}
-          title="Toggle sidebar"
-        >
-          ≡
-        </button>
         {fetchError && url ? (
           // The fetch failed for a real URL — a load failure, NOT "no data
           // for this selection" (that's the !url case below). Different copy

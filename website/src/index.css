@@ -264,9 +264,7 @@ p  { margin: 0 0 0.75rem; }
   font-size: 12.5px;
   line-height: 1.4;
   color: var(--text);
-  transition: margin-left 220ms ease;
 }
-.sb.collapsed { margin-left: -300px; }
 
 .sb-title {
   font-size: 15px;
@@ -316,29 +314,6 @@ p  { margin: 0 0 0.75rem; }
   position: absolute;
   inset: 0;
 }
-
-/* ≡ toggle button — overlays top-left of the map, matches 09's affordance. */
-.sb-toggle {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 5;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  font-size: 16px;
-  color: var(--text);
-  cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-  padding: 0;
-  font-family: inherit;
-}
-.sb-toggle:hover { background: #f4f4f1; }
 
 /* ---- Empty state (shown when (city, year) has no data URL) -------------- */
 .canvas-empty {
@@ -719,11 +694,7 @@ p  { margin: 0 0 0.75rem; }
   .shell-nav { top:50px; }
   .content-map { flex-direction:column; }
   .sb { flex:0 0 auto; width:100%; max-height:45svh;
-    border-right:none; border-bottom:1px solid var(--border-soft);
-    transition:max-height 240ms cubic-bezier(0.4,0,0.2,1); }
-  .sb.collapsed { margin-left:0; max-height:52px; overflow:hidden; }
-  .sb-toggle { top:auto; bottom:12px; border-radius:50%;
-    box-shadow:var(--shadow-md); }
+    border-right:none; border-bottom:1px solid var(--border-soft); }
   .canvas-wrap { min-height:55svh; }
   .shell-footer-grid { grid-template-columns:1fr; gap:1.25rem; }
 }
