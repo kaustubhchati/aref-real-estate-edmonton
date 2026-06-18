@@ -102,14 +102,29 @@ function quantile(sorted, p) {
   return lo === hi ? sorted[lo] : sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
 }
 
+// ---- Year-over-year diverging scale ----------------------------------------
+// Fixed blue→white→red diverging ramp for yoy_pct_change (a signed %, unlike
+// the sequential $ metrics). NOT per-year and NOT data-derived: a stable scale
+// centred on 0% so a colour means the same change in every year. Values are
+// already on the 0-100 % scale (e.g. -5 = down 5%), matching fmtPct.
+const YOY_STOPS = [
+  { v: -15, c: "#2166ac", label: "-15%" },
+  { v:  -5, c: "#92c5de", label: "-5%"  },
+  { v:   0, c: "#f7f7f7", label: "0%"   },
+  { v:   5, c: "#f4a582", label: "+5%"  },
+  { v:  15, c: "#b2182b", label: "+15%" },
+];
+export { YOY_STOPS };
+
 // ---- Choropleth metrics ----------------------------------------------------
 // The columns the user can colour the map by. key = GeoJSON property,
 // label = control + legend text, fmt = value formatter for legend/popup.
 const METRICS = [
-  { key: "median_assessvalue", label: "Median assessed value", fmt: fmtCurrency },
-  { key: "avall_public",       label: "Mean assessed value",   fmt: fmtCurrency },
-  { key: "avg_lotsize",        label: "Mean lot size",         fmt: fmtArea     },
-  { key: "median_yearbuilt",   label: "Median year built",     fmt: fmtYear     },
+  { key: "median_assessvalue", label: "Median assessed value",   fmt: fmtCurrency },
+  { key: "avall_public",       label: "Mean assessed value",     fmt: fmtCurrency },
+  { key: "avg_lotsize",        label: "Mean lot size",           fmt: fmtArea     },
+  { key: "median_yearbuilt",   label: "Median year built",       fmt: fmtYear     },
+  { key: "yoy_pct_change",     label: "Year-over-year change %", fmt: fmtPct      },
 ];
 export { METRICS };
 

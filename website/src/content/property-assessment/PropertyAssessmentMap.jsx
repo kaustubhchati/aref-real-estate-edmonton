@@ -36,6 +36,7 @@ import {
   STATE_STYLE,
   GREY_STATES,
   METRICS,
+  YOY_STOPS,
   stopsFromScale,
   metricStops,
   choroplethFillColor,
@@ -98,17 +99,26 @@ export default function PropertyAssessmentMap() {
 
   const selectedMetric = METRICS.find((m) => m.key === metric) ?? METRICS[0];
 
-  // Colour ramp for the current metric. median_assessvalue keeps its locked
-  // per-year manifest scale; the other metrics have no manifest scale, so their
-  // stops are computed from the loaded polygons (quantiles). gj is null until
-  // the fetch resolves — metricStops falls back to the locked STOPS until then.
-  // Memoised so its identity is stable between renders (the repaint effect and
-  // the Legend both depend on it).
-  const stops = useMemo(() => (
-    metric === "median_assessvalue"
+  // yoy_pct_change is a signed % with no prior year for the earliest year in
+  // the dataset, so that (year, metric) combination has no data to colour.
+  // Derive "earliest" from the manifest's years — no year literal.
+  const isYoy = metric === "yoy_pct_change";
+  const earliestYear = years.length ? Math.min(...years) : null;
+  const noPriorYear = isYoy && year != null && year === earliestYear;
+
+  // Colour ramp for the current metric:
+  //   yoy_pct_change     → the fixed diverging YOY_STOPS (same scale every year)
+  //   median_assessvalue → its locked per-year manifest scale
+  //   everything else    → quantiles computed from the loaded polygons
+  // gj is null until the fetch resolves — metricStops falls back to the locked
+  // STOPS until then. Memoised so its identity is stable between renders (the
+  // repaint effect and the Legend both depend on it).
+  const stops = useMemo(() => {
+    if (metric === "yoy_pct_change") return YOY_STOPS;
+    return metric === "median_assessvalue"
       ? stopsFromScale(getColourScale(manifest, city, year))
-      : metricStops(gj, metric)
-  ), [metric, manifest, city, year, gj]);
+      : metricStops(gj, metric);
+  }, [metric, manifest, city, year, gj]);
 
   // Switching city resets the year to that city's default in the same update,
   // so we never carry one city's year onto another (or onto a city with none).
@@ -145,8 +155,18 @@ export default function PropertyAssessmentMap() {
   // MapView reads `layers` only at mount, so live updates go through
   // setPaintProperty — the mechanism MapView documents for exactly this.
   useEffect(() => {
-    if (!map || !map.getLayer("nbhd-fill")) return;
-    map.setPaintProperty("nbhd-fill", "fill-color", choroplethFillColor(metric, stops));
+    if (!map) return;
+    try {
+      // The map can be mid-teardown here: switching to the no-prior-year empty
+      // state unmounts MapView without changing `url` (so `map` still points at
+      // the now-removed instance). getLayer on a removed map throws; ignore it
+      // — the next mounted map repaints via onLoad → this effect re-running.
+      if (map.getLayer("nbhd-fill")) {
+        map.setPaintProperty("nbhd-fill", "fill-color", choroplethFillColor(metric, stops));
+      }
+    } catch {
+      /* map removed; no-op */
+    }
   }, [map, metric, stops]);
 
   const names = useMemo(() => (gj ? indexNamesForSearch(gj) : []), [gj]);
@@ -264,9 +284,11 @@ export default function PropertyAssessmentMap() {
 
         <p className="sb-ref">
           {selectedMetric.label} scale for {year} (
-          {metric === "median_assessvalue"
-            ? "from the manifest"
-            : "computed from this year's neighbourhoods"}
+          {metric === "yoy_pct_change"
+            ? "fixed diverging scale"
+            : metric === "median_assessvalue"
+              ? "from the manifest"
+              : "computed from this year's neighbourhoods"}
           ): {stops.map((s) => `${s.label} ${selectedMetric.fmt(s.v)}`).join(" · ")}.
         </p>
       </aside>
@@ -288,6 +310,13 @@ export default function PropertyAssessmentMap() {
           <EmptyState
             title="Could not load data"
             body={`The ${city} ${year} dataset failed to load. Try refreshing or select a different year.`}
+          />
+        ) : noPriorYear ? (
+          // YoY needs a prior year; the earliest year in the dataset has none,
+          // so the whole year is blank for this metric (every polygon is NA).
+          <EmptyState
+            title="No prior year"
+            body={`YoY change is not available for the earliest year in the dataset (${year}).`}
           />
         ) : url ? (
           // key={url} forces a clean MapView remount when the data URL
