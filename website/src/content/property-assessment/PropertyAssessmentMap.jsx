@@ -33,9 +33,9 @@ import EmptyState from "../../components/EmptyState.jsx";
 import {
   BASEMAP_STYLE,
   MAP_VIEW,
-  STOPS,
   STATE_STYLE,
   GREY_STATES,
+  stopsFromScale,
   choroplethLayers,
   choroplethImages,
 } from "./choroplethStyle.js";
@@ -45,6 +45,7 @@ import {
   loadManifest,
   getYearsForCity,
   getDefaultYear,
+  getColourScale,
   resolveDataUrl,
   describeEmpty,
 } from "./dataSources.js";
@@ -91,6 +92,11 @@ export default function PropertyAssessmentMap() {
   // EmptyState. resolveDataUrl always returns a path, so the gate lives here.
   const years = getYearsForCity(manifest, city);
   const url = year != null && years.includes(year) ? resolveDataUrl(city, year) : null;
+
+  // Colour ramp for the displayed year, from the manifest's per-year scale.
+  // stopsFromScale falls back to the locked STOPS when a year's scale is
+  // missing, so this is always a valid stops array.
+  const stops = stopsFromScale(getColourScale(manifest, city, year));
 
   // Switching city resets the year to that city's default in the same update,
   // so we never carry one city's year onto another (or onto a city with none).
@@ -214,7 +220,7 @@ export default function PropertyAssessmentMap() {
         <section className="sb-section">
           <Legend
             title="Median assessed value"
-            stops={STOPS}
+            stops={stops}
             format={fmtCurrency}
             greyTitle="Non-aggregated polygons"
             greyStates={GREY_STATES.map((k) => STATE_STYLE[k])}
@@ -222,10 +228,8 @@ export default function PropertyAssessmentMap() {
         </section>
 
         <p className="sb-ref">
-          Colour scale locked to <code>PHASE1_STATUS.md §5</code>:
-          min&nbsp;$103,500 · Q25&nbsp;$352,625 · median&nbsp;$425,125 ·
-          Q75&nbsp;$496,188 · max&nbsp;$1,226,000. ~10× spread, tight IQR,
-          long tail.
+          Colour scale for {year} (from <code>manifest.json</code>):{" "}
+          {stops.map((s) => `${s.label} ${fmtCurrency(s.v)}`).join(" · ")}.
         </p>
       </aside>
 
@@ -253,7 +257,7 @@ export default function PropertyAssessmentMap() {
             view={MAP_VIEW}
             sourceId="nbhd"
             promoteId="Neighbourhood ID"
-            layers={choroplethLayers()}
+            layers={choroplethLayers(stops)}
             images={choroplethImages()}
             onLoad={setMap}
           />

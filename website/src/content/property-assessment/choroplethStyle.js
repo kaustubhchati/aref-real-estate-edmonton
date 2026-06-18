@@ -8,7 +8,9 @@
 // Legend, MapView paint expressions, and any future popup all read from these
 // tables (CLAUDE.md §6: data-driven, single source of truth).
 //
-// Locked colour-scale domain: PHASE1_STATUS.md §5 — DO NOT recompute per refresh.
+// Colour-scale domain is PER-YEAR, derived from the manifest's
+// colourScaleByYear (see stopsFromScale). The locked PHASE1_STATUS §5 (2026)
+// domain is kept only as the fallback when a year has no usable scale.
 // =============================================================================
 
 import { fmtCurrency, fmtNumber, fmtPct, fmtYear, fmtArea } from "../../utils/format.js";
@@ -26,15 +28,43 @@ export const MAP_VIEW = {
 export const BASEMAP_STYLE =
   "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
 
-// ---- Locked colour-scale stops (PHASE1_STATUS §5) --------------------------
-// v = $CAD threshold, c = fill colour at that stop, label = role in the IQR.
-export const STOPS = [
-  { v:  103500, c: "#ffffcc", label: "min"    },
-  { v:  352625, c: "#fed976", label: "Q25"    },
-  { v:  425125, c: "#feb24c", label: "median" },
-  { v:  496188, c: "#fd8d3c", label: "Q75"    },
-  { v: 1226000, c: "#bd0026", label: "max"    },
+// ---- Colour ramp: fixed colours + IQR roles, per-year $ thresholds ---------
+// Only the dollar thresholds change between years; the five colours and their
+// roles (min … max) are constant. RAMP holds the constant part; the per-year
+// values come from the manifest via stopsFromScale().
+//   key   = the field name in a manifest colourScaleByYear entry
+//   c     = fill colour at that stop
+//   label = role in the IQR (shown in the legend)
+const RAMP = [
+  { key: "min",    c: "#ffffcc", label: "min"    },
+  { key: "q25",    c: "#fed976", label: "Q25"    },
+  { key: "median", c: "#feb24c", label: "median" },
+  { key: "q75",    c: "#fd8d3c", label: "Q75"    },
+  { key: "max",    c: "#bd0026", label: "max"    },
 ];
+
+// Turn a {min,q25,median,q75,max} scale into the [{ v, c, label }] stops the
+// map and legend consume. Returns null if any value is missing, non-finite, or
+// not strictly ascending — MapLibre's interpolate requires ascending inputs,
+// so a bad scale must fall back rather than throw at render time.
+function buildStops(scale) {
+  const stops = RAMP.map((r) => ({ v: scale?.[r.key], c: r.c, label: r.label }));
+  const finite = stops.every((s) => Number.isFinite(s.v));
+  const ascending = stops.every((s, i) => i === 0 || s.v > stops[i - 1].v);
+  return finite && ascending ? stops : null;
+}
+
+// Locked fallback domain (PHASE1_STATUS §5, 2026 actuals). Used when a year has
+// no usable scale in the manifest. Valid by construction, so always non-null.
+export const STOPS = buildStops({
+  min: 103500, q25: 352625, median: 425125, q75: 496188, max: 1226000,
+});
+
+// Per-year stops from a manifest colourScaleByYear[year] entry, falling back to
+// the locked STOPS when that year's scale is missing or unusable.
+export function stopsFromScale(scale) {
+  return buildStops(scale) ?? STOPS;
+}
 
 // ---- The five polygon states ----------------------------------------------
 // Aggregated polygons get the colour ramp above. The other four each get a
@@ -197,11 +227,11 @@ export function makeDotPattern(size = 10, dotColor = "rgba(60,55,42,0.55)") {
 }
 
 // ---- Fill-colour expression -----------------------------------------------
-// case: state == aggregated → linear interpolation over STOPS
+// case: state == aggregated → linear interpolation over the given stops
 // otherwise → that state's flat fillColor (or fallback grey).
-function buildFillColourExpression() {
+function buildFillColourExpression(stops) {
   const interp = ["interpolate", ["linear"], ["number", ["get", "median_assessvalue"], 0]];
-  for (const s of STOPS) interp.push(s.v, s.c);
+  for (const s of stops) interp.push(s.v, s.c);
 
   return [
     "case",
@@ -217,7 +247,9 @@ function buildFillColourExpression() {
 // ---- Layer specs handed to MapView ----------------------------------------
 // One function so the consumer file is short. Layers are in z-order
 // (first = bottom). MapView inserts them all below the basemap's labels.
-export function choroplethLayers() {
+// `stops` selects the colour ramp for the displayed year; defaults to the
+// locked STOPS when a caller doesn't pass one.
+export function choroplethLayers(stops = STOPS) {
   return [
     // 1. Fill colour for every polygon. Opacity lifts on hover or when pinned
     //    so the user can confirm which polygon their popup is describing.
@@ -225,7 +257,7 @@ export function choroplethLayers() {
       id: "nbhd-fill",
       type: "fill",
       paint: {
-        "fill-color": buildFillColourExpression(),
+        "fill-color": buildFillColourExpression(stops),
         "fill-opacity": [
           "case",
           ["boolean", ["feature-state", "hover"], false], 0.88,

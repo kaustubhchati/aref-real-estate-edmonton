@@ -52,6 +52,13 @@ export function getDefaultYear(manifestData, city) {
   return manifestData?.cities?.[city]?.assessment?.defaultYear ?? null;
 }
 
+// The colour-scale stats for a (city, year): {min,q25,median,q75,max}, or null
+// if absent. The map/legend turn this into ramp stops — see
+// choroplethStyle.stopsFromScale, which falls back to the locked scale on null.
+export function getColourScale(manifestData, city, year) {
+  return manifestData?.cities?.[city]?.assessment?.colourScaleByYear?.[year] ?? null;
+}
+
 // True if the city has at least one year of data in the manifest. Used by
 // describeEmpty to tell "Calgary is coming" (no years at all) apart from
 // "Edmonton <year> not ready" (city has data, just not this year).
