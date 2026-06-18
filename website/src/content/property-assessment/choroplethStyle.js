@@ -306,11 +306,18 @@ export function choroplethLayers(stops = STOPS) {
           "manufactured_home_community", STATE_STYLE.manufactured_home_community.outlineColor,
           STATE_STYLE.aggregated.outlineColor,
         ],
+        // Thin at city-wide zoom, fuller as you zoom into a neighbourhood, so
+        // outlines don't visually crowd the choropleth when zoomed out.
         "line-width": [
-          "match", ["get", "polygon_state"],
-          "non_residential",             STATE_STYLE.non_residential.outlineWidth,
-          "manufactured_home_community", STATE_STYLE.manufactured_home_community.outlineWidth,
-          STATE_STYLE.aggregated.outlineWidth,
+          "interpolate", ["linear"], ["zoom"],
+          8,  ["match", ["get", "polygon_state"],
+                "non_residential", 0.3,
+                "manufactured_home_community", 0.4,
+                0.2],
+          13, ["match", ["get", "polygon_state"],
+                "non_residential", 1.0,
+                "manufactured_home_community", 1.2,
+                0.8],
         ],
       },
     },
@@ -321,7 +328,12 @@ export function choroplethLayers(stops = STOPS) {
       filter: ["==", ["get", "polygon_state"], "suppressed_low_n"],
       paint: {
         "line-color":     STATE_STYLE.suppressed_low_n.outlineColor,
-        "line-width":     STATE_STYLE.suppressed_low_n.outlineWidth,
+        // Same zoom ramp as the solid outline: thin out, full in.
+        "line-width": [
+          "interpolate", ["linear"], ["zoom"],
+          8,  0.2,
+          13, STATE_STYLE.suppressed_low_n.outlineWidth,
+        ],
         "line-dasharray": STATE_STYLE.suppressed_low_n.outlineDash,
       },
     },
@@ -332,7 +344,12 @@ export function choroplethLayers(stops = STOPS) {
       filter: ["==", ["get", "polygon_state"], "no_data"],
       paint: {
         "line-color":     STATE_STYLE.no_data.outlineColor,
-        "line-width":     STATE_STYLE.no_data.outlineWidth,
+        // Same zoom ramp as the solid outline: thin out, full in.
+        "line-width": [
+          "interpolate", ["linear"], ["zoom"],
+          8,  0.2,
+          13, STATE_STYLE.no_data.outlineWidth,
+        ],
         "line-dasharray": STATE_STYLE.no_data.outlineDash,
       },
     },
