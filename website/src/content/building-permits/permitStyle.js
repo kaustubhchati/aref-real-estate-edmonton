@@ -47,6 +47,15 @@ export const COLOURS = {
   fallback:    "#9aa0a6",
 };
 
+// Colour lookup for the legend, keyed by the permit-type filter value. "all"
+// uses a neutral grey so the size legend reads as a generic scale when no single
+// group is selected. Mirrors COLOURS so the legend can't drift from the paint.
+export const COLOUR_BY_GROUP = {
+  residential: COLOURS.residential,  // #f57c00 orange
+  commercial:  COLOURS.commercial,   // #7b2fa0 violet
+  all:         "var(--text-muted)",   // neutral grey for "All" view
+};
+
 // ["match", job_group, …] → fill colour, built from COLOURS so the table above
 // is the only place to edit a hue.
 function buildColourExpression() {
