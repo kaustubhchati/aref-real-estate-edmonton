@@ -38,3 +38,17 @@ export const JOB_CATEGORIES = [
   "Uncovered Deck Combination",
 ];
 export const DEFAULT_CATEGORY = ALL_CATEGORIES;
+
+// Month filter. value 0 is the "All months" sentinel (no month clause — see
+// buildPermitFilter / buildHeatmapFilter); 1–12 match the tile's month_number
+// field verbatim. Short labels keep the <select> narrow in the sidebar.
+export const MONTHS = [
+  { value: 0,  label: "All months" },
+  { value: 1,  label: "Jan" }, { value: 2,  label: "Feb" },
+  { value: 3,  label: "Mar" }, { value: 4,  label: "Apr" },
+  { value: 5,  label: "May" }, { value: 6,  label: "Jun" },
+  { value: 7,  label: "Jul" }, { value: 8,  label: "Aug" },
+  { value: 9,  label: "Sep" }, { value: 10, label: "Oct" },
+  { value: 11, label: "Nov" }, { value: 12, label: "Dec" },
+];
+export const DEFAULT_MONTH = 0;

@@ -18,13 +18,21 @@ import { useEffect, useState } from "react";
 
 import PermitMapView from "./PermitMapView.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
-import { LAYER_ID, COLOURS } from "./permitStyle.js";
+import {
+  LAYER_ID,
+  HEATMAP_LAYER_ID,
+  COLOURS,
+  buildPermitFilter,
+  buildHeatmapFilter,
+} from "./permitStyle.js";
 import {
   YEARS,
   DEFAULT_YEAR,
   JOB_CATEGORIES,
   DEFAULT_CATEGORY,
   ALL_CATEGORIES,
+  MONTHS,
+  DEFAULT_MONTH,
 } from "./dataSources.js";
 // Reusing the site's only CSV parser (it lives in report-card). It now has two
 // consumers, so by the "extract on second use" rule it should move to utils/ —
@@ -108,19 +116,6 @@ function PermitLegend() {
   );
 }
 
-// Build the MapLibre filter for the current controls.
-// WHY an ["all", …]: the two clauses are independent and BOTH must hold. Year is
-// always constrained (exactly one year shows at a time). Job category is added
-// only when it isn't "All" — "All" means "don't filter by category", so we drop
-// the clause entirely rather than trying to match a non-existent category value.
-function buildPermitFilter(year, category) {
-  const clauses = [["==", ["get", "year"], year]];
-  if (category !== ALL_CATEGORIES) {
-    clauses.push(["==", ["get", "job_category"], category]);
-  }
-  return ["all", ...clauses];
-}
-
 // Match the .sb collapse transition (index.css) so we resize the map only after
 // the sidebar has finished shrinking/growing — resizing mid-animation leaves the
 // canvas at a stale width.
@@ -129,6 +124,7 @@ const SIDEBAR_TRANSITION_MS = 220;
 export default function BuildingPermitsMap() {
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [category, setCategory] = useState(DEFAULT_CATEGORY);
+  const [month, setMonth] = useState(DEFAULT_MONTH);
   const [map, setMap] = useState(null);
   const [coverage, setCoverage] = useState([]);
   const [counts, setCounts] = useState([]);
@@ -142,13 +138,16 @@ export default function BuildingPermitsMap() {
     if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS);
   }
 
-  // Re-apply the filter whenever the map is ready or a control changes. setFilter
-  // is instant — it re-evaluates the already-loaded tiles, no network. Guard on
-  // `map` so we don't call setFilter before onLoad hands us the instance.
+  // Re-apply BOTH layers' filters whenever the map is ready or a control changes.
+  // setFilter is instant — it re-evaluates the already-loaded tiles, no network.
+  // The circle layer respects category; the heatmap (year + month only) does not,
+  // by design (see buildHeatmapFilter). Guard on `map` so we don't call setFilter
+  // before onLoad hands us the instance.
   useEffect(() => {
     if (!map) return;
-    map.setFilter(LAYER_ID, buildPermitFilter(year, category));
-  }, [map, year, category]);
+    map.setFilter(LAYER_ID, buildPermitFilter(year, category, month));
+    map.setFilter(HEATMAP_LAYER_ID, buildHeatmapFilter(year, month));
+  }, [map, year, category, month]);
 
   // Load the coverage table ONCE on mount. It's supplementary to the map, so a
   // failed load just hides the note (logged, not thrown — the map still works).
@@ -204,8 +203,8 @@ export default function BuildingPermitsMap() {
         <h1 className="sb-title">Edmonton — {year}</h1>
         <p className="sb-sub">
           226,184 permit points, 2009–2026. Slate = residential, orange =
-          commercial; dot size scales with construction value. Filter by year and
-          job category below.
+          commercial; dot size scales with construction value. Filter by year,
+          job category, and month below.
         </p>
 
         <section className="sb-section">
@@ -234,6 +233,19 @@ export default function BuildingPermitsMap() {
             >
               {JOB_CATEGORIES.map((c) => (
                 <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="opt-toggle">
+            <div className="opt-toggle-label">Month</div>
+            <select
+              className="search-input"
+              value={month}
+              onChange={(e) => setMonth(Number(e.target.value))}
+            >
+              {MONTHS.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
               ))}
             </select>
           </div>

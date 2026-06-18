@@ -21,8 +21,12 @@
 #
 #   tippecanoe -o output/permits.pmtiles --force \
 #     --layer=permits --minimum-zoom=9 --maximum-zoom=14 \
-#     -y year -y job_category -y job_group -y construction_value \
-#     -y building_type -y work_type -y address \
+#     -y year -y month_number \
+#     -y job_category -y job_group \
+#     -y construction_value \
+#     -y building_type -y work_type \
+#     -y job_description -y units_added \
+#     -y address \
 #     -r1 --no-tile-size-limit --no-feature-limit \
 #     output/permits.geojson
 #
@@ -36,10 +40,11 @@
 #                        holds all 226k, over the 200k default (build fails
 #                        without it — no zoom levels get written).
 #   --no-tile-size-limit lifts the 500 KB-per-tile cap so the dense tiles write.
-# -y is a property allowlist (only those 7 columns enter the tiles; row_id and
-# others dropped). Trimming to 7 properties keeps the no-drop file ~16 MB —
-# under Cloudflare Pages' 25 MB per-file limit. If it ever exceeds 25 MB, lower
-# tile detail (tippecanoe -d, default 12) before sacrificing points.
+# -y is a property allowlist (only those 10 columns enter the tiles; row_id and
+# others dropped). job_description is free-text and inflates the file more than
+# the other fields, so re-check the size after building. The tile is hosted on
+# R2 (no per-file cap), but if it grows large, lower tile detail (tippecanoe -d,
+# default 12) before sacrificing points.
 #
 # Inputs:
 #   - Edmonton Open Data, dataset 24uj-dj8v (streamed; no local input needed)
@@ -125,18 +130,22 @@ permits_clean <- permits_raw |>
 # Dropped: PERMIT_NUMBER (100% NA), COUNT (always 1), BIA (96% NA),
 #          Occupancy Date (90% NA), LOCATION / Geometry Point (redundant with
 #          LAT/LON), NEIGHBOURHOOD* (different universe from our polygons —
-#          dropped as a filter per the locked decision), MONTH_NUMBER,
-#          REPORT_PERMIT_DATE, LEGAL_DESCRIPTION, ZONING, FLOOR_AREA,
-#          UNITS_ADDED (not used by this map).
+#          dropped as a filter per the locked decision),
+#          REPORT_PERMIT_DATE, LEGAL_DESCRIPTION, ZONING, FLOOR_AREA.
+# Kept for the map: month_number (drives the month filter), job_description and
+#          units_added (popup detail / future use). These three ride alongside
+#          the original set into the tile (see the -y allowlist below).
 permits_tidy <- permits_clean |>
   transmute(
     row_id             = `Row ID`,
     year               = as.integer(YEAR),
+    month_number       = as.integer(MONTH_NUMBER),
     job_category       = JOB_CATEGORY,
     job_description    = JOB_DESCRIPTION,
     building_type      = BUILDING_TYPE,
     work_type          = WORK_TYPE,
     construction_value = construction_value,
+    units_added        = UNITS_ADDED,
     address            = ADDRESS,
     latitude           = LATITUDE,
     longitude          = LONGITUDE,
@@ -216,8 +225,10 @@ print(coverage, n = Inf)
 # ramp. We do NOT bake styling into the data.
 points <- permits_grouped |>
   filter(has_coord) |>
-  select(row_id, year, job_category, job_group, construction_value,
-         building_type, work_type, address, longitude, latitude)
+  select(row_id, year, month_number, job_category, job_group,
+         construction_value, building_type, work_type,
+         job_description, units_added, address,
+         longitude, latitude)
 
 cat(sprintf("\nMappable points: %s of %s rows\n",
             comma(nrow(points)), comma(nrow(permits_grouped))))
@@ -272,10 +283,12 @@ cat(sprintf("Category pairs: %s -> output/permits_category_counts.csv\n",
 cat("\nNext (Stage B): tippecanoe output/permits.geojson -> .pmtiles\n")
 cat("  tippecanoe -o output/permits.pmtiles --force --layer=permits \\\n")
 cat("    --minimum-zoom=9 --maximum-zoom=14 \\\n")
-cat("    -y year -y job_category -y job_group -y construction_value \\\n")
-cat("    -y building_type -y work_type -y address \\\n")
+cat("    -y year -y month_number \\\n")
+cat("    -y job_category -y job_group -y construction_value \\\n")
+cat("    -y building_type -y work_type \\\n")
+cat("    -y job_description -y units_added -y address \\\n")
 cat("    -r1 --no-tile-size-limit --no-feature-limit \\\n")
 cat("    output/permits.geojson\n")
-cat("  (no-drop build, ~16 MB: -r1 stops dot drop-rate thinning,\n")
+cat("  (no-drop build: -r1 stops dot drop-rate thinning,\n")
 cat("   --no-feature-limit allows >200k in the z9 tile, --no-tile-size-limit\n")
-cat("   lifts the 500 KB cap. -y trims to 7 props. See header for why.)\n")
+cat("   lifts the 500 KB cap. -y trims to 10 props. See header for why.)\n")
