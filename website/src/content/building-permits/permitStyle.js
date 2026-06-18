@@ -59,29 +59,41 @@ function buildColourExpression() {
 }
 
 // ---- Size by construction-value TIER ---------------------------------------
-// A step expression maps construction_value (NULL → 0) into a VALUE_BUCKETS tier
-// radius — the SAME table the interactive legend reads, so the two can't drift.
-// Each tier radius is itself zoom-scaled (z9 base → z18 ~2×) so dots grow toward
-// street level. NULL/0 lands on the first (micro) tier — small but never gone.
+// Final radius = zoomBase(zoom) × tierMultiplier(construction_value).
+//
+// MapLibre rule: a "zoom" expression may only be the input to ONE, TOP-LEVEL
+// "step"/"interpolate". So the zoom curve must be the OUTERMOST expression, with
+// the value-tier multiplier (a data-driven `case`, not zoom-based) INSIDE each
+// stop output. The two patterns MapLibre rejects (both verified against its
+// expression validator):
+//   • nesting a zoom interpolate inside every output of a construction_value
+//     `step` → "Only one zoom-based subexpression may be used" (the old bug);
+//   • ["*", ["interpolate", ["zoom"], …], case] → "zoom may only be input to a
+//     top-level step/interpolate" (zoom interp isn't outermost).
+// This form computes the identical base×tier value but is valid.
 function buildRadiusExpression() {
-  const zoomScale = (r) => [
-    "interpolate", ["linear"], ["zoom"],
-    9,  r,
-    13, Math.round(r * 1.4),
-    18, Math.round(r * 2),
+  const v = ["number", ["get", "construction_value"], 0];
+  // Data-driven tier multiplier (1.0 = micro floor). Thresholds match the
+  // VALUE_BUCKETS boundaries. NOT zoom-based, so it nests freely.
+  const tier = [
+    "case",
+    ["<", v,    10_000], 1.0,
+    ["<", v,   100_000], 1.6,
+    ["<", v,   500_000], 2.5,
+    ["<", v, 2_000_000], 3.8,
+    5.5,  // > $2M
   ];
 
-  // ["step", input, default, threshold1, out1, …] — default = micro tier.
-  const expr = [
-    "step",
-    ["number", ["get", "construction_value"], 0],
-    zoomScale(VALUE_BUCKETS[0].radius),
+  // The single, top-level zoom curve. Each stop multiplies a zoom base by the
+  // tier so dots grow toward street level while keeping value-tier proportions.
+  return [
+    "interpolate", ["linear"], ["zoom"],
+    9,  ["*", 1.8, tier],
+    11, ["*", 2.8, tier],
+    13, ["*", 4.0, tier],
+    16, ["*", 6.0, tier],
+    18, ["*", 8.0, tier],
   ];
-  for (let i = 1; i < VALUE_BUCKETS.length; i++) {
-    expr.push(VALUE_BUCKETS[i].min);
-    expr.push(zoomScale(VALUE_BUCKETS[i].radius));
-  }
-  return expr;
 }
 
 // ---- The circle layer spec -------------------------------------------------
