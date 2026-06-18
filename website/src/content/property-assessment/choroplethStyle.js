@@ -25,8 +25,7 @@ export const MAP_VIEW = {
   maxZoom: 17,
 };
 
-export const BASEMAP_STYLE =
-  "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
+export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 
 // ---- Colour ramp: fixed colours + IQR roles, per-year $ thresholds ---------
 // Only the dollar thresholds change between years; the five colours and their

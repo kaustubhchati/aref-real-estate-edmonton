@@ -22,8 +22,7 @@ import { fmtCurrency } from "../../utils/format.js";
 // ---- Map view defaults (Edmonton, matches the choropleth) ------------------
 // Moved here from PermitMapView so the basemap/view live beside the layer paint,
 // exactly like choroplethStyle.js. Single source of truth for the section.
-export const BASEMAP_STYLE =
-  "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
+export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 
 export const MAP_VIEW = {
   center: [-113.4938, 53.5461], // Edmonton
