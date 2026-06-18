@@ -129,7 +129,7 @@ export default function PropertyAssessmentMap() {
   const stops = useMemo(() => {
     if (metric === "yoy_pct_change") return YOY_STOPS;
     return metric === "median_assessvalue"
-      ? stopsFromScale(getColourScale(manifest, city, year))
+      ? stopsFromScale(getColourScale(manifest, city, year), metric)
       : metricStops(gj, metric);
   }, [metric, manifest, city, year, gj]);
 

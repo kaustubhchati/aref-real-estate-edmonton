@@ -28,51 +28,52 @@ export const MAP_VIEW = {
 export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 
 // ---- Per-metric colour ramps -----------------------------------------------
-// Each ramp has 5 stops (min→Q25→median→Q75→max, light→dark). The per-year
-// dollar/area/year thresholds come from the manifest or the data; only the
-// colours are fixed here.
-//   key   = the field name in a manifest colourScaleByYear entry / quantile role
+// Each metric colours by its own 5-stop ramp (min→Q25→median→Q75→max). The
+// per-year thresholds come from the manifest or the data; only the colours are
+// fixed here. Each palette is perceptually ordered, colourblind-aware, and
+// shifted to stay visible against the cream CARTO Voyager basemap.
+//   key   = manifest colourScaleByYear field / quantile role
 //   c     = fill colour at that stop
 //   label = role in the IQR (shown in the legend)
-//
-// Chosen from ColorBrewer 2.0 (Brewer 1999) for:
-//   • colourblind safety (deuteranopia + protanopia tested)
-//   • no false semantic signal (red = danger avoided for $ data)
-//   • distinction from CARTO Voyager basemap colours
-//   • perceptual uniformity (luminance increases monotonically)
 
-// Dollar value metrics (median + mean assessed): PuBu
-// White→lavender→mid-blue→deep blue. Standard ColorBrewer
-// choice for income/property value data. Light = low value,
-// dark = high value. No red alarm signal.
+// ── Lajolla (Crameri Scientific Colour Maps, shifted)
+// Gold → terracotta → wine-red. For $ value metrics.
+// Shifted +20% from canonical to fix min visibility on
+// cream Voyager basemap. Wine-red max avoids near-black.
+// Perceptually uniform, colourblind-safe (Crameri 2023).
 const RAMP_VALUE = [
-  { key: "min",    c: "#f1eef6", label: "min"    },
-  { key: "q25",    c: "#bdc9e1", label: "Q25"    },
-  { key: "median", c: "#74a9cf", label: "median" },
-  { key: "q75",    c: "#2b8cbe", label: "Q75"    },
-  { key: "max",    c: "#045a8d", label: "max"    },
+  { key: "min",    c: "#f0c97a", label: "min"    },
+  { key: "q25",    c: "#d4823a", label: "Q25"    },
+  { key: "median", c: "#a34428", label: "median" },
+  { key: "q75",    c: "#7d2828", label: "Q75"    },
+  { key: "max",    c: "#5a1525", label: "max"    },
 ];
 
-// Lot size (physical area): YlOrBr
-// Cream→gold→orange→rust→dark brown. Earth tones for physical
-// area data. Distinct from value palette. Semantically neutral.
+// ── Amber-sienna (custom, YlOrBr family shifted)
+// Pale amber → deep burnt sienna. For lot size (m²).
+// Shifted min to #fedf9a — visible on cream land.
+// Max #8b3a12 (burnt sienna-orange) clearly distinct
+// from RAMP_VALUE max #5a1525 (wine-red) — different hue.
 const RAMP_AREA = [
-  { key: "min",    c: "#ffffd4", label: "min"    },
-  { key: "q25",    c: "#fed98e", label: "Q25"    },
-  { key: "median", c: "#fe9929", label: "median" },
-  { key: "q75",    c: "#cc4c02", label: "Q75"    },
-  { key: "max",    c: "#662506", label: "max"    },
+  { key: "min",    c: "#fedf9a", label: "min"    },
+  { key: "q25",    c: "#fdb455", label: "Q25"    },
+  { key: "median", c: "#e87520", label: "median" },
+  { key: "q75",    c: "#c04a12", label: "Q75"    },
+  { key: "max",    c: "#8b3a12", label: "max"    },
 ];
 
-// Year built (temporal): viridis-inspired (yellow→green→teal→navy→purple)
-// Perceptually uniform, colourblind-safe. Older = light/warm,
-// newer = dark/cool. Temporal data reads well on this ramp.
+// ── OrRd reversed (ColorBrewer)
+// Dark crimson → light cream. For median year built.
+// REVERSED: oldest neighbourhoods (inner city) render
+// darkest; newest suburbs render lightest. Intuitive
+// temporal reading. Distinct from value/area palettes —
+// runs in opposite luminance direction.
 const RAMP_YEAR = [
-  { key: "min",    c: "#fde725", label: "oldest" },
-  { key: "q25",    c: "#5ec962", label: "Q25"    },
-  { key: "median", c: "#21918c", label: "median" },
-  { key: "q75",    c: "#3b528b", label: "Q75"    },
-  { key: "max",    c: "#440154", label: "newest" },
+  { key: "min",    c: "#7f0000", label: "oldest" },
+  { key: "q25",    c: "#d7301f", label: "Q25"    },
+  { key: "median", c: "#fc8d59", label: "median" },
+  { key: "q75",    c: "#fdcc8a", label: "Q75"    },
+  { key: "max",    c: "#fef0d9", label: "newest" },
 ];
 
 // Map each metric key to its ramp.
@@ -134,9 +135,7 @@ export function metricStops(gj, metricKey) {
     const v = Number(p[metricKey]);
     if (Number.isFinite(v)) vals.push(v);
   }
-  if (vals.length < 2) return buildStops({
-    min: 0, q25: 25, median: 50, q75: 75, max: 100,
-  }, ramp) ?? STOPS;
+  if (vals.length < 2) return STOPS;
   vals.sort((a, b) => a - b);
 
   const ps = [0, 0.25, 0.5, 0.75, 1]; // min, Q25, median, Q75, max
@@ -161,19 +160,19 @@ function quantile(sorted, p) {
 }
 
 // ---- Year-over-year diverging scale ----------------------------------------
-// Fixed blue→white→orange diverging ramp for yoy_pct_change (a signed %, unlike
-// the sequential $ metrics). NOT per-year and NOT data-derived: a stable scale
-// centred on 0% so a colour means the same change in every year. Values are
-// already on the 0-100 % scale (e.g. -5 = down 5%), matching fmtPct.
-// Orange (not red) on the positive arm: blue/orange is the recommended
-// colourblind-safe diverging pair (deuteranopia + protanopia), keeping the
-// semantic reading blue = decline, warm = growth.
+// Fixed blue→white→red diverging ramp (ColorBrewer RdBu reversed) for
+// yoy_pct_change (a signed %, unlike the sequential $ metrics). NOT per-year and
+// NOT data-derived: a stable scale centred on 0% so a colour means the same
+// change in every year. Values are already on the 0-100 % scale (e.g. -5 = down
+// 5%), matching fmtPct. blue = decline, red = growth. (#d6604d is a slightly
+// softer red than the prior #b2182b; restored over the colourblind-safe orange
+// per KC's decision that the original read better.)
 const YOY_STOPS = [
   { v: -15, c: "#2166ac", label: "-15%" },
   { v:  -5, c: "#92c5de", label: "-5%"  },
   { v:   0, c: "#f7f7f7", label: "0%"   },
-  { v:   5, c: "#f4a35a", label: "+5%"  },
-  { v:  15, c: "#b35806", label: "+15%" },
+  { v:   5, c: "#f4a582", label: "+5%"  },
+  { v:  15, c: "#d6604d", label: "+15%" },
 ];
 export { YOY_STOPS };
 
