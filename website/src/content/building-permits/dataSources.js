@@ -38,3 +38,21 @@ export const MONTHS = [
   { value: 11, label: "Nov" }, { value: 12, label: "Dec" },
 ];
 export const DEFAULT_MONTH = 0;
+
+// Construction-value tiers — the interactive size legend. Each bucket is a
+// half-open [min, max) range in raw $CAD; `radius` is the dot's base pixel size
+// at z11 (zoom-scaled up from there, see buildRadiusExpression). The legend and
+// the map read these SAME rows, so a tier edit moves both together.
+export const VALUE_BUCKETS = [
+  { id: "micro",  label: "< $10k",        min: 0,         max: 10_000,    radius: 4  },
+  { id: "small",  label: "$10k – $100k",  min: 10_000,    max: 100_000,   radius: 7  },
+  { id: "medium", label: "$100k – $500k", min: 100_000,   max: 500_000,   radius: 10 },
+  { id: "large",  label: "$500k – $2M",   min: 500_000,   max: 2_000_000, radius: 14 },
+  { id: "major",  label: "> $2M",         min: 2_000_000, max: Infinity,  radius: 19 },
+];
+
+// Default active set on load: medium + large only.
+// micro and major start deselected — user adds them deliberately.
+export const DEFAULT_ACTIVE_BUCKETS = new Set(["medium", "large"]);
+
+export const ALL_BUCKET_IDS = VALUE_BUCKETS.map((b) => b.id);

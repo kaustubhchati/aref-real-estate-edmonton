@@ -19,6 +19,7 @@
 // =============================================================================
 
 import { fmtCurrency } from "../../utils/format.js";
+import { VALUE_BUCKETS } from "./dataSources.js";
 
 // ---- Map view defaults (Edmonton, matches the choropleth) ------------------
 // Moved here from PermitMapView so the basemap/view live beside the layer paint,
@@ -69,10 +70,40 @@ function buildColourExpression() {
   ];
 }
 
+// ---- Size by construction-value TIER ---------------------------------------
+// Dot radius is driven by the SAME VALUE_BUCKETS the interactive legend reads,
+// so the two can never drift. A step expression maps construction_value into a
+// bucket's base radius, then a per-bucket zoom ramp scales it up (so dots grow
+// as you zoom to street level). NULL/0 value → the first (micro) bucket, never
+// invisible.
+function buildRadiusExpression() {
+  const zoomScale = (r) => [
+    "interpolate", ["linear"], ["zoom"],
+    11, r,
+    14, Math.round(r * 1.5),
+    18, Math.round(r * 2.2),
+  ];
+
+  // ["step", input, default, threshold1, out1, threshold2, out2, ...]
+  // Default = micro (anything below first threshold or NULL).
+  const expr = [
+    "step",
+    ["number", ["get", "construction_value"], 0],
+    zoomScale(VALUE_BUCKETS[0].radius),
+  ];
+
+  for (let i = 1; i < VALUE_BUCKETS.length; i++) {
+    expr.push(VALUE_BUCKETS[i].min);
+    expr.push(zoomScale(VALUE_BUCKETS[i].radius));
+  }
+
+  return expr;
+}
+
 // ---- The circle layer spec -------------------------------------------------
 // Returned WITHOUT `source` (PermitMapView fills that in), mirroring
-// choroplethLayers(). One layer: colour by job_group, UNIFORM zoom-scaled size
-// (no value encoding any more), with a thick white halo so dots stay distinct on
+// choroplethLayers(). One layer: colour by job_group, size by construction-value
+// tier (buildRadiusExpression), with a thick white halo so dots stay distinct on
 // the light Voyager basemap.
 export function permitCircleLayer() {
   return {
@@ -91,16 +122,9 @@ export function permitCircleLayer() {
       ],
     },
     paint: {
-      // Uniform size — zoom-scaled only, no value encoding.
-      // At z11 dots are small enough to show density pattern.
-      // At z16+ they're large enough to click comfortably.
-      "circle-radius": [
-        "interpolate", ["linear"], ["zoom"],
-        11,  3.5,
-        13,  5.5,
-        15,  8.0,
-        18, 12.0,
-      ],
+      // Size by construction-value tier (same VALUE_BUCKETS the legend shows),
+      // zoom-scaled up so dots grow toward street level.
+      "circle-radius": buildRadiusExpression(),
       "circle-color": buildColourExpression(),
       // Opacity: lower at mid-zoom (many overlapping dots),
       // higher at street level (individual permit legibility).
@@ -258,18 +282,47 @@ export function buildPermitHoverHtml(p) {
 // filter on that axis". group is the sidebar's "Permit type" ("All" /
 // "Residential" / "Commercial"); the tile's job_group field is lower-case, so we
 // lower-case the picked value to match. month 0 is the "All months" sentinel.
-export function buildPermitFilter(year, group, month) {
+export function buildPermitFilter(year, group, month, activeBucketIds) {
   const clauses = [["==", ["get", "year"], year]];
+
   if (group !== "All") {
     clauses.push([
-      "==",
-      ["get", "job_group"],
-      group.toLowerCase(),   // "Residential" → "residential"
+      "==", ["get", "job_group"], group.toLowerCase(),
     ]);
   }
+
   if (month !== 0) {
     clauses.push(["==", ["get", "month_number"], month]);
   }
+
+  // Value bucket filter. Independent AND with type + month.
+  // Build one range clause per active bucket, combine with ["any"].
+  // A permit is shown if it falls in ANY active bucket AND meets
+  // all other clauses (year, group, month).
+  // Infinity max → no upper bound clause for the major bucket.
+  if (activeBucketIds.size < VALUE_BUCKETS.length) {
+    const active = VALUE_BUCKETS.filter((b) =>
+      activeBucketIds.has(b.id)
+    );
+
+    if (active.length === 0) {
+      // Nothing active → show nothing.
+      clauses.push(["==", ["get", "year"], -1]);
+    } else {
+      const bucketClauses = active.map((b) => {
+        const val = ["number", ["get", "construction_value"], 0];
+        const above = [">=", val, b.min];
+        if (b.max === Infinity) return above;
+        return ["all", above, ["<", val, b.max]];
+      });
+      clauses.push(bucketClauses.length === 1
+        ? bucketClauses[0]
+        : ["any", ...bucketClauses]
+      );
+    }
+  }
+  // If all buckets active → no bucket clause (show everything).
+
   return ["all", ...clauses];
 }
 
@@ -290,3 +343,9 @@ export function buildHeatmapFilter(year, group, month) {
   }
   return ["all", ...clauses];
 }
+
+// Convenience re-export so the page (which already imports from permitStyle) has
+// a single import point for the value-bucket tables rather than splitting across
+// two files. These live in dataSources.js (the option-list seam).
+export { VALUE_BUCKETS, ALL_BUCKET_IDS, DEFAULT_ACTIVE_BUCKETS }
+  from "./dataSources.js";

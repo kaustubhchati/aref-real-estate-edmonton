@@ -25,6 +25,9 @@ import {
   COLOURS,
   buildPermitFilter,
   buildHeatmapFilter,
+  VALUE_BUCKETS,
+  ALL_BUCKET_IDS,
+  DEFAULT_ACTIVE_BUCKETS,
 } from "./permitStyle.js";
 import {
   YEARS,
@@ -52,16 +55,18 @@ function coverageForYear(rows, year) {
   return rows.find((r) => Number(r.year) === year) || null;
 }
 
-// Sidebar legend. One key: colour (job_group → hue). Dots are now a uniform
-// size (no value encoding), so there's no size key to show. Colours come from
-// permitStyle's COLOURS table — imported, never re-hardcoded — so the legend
-// can't drift from the map paint. Reuses the global .legend* CSS (same classes
-// the choropleth Legend uses).
-function PermitLegend() {
+// Sidebar legend. Two parts: a static colour key (job_group → hue) and an
+// INTERACTIVE construction-value size key — each tier is a button that toggles
+// whether that bucket's dots show on the map. Active tier = filled dot; inactive
+// = outlined ring (the map dots vanish, the ring says "this tier exists but is
+// hidden"). Tiers + radii come from VALUE_BUCKETS, the same table the map paints
+// from, so the legend can't drift. Reuses the global .legend* CSS (no new CSS).
+function PermitLegend({ activeBuckets, onToggle, onReset }) {
   const colourRows = [
     { label: "Residential", colour: COLOURS.residential },
-    { label: "Commercial", colour: COLOURS.commercial },
+    { label: "Commercial",  colour: COLOURS.commercial  },
   ];
+  const allActive = activeBuckets.size === ALL_BUCKET_IDS.length;
 
   return (
     <aside className="legend">
@@ -69,15 +74,90 @@ function PermitLegend() {
       <ul className="legend-list">
         {colourRows.map((r) => (
           <li key={r.label} className="legend-row">
-            {/* Round swatch (override .legend-sw's rectangle) so the key reads
-                as a permit dot, coloured straight from COLOURS. */}
             <span
               className="legend-sw"
-              style={{ background: r.colour, width: 14, flex: "0 0 14px", borderRadius: "50%" }}
+              style={{
+                background: r.colour,
+                width: 14,
+                flex: "0 0 14px",
+                borderRadius: "50%",
+              }}
             />
             <span className="legend-lab">{r.label}</span>
           </li>
         ))}
+      </ul>
+
+      <div className="legend-divider">
+        Construction value
+        {!allActive && (
+          <button
+            type="button"
+            onClick={onReset}
+            style={{
+              marginLeft: 8,
+              fontSize: 10,
+              padding: "1px 6px",
+              border: "1px solid var(--border)",
+              borderRadius: 3,
+              background: "var(--bg-soft)",
+              cursor: "pointer",
+              color: "var(--text-muted)",
+            }}
+          >
+            All
+          </button>
+        )}
+      </div>
+
+      <ul className="legend-list">
+        {VALUE_BUCKETS.map((b) => {
+          const active = activeBuckets.has(b.id);
+          const dotPx = b.radius * 2;
+          return (
+            <li key={b.id}>
+              <button
+                type="button"
+                onClick={() => onToggle(b.id)}
+                className="legend-row"
+                style={{
+                  width: "100%",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "2px 0",
+                  opacity: active ? 1 : 0.35,
+                  // Inactive bucket: label muted, dot outlined.
+                  // Dots on map vanish — legend ring signals "off".
+                }}
+                aria-pressed={active}
+                title={active ? "Click to hide" : "Click to show"}
+              >
+                <span
+                  style={{
+                    width: dotPx,
+                    height: dotPx,
+                    flex: `0 0 ${dotPx}px`,
+                    borderRadius: "50%",
+                    background: active
+                      ? "var(--text-muted)"
+                      : "none",
+                    border: active
+                      ? "none"
+                      : "2px solid var(--text-muted)",
+                    display: "inline-block",
+                  }}
+                />
+                <span
+                  className="legend-lab"
+                  style={{ marginLeft: 8 }}
+                >
+                  {b.label}
+                </span>
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </aside>
   );
@@ -95,6 +175,28 @@ export default function BuildingPermitsMap() {
   const [map, setMap] = useState(null);
   const [coverage, setCoverage] = useState([]);
   const [collapsed, setCollapsed] = useState(false);
+  // Factory init so new Set(...) runs ONCE on mount, not every render.
+  const [activeBuckets, setActiveBuckets] = useState(
+    () => new Set(DEFAULT_ACTIVE_BUCKETS)
+  );
+
+  // Toggle one value tier on/off (immutably — clone, mutate the clone, return it
+  // so React sees a new Set reference and re-renders + re-filters).
+  function toggleBucket(id) {
+    setActiveBuckets((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function resetBuckets() {
+    setActiveBuckets(new Set(ALL_BUCKET_IDS));
+  }
 
   // Hide/show the sidebar. MapLibre sizes its canvas to the container, so after
   // the width transition finishes we tell the map to re-measure and fill the
@@ -106,14 +208,15 @@ export default function BuildingPermitsMap() {
 
   // Re-apply BOTH layers' filters whenever the map is ready or a control changes.
   // setFilter is instant — it re-evaluates the already-loaded tiles, no network.
-  // Both layers honour the same year + permit-type + month filter, so picking
-  // "Commercial" reshapes the dots AND the heat signature together. Guard on
-  // `map` so we don't call setFilter before onLoad hands us the instance.
+  // The dot layer also honours the active value tiers; the heatmap intentionally
+  // does NOT take the bucket filter (it's a density-context layer), but it still
+  // tracks year + permit-type + month so it stays in sync with the selection.
+  // Guard on `map` so we don't call setFilter before onLoad hands us the instance.
   useEffect(() => {
     if (!map) return;
-    map.setFilter(LAYER_ID, buildPermitFilter(year, group, month));
+    map.setFilter(LAYER_ID, buildPermitFilter(year, group, month, activeBuckets));
     map.setFilter(HEATMAP_LAYER_ID, buildHeatmapFilter(year, group, month));
-  }, [map, year, group, month]);
+  }, [map, year, group, month, activeBuckets]);
 
   // Load the coverage table ONCE on mount. It's supplementary to the map, so a
   // failed load just hides the note (logged, not thrown — the map still works).
@@ -144,7 +247,8 @@ export default function BuildingPermitsMap() {
         <h1 className="sb-title">Edmonton — {year}</h1>
         <p className="sb-sub">
           226,184 permit points, 2009–2026. Amber = residential, violet =
-          commercial. Filter by year, permit type, and month.
+          commercial. Click value tiers below to show or hide by construction
+          value.
         </p>
 
         <section className="sb-section">
@@ -197,7 +301,11 @@ export default function BuildingPermitsMap() {
         )}
 
         <section className="sb-section">
-          <PermitLegend />
+          <PermitLegend
+            activeBuckets={activeBuckets}
+            onToggle={toggleBucket}
+            onReset={resetBuckets}
+          />
         </section>
 
         <p className="sb-ref">
