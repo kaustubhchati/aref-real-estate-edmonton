@@ -88,3 +88,4 @@ pipeline/property-assessment/data/reference/neighbourhood_name_merges_*.csv
 # pipeline/shared/ stays committable; only its data/ is excluded (CLAUDE.md §3).
 pipeline/shared/data/
 **/building-permits/output/permits.pmtiles
+**/building-permits/output/permits.pmtiles
