@@ -163,7 +163,35 @@ for (yr in years_present) {
 }
 
 # ============================================================
-# 5. Summary log
+# 5. Year-over-year change — second pass over the written CSVs
+#    The per-year loop above processes years independently, so
+#    yoy can't be computed inside it. Read all aggregates back,
+#    compute the per-neighbourhood median yoy % change, and write
+#    the new yoy_pct_change column back into each year's CSV.
+# ============================================================
+
+all_agg <- map_dfr(years_present, function(yr) {
+  read_csv(sprintf("output/hist_aggregates/neighbourhood_aggregates_%d.csv", yr),
+           show_col_types = FALSE) |>
+    mutate(year = yr)
+}) |>
+  arrange(Neighbourhood, year) |>
+  group_by(Neighbourhood) |>
+  mutate(yoy_pct_change = (median_assessvalue - lag(median_assessvalue))
+         / lag(median_assessvalue) * 100) |>
+  ungroup()
+
+for (yr in years_present) {
+  yr_data <- all_agg |> filter(year == yr) |> select(-year)
+  write_csv(yr_data,
+    sprintf("output/hist_aggregates/neighbourhood_aggregates_%d.csv", yr))
+}
+
+cat(sprintf("yoy_pct_change written back into all %d aggregate CSVs.\n\n",
+            length(years_present)))
+
+# ============================================================
+# 6. Summary log
 # ============================================================
 
 cat("=============================================================\n")
