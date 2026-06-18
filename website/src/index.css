@@ -165,7 +165,11 @@ p  { margin: 0 0 0.75rem; }
 .shell-nav { background:var(--bg); border-bottom:1px solid var(--border-soft);
   padding:0 1.5rem; position:sticky; top:56px; z-index:90;
   box-shadow:var(--shadow-sm); }
-.shell-nav-list { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; }
+.shell-nav-list { list-style:none; margin:0; padding:0; display:flex;
+  flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;
+  -ms-overflow-style:none; scroll-behavior:smooth;
+  -webkit-overflow-scrolling:touch; }
+.shell-nav-list::-webkit-scrollbar { display:none; }
 
 /* Each top-level item is the positioning context for its dropdown (kept from
    the prior rules — the absolute sublist anchors to this, not the sticky nav). */
@@ -180,16 +184,17 @@ p  { margin: 0 0 0.75rem; }
 .shell-nav-link.is-active, .shell-nav-link.active {
   color:var(--accent); border-bottom-color:var(--accent); }
 
-/* Hide the native <details> disclosure marker so only the ▾ from ::after shows
-   (kept from the prior rules). */
-.shell-nav-group { display: inline-block; }
-.shell-nav-summary { list-style: none; user-select: none; }
-.shell-nav-summary::-webkit-details-marker { display: none; }
+/* The group toggle is a <button> (was <summary>); reset UA button chrome so it
+   matches the leaf links, and keep the ▾ marker. */
+.shell-nav-summary { user-select: none; background: none; border: 0;
+  font-family: inherit; cursor: pointer; }
 .shell-nav-summary::after { content:" ▾"; font-size:0.65em;
   color:var(--text-subtle); }
 
-.shell-nav-sublist { position:absolute; top:calc(100% + 1px); left:0;
-  z-index:200; list-style:none; margin:0; padding:0.375rem 0; min-width:15rem;
+/* position:fixed + coords are set inline by NavGroup (getBoundingClientRect)
+   so the menu escapes the nav row's overflow-x scroll container. */
+.shell-nav-sublist { position:fixed;
+  z-index:500; list-style:none; margin:0; padding:0.375rem 0; min-width:15rem;
   background:var(--bg); border:1px solid var(--border-soft);
   border-radius:var(--radius-md); box-shadow:var(--shadow-lg); }
 .shell-nav-sublist .shell-nav-link { height:38px; border-bottom:none;
