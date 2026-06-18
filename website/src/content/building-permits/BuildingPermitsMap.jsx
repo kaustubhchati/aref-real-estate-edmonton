@@ -17,6 +17,7 @@
 import { useEffect, useState } from "react";
 
 import PermitMapView from "./PermitMapView.jsx";
+import MapSkeleton from "../../components/MapSkeleton.jsx";
 import { LAYER_ID, COLOURS } from "./permitStyle.js";
 import {
   YEARS,
@@ -246,6 +247,9 @@ export default function BuildingPermitsMap() {
       </aside>
 
       <div className="canvas-wrap">
+        {/* No url/gj here (PMTiles point map, no MapErrorBoundary); the loading
+            signal is "map not ready yet" — skeleton shows until onLoad fires. */}
+        {!map && <MapSkeleton />}
         <PermitMapView className="canvas" onLoad={setMap} />
       </div>
     </article>

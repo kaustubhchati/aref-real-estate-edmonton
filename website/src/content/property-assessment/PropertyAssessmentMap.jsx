@@ -31,6 +31,7 @@ import SearchInput from "../../components/SearchInput.jsx";
 import OptionToggle from "../../components/OptionToggle.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
+import MapSkeleton from "../../components/MapSkeleton.jsx";
 import {
   BASEMAP_STYLE,
   MAP_VIEW,
@@ -326,19 +327,22 @@ export default function PropertyAssessmentMap() {
           // inside it. MapLibre destroys the old map in its cleanup; the new
           // instance fires onLoad and useChoroplethInteractions reattaches.
           // The boundary keeps a WebGL/MapLibre failure from blanking the page.
-          <MapErrorBoundary key={url}>
-            <MapView
-              className="canvas"
-              basemapStyle={BASEMAP_STYLE}
-              geojsonUrl={url}
-              view={MAP_VIEW}
-              sourceId="nbhd"
-              promoteId="Neighbourhood ID"
-              layers={choroplethLayers(stops, metric)}
-              images={choroplethImages()}
-              onLoad={setMap}
-            />
-          </MapErrorBoundary>
+          <>
+            {url && !gj && <MapSkeleton />}
+            <MapErrorBoundary key={url}>
+              <MapView
+                className="canvas"
+                basemapStyle={BASEMAP_STYLE}
+                geojsonUrl={url}
+                view={MAP_VIEW}
+                sourceId="nbhd"
+                promoteId="Neighbourhood ID"
+                layers={choroplethLayers(stops, metric)}
+                images={choroplethImages()}
+                onLoad={setMap}
+              />
+            </MapErrorBoundary>
+          </>
         ) : (
           <EmptyState title={empty.title} body={empty.body} />
         )}
