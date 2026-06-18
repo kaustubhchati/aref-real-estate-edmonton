@@ -66,6 +66,53 @@ export function stopsFromScale(scale) {
   return buildStops(scale) ?? STOPS;
 }
 
+// Compute ramp stops for a metric straight from the loaded GeoJSON: the
+// [min, Q25, median, Q75, max] of that metric across aggregated polygons,
+// mapped onto RAMP's fixed colours. Used for the metrics the manifest has no
+// scale for — i.e. everything except median_assessvalue, which keeps its locked
+// manifest scale. Falls back to the locked STOPS when there's too little data,
+// and drops any stop not strictly greater than the previous one so MapLibre's
+// interpolate (which requires ascending inputs) never throws on ties.
+export function metricStops(gj, metricKey) {
+  const vals = [];
+  for (const f of gj?.features ?? []) {
+    const p = f.properties;
+    if (p?.polygon_state !== "aggregated") continue;
+    const v = Number(p[metricKey]);
+    if (Number.isFinite(v)) vals.push(v);
+  }
+  if (vals.length < 2) return STOPS;
+  vals.sort((a, b) => a - b);
+
+  const ps = [0, 0.25, 0.5, 0.75, 1]; // min, Q25, median, Q75, max — aligns to RAMP
+  const raw = RAMP.map((r, i) => ({ v: quantile(vals, ps[i]), c: r.c, label: r.label }));
+
+  const stops = [];
+  for (const s of raw) {
+    if (stops.length === 0 || s.v > stops[stops.length - 1].v) stops.push(s);
+  }
+  return stops.length >= 2 ? stops : STOPS;
+}
+
+// Linear-interpolated quantile of an ascending-sorted array (p in [0, 1]).
+function quantile(sorted, p) {
+  const idx = (sorted.length - 1) * p;
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  return lo === hi ? sorted[lo] : sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+}
+
+// ---- Choropleth metrics ----------------------------------------------------
+// The columns the user can colour the map by. key = GeoJSON property,
+// label = control + legend text, fmt = value formatter for legend/popup.
+const METRICS = [
+  { key: "median_assessvalue", label: "Median assessed value", fmt: fmtCurrency },
+  { key: "avall_public",       label: "Mean assessed value",   fmt: fmtCurrency },
+  { key: "avg_lotsize",        label: "Mean lot size",         fmt: fmtArea     },
+  { key: "median_yearbuilt",   label: "Median year built",     fmt: fmtYear     },
+];
+export { METRICS };
+
 // ---- The five polygon states ----------------------------------------------
 // Aggregated polygons get the colour ramp above. The other four each get a
 // distinct grey + (optional) pattern + (optional) dashed outline so the legend
@@ -232,10 +279,11 @@ export function makeDotPattern(size = 10, dotColor = "rgba(60,55,42,0.55)") {
 }
 
 // ---- Fill-colour expression -----------------------------------------------
-// case: state == aggregated → linear interpolation over the given stops
+// case: state == aggregated → linear interpolation over the given stops,
+//       reading the chosen metric column
 // otherwise → that state's flat fillColor (or fallback grey).
-function buildFillColourExpression(stops) {
-  const interp = ["interpolate", ["linear"], ["number", ["get", "median_assessvalue"], 0]];
+function buildFillColourExpression(metricKey, stops) {
+  const interp = ["interpolate", ["linear"], ["number", ["get", metricKey], 0]];
   for (const s of stops) interp.push(s.v, s.c);
 
   return [
@@ -249,12 +297,19 @@ function buildFillColourExpression(stops) {
   ];
 }
 
+// Public fill-colour expression for the chosen metric + stops. The page uses
+// this with map.setPaintProperty to repaint on a metric/scale change without
+// remounting the map (see MapView's note on live updates).
+export function choroplethFillColor(metricKey = "median_assessvalue", stops = STOPS) {
+  return buildFillColourExpression(metricKey, stops);
+}
+
 // ---- Layer specs handed to MapView ----------------------------------------
 // One function so the consumer file is short. Layers are in z-order
 // (first = bottom). MapView inserts them all below the basemap's labels.
-// `stops` selects the colour ramp for the displayed year; defaults to the
-// locked STOPS when a caller doesn't pass one.
-export function choroplethLayers(stops = STOPS) {
+// `stops` selects the colour ramp and `metricKey` the column to colour by;
+// both default to the locked median scale when a caller doesn't pass them.
+export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue") {
   return [
     // 1. Fill colour for every polygon. Opacity lifts on hover or when pinned
     //    so the user can confirm which polygon their popup is describing.
@@ -262,7 +317,7 @@ export function choroplethLayers(stops = STOPS) {
       id: "nbhd-fill",
       type: "fill",
       paint: {
-        "fill-color": buildFillColourExpression(stops),
+        "fill-color": buildFillColourExpression(metricKey, stops),
         "fill-opacity": [
           "case",
           ["boolean", ["feature-state", "hover"], false], 0.88,
@@ -396,6 +451,27 @@ export function choroplethLayers(stops = STOPS) {
         "text-color": "#3c3728",
         "text-halo-color": "#ffffff",
         "text-halo-width": 1.5,
+      },
+    },
+    // 8. N-count label on suppressed (N < 100) polygons. These carry no value
+    //    on the ramp, so showing the count makes the suppression legible rather
+    //    than just grey. Zoom 11+ like the name labels, to keep the wide view
+    //    uncluttered.
+    {
+      id: "nbhd-suppressed-count",
+      type: "symbol",
+      filter: ["==", ["get", "polygon_state"], "suppressed_low_n"],
+      minzoom: 11,
+      layout: {
+        "text-field": ["concat", "N=", ["to-string", ["get", "n_properties"]]],
+        "text-size": 9,
+        "text-font": ["Noto Sans Regular"],
+        "text-anchor": "center",
+      },
+      paint: {
+        "text-color": "#7a7468",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.2,
       },
     },
   ];
