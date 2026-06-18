@@ -20,8 +20,8 @@ export default function Legend({
   title,
   stops,
   format,
-  greyTitle,
-  greyStates,
+  greyTitle = null,
+  greyStates = null,
 }) {
   return (
     <aside className="legend">
@@ -48,15 +48,19 @@ export default function Legend({
         })}
       </ul>
 
-      <div className="legend-divider">{greyTitle}</div>
-      <ul className="legend-list">
-        {greyStates.map((g) => (
-          <li key={g.label} className="legend-row">
-            <span className="legend-sw" style={swatchStyle(g)} />
-            <span className="legend-lab">{g.label}</span>
-          </li>
-        ))}
-      </ul>
+      {greyStates?.length > 0 && (
+        <>
+          <div className="legend-divider">{greyTitle}</div>
+          <ul className="legend-list">
+            {greyStates.map((g) => (
+              <li key={g.label} className="legend-row">
+                <span className="legend-sw" style={swatchStyle(g)} />
+                <span className="legend-lab">{g.label}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </aside>
   );
 }

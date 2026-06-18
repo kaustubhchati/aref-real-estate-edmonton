@@ -35,8 +35,6 @@ import MapSkeleton from "../../components/MapSkeleton.jsx";
 import {
   BASEMAP_STYLE,
   MAP_VIEW,
-  STATE_STYLE,
-  GREY_STATES,
   METRICS,
   YOY_STOPS,
   stopsFromScale,
@@ -294,14 +292,14 @@ export default function PropertyAssessmentMap() {
             title={selectedMetric.label}
             stops={stops}
             format={selectedMetric.fmt}
-            greyTitle="Non-aggregated polygons"
-            greyStates={GREY_STATES.map((k) => STATE_STYLE[k])}
           />
         </section>
 
         <div className="sb-ref">
-          <p>Scale: {selectedMetric.label} for {city} {year}.</p>
-          <p>N&lt;100 suppressed · parking + R1 + R3 cleaned.</p>
+          <p>
+            {selectedMetric.label}, {city} {year}.
+            Layer 1a-cleaned residential properties.
+          </p>
           <p>Data last updated: {manifest?.last_updated ?? "—"}</p>
         </div>
       </aside>
