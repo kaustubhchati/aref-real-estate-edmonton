@@ -17,11 +17,10 @@ import { fmtCurrency } from "../../utils/format.js";
 import { VALUE_BUCKETS, ALL_BUCKET_IDS } from "./dataSources.js";
 
 // ---- Map view defaults (Edmonton) ------------------------------------------
-export const BASEMAP_STYLE =
-  "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
-// WHY the CDN URL, not the self-hosted /styles/custom-basemap.json: the local
-// style was reported to render blank for this map. Fall back to the CDN Voyager
-// style that the permit choropleth (permitChoroplethStyle.js) already uses.
+export const BASEMAP_STYLE = "/styles/custom-basemap.json";
+// The self-hosted style (same one PropertyAssessmentMap uses). The CDN Voyager
+// URL was a temporary workaround while the map rendered blank — the real cause
+// was an invalid nested-zoom circle-radius expression, since fixed.
 
 export const MAP_VIEW = {
   center: [-113.4938, 53.5461],
