@@ -10,25 +10,70 @@
 
 /* ---- Base ---------------------------------------------------------------- */
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
-  --text:        #1a1f2e;
-  --text-muted:  #6b7280;
+  /* Colour tokens */
+  --green-900: #003d1a;
+  --green-700: #005c26;
+  --green-500: #007a33;
+  --green-300: #4caf72;
+  --green-100: #e6f4ec;
+  --green-50:  #f0faf4;
+
+  --slate-950: #0f1117;
+  --slate-900: #1a1f2e;
+  --slate-700: #374151;
+  --slate-500: #6b7280;
+  --slate-300: #d1d5db;
+  --slate-100: #f3f4f6;
+  --slate-50:  #f9fafb;
+
+  /* Semantic aliases */
+  --text:        var(--slate-900);
+  --text-muted:  var(--slate-500);
+  --text-subtle: var(--slate-300);
   --bg:          #ffffff;
-  --bg-soft:     #f5f6f2;
-  --border:      #e5e7eb;
-  --accent:      #007a33;
-  --accent-soft: #e6f4ec;
-  --accent-dark: #005c26;
-  /* Neutral button surfaces (base + hover), used by small UI buttons like the
-     popup "Copy stats" and the map-error retry. */
-  --surface-2:   #f4f2ee;
-  --surface-3:   #e8e5df;
+  --bg-soft:     var(--slate-50);
+  --bg-raised:   #ffffff;
+  --border:      var(--slate-300);
+  --border-soft: #eaecef;
+  --accent:      var(--green-500);
+  --accent-soft: var(--green-50);
+  --accent-dark: var(--green-700);
+  /* Carried over for the popup "Copy stats" + map-error buttons (not part of
+     the new system); mapped into the slate palette so they don't break. */
+  --surface-2:   var(--slate-100);
+  --surface-3:   var(--slate-300);
 
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Typography */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
 
-  font: 16px/1.5 var(--sans);
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05);
+  --shadow-lg: 0 10px 24px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.06);
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  font: 16px/1.5 var(--font-sans);
   color: var(--text);
   background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 * { box-sizing: border-box; }
@@ -41,9 +86,34 @@ a {
 }
 a:hover { text-decoration: underline; }
 
-h1 { font-size: 1.75rem; margin: 0 0 0.75rem; }
-h2 { font-size: 1.25rem; margin: 1.25rem 0 0.5rem; }
+h1 {
+  font-size: clamp(1.6rem, 3.5vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  margin: 0 0 0.75rem;
+}
+h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 1.5rem 0 0.5rem;
+}
+h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.35rem;
+}
 p  { margin: 0 0 0.75rem; }
+
+.eyebrow {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  margin: 0 0 0.3rem;
+}
 
 /* ---- Shell layout -------------------------------------------------------- */
 
