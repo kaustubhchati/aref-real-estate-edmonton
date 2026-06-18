@@ -418,6 +418,26 @@ p  { margin: 0 0 0.75rem; }
   text-align: center;
 }
 
+/* ---- Map error state (MapErrorBoundary fallback) ------------------------ */
+.map-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.map-error button {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  /* --surface-2 isn't defined in :root yet; fall back to the existing surface. */
+  background: var(--surface-2, var(--bg-soft));
+  cursor: pointer;
+}
+
 /* ---- Search (rendered inside .sb-section) -------------------------------- */
 .search { display: block; }
 .search-label {

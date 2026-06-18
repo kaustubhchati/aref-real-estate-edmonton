@@ -30,6 +30,7 @@ import Legend from "../../components/Legend.jsx";
 import SearchInput from "../../components/SearchInput.jsx";
 import OptionToggle from "../../components/OptionToggle.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
+import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import {
   BASEMAP_STYLE,
   MAP_VIEW,
@@ -319,23 +320,25 @@ export default function PropertyAssessmentMap() {
             body={`YoY change is not available for the earliest year in the dataset (${year}).`}
           />
         ) : url ? (
-          // key={url} forces a clean MapView remount when the data URL
-          // changes (switching cities, or switching years that hit different
-          // files). MapLibre destroys the old map in its cleanup; the new
-          // instance fires onLoad and useChoroplethInteractions reattaches
-          // handlers to it.
-          <MapView
-            key={url}
-            className="canvas"
-            basemapStyle={BASEMAP_STYLE}
-            geojsonUrl={url}
-            view={MAP_VIEW}
-            sourceId="nbhd"
-            promoteId="Neighbourhood ID"
-            layers={choroplethLayers(stops, metric)}
-            images={choroplethImages()}
-            onLoad={setMap}
-          />
+          // key={url} on the boundary: a new data URL (switching cities or
+          // years) remounts both the boundary — clearing any caught error so a
+          // stale failure doesn't persist across selections — and MapView
+          // inside it. MapLibre destroys the old map in its cleanup; the new
+          // instance fires onLoad and useChoroplethInteractions reattaches.
+          // The boundary keeps a WebGL/MapLibre failure from blanking the page.
+          <MapErrorBoundary key={url}>
+            <MapView
+              className="canvas"
+              basemapStyle={BASEMAP_STYLE}
+              geojsonUrl={url}
+              view={MAP_VIEW}
+              sourceId="nbhd"
+              promoteId="Neighbourhood ID"
+              layers={choroplethLayers(stops, metric)}
+              images={choroplethImages()}
+              onLoad={setMap}
+            />
+          </MapErrorBoundary>
         ) : (
           <EmptyState title={empty.title} body={empty.body} />
         )}
