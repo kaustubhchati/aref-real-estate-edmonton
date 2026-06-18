@@ -164,15 +164,15 @@ function quantile(sorted, p) {
 // yoy_pct_change (a signed %, unlike the sequential $ metrics). NOT per-year and
 // NOT data-derived: a stable scale centred on 0% so a colour means the same
 // change in every year. Values are already on the 0-100 % scale (e.g. -5 = down
-// 5%), matching fmtPct. blue = decline, red = growth. (#d6604d is a slightly
-// softer red than the prior #b2182b; restored over the colourblind-safe orange
-// per KC's decision that the original read better.)
+// 5%), matching fmtPct. blue = decline, warm = growth — accentuated arms (navy
+// decline, solid orange growth, strong red at the top) so the diverging signal
+// reads clearly against the basemap.
 const YOY_STOPS = [
-  { v: -15, c: "#2166ac", label: "-15%" },
-  { v:  -5, c: "#92c5de", label: "-5%"  },
-  { v:   0, c: "#f7f7f7", label: "0%"   },
-  { v:   5, c: "#f4a582", label: "+5%"  },
-  { v:  15, c: "#d6604d", label: "+15%" },
+  { v: -15, c: "#1040a0", label: "-15%" },
+  { v:  -5, c: "#4393c3", label: "-5%"  },
+  { v:   0, c: "#f5f5f5", label: "0%"   },
+  { v:   5, c: "#f4782a", label: "+5%"  },
+  { v:  15, c: "#b83020", label: "+15%" },
 ];
 export { YOY_STOPS };
 
