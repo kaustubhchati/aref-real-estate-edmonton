@@ -186,7 +186,8 @@ export default function BuildingPermitsMap() {
   return (
     <article className="content-map">
       <aside className="sb" aria-label="Map sidebar">
-        <h1 className="sb-title">Edmonton — building permits</h1>
+        <p className="eyebrow">Building Activity</p>
+        <h1 className="sb-title">Edmonton — {year}</h1>
         <p className="sb-sub">
           226,184 permit points, 2009–2026. Slate = residential, orange =
           commercial; dot size scales with construction value. Filter by year and

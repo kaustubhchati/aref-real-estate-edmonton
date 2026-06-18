@@ -201,13 +201,17 @@ export default function PropertyAssessmentMap() {
   return (
     <article className="content-map">
       <aside className="sb" aria-label="Map sidebar">
-        <h1 className="sb-title">
-          {city} — residential assessment{year != null ? `, ${year}` : ""}
-        </h1>
-        <p className="sb-sub">
-          Layer 1a-cleaned (parking + R1 + R3), neighbourhood aggregates.
-          Hover any polygon for detail; click to pin.
-        </p>
+        <div className="sb-header">
+          <p className="eyebrow">Properties & Land</p>
+          <h1 className="sb-title">
+            {city} — {year}
+          </h1>
+          <p className="sb-sub">
+            Layer 1a-cleaned residential assessment,
+            neighbourhood aggregates. Hover any polygon
+            for detail; click to pin.
+          </p>
+        </div>
 
         <section className="sb-section">
           <OptionToggle
