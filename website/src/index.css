@@ -618,6 +618,41 @@ p  { margin: 0 0 0.75rem; }
 }
 .pop-copy-btn:hover { background: var(--surface-3); }
 
+/* ---- Map controls (zoom / attribution / scale) -------------------------- */
+/* Zoom controls */
+.maplibregl-ctrl-group {
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-md) !important;
+  border: 1px solid var(--border-soft) !important;
+  overflow: hidden;
+}
+.maplibregl-ctrl-group button {
+  width: 30px !important;
+  height: 30px !important;
+}
+.maplibregl-ctrl-group button:hover {
+  background-color: var(--bg-soft) !important;
+}
+
+/* Attribution — compact and unobtrusive */
+.maplibregl-ctrl-attrib {
+  background: rgba(255,255,255,0.72) !important;
+  backdrop-filter: blur(4px);
+  font-size: 10px !important;
+  border-radius: var(--radius-sm) 0 0 0 !important;
+  padding: 2px 6px !important;
+}
+.maplibregl-ctrl-attrib a { color: var(--text-muted) !important; }
+
+/* Scale bar */
+.maplibregl-ctrl-scale {
+  background: rgba(255,255,255,0.72) !important;
+  backdrop-filter: blur(4px);
+  border-color: var(--slate-500) !important;
+  font-size: 10px !important;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm) !important;
+}
+
 /* ---- Report Card --------------------------------------------------------- */
 
 /* Page widens past the text-page max so 9 columns + tabular numerics

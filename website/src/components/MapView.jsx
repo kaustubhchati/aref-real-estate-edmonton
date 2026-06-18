@@ -58,7 +58,7 @@ export default function MapView({
       zoom: view.zoom,
       minZoom: view.minZoom,
       maxZoom: view.maxZoom,
-      attributionControl: true,
+      attributionControl: { compact: true },
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
