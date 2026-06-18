@@ -29,11 +29,18 @@ import {
   buildPermitHoverHtml,
 } from "./permitStyle.js";
 
-// Register the PMTiles protocol ONCE at module load. MapLibre only knows http(s)
-// out of the box; PMTiles needs a handler so it can read pmtiles:// URLs by
-// byte-range. Once per module → repeated mounts don't re-register.
-const protocol = new Protocol();
-maplibregl.addProtocol("pmtiles", protocol.tile);
+// Register the PMTiles protocol exactly once, lazily, the first time a map
+// mounts. A module-level flag guards against re-registration across StrictMode
+// double-mounts and route revisits — re-adding the same protocol can silently
+// conflict. MapLibre only knows http(s) out of the box; PMTiles needs this
+// handler to read pmtiles:// URLs by byte-range.
+let pmtilesRegistered = false;
+function ensurePMTilesProtocol() {
+  if (pmtilesRegistered) return;
+  const protocol = new Protocol();
+  maplibregl.addProtocol("pmtiles", protocol.tile);
+  pmtilesRegistered = true;
+}
 
 const SOURCE_ID = "permits";
 
@@ -110,6 +117,7 @@ export default function PermitMapView({ className = "", onLoad }) {
 
   // Single effect: create on mount, remove on unmount. Same shape as MapView.
   useEffect(() => {
+    ensurePMTilesProtocol();
     if (!containerRef.current) return;
 
     const map = new maplibregl.Map({
@@ -125,26 +133,33 @@ export default function PermitMapView({ className = "", onLoad }) {
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new maplibregl.ScaleControl({ unit: "metric", maxWidth: 100 }), "bottom-right");
 
-    map.on("error", (e) => {
-      // Surface map errors honestly instead of swallowing them — CLAUDE.md §6.
-      const err = e?.error;
-      console.error("[PermitMapView]", err?.message || err || e);
-    });
-
     map.on("load", () => {
+      console.log("[PermitMapView] map loaded, adding source");
       map.addSource(SOURCE_ID, {
         type: "vector",
         url: PERMITS_URL,
       });
-
-      // One circle layer from permitStyle.js; the spec is returned without
-      // `source`, filled in here so the style file stays source-agnostic.
+      console.log("[PermitMapView] source added, adding layer");
+      console.log("[PermitMapView] layer spec:",
+        JSON.stringify(permitCircleLayer()));
       map.addLayer({ ...permitCircleLayer(), source: SOURCE_ID });
-
+      console.log("[PermitMapView] layer added");
       wirePermitPopup(map);
-
       // Hand the live map to the page (last, so the layer it filters exists).
       if (onLoadRef.current) onLoadRef.current(map);
+    });
+
+    // Confirm the vector source actually finishes loading tiles.
+    map.on("sourcedata", (e) => {
+      if (e.sourceId === SOURCE_ID && e.isSourceLoaded) {
+        console.log("[PermitMapView] source loaded:",
+          SOURCE_ID, "tiles:", e.tile ? "yes" : "no");
+      }
+    });
+
+    // Surface map errors honestly instead of swallowing them — CLAUDE.md §6.
+    map.on("error", (e) => {
+      console.error("[PermitMapView] map error:", e.error);
     });
 
     // StrictMode double-mounts effects in dev; map.remove() teardown handles it.
