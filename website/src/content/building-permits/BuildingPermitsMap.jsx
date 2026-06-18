@@ -43,43 +43,85 @@ function coverageForYear(rows, year) {
   return rows.find((r) => Number(r.year) === year) || null;
 }
 
-// The construction-value size legend: nested proportional circles on a shared
-// baseline (the cartographic convention), coloured to the active permit type
-// (activeGroup → dotColour), clickable + keyboard-accessible. Permit-type colour
-// is communicated by the filter chips in the sidebar above (no chip row here).
-// Reuses existing classes + tokens (no new CSS).
-function PermitLegend({
-  activeBuckets, onToggle, onReset, activeGroup
-}) {
-  const allActive =
-    activeBuckets.size === ALL_BUCKET_IDS.length;
+// The construction-value tier selector: a 5-card grid. Each card is a native
+// <button> (free keyboard + touch a11y) showing a proportional circle coloured
+// to the active permit type — solid for a single group, a diagonal split
+// gradient (orange/violet) for "All". Active cards carry a coloured border + bg;
+// inactive cards a dashed ring + dimmed. Reuses existing tokens (no new CSS).
+function PermitLegend({ activeBuckets, onToggle, onReset, activeGroup }) {
+  const allActive = activeBuckets.size === ALL_BUCKET_IDS.length;
 
-  // Active dot colour mirrors the map exactly.
-  const dotColour =
-    activeGroup === "Residential" ? COLOURS.residential :
-    activeGroup === "Commercial"  ? COLOURS.commercial  :
-    COLOURS.residential; // "All" → show residential orange
-                         // as the dominant colour (84%)
+  // Circle fill per active group.
+  // "All" → diagonal split gradient (both colours visible).
+  // Single group → solid colour matching map dots.
+  const isAll = activeGroup === "All";
+  const resColour = COLOURS.residential;  // #f57c00 orange
+  const comColour = COLOURS.commercial;   // #7b2fa0 violet
 
-  // Layout: 5 columns, 48px each = 240px total. Wider columns give bucket
-  // labels room at legible font sizes. Fits inside the 300px sidebar (18px
-  // padding each side → 264px usable, 24px clearance).
-  const COL_W  = 48;
-  const MAX_R  = VALUE_BUCKETS[4].radius; // 19
-  const SVG_H  = MAX_R * 2 + 4;          // 42px
-  const SVG_W  = VALUE_BUCKETS.length * COL_W; // 240px
+  // Gradient id must be unique per bucket to avoid SVG id collisions.
+  function circleContent(bucketId, radius) {
+    const cx = radius + 2;
+    const cy = radius + 2;
+    const size = (radius + 2) * 2;
+    const gradId = `cv-grad-${bucketId}`;
+
+    if (isAll) {
+      return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}
+          aria-hidden="true">
+          <defs>
+            <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="50%" stopColor={resColour} />
+              <stop offset="50%" stopColor={comColour} />
+            </linearGradient>
+          </defs>
+          <circle cx={cx} cy={cy} r={radius}
+            fill={`url(#${gradId})`}
+            stroke="rgba(255,255,255,0.8)"
+            strokeWidth="1.2"
+          />
+        </svg>
+      );
+    }
+
+    const colour = activeGroup === "Residential" ? resColour : comColour;
+    return (
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}
+        aria-hidden="true">
+        <circle cx={cx} cy={cy} r={radius}
+          fill={colour}
+          stroke="rgba(255,255,255,0.8)"
+          strokeWidth="1.2"
+        />
+      </svg>
+    );
+  }
+
+  // Tier radii matching VALUE_BUCKETS proportions:
+  // micro=4, small=6, medium=8, large=11, major=15
+  const TIER_RADII = [4, 6, 8, 11, 15];
+
+  // Active card border/bg colours driven by active group.
+  const activeBorder = isAll
+    ? "#c0530b"
+    : activeGroup === "Residential" ? resColour : comColour;
+  const activeBg = isAll
+    ? `linear-gradient(135deg, ${resColour}14 50%, ${comColour}14 50%)`
+    : activeGroup === "Residential"
+      ? `${resColour}18`
+      : `${comColour}18`;
 
   return (
     <div className="legend">
 
-      {/* ── Construction value header ─────────────── */}
+      {/* ── Section header + reset ─────────────────── */}
       <div style={{
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         marginBottom: 8,
       }}>
-        <span className="legend-title">
+        <span className="legend-title" style={{ margin: 0 }}>
           Construction value
         </span>
         {!allActive && (
@@ -88,14 +130,23 @@ function PermitLegend({
             onClick={onReset}
             style={{
               fontSize: "0.66rem",
-              padding: "1px 8px",
-              border: "1px solid var(--border)",
+              padding: "2px 9px",
               borderRadius: 999,
+              border: "1px solid var(--border)",
               background: "var(--bg-soft)",
-              cursor: "pointer",
               color: "var(--text-muted)",
               fontFamily: "inherit",
+              cursor: "pointer",
               lineHeight: 1.6,
+              transition: "border-color 120ms, color 120ms",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "var(--text-muted)";
+              e.currentTarget.style.color = "var(--text)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "var(--border)";
+              e.currentTarget.style.color = "var(--text-muted)";
             }}
           >
             Show all
@@ -103,128 +154,120 @@ function PermitLegend({
         )}
       </div>
 
-      {/* ── Nested baseline circles ───────────────────
-          All circles share the same bottom baseline.
-          This is the cartographic gold standard for
-          proportional symbol legends (Axis Maps, ESRI).
-          Active = filled with dotColour + white halo.
-          Inactive = outlined dashed ring, 40% opacity.
-          Invisible expanded hit area (r=12 min) for
-          comfortable clicking on tiny circles. */}
-      <svg
-        width={SVG_W}
-        height={SVG_H}
-        viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-        aria-label="Construction value size reference.
-          Click each circle to filter."
-        style={{ display: "block", overflow: "visible" }}
-      >
-        {/* Baseline rule */}
-        <line
-          x1={0} y1={SVG_H - 1}
-          x2={SVG_W} y2={SVG_H - 1}
-          stroke="var(--border)"
-          strokeWidth="0.75"
-        />
-
+      {/* ── 5-card grid ────────────────────────────── */}
+      {/* Each card is a native <button> — pointer cursor,
+          keyboard (Tab/Enter/Space), and 44px+ touch
+          targets come for free. No SVG role="button"
+          fragility. Card border = on/off signal,
+          independent of circle size. */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(5, 1fr)",
+        gap: 4,
+        marginBottom: 6,
+      }}>
         {VALUE_BUCKETS.map((b, i) => {
           const active = activeBuckets.has(b.id);
-          const cx = i * COL_W + COL_W / 2;
-          // Baseline alignment: bottom edge of circle
-          // sits on the baseline line.
-          const cy = SVG_H - 1 - b.radius;
+          const radius = TIER_RADII[i];
 
-          return (
-            <g
-              key={b.id}
-              onClick={() => onToggle(b.id)}
-              style={{ cursor: "pointer" }}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onToggle(b.id);
-                }
-              }}
-              aria-pressed={active}
-              aria-label={`${b.label}: ${
-                active ? "visible, click to hide"
-                       : "hidden, click to show"
-              }`}
-            >
-              {/* Invisible expanded hit area */}
-              <circle
-                cx={cx} cy={cy}
-                r={Math.max(b.radius, 12)}
-                fill="transparent"
-              />
-              {active ? (
-                <circle
-                  cx={cx} cy={cy} r={b.radius}
-                  fill={dotColour}
-                  stroke="rgba(255,255,255,0.75)"
-                  strokeWidth={1.5}
-                  opacity={0.85}
-                />
-              ) : (
-                <circle
-                  cx={cx} cy={cy} r={b.radius}
-                  fill="none"
-                  stroke="var(--text-muted)"
-                  strokeWidth={1}
-                  strokeDasharray="2 1.5"
-                  opacity={0.35}
-                />
-              )}
-            </g>
-          );
-        })}
-      </svg>
-
-      {/* ── Value label buttons below each circle ─── */}
-      <div style={{
-        display: "flex",
-        width: SVG_W,
-        marginTop: 3,
-      }}>
-        {VALUE_BUCKETS.map((b) => {
-          const active = activeBuckets.has(b.id);
           return (
             <button
               key={b.id}
               type="button"
               onClick={() => onToggle(b.id)}
+              aria-pressed={active}
+              aria-label={`${b.label}: ${
+                active ? "visible, click to hide"
+                       : "hidden, click to show"
+              }`}
               style={{
-                flex: `0 0 ${COL_W}px`,
-                background: "none",
-                border: "none",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                gap: 4,
+                padding: "7px 3px 6px",
+                minHeight: 52,
+                borderRadius: 7,
+                border: `1.5px solid ${
+                  active ? activeBorder : "var(--border-soft)"
+                }`,
+                background: active ? activeBg : "transparent",
                 cursor: "pointer",
-                padding: "2px 1px 0",
+                fontFamily: "inherit",
+                transition:
+                  "opacity 150ms, border-color 150ms, background 150ms",
+                opacity: active ? 1 : 0.42,
+              }}
+              onMouseEnter={(e) => {
+                if (!activeBuckets.has(b.id)) {
+                  e.currentTarget.style.opacity = "0.72";
+                  e.currentTarget.style.borderColor =
+                    "var(--text-muted)";
+                } else {
+                  // Slight deepen on hover for active cards
+                  e.currentTarget.style.filter =
+                    "brightness(0.94)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity =
+                  activeBuckets.has(b.id) ? "1" : "0.42";
+                e.currentTarget.style.borderColor = active
+                  ? activeBorder
+                  : "var(--border-soft)";
+                e.currentTarget.style.filter = "";
+              }}
+            >
+              {/* Circle — filled when active, dashed
+                  outline when inactive. Size = tier size. */}
+              {active
+                ? circleContent(b.id, radius)
+                : (
+                  <svg
+                    width={(radius + 2) * 2}
+                    height={(radius + 2) * 2}
+                    viewBox={`0 0 ${(radius+2)*2} ${(radius+2)*2}`}
+                    aria-hidden="true"
+                  >
+                    <circle
+                      cx={radius + 2}
+                      cy={radius + 2}
+                      r={radius}
+                      fill="none"
+                      stroke="var(--text-muted)"
+                      strokeWidth="1.2"
+                      strokeDasharray="2 1.5"
+                    />
+                  </svg>
+                )
+              }
+
+              {/* Label below circle */}
+              <span style={{
+                fontSize: "0.58rem",
+                lineHeight: 1.2,
                 textAlign: "center",
-                fontSize: "0.72rem",
                 color: active
                   ? "var(--text)"
                   : "var(--text-muted)",
-                fontFamily: "inherit",
-                lineHeight: 1.3,
-                opacity: active ? 1 : 0.55,
-                transition: "opacity 150ms",
-              }}
-            >
-              {b.label}
+                wordBreak: "break-all",
+                hyphens: "auto",
+                maxWidth: "100%",
+              }}>
+                {b.label}
+              </span>
             </button>
           );
         })}
       </div>
 
       <p style={{
-        fontSize: "0.72rem",
+        fontSize: "0.66rem",
         color: "var(--text-muted)",
-        marginTop: 7,
-        lineHeight: 1.45,
+        lineHeight: 1.4,
       }}>
-        Click any circle or label to show/hide that tier.
+        Click any tier to show or hide.
       </p>
     </div>
   );
