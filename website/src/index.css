@@ -165,7 +165,7 @@ p  { margin: 0 0 0.75rem; }
 .shell-nav { background:var(--bg); border-bottom:1px solid var(--border-soft);
   padding:0 1.5rem; position:sticky; top:56px; z-index:90;
   box-shadow:var(--shadow-sm); }
-.shell-nav-list { list-style:none; margin:0; padding:0; display:flex; }
+.shell-nav-list { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; }
 
 /* Each top-level item is the positioning context for its dropdown (kept from
    the prior rules — the absolute sublist anchors to this, not the sticky nav). */
@@ -173,7 +173,7 @@ p  { margin: 0 0 0.75rem; }
 
 .shell-nav-link { display:inline-flex; align-items:center; padding:0 0.875rem;
   height:44px; color:var(--text-muted); font-size:0.875rem; font-weight:500;
-  border-bottom:2px solid transparent;
+  white-space:nowrap; border-bottom:2px solid transparent;
   transition:color 150ms ease, border-color 150ms ease; }
 .shell-nav-link:hover { color:var(--text); background:var(--bg-soft);
   text-decoration:none; }
