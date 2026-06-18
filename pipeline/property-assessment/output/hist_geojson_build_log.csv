@@ -1,0 +1,15 @@
+year,n_aggregated,n_suppressed,n_non_residential,n_no_data,geojson_path,file_size_mb
+2012,244,47,115,0,website/public/data/property-assessment/neighbourhoods_2012_recovered.geojson,1.92
+2013,249,62,95,0,website/public/data/property-assessment/neighbourhoods_2013_recovered.geojson,1.92
+2014,252,65,89,0,website/public/data/property-assessment/neighbourhoods_2014_recovered.geojson,1.92
+2015,258,65,83,0,website/public/data/property-assessment/neighbourhoods_2015_recovered.geojson,1.92
+2016,260,63,83,0,website/public/data/property-assessment/neighbourhoods_2016_recovered.geojson,1.92
+2017,260,68,78,0,website/public/data/property-assessment/neighbourhoods_2017_recovered.geojson,1.92
+2018,263,68,75,0,website/public/data/property-assessment/neighbourhoods_2018_recovered.geojson,1.92
+2019,262,64,80,0,website/public/data/property-assessment/neighbourhoods_2019_recovered.geojson,1.92
+2020,263,64,79,0,website/public/data/property-assessment/neighbourhoods_2020_recovered.geojson,1.92
+2021,265,65,76,0,website/public/data/property-assessment/neighbourhoods_2021_recovered.geojson,1.92
+2022,267,66,73,0,website/public/data/property-assessment/neighbourhoods_2022_recovered.geojson,1.92
+2023,270,65,71,0,website/public/data/property-assessment/neighbourhoods_2023_recovered.geojson,1.92
+2024,266,65,75,0,website/public/data/property-assessment/neighbourhoods_2024_recovered.geojson,1.92
+2025,275,60,71,0,website/public/data/property-assessment/neighbourhoods_2025_recovered.geojson,1.92

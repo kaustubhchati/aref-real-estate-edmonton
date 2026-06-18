@@ -1,0 +1,4 @@
+rule,description,validated_f1,rows_in,rows_out,rows_dropped,pct_dropped,run_date
+R1,Keep Assessment Class 1 == RESIDENTIAL,0.992,5501958,5141138,360820,6.56%,20260617
+R3,Drop NA Lot Size + zero/NA Assessed Value (manufactured homes),0.974,5141138,4950354,190784,3.71%,20260617
+R_PARK_HIST,Drop parking stalls: value<$15K + lot<20m² + RA/DC/OTHER zone,0.894,4950354,4552910,397444,8.03%,20260617
