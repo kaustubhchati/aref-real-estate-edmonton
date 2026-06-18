@@ -17,9 +17,10 @@
 //   └────────────────────────────────────────────────────────────────┘
 //
 // Data source seam: city + year drive a single URL via dataSources.js.
-// Today only (Edmonton, 2026) resolves; (Calgary, *) and (*, 2025) etc
-// resolve to null → EmptyState. Adding a real dataset later is one row
-// in DATA_SOURCES.
+// The available years come from /manifest.json (loaded once on mount), never
+// from literals here — adding a year is a pipeline-only change. A (city, year)
+// the manifest doesn't list (e.g. any Calgary year today) resolves to null →
+// EmptyState.
 // =============================================================================
 
 import { useEffect, useMemo, useState } from "react";
@@ -40,9 +41,10 @@ import {
 } from "./choroplethStyle.js";
 import {
   CITIES,
-  YEARS,
   DEFAULT_CITY,
-  DEFAULT_YEAR,
+  loadManifest,
+  getYearsForCity,
+  getDefaultYear,
   resolveDataUrl,
   describeEmpty,
 } from "./dataSources.js";
@@ -55,14 +57,47 @@ import { fmtCurrency } from "../../utils/format.js";
 const SIDEBAR_TRANSITION_MS = 260;
 
 export default function PropertyAssessmentMap() {
+  // The manifest is the source of truth for which years exist. Until it loads,
+  // we show a loading state; if it fails, an error state. year is null until
+  // the manifest tells us a city's default.
+  const [manifest, setManifest] = useState(null);
+  const [manifestError, setManifestError] = useState(null);
   const [city, setCity] = useState(DEFAULT_CITY);
-  const [year, setYear] = useState(DEFAULT_YEAR);
-  const url = resolveDataUrl(city, year);
+  const [year, setYear] = useState(null);
 
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
   const [fetchError, setFetchError] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
+
+  // Load the manifest once on mount. We seed the year in the SAME update as the
+  // manifest so there's no frame where the manifest is loaded but no year is
+  // chosen yet (which would flash an empty state). City can't have changed yet
+  // — the controls only render after this resolves — so DEFAULT_CITY is right.
+  useEffect(() => {
+    let cancelled = false;
+    loadManifest()
+      .then((m) => {
+        if (cancelled) return;
+        setManifest(m);
+        setYear(getDefaultYear(m, DEFAULT_CITY));
+      })
+      .catch((err) => { if (!cancelled) setManifestError(err.message); });
+    return () => { cancelled = true; };
+  }, []);
+
+  // The years this city offers, and the URL for the current selection. A year
+  // the manifest doesn't list (any Calgary year today) yields url=null →
+  // EmptyState. resolveDataUrl always returns a path, so the gate lives here.
+  const years = getYearsForCity(manifest, city);
+  const url = year != null && years.includes(year) ? resolveDataUrl(city, year) : null;
+
+  // Switching city resets the year to that city's default in the same update,
+  // so we never carry one city's year onto another (or onto a city with none).
+  function changeCity(nextCity) {
+    setCity(nextCity);
+    setYear(getDefaultYear(manifest, nextCity));
+  }
 
   // Single effect on [url]: reset all derived state, then fetch if there's a
   // real URL. When url is null we leave gj/map null and the JSX renders
@@ -95,16 +130,42 @@ export default function PropertyAssessmentMap() {
     if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS);
   }
 
-  const empty = url ? null : describeEmpty(city, year);
+  // All hooks above run every render; only now do we branch the output, so the
+  // loading/error short-circuits never change hook order.
+  if (manifestError) {
+    return (
+      <article className="content-map">
+        <div className="canvas-wrap">
+          <EmptyState
+            title="Could not load the data catalogue."
+            body={manifestError}
+          />
+        </div>
+      </article>
+    );
+  }
+
+  if (!manifest) {
+    return (
+      <article className="content-map">
+        <div className="canvas-wrap">
+          <p className="map-loading">Loading data catalogue…</p>
+        </div>
+      </article>
+    );
+  }
+
+  const empty = url ? null : describeEmpty(manifest, city, year);
 
   return (
     <article className="content-map">
       <aside className={`sb${collapsed ? " collapsed" : ""}`} aria-label="Map sidebar">
-        <h1 className="sb-title">Edmonton — median residential assessment, 2026</h1>
+        <h1 className="sb-title">
+          {city} — median residential assessment{year != null ? `, ${year}` : ""}
+        </h1>
         <p className="sb-sub">
-          Layer 1a-cleaned (parking + R1 + R3), neighbourhood aggregates over
-          365,406 properties. 402 polygons. Hover any polygon for detail;
-          click to pin.
+          Layer 1a-cleaned (parking + R1 + R3), neighbourhood aggregates.
+          Hover any polygon for detail; click to pin.
         </p>
 
         <section className="sb-section">
@@ -112,14 +173,24 @@ export default function PropertyAssessmentMap() {
             label="City"
             options={CITIES}
             value={city}
-            onChange={setCity}
+            onChange={changeCity}
           />
-          <OptionToggle
-            label="Year"
-            options={YEARS}
-            value={year}
-            onChange={setYear}
-          />
+          {/* 15 years is too many for a segmented toggle (see OptionToggle's
+              own note), so the year control is a native dropdown. years comes
+              straight from the manifest. */}
+          <div className="year-select-field">
+            <span className="year-select-label">Year</span>
+            <select
+              className="year-select"
+              aria-label="Year"
+              value={year ?? ""}
+              onChange={(e) => setYear(Number(e.target.value))}
+            >
+              {years.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
         </section>
 
         <section className="sb-section">
@@ -170,10 +241,10 @@ export default function PropertyAssessmentMap() {
         </button>
         {url ? (
           // key={url} forces a clean MapView remount when the data URL
-          // changes (e.g. switching cities, or future year switches that
-          // hit different files). MapLibre destroys the old map in its
-          // cleanup; the new instance fires onLoad and useChoroplethInteractions
-          // reattaches handlers to it.
+          // changes (switching cities, or switching years that hit different
+          // files). MapLibre destroys the old map in its cleanup; the new
+          // instance fires onLoad and useChoroplethInteractions reattaches
+          // handlers to it.
           <MapView
             key={url}
             className="canvas"
