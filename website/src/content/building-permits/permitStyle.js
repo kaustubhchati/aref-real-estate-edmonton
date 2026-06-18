@@ -47,15 +47,14 @@ export const LAYER_ID = "permits-circles";
 export const HEATMAP_LAYER_ID = "permits-heat";
 
 // ---- Colour by job_group ---------------------------------------------------
-// The mix is ~84% residential / 16% commercial. If both were the same hot
-// colour the map would read as a single mass; if commercial were the muted one
-// it would vanish under the residential majority. So residential is the quiet
-// BASE (muted slate-blue) and commercial is the SIGNAL (hot orange) — the 16%
-// has to pop against the 84%.
+// Magenta (residential) vs teal (commercial): ~170° of hue separation, and both
+// hues are ABSENT from CARTO Voyager's blue/green/yellow/beige basemap, so dots
+// never blend into the map. The pair is colourblind-safe (deuteranopia +
+// protanopia) — magenta reads residential warmth, teal reads commercial/civic.
 export const COLOURS = {
-  residential: "#6b8cae", // muted slate-blue — the base
-  commercial:  "#e8590c", // hot orange — the signal
-  fallback:    "#9aa0a6", // any unexpected/missing job_group → neutral grey
+  residential: "#c0397a",  // deep magenta — absent from Voyager basemap
+  commercial:  "#00897b",  // teal — absent from Voyager basemap
+  fallback:    "#9aa0a6",  // neutral grey for any unknown group
 };
 
 // ["match", job_group, ...] → fill colour. Built from COLOURS so the table above
@@ -136,16 +135,37 @@ export function permitCircleLayer() {
     // and the two layers would overlap with no clean crossover.
     minzoom: 10,
     paint: {
-      "circle-color":  buildColourExpression(),
-      "circle-radius": buildRadiusExpression(),
-      // Opacity rises with zoom: at low zoom dots pile up, so lower opacity lets
-      // density read through the overlap; at street level full(er) opacity makes
-      // each dot readable.
-      "circle-opacity": ["interpolate", ["linear"], ["zoom"], 7, 0.45, 11, 0.60, 14, 0.75],
-      // Stroke widens with zoom in step with the larger dots — a hairline at the
-      // overview, a clear outline up close so piled dots stay distinct.
-      "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 7, 0.3, 11, 0.5, 14, 1.0],
-      "circle-stroke-color": "rgba(40,40,45,0.5)",
+      "circle-color":            buildColourExpression(),
+      "circle-radius":           buildRadiusExpression(),
+      // Start at 0 at z10 so circles are invisible until the heatmap (which fades
+      // out z10–12) hands off — no moment where both show at full weight. Visible
+      // from z11 onward, fuller as you zoom to street level.
+      "circle-opacity": [
+        "interpolate", ["linear"], ["zoom"],
+        10, 0.0,    // invisible until heatmap crossover starts
+        11, 0.65,
+        14, 0.82,
+        18, 0.90,
+      ],
+      "circle-stroke-width": [
+        "interpolate", ["linear"], ["zoom"],
+        11, 0.5,
+        14, 1.0,
+        18, 1.5,
+      ],
+      // White stroke (not dark): Voyager is a LIGHT basemap, so a white outline
+      // separates overlapping dots far better than the dark stroke a dark basemap
+      // would want.
+      "circle-stroke-color": [
+        "interpolate", ["linear"], ["zoom"],
+        11, "rgba(255,255,255,0.4)",  // soft white stroke at mid zoom
+        14, "rgba(255,255,255,0.75)", // stronger white at street level
+      ],
+      // circle-pitch-alignment is a PAINT property in MapLibre (not layout, where
+      // the original spec placed it — MapLibre would reject it there). "map" makes
+      // dots scale with apparent distance when the map is pitched, so they read as
+      // sitting on the surface instead of floating viewport-fixed.
+      "circle-pitch-alignment": "map",
     },
   };
 }
@@ -177,14 +197,18 @@ export function heatmapLayer() {
         9, 0.6,
         12, 1.8,
       ],
+      // Magenta-tinted ramp aligned with the residential majority (~84% of
+      // permits drive the density signal), so the heatmap→dots handoff is
+      // coherent — the old blue→red ramp clashed with both the dot colours and
+      // the basemap.
       "heatmap-color": [
         "interpolate", ["linear"], ["heatmap-density"],
         0,   "rgba(0,0,0,0)",
-        0.2, "#2166ac",
-        0.4, "#74add1",
-        0.6, "#fee090",
-        0.8, "#f46d43",
-        1.0, "#a50026",
+        0.15, "#f3e0eb",   // pale pink
+        0.35, "#d9748a",   // rose
+        0.55, "#c0397a",   // residential magenta
+        0.75, "#7b1c5c",   // deep magenta
+        1.0,  "#3d0033",   // near-black purple — peak density
       ],
       "heatmap-radius": [
         "interpolate", ["linear"], ["zoom"],
