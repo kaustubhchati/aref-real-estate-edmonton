@@ -153,3 +153,18 @@ export function buildPermitPopupHtml(p) {
     `</div>`
   )).join("");
 }
+
+// Hover popup: a slim two-row preview (address + category) shown while the
+// pointer is over a dot, distinct from the full click-popup above. Same row
+// markup and escaping, just a shorter inline field list.
+export function buildPermitHoverHtml(p) {
+  return [
+    ["address",      "Address",      asText],
+    ["job_category", "Job category", asText],
+  ].map(([key, label, fmt]) => (
+    `<div class="pop-row">` +
+      `<span class="pop-k">${label}</span>` +
+      `<span class="pop-v">${escapeHtml(fmt(p[key]))}</span>` +
+    `</div>`
+  )).join("");
+}

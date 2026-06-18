@@ -31,6 +31,7 @@ import {
   LAYER_ID,
   permitCircleLayer,
   buildPermitPopupHtml,
+  buildPermitHoverHtml,
 } from "./permitStyle.js";
 
 // Register the PMTiles protocol ONCE at module load, not inside the effect.
@@ -68,6 +69,30 @@ function wirePermitPopup(map) {
     closeOnClick: false,
     offset: 10,
     maxWidth: "300px",
+  });
+
+  // A second, lighter popup that follows the pointer to preview the dot under it
+  // (address + category). No close button — it lives only while hovering and is
+  // removed on mouseleave. Separate instance from the click popup so a pinned
+  // click popup isn't disturbed by hovering nearby dots.
+  const hoverPopup = new maplibregl.Popup({
+    closeButton: false,
+    closeOnClick: false,
+    offset: 8,
+    maxWidth: "220px",
+  });
+
+  map.on("mousemove", LAYER_ID, (e) => {
+    if (!e.features?.length) return;
+    const f = e.features[0];
+    hoverPopup
+      .setLngLat(e.lngLat)
+      .setHTML(buildPermitHoverHtml(f.properties))
+      .addTo(map);
+  });
+
+  map.on("mouseleave", LAYER_ID, () => {
+    hoverPopup.remove();
   });
 
   map.on("click", LAYER_ID, (e) => {
