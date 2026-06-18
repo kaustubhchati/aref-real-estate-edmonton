@@ -122,6 +122,11 @@ export default function PermitMapView({ className = "", onLoad }) {
   // onLoad is read from a ref so the page can pass a fresh callback between
   // renders without re-mounting the map (same trick as the shared MapView).
   const onLoadRef = useRef(onLoad);
+  // Live-callback pattern: ref is updated during render so the
+  // effect always reads the latest onLoad without re-mounting
+  // the map. The rule flags ref writes outside effects but this
+  // is safe and intentional — see MapView.jsx / PermitMapView.jsx.
+  // eslint-disable-next-line react-hooks/refs
   onLoadRef.current = onLoad;
 
   // Single effect: create on mount, remove on unmount. Same shape as MapView.
@@ -174,7 +179,6 @@ export default function PermitMapView({ className = "", onLoad }) {
 
     // StrictMode double-mounts effects in dev; map.remove() teardown handles it.
     return () => map.remove();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return <div ref={containerRef} className={`mapview ${className}`} />;

@@ -46,6 +46,11 @@ export default function MapView({
   // onLoad is read from a ref so it can change between renders (e.g. when
   // the section closes over fresh state) without re-mounting the map.
   const onLoadRef = useRef(onLoad);
+  // Live-callback pattern: ref is updated during render so the
+  // effect always reads the latest onLoad without re-mounting
+  // the map. The rule flags ref writes outside effects but this
+  // is safe and intentional — see MapView.jsx / PermitMapView.jsx.
+  // eslint-disable-next-line react-hooks/refs
   onLoadRef.current = onLoad;
 
   useEffect(() => {
