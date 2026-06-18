@@ -28,7 +28,10 @@ export const MAP_VIEW = {
   center: [-113.4938, 53.5461], // Edmonton
   zoom: 9.6,
   minZoom: 7,
-  maxZoom: 14,
+  // z18 is the MapLibre/Carto tile ceiling. Street names + building outlines are
+  // readable by z16-17, which is where permit-level work is actionable; z14 was
+  // still tile-blurry for that.
+  maxZoom: 18,
 };
 
 // The tippecanoe layer name baked into permits.pmtiles. The circle layer's
@@ -72,25 +75,46 @@ function buildColourExpression() {
 // which fits a legible 2–22px radius band. (sqrt, not log: construction_value
 // can be 0/NULL, and log(0) is -Infinity. sqrt(0) is a clean 0.)
 //
-// RADIUS_STOPS is written in RAW dollars for legibility; the expression applies
-// sqrt to both the stop boundaries and the live value so the two stay aligned.
-// NULL construction_value coalesces to 0 (via ["number", …, 0]) and lands on the
-// first stop → the 2px floor, so no-value permits are small but NEVER invisible.
-export const RADIUS_STOPS = [
-  { v:           0, r:  2 },  // NULL / no-value → the floor
-  { v:      50_000, r:  3.5 },
-  { v:     500_000, r:  6 },
-  { v:   5_000_000, r: 10 },
-  { v:  50_000_000, r: 16 },
-  { v: 480_000_000, r: 22 },  // the largest towers
-];
-
+// The value→radius stops are written inline in the zoom-aware expression below,
+// in RAW dollars with sqrt applied to each boundary. NULL construction_value
+// coalesces to 0 (via ["number", …, 0]) and lands on the first stop → the floor,
+// so no-value permits are small but NEVER invisible.
+//
+// Radius is ALSO zoom-aware: a fixed-pixel ramp is the same size at z7 as z14,
+// so low zoom collapses into an unreadable mass and high zoom makes small permits
+// invisible. So we interpolate on TWO axes — outer = zoom, inner = sqrt(value):
+// dots stay small at the city overview (density reads from overlap) and grow at
+// street level (individual permits become legible).
 function buildRadiusExpression() {
-  // sqrt-tamed input: NULL/missing → 0 → first stop.
-  const input = ["sqrt", ["number", ["get", "construction_value"], 0]];
-  const interp = ["interpolate", ["linear"], input];
-  for (const s of RADIUS_STOPS) interp.push(Math.sqrt(s.v), s.r);
-  return interp;
+  // Two-axis interpolation: outer = zoom, inner = construction_value (sqrt-tamed).
+  // At z7 (city overview) dots are small — density reads from overlap, not size.
+  // At z14 (street level) dots grow — individual permits are legible.
+  // The inner sqrt ramp is identical to before; only the scale factor changes.
+  const sqrtVal = ["sqrt", ["number", ["get", "construction_value"], 0]];
+  return [
+    "interpolate", ["linear"], ["zoom"],
+    7,  ["interpolate", ["linear"], sqrtVal,
+          0,           1.5,
+          Math.sqrt(    50_000),  2.5,
+          Math.sqrt(   500_000),  4,
+          Math.sqrt( 5_000_000),  6,
+          Math.sqrt(50_000_000),  9,
+          Math.sqrt(480_000_000), 13],
+    11, ["interpolate", ["linear"], sqrtVal,
+          0,           2.5,
+          Math.sqrt(    50_000),  4,
+          Math.sqrt(   500_000),  7,
+          Math.sqrt( 5_000_000), 11,
+          Math.sqrt(50_000_000), 16,
+          Math.sqrt(480_000_000), 22],
+    14, ["interpolate", ["linear"], sqrtVal,
+          0,           3.5,
+          Math.sqrt(    50_000),  6,
+          Math.sqrt(   500_000), 10,
+          Math.sqrt( 5_000_000), 16,
+          Math.sqrt(50_000_000), 22,
+          Math.sqrt(480_000_000), 30],
+  ];
 }
 
 // ---- The circle layer spec -------------------------------------------------
@@ -104,10 +128,15 @@ export function permitCircleLayer() {
     type: "circle",
     "source-layer": SOURCE_LAYER,
     paint: {
-      "circle-color":        buildColourExpression(),
-      "circle-radius":       buildRadiusExpression(),
-      "circle-opacity":      0.6,
-      "circle-stroke-width": 0.4,
+      "circle-color":  buildColourExpression(),
+      "circle-radius": buildRadiusExpression(),
+      // Opacity rises with zoom: at low zoom dots pile up, so lower opacity lets
+      // density read through the overlap; at street level full(er) opacity makes
+      // each dot readable.
+      "circle-opacity": ["interpolate", ["linear"], ["zoom"], 7, 0.45, 11, 0.60, 14, 0.75],
+      // Stroke widens with zoom in step with the larger dots — a hairline at the
+      // overview, a clear outline up close so piled dots stay distinct.
+      "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 7, 0.3, 11, 0.5, 14, 1.0],
       "circle-stroke-color": "rgba(40,40,45,0.5)",
     },
   };
@@ -124,13 +153,18 @@ export function permitCircleLayer() {
 // loop never has to special-case missing values.
 const asText = (v) => (v == null || v === "" ? "—" : String(v));
 
+// The fourth tuple element is `headline`: true → the row gets the .pop-row
+// headline class (bold value), mirroring choroplethStyle.js's POPUP_ROWS.
+// Address leads (orientation); construction value is the headline (the primary
+// quantitative fact). Year is intentionally absent — the sidebar already shows
+// the selected year, so repeating it here is noise.
 export const PERMIT_POPUP_ROWS = [
-  ["job_category",       "Job category",       asText],
-  ["building_type",      "Building type",      asText],
-  ["work_type",          "Work type",          asText],
-  ["construction_value", "Construction value", fmtCurrency],
-  ["year",               "Year",               asText],
-  ["address",            "Address",            asText],
+  ["address",            "Address",            asText,      false],
+  ["job_category",       "Job category",       asText,      false],
+  ["job_group",          "Permit type",        asText,      false],
+  ["building_type",      "Building type",      asText,      false],
+  ["work_type",          "Work type",          asText,      false],
+  ["construction_value", "Construction value", fmtCurrency, true ],
 ];
 
 // HTML-escape before interpolating into setHTML() — popup content is the only
@@ -146,8 +180,8 @@ function escapeHtml(s) {
 // Build the popup body for one clicked permit feature, row by row from the
 // table above. Reuses the global .pop-row / .pop-k / .pop-v CSS (no new styles).
 export function buildPermitPopupHtml(p) {
-  return PERMIT_POPUP_ROWS.map(([key, label, fmt]) => (
-    `<div class="pop-row">` +
+  return PERMIT_POPUP_ROWS.map(([key, label, fmt, headline]) => (
+    `<div class="pop-row${headline ? " headline" : ""}">` +
       `<span class="pop-k">${label}</span>` +
       `<span class="pop-v">${escapeHtml(fmt(p[key]))}</span>` +
     `</div>`

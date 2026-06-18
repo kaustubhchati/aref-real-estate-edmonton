@@ -134,6 +134,9 @@ export default function PermitMapView({ className = "", onLoad }) {
       zoom: MAP_VIEW.zoom,
       minZoom: MAP_VIEW.minZoom,
       maxZoom: MAP_VIEW.maxZoom,
+      // Edmonton metro bounds — keep panning from drifting to Calgary or the
+      // Arctic. Loose enough that zooming out to z7 still shows full city context.
+      maxBounds: [[-114.5, 52.8], [-112.2, 54.0]],
       attributionControl: true,
     });
 
