@@ -27,29 +27,80 @@ export const MAP_VIEW = {
 
 export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 
-// ---- Colour ramp: fixed colours + IQR roles, per-year $ thresholds ---------
-// Only the dollar thresholds change between years; the five colours and their
-// roles (min … max) are constant. RAMP holds the constant part; the per-year
-// values come from the manifest via stopsFromScale().
-//   key   = the field name in a manifest colourScaleByYear entry
+// ---- Per-metric colour ramps -----------------------------------------------
+// Each ramp has 5 stops (min→Q25→median→Q75→max, light→dark). The per-year
+// dollar/area/year thresholds come from the manifest or the data; only the
+// colours are fixed here.
+//   key   = the field name in a manifest colourScaleByYear entry / quantile role
 //   c     = fill colour at that stop
 //   label = role in the IQR (shown in the legend)
-const RAMP = [
-  { key: "min",    c: "#ffffcc", label: "min"    },
-  { key: "q25",    c: "#fed976", label: "Q25"    },
-  { key: "median", c: "#feb24c", label: "median" },
-  { key: "q75",    c: "#fd8d3c", label: "Q75"    },
-  { key: "max",    c: "#bd0026", label: "max"    },
+//
+// Chosen from ColorBrewer 2.0 (Brewer 1999) for:
+//   • colourblind safety (deuteranopia + protanopia tested)
+//   • no false semantic signal (red = danger avoided for $ data)
+//   • distinction from CARTO Voyager basemap colours
+//   • perceptual uniformity (luminance increases monotonically)
+
+// Dollar value metrics (median + mean assessed): PuBu
+// White→lavender→mid-blue→deep blue. Standard ColorBrewer
+// choice for income/property value data. Light = low value,
+// dark = high value. No red alarm signal.
+const RAMP_VALUE = [
+  { key: "min",    c: "#f1eef6", label: "min"    },
+  { key: "q25",    c: "#bdc9e1", label: "Q25"    },
+  { key: "median", c: "#74a9cf", label: "median" },
+  { key: "q75",    c: "#2b8cbe", label: "Q75"    },
+  { key: "max",    c: "#045a8d", label: "max"    },
 ];
+
+// Lot size (physical area): YlOrBr
+// Cream→gold→orange→rust→dark brown. Earth tones for physical
+// area data. Distinct from value palette. Semantically neutral.
+const RAMP_AREA = [
+  { key: "min",    c: "#ffffd4", label: "min"    },
+  { key: "q25",    c: "#fed98e", label: "Q25"    },
+  { key: "median", c: "#fe9929", label: "median" },
+  { key: "q75",    c: "#cc4c02", label: "Q75"    },
+  { key: "max",    c: "#662506", label: "max"    },
+];
+
+// Year built (temporal): viridis-inspired (yellow→green→teal→navy→purple)
+// Perceptually uniform, colourblind-safe. Older = light/warm,
+// newer = dark/cool. Temporal data reads well on this ramp.
+const RAMP_YEAR = [
+  { key: "min",    c: "#fde725", label: "oldest" },
+  { key: "q25",    c: "#5ec962", label: "Q25"    },
+  { key: "median", c: "#21918c", label: "median" },
+  { key: "q75",    c: "#3b528b", label: "Q75"    },
+  { key: "max",    c: "#440154", label: "newest" },
+];
+
+// Map each metric key to its ramp.
+// WHY a lookup table: metricStops() and stopsFromScale() both
+// need to know which ramp to use. Single source of truth here.
+const METRIC_RAMP = {
+  median_assessvalue: RAMP_VALUE,
+  avall_public:       RAMP_VALUE,
+  avg_lotsize:        RAMP_AREA,
+  median_yearbuilt:   RAMP_YEAR,
+  // yoy_pct_change uses YOY_STOPS (diverging) — not this table.
+};
+
+// Default ramp for fallback (used when metric key is unknown).
+const RAMP_DEFAULT = RAMP_VALUE;
 
 // Turn a {min,q25,median,q75,max} scale into the [{ v, c, label }] stops the
 // map and legend consume. Returns null if any value is missing, non-finite, or
 // not strictly ascending — MapLibre's interpolate requires ascending inputs,
 // so a bad scale must fall back rather than throw at render time.
-function buildStops(scale) {
-  const stops = RAMP.map((r) => ({ v: scale?.[r.key], c: r.c, label: r.label }));
-  const finite = stops.every((s) => Number.isFinite(s.v));
-  const ascending = stops.every((s, i) => i === 0 || s.v > stops[i - 1].v);
+function buildStops(scale, ramp = RAMP_DEFAULT) {
+  const stops = ramp.map((r) => ({
+    v: scale?.[r.key], c: r.c, label: r.label,
+  }));
+  const finite    = stops.every((s) => Number.isFinite(s.v));
+  const ascending = stops.every(
+    (s, i) => i === 0 || s.v > stops[i - 1].v
+  );
   return finite && ascending ? stops : null;
 }
 
@@ -57,22 +108,25 @@ function buildStops(scale) {
 // no usable scale in the manifest. Valid by construction, so always non-null.
 export const STOPS = buildStops({
   min: 103500, q25: 352625, median: 425125, q75: 496188, max: 1226000,
-});
+}, RAMP_VALUE);
 
 // Per-year stops from a manifest colourScaleByYear[year] entry, falling back to
 // the locked STOPS when that year's scale is missing or unusable.
-export function stopsFromScale(scale) {
-  return buildStops(scale) ?? STOPS;
+export function stopsFromScale(scale, metricKey = "median_assessvalue") {
+  const ramp = METRIC_RAMP[metricKey] ?? RAMP_DEFAULT;
+  return buildStops(scale, ramp) ?? STOPS;
 }
 
 // Compute ramp stops for a metric straight from the loaded GeoJSON: the
 // [min, Q25, median, Q75, max] of that metric across aggregated polygons,
-// mapped onto RAMP's fixed colours. Used for the metrics the manifest has no
-// scale for — i.e. everything except median_assessvalue, which keeps its locked
-// manifest scale. Falls back to the locked STOPS when there's too little data,
+// mapped onto that metric's ramp colours (METRIC_RAMP). Used for the metrics the
+// manifest has no scale for — i.e. everything except median_assessvalue, which
+// keeps its locked manifest scale. Falls back to the locked STOPS when there's
+// too little data,
 // and drops any stop not strictly greater than the previous one so MapLibre's
 // interpolate (which requires ascending inputs) never throws on ties.
 export function metricStops(gj, metricKey) {
+  const ramp = METRIC_RAMP[metricKey] ?? RAMP_DEFAULT;
   const vals = [];
   for (const f of gj?.features ?? []) {
     const p = f.properties;
@@ -80,15 +134,20 @@ export function metricStops(gj, metricKey) {
     const v = Number(p[metricKey]);
     if (Number.isFinite(v)) vals.push(v);
   }
-  if (vals.length < 2) return STOPS;
+  if (vals.length < 2) return buildStops({
+    min: 0, q25: 25, median: 50, q75: 75, max: 100,
+  }, ramp) ?? STOPS;
   vals.sort((a, b) => a - b);
 
-  const ps = [0, 0.25, 0.5, 0.75, 1]; // min, Q25, median, Q75, max — aligns to RAMP
-  const raw = RAMP.map((r, i) => ({ v: quantile(vals, ps[i]), c: r.c, label: r.label }));
+  const ps = [0, 0.25, 0.5, 0.75, 1]; // min, Q25, median, Q75, max
+  const raw = ramp.map((r, i) => ({
+    v: quantile(vals, ps[i]), c: r.c, label: r.label,
+  }));
 
   const stops = [];
   for (const s of raw) {
-    if (stops.length === 0 || s.v > stops[stops.length - 1].v) stops.push(s);
+    if (stops.length === 0 || s.v > stops[stops.length - 1].v)
+      stops.push(s);
   }
   return stops.length >= 2 ? stops : STOPS;
 }
@@ -102,16 +161,19 @@ function quantile(sorted, p) {
 }
 
 // ---- Year-over-year diverging scale ----------------------------------------
-// Fixed blue→white→red diverging ramp for yoy_pct_change (a signed %, unlike
+// Fixed blue→white→orange diverging ramp for yoy_pct_change (a signed %, unlike
 // the sequential $ metrics). NOT per-year and NOT data-derived: a stable scale
 // centred on 0% so a colour means the same change in every year. Values are
 // already on the 0-100 % scale (e.g. -5 = down 5%), matching fmtPct.
+// Orange (not red) on the positive arm: blue/orange is the recommended
+// colourblind-safe diverging pair (deuteranopia + protanopia), keeping the
+// semantic reading blue = decline, warm = growth.
 const YOY_STOPS = [
   { v: -15, c: "#2166ac", label: "-15%" },
   { v:  -5, c: "#92c5de", label: "-5%"  },
   { v:   0, c: "#f7f7f7", label: "0%"   },
-  { v:   5, c: "#f4a582", label: "+5%"  },
-  { v:  15, c: "#b2182b", label: "+15%" },
+  { v:   5, c: "#f4a35a", label: "+5%"  },
+  { v:  15, c: "#b35806", label: "+15%" },
 ];
 export { YOY_STOPS };
 
