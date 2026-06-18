@@ -599,6 +599,17 @@ p  { margin: 0 0 0.75rem; }
   font-style: italic;
 }
 
+/* Honest "why this polygon has no value" note for non-aggregated states. */
+.pop-reason {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.45;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #f0f0f0;
+}
+
 /* "Copy stats" button in the pinned popup (wired in interactions.js). */
 .pop-copy-btn {
   margin-top: 8px;

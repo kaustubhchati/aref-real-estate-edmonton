@@ -142,7 +142,7 @@ export const STATE_STYLE = {
   },
   suppressed_low_n: {
     label:        "Suppressed (N < 100)",
-    fillColor:    "#d8d4cc",
+    fillColor:    "rgba(255,255,255,0.08)",   // glass — basemap shows through; outline carries the state
     pattern:      null,
     outlineColor: "#7a7468",
     outlineWidth: 0.7,
@@ -150,7 +150,7 @@ export const STATE_STYLE = {
   },
   non_residential: {
     label:        "No residential properties",
-    fillColor:    "#c9c4ba",
+    fillColor:    "rgba(255,255,255,0.08)",   // glass — basemap shows through; outline carries the state
     pattern:      "stripes",
     outlineColor: "#888173",
     outlineWidth: 0.5,
@@ -158,7 +158,7 @@ export const STATE_STYLE = {
   },
   manufactured_home_community: {
     label:        "Manufactured home community",
-    fillColor:    "#b8b3a8",
+    fillColor:    "rgba(255,255,255,0.08)",   // glass — basemap shows through; outline carries the state
     pattern:      "dots",
     outlineColor: "#7a7468",
     outlineWidth: 0.6,
@@ -166,7 +166,7 @@ export const STATE_STYLE = {
   },
   no_data: {
     label:        "No data (legitimately empty)",
-    fillColor:    "#a8a39a",
+    fillColor:    "rgba(255,255,255,0.08)",   // glass — basemap shows through; outline carries the state
     pattern:      null,
     outlineColor: "#5a554c",
     outlineWidth: 0.8,
@@ -251,8 +251,15 @@ export function buildPopupHtml(p, pinned, year) {
       `<div class="pop-row">` +
         `<span class="pop-k">Median assessed</span>` +
         `<span class="pop-v pop-v-muted">suppressed</span>` +
-      `</div>`
+      `</div>`,
+      `<div class="pop-reason">Fewer than 100 properties — aggregate values suppressed to protect privacy.</div>`
     );
+  } else if (state === "non_residential") {
+    parts.push(`<div class="pop-reason">No residential properties in this area. May include river valley, industrial zones, parks, or commercial-only land.</div>`);
+  } else if (state === "manufactured_home_community") {
+    parts.push(`<div class="pop-reason">Manufactured home community. Lot sizes are not recorded for leased-land properties.</div>`);
+  } else if (state === "no_data") {
+    parts.push(`<div class="pop-reason">No assessment data for this boundary. Area may be unregistered, recently annexed, or a planning placeholder.</div>`);
   }
 
   if (pinned) {
@@ -344,8 +351,10 @@ export function choroplethFillColor(metricKey = "median_assessvalue", stops = ST
 // both default to the locked median scale when a caller doesn't pass them.
 export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue") {
   return [
-    // 1. Fill colour for every polygon. Opacity lifts on hover or when pinned
-    //    so the user can confirm which polygon their popup is describing.
+    // 1. Fill colour for every polygon. Aggregated polygons get the solid ramp
+    //    (lifting on hover/pin); non-aggregated polygons are near-transparent
+    //    "glass" so the basemap shows through, with a faint white wash on hover
+    //    to confirm the interaction. The outline (below) carries the state.
     {
       id: "nbhd-fill",
       type: "fill",
@@ -353,9 +362,16 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
         "fill-color": buildFillColourExpression(metricKey, stops),
         "fill-opacity": [
           "case",
-          ["boolean", ["feature-state", "hover"], false], 0.88,
-          ["boolean", ["feature-state", "pinned"], false], 0.88,
-          0.74,
+          ["==", ["get", "polygon_state"], "aggregated"],
+            [
+              "case",
+              ["boolean", ["feature-state", "hover"], false], 0.88,
+              ["boolean", ["feature-state", "pinned"], false], 0.88,
+              0.74,
+            ],
+          ["boolean", ["feature-state", "hover"], false], 0.15,
+          ["boolean", ["feature-state", "pinned"], false], 0.15,
+          0.04,
         ],
         // Spec-compliant paint-level transition. Note: MapLibre does not
         // animate feature-state-driven changes (hover/pinned) through this —
@@ -379,7 +395,9 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
           "manufactured_home_community", "dots",
           "stripes",
         ],
-        "fill-opacity": 0.7,
+        // Hidden: stripes/dots on a glass polygon look wrong — the outline
+        // alone signals the state now. Layer kept so re-enabling is one value.
+        "fill-opacity": 0.0,
         "fill-opacity-transition": { duration: 150, delay: 0 },
       },
     },

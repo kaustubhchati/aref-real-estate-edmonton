@@ -61,12 +61,26 @@ export default function Legend({
   );
 }
 
-// Build the inline style for one categorical swatch. Pattern + dash-style are
-// mirrored as CSS gradients / border-styles so the swatch reads identical to
-// the polygon on the map.
+// Build the inline style for one categorical swatch. Dash-style mirrors the
+// polygon's outline so the swatch reads like the polygon on the map.
 function swatchStyle({ fillColor, pattern, outlineColor, outlineDash }) {
-  const style = { background: fillColor };
+  // Dashed vs dotted border: pick by the gap-to-dash ratio in the dasharray.
+  const borderStyle = outlineDash
+    ? outlineDash[1] >= outlineDash[0] * 1.5
+      ? "dotted"
+      : "dashed"
+    : "solid";
 
+  // Glass (non-aggregated) states render as outline-only on the map now, so the
+  // swatch matches: transparent fill, just the outline. No pattern fill.
+  if (fillColor === "rgba(255,255,255,0.08)") {
+    return {
+      background: "transparent",
+      border: `1.5px ${borderStyle} ${outlineColor || "rgba(0,0,0,0.2)"}`,
+    };
+  }
+
+  const style = { background: fillColor };
   if (pattern === "stripes") {
     style.backgroundImage =
       "repeating-linear-gradient(45deg, rgba(60,55,42,0.55) 0 1.4px, transparent 1.4px 4px)";
@@ -75,14 +89,6 @@ function swatchStyle({ fillColor, pattern, outlineColor, outlineDash }) {
       "radial-gradient(rgba(60,55,42,0.55) 1px, transparent 1.4px)";
     style.backgroundSize = "5px 5px";
   }
-
-  // Dashed vs dotted border: pick by the gap-to-dash ratio in the dasharray.
-  const borderStyle = outlineDash
-    ? outlineDash[1] >= outlineDash[0] * 1.5
-      ? "dotted"
-      : "dashed"
-    : "solid";
   style.border = `1px ${borderStyle} ${outlineColor || "rgba(0,0,0,0.2)"}`;
-
   return style;
 }
