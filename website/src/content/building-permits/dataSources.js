@@ -51,8 +51,8 @@ export const VALUE_BUCKETS = [
   { id: "major",  label: "> $2M",         min: 2_000_000, max: Infinity,  radius: 19 },
 ];
 
-// Default active set on load: medium + large only.
-// micro and major start deselected — user adds them deliberately.
-export const DEFAULT_ACTIVE_BUCKETS = new Set(["medium", "large"]);
-
 export const ALL_BUCKET_IDS = VALUE_BUCKETS.map((b) => b.id);
+
+// Default active set on load: ALL tiers selected (every bucket visible).
+// Declared after ALL_BUCKET_IDS so it can reference it without a TDZ error.
+export const DEFAULT_ACTIVE_BUCKETS = new Set(ALL_BUCKET_IDS);

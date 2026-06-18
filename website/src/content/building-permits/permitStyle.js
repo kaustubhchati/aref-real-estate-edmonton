@@ -107,9 +107,10 @@ export function permitCircleLayer() {
     id: LAYER_ID,
     type: "circle",
     "source-layer": SOURCE_LAYER,
-    // Below z11 the heatmap carries density; dots at z9 on 226k points are
-    // unreadable regardless of colour, so we just don't draw them down there.
-    minzoom: 11,
+    // Dots are drawn from z9 (the map's minZoom) up. The heatmap that used to
+    // own the low-zoom overview is gone, so the dots carry density at city scale
+    // too — the white halo + value-tier sizing keep them readable when dense.
+    minzoom: 9,
     layout: {
       // Draw commercial (the 16% minority) ON TOP of residential so the violet
       // signal isn't buried under the amber majority (key=1 sorts above key=0).
