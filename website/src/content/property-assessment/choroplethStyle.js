@@ -356,6 +356,26 @@ export function choroplethLayers(stops = STOPS) {
         ],
       },
     },
+    // 7. Neighbourhood name labels. Last in the array so they render above the
+    //    fills and outlines. Only from zoom 11 in, so the city-wide view stays
+    //    uncluttered and labels appear as the user zooms to a neighbourhood.
+    {
+      id: "nbhd-labels",
+      type: "symbol",
+      minzoom: 11,
+      layout: {
+        "text-field": ["get", "display_name"],
+        "text-size": 11,
+        "text-font": ["Noto Sans Regular"],
+        "text-max-width": 8,
+        "text-anchor": "center",
+      },
+      paint: {
+        "text-color": "#3c3728",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.5,
+      },
+    },
   ];
 }
 
