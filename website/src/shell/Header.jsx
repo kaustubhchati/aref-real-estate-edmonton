@@ -14,6 +14,7 @@ export default function Header() {
     <header className="shell-header">
       <Link to="/" className="shell-header-title">
         <span className="shell-header-centre">{siteConfig.centre}</span>
+        <span className="shell-header-separator" aria-hidden="true" />
         <span className="shell-header-org">{siteConfig.org}</span>
       </Link>
     </header>

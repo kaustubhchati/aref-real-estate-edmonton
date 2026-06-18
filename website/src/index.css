@@ -139,27 +139,26 @@ p  { margin: 0 0 0.75rem; }
 /* ---- Header -------------------------------------------------------------- */
 
 .shell-header {
-  background: var(--bg-soft);
-  border-bottom: 1px solid var(--border);
-  padding: 1rem 1.25rem;
+  background: var(--slate-950); border-bottom: none;
+  padding: 0 1.5rem; height: 56px;
+  display: flex; align-items: center;
+  position: sticky; top: 0; z-index: 100;
 }
-
+.shell-header::after {
+  content: ""; position: absolute;
+  bottom: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg,#005c26,#007a33,#4caf72);
+}
 .shell-header-title {
-  display: inline-flex;
-  flex-direction: column;
-  line-height: 1.2;
-  color: var(--text);
+  display: inline-flex; align-items: baseline;
+  gap: 0.625rem; line-height: 1;
 }
 .shell-header-title:hover { text-decoration: none; }
-
-.shell-header-centre {
-  font-size: 1.25rem;
-  font-weight: 600;
+.shell-header-centre { font-size:0.9rem; font-weight:700; color:#fff; }
+.shell-header-separator {
+  width:1px; height:14px; background:rgba(255,255,255,0.2);
 }
-.shell-header-org {
-  font-size: 0.9rem;
-  color: var(--text-muted);
-}
+.shell-header-org { font-size:0.75rem; color:rgba(255,255,255,0.5); }
 
 /* ---- Nav ----------------------------------------------------------------- */
 
