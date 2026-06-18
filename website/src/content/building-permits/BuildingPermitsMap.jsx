@@ -8,16 +8,17 @@
 // a POINT-symbol map (orange/slate dots from a PMTiles vector source), so it
 // uses its OWN mount (PermitMapView), not the shared components/MapView.jsx.
 //
-// Step 4a scope: two live filters — Year and Job Category. All 18 years live in
-// one PMTiles, so filtering is CLIENT-SIDE via map.setFilter (instant, no
-// refetch); nothing reloads when the user changes a control. Popups + legend
-// come later.
+// Three live filters — Year, Permit type (job_group), and Month. All 18 years
+// live in one PMTiles, so filtering is CLIENT-SIDE via map.setFilter (instant,
+// no refetch); nothing reloads when the user changes a control. Both the circle
+// and heatmap layers share the same filter.
 // =============================================================================
 
 import { useEffect, useState } from "react";
 
 import PermitMapView from "./PermitMapView.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
+import OptionToggle from "../../components/OptionToggle.jsx";
 import {
   LAYER_ID,
   HEATMAP_LAYER_ID,
@@ -28,9 +29,8 @@ import {
 import {
   YEARS,
   DEFAULT_YEAR,
-  JOB_CATEGORIES,
-  DEFAULT_CATEGORY,
-  ALL_CATEGORIES,
+  JOB_GROUPS,
+  DEFAULT_GROUP,
   MONTHS,
   DEFAULT_MONTH,
 } from "./dataSources.js";
@@ -45,24 +45,11 @@ import { fmtNumber } from "../../utils/format.js";
 // plain static fetch, not range-requested like the .pmtiles.
 const COVERAGE_URL = "/data/building-permits/permits_coverage.csv";
 
-// Per-(year, job_category) counts — drives the empty-state. The pipeline emits
-// only pairs with n>0, so "row exists" == "permits exist". Same /public + plain
-// fetch handling as the coverage table.
-const COUNTS_URL = "/data/building-permits/permits_category_counts.csv";
-
 // Find the coverage row for one year. Every CSV cell is a string, so compare
 // year numerically. Returns null when the year isn't in the table (caller then
 // shows nothing).
 function coverageForYear(rows, year) {
   return rows.find((r) => Number(r.year) === year) || null;
-}
-
-// Does this (year, category) pair have any permits? The counts file lists only
-// pairs with n>0, so presence in the file == present. CSV cells are strings:
-// compare year numerically, category by exact string (verbatim, commas/ampersand
-// intact — the same value the filter matches on).
-function pairHasPermits(rows, year, category) {
-  return rows.some((r) => Number(r.year) === year && r.job_category === category);
 }
 
 // Sidebar legend. Two keys: colour (job_group → hue) and dot size
@@ -123,11 +110,10 @@ const SIDEBAR_TRANSITION_MS = 220;
 
 export default function BuildingPermitsMap() {
   const [year, setYear] = useState(DEFAULT_YEAR);
-  const [category, setCategory] = useState(DEFAULT_CATEGORY);
+  const [group, setGroup] = useState(DEFAULT_GROUP);
   const [month, setMonth] = useState(DEFAULT_MONTH);
   const [map, setMap] = useState(null);
   const [coverage, setCoverage] = useState([]);
-  const [counts, setCounts] = useState([]);
   const [collapsed, setCollapsed] = useState(false);
 
   // Hide/show the sidebar. MapLibre sizes its canvas to the container, so after
@@ -140,14 +126,14 @@ export default function BuildingPermitsMap() {
 
   // Re-apply BOTH layers' filters whenever the map is ready or a control changes.
   // setFilter is instant — it re-evaluates the already-loaded tiles, no network.
-  // The circle layer respects category; the heatmap (year + month only) does not,
-  // by design (see buildHeatmapFilter). Guard on `map` so we don't call setFilter
-  // before onLoad hands us the instance.
+  // Both layers honour the same year + permit-type + month filter, so picking
+  // "Commercial" reshapes the dots AND the heat signature together. Guard on
+  // `map` so we don't call setFilter before onLoad hands us the instance.
   useEffect(() => {
     if (!map) return;
-    map.setFilter(LAYER_ID, buildPermitFilter(year, category, month));
-    map.setFilter(HEATMAP_LAYER_ID, buildHeatmapFilter(year, month));
-  }, [map, year, category, month]);
+    map.setFilter(LAYER_ID, buildPermitFilter(year, group, month));
+    map.setFilter(HEATMAP_LAYER_ID, buildHeatmapFilter(year, group, month));
+  }, [map, year, group, month]);
 
   // Load the coverage table ONCE on mount. It's supplementary to the map, so a
   // failed load just hides the note (logged, not thrown — the map still works).
@@ -163,20 +149,6 @@ export default function BuildingPermitsMap() {
     return () => { cancelled = true; };
   }, []);
 
-  // Load the per-(year, category) counts ONCE on mount (same handling as
-  // coverage). Supplementary: if it fails the empty-state simply never shows.
-  useEffect(() => {
-    let cancelled = false;
-    fetch(COUNTS_URL)
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
-        return r.text();
-      })
-      .then((text) => { if (!cancelled) setCounts(parseCsvAsObjects(text)); })
-      .catch((err) => console.error("[BuildingPermitsMap] counts:", err.message));
-    return () => { cancelled = true; };
-  }, []);
-
   // No-coordinate count for the selected year. WHY surface this: the share is
   // small in older years (~2-5%) but spikes recently — ~28% in 2025, ~35% in
   // 2026 — because of City geocoding lag. The map only plots permits that HAVE
@@ -184,17 +156,6 @@ export default function BuildingPermitsMap() {
   // Stating the absence is honest; dropping the rows quietly is not.
   const cov = coverageForYear(coverage, year);
   const nNoCoord = cov ? Number(cov.n_no_coord) : 0;
-
-  // WHY: several job categories are legacy taxonomy with genuinely zero permits
-  // in recent years, so filtering to one yields a correctly-empty map. This flag
-  // drives a line that says so — distinguishing "empty" from "broken". Only
-  // meaningful for a specific category ("All" is never empty for a year that has
-  // permits, so skip it), and only once counts have loaded (else a not-yet-found
-  // pair would read as empty during the fetch).
-  const categoryEmpty =
-    category !== ALL_CATEGORIES &&
-    counts.length > 0 &&
-    !pairHasPermits(counts, year, category);
 
   return (
     <article className="content-map">
@@ -204,7 +165,7 @@ export default function BuildingPermitsMap() {
         <p className="sb-sub">
           226,184 permit points, 2009–2026. Slate = residential, orange =
           commercial; dot size scales with construction value. Filter by year,
-          job category, and month below.
+          permit type, and month below.
         </p>
 
         <section className="sb-section">
@@ -224,18 +185,12 @@ export default function BuildingPermitsMap() {
             </select>
           </div>
 
-          <div className="opt-toggle">
-            <div className="opt-toggle-label">Job category</div>
-            <select
-              className="search-input"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              {JOB_CATEGORIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
+          <OptionToggle
+            label="Permit type"
+            options={JOB_GROUPS}
+            value={group}
+            onChange={setGroup}
+          />
 
           <div className="opt-toggle">
             <div className="opt-toggle-label">Month</div>
@@ -260,12 +215,6 @@ export default function BuildingPermitsMap() {
             {" "}({Math.round(Number(cov.pct_no_coord) * 100)}%) have no map
             location for {year} and are not shown.
           </p>
-        )}
-
-        {/* Empty-state: the selected category genuinely has no permits this year
-            (legacy taxonomy). Reuses the .sb-sub caption style — no new CSS. */}
-        {categoryEmpty && (
-          <p className="sb-sub">No permits in this category for {year}.</p>
         )}
 
         <section className="sb-section">

@@ -18,7 +18,6 @@
 // =============================================================================
 
 import { fmtCurrency } from "../../utils/format.js";
-import { ALL_CATEGORIES } from "./dataSources.js";
 
 // ---- Map view defaults (Edmonton, matches the choropleth) ------------------
 // Moved here from PermitMapView so the basemap/view live beside the layer paint,
@@ -212,19 +211,29 @@ export function heatmapLayer() {
 // loop never has to special-case missing values.
 const asText = (v) => (v == null || v === "" ? "—" : String(v));
 
+// Strip City internal code suffix from building_type.
+// "Indoor Recreational Buildings (560)" → "Indoor Recreational Buildings"
+const stripBuildingCode = (v) =>
+  v == null || v === "" ? "—" : String(v).replace(/\s*\(\d+\)\s*$/, "").trim();
+
+// Strip City internal code prefix from work_type.
+// "(03) Interior Alterations" → "Interior Alterations"
+const stripWorkCode = (v) =>
+  v == null || v === "" ? "—" : String(v).replace(/^\(\d+\)\s*/, "").trim();
+
 // The fourth tuple element is `headline`: true → the row gets the .pop-row
 // headline class (bold value), mirroring choroplethStyle.js's POPUP_ROWS.
 // job_description (now carried in the tile) leads as the headline — it's the
 // human-readable "what is this permit" line; address follows for orientation.
-// Year is intentionally absent — the sidebar already shows the selected year.
+// job_category is gone (the sidebar filters by job_group now), so job_group is
+// the classification label. Year is absent — the sidebar already shows it.
 export const PERMIT_POPUP_ROWS = [
-  ["job_description",    "Description",        asText,      true ],
-  ["address",            "Address",            asText,      false],
-  ["job_category",       "Job category",       asText,      false],
-  ["job_group",          "Permit type",        asText,      false],
-  ["building_type",      "Building type",      asText,      false],
-  ["work_type",          "Work type",          asText,      false],
-  ["construction_value", "Construction value", fmtCurrency, false],
+  ["job_description",    "Description",        asText,            true ],
+  ["address",            "Address",            asText,            false],
+  ["job_group",          "Permit type",        asText,            false],
+  ["building_type",      "Building type",      stripBuildingCode, false],
+  ["work_type",          "Work type",          stripWorkCode,     false],
+  ["construction_value", "Construction value", fmtCurrency,       false],
 ];
 
 // HTML-escape before interpolating into setHTML() — popup content is the only
@@ -269,14 +278,19 @@ export function buildPermitHoverHtml(p) {
 // picks values and calls setFilter.
 //
 // WHY ["all", …]: each clause is independent and ALL must hold. Year is always
-// constrained (exactly one year at a time). The category and month clauses are
+// constrained (exactly one year at a time). The group and month clauses are
 // added only when they aren't the "all" sentinel — dropping a clause means "don't
-// filter on that axis" rather than trying to match a non-existent value. month 0
-// is the "All months" sentinel (see dataSources MONTHS).
-export function buildPermitFilter(year, category, month) {
+// filter on that axis". group is the sidebar's "Permit type" ("All" /
+// "Residential" / "Commercial"); the tile's job_group field is lower-case, so we
+// lower-case the picked value to match. month 0 is the "All months" sentinel.
+export function buildPermitFilter(year, group, month) {
   const clauses = [["==", ["get", "year"], year]];
-  if (category !== ALL_CATEGORIES) {
-    clauses.push(["==", ["get", "job_category"], category]);
+  if (group !== "All") {
+    clauses.push([
+      "==",
+      ["get", "job_group"],
+      group.toLowerCase(),   // "Residential" → "residential"
+    ]);
   }
   if (month !== 0) {
     clauses.push(["==", ["get", "month_number"], month]);
@@ -284,12 +298,18 @@ export function buildPermitFilter(year, category, month) {
   return ["all", ...clauses];
 }
 
-// The heatmap reads year + month only — NO category clause. WHY: the heatmap is
-// the city-overview "where is the high-value work" view; narrowing it to one of
-// 12 categories would gut the density it exists to show. Category filtering is a
-// circle-layer (street-level) concern.
-export function buildHeatmapFilter(year, month) {
+// The heatmap now respects the SAME group + month filter as the circle layer, so
+// picking "Commercial" reshapes the heat signature to commercial-only (not just
+// the dots). Identical clause logic to buildPermitFilter.
+export function buildHeatmapFilter(year, group, month) {
   const clauses = [["==", ["get", "year"], year]];
+  if (group !== "All") {
+    clauses.push([
+      "==",
+      ["get", "job_group"],
+      group.toLowerCase(),
+    ]);
+  }
   if (month !== 0) {
     clauses.push(["==", ["get", "month_number"], month]);
   }
