@@ -49,13 +49,14 @@ export const LAYER_ID = "permits-circles";
 export const HEATMAP_LAYER_ID = "permits-heat";
 
 // ---- Colour by job_group ---------------------------------------------------
-// Amber (residential) vs deep violet (commercial): ~200° of hue separation, both
-// absent from CARTO Voyager's blue/green/yellow/beige basemap so dots never blend
-// into the map. Amber reads human/housing warmth; violet reads the commercial
-// minority and pops against the amber majority.
+// Orange (residential) vs blue (commercial) — the classic complementary,
+// colourblind-safe pair (~180° apart). Both are SATURATED enough to stand off
+// CARTO Voyager's pale palette; the commercial blue is deliberately deep/strong
+// so it doesn't blend into the basemap's light-blue water (the white dot halo
+// further separates it).
 export const COLOURS = {
-  residential: "#f5a623",  // warm amber — absent from Voyager, human/housing
-  commercial:  "#7b2d8b",  // deep violet — absent from Voyager, ~200° from amber
+  residential: "#f57c00",  // vivid orange — residential warmth, absent from Voyager
+  commercial:  "#1565c0",  // strong blue — deeper than the basemap's pale water
   fallback:    "#9aa0a6",  // neutral grey
 };
 

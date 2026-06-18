@@ -246,7 +246,7 @@ export default function BuildingPermitsMap() {
         <p className="eyebrow">Building Activity</p>
         <h1 className="sb-title">Edmonton — {year}</h1>
         <p className="sb-sub">
-          226,184 permit points, 2009–2026. Amber = residential, violet =
+          226,184 permit points, 2009–2026. Orange = residential, blue =
           commercial. Click value tiers below to show or hide by construction
           value.
         </p>
