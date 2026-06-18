@@ -27,30 +27,46 @@ export default function Legend({
     <aside className="legend">
       <h2 className="legend-title">{title}</h2>
 
-      {/* Gradient bar — honest representation of MapLibre's
-          continuous linear interpolation. Discrete swatches
-          imply stepped classification which isn't what renders.
-          Bar width = full legend width; ticks at each stop. */}
-      <div style={{ marginBottom: 8 }}>
+      {/* Vertical gradient bar + tick labels.
+          Bar runs top=max → bottom=min (dark at top,
+          light at bottom) so "high value = dark = top"
+          reads naturally.
+          WHY vertical: horizontal bar in a 264px sidebar
+          forces 5 dollar values into ~52px each — they
+          collide at any readable font size. Vertical gives
+          each tick its own line with no crowding. */}
+      <div style={{
+        display: "flex",
+        gap: 8,
+        alignItems: "stretch",
+        marginBottom: 8,
+      }}>
 
-        {/* Continuous gradient bar */}
+        {/* The bar: 14px wide, 130px tall, gradient
+            top=stops[last].c → bottom=stops[0].c
+            (max at top, min at bottom). */}
         <div style={{
-          height: 12,
-          borderRadius: 3,
-          background: `linear-gradient(to right, ${
-            stops.map((s) => s.c).join(", ")
+          width: 14,
+          minHeight: 130,
+          borderRadius: 4,
+          flexShrink: 0,
+          background: `linear-gradient(to bottom, ${
+            [...stops].reverse().map((s) => s.c).join(", ")
           })`,
-          marginBottom: 4,
         }} />
 
-        {/* Tick labels — value + role label below each stop.
-            Flex with space-between so first/last align to
-            bar edges; middle stops distribute evenly. */}
+        {/* Tick rows: space-between so they align with the
+            gradient stops. First row = max (top of bar),
+            last row = min (bottom of bar). Reverse stops
+            so max renders at top. */}
         <div style={{
           display: "flex",
+          flexDirection: "column",
           justifyContent: "space-between",
+          flex: 1,
+          minHeight: 130,
         }}>
-          {stops.map((s) => {
+          {[...stops].reverse().map((s) => {
             const formatted = format(s.v);
             const num = (t) =>
               parseFloat(String(t).replace(/[^0-9.-]/g, ""));
@@ -58,37 +74,37 @@ export default function Legend({
               !Number.isNaN(num(s.label)) &&
               num(s.label) === num(formatted);
             return (
-              <div
-                key={s.label}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: s === stops[0]
-                    ? "flex-start"
-                    : s === stops[stops.length - 1]
-                      ? "flex-end"
-                      : "center",
-                  maxWidth: `${100 / stops.length}%`,
-                }}
-              >
-                <span style={{
-                  fontSize: "0.68rem",
-                  fontVariantNumeric: "tabular-nums",
-                  color: "var(--text)",
-                  lineHeight: 1.2,
-                  whiteSpace: "nowrap",
-                }}>
-                  {formatted}
-                </span>
-                {!labelIsValue && (
+              <div key={s.label} style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+              }}>
+                {/* Short tick line connecting bar to label */}
+                <div style={{
+                  width: 5,
+                  height: 1,
+                  background: "var(--border)",
+                  flexShrink: 0,
+                }} />
+                <div style={{ lineHeight: 1.25 }}>
                   <span style={{
-                    fontSize: "0.60rem",
-                    color: "var(--text-subtle)",
-                    lineHeight: 1.2,
+                    fontSize: "0.70rem",
+                    fontVariantNumeric: "tabular-nums",
+                    color: "var(--text)",
+                    display: "block",
                   }}>
-                    {s.label}
+                    {formatted}
                   </span>
-                )}
+                  {!labelIsValue && (
+                    <span style={{
+                      fontSize: "0.60rem",
+                      color: "var(--text-subtle)",
+                      display: "block",
+                    }}>
+                      {s.label}
+                    </span>
+                  )}
+                </div>
               </div>
             );
           })}
