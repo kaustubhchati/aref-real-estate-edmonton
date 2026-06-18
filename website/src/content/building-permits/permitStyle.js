@@ -38,11 +38,12 @@ export const SOURCE_LAYER = "permits";
 export const LAYER_ID = "permits-circles";
 
 // ---- Colour by job_group ---------------------------------------------------
-// Orange (residential) vs blue (commercial) — the classic colourblind-safe
-// complementary pair, both saturated enough to stand off Voyager's pale palette.
+// Orange (residential) vs violet-magenta (commercial) — ~200° hue separation,
+// colourblind-safe. Violet-magenta (not blue) because a blue dot conflicts with
+// Voyager's water bodies at mid-zoom; violet is absent from the basemap palette.
 export const COLOURS = {
   residential: "#f57c00",  // deep orange
-  commercial:  "#1565c0",  // deep blue
+  commercial:  "#7b2fa0",  // deep violet-magenta
   fallback:    "#9aa0a6",
 };
 

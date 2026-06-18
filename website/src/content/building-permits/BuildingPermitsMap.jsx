@@ -46,93 +46,145 @@ function coverageForYear(rows, year) {
 }
 
 // Sidebar legend. A static colour key (job_group → hue) plus an INTERACTIVE
-// construction-value size key — each tier is a button that toggles whether that
-// bucket's dots show. Active tier = filled dot; inactive = outlined ring (map
-// dots vanish; the ring says "this tier exists but is hidden"). Tiers + radii
-// come from VALUE_BUCKETS, the same table the map paints from. Reuses the global
-// .legend* CSS (no new CSS).
+// construction-value size key — each tier is a toggle button. Active tier =
+// filled SVG dot (white halo, matching the map dot exactly); inactive = dashed
+// outline ring + dimmed row. SVG circles (not CSS border-radius divs) so they
+// stay crisp at any DPI. Tiers + radii come from VALUE_BUCKETS, the same table
+// the map paints from. Reuses existing .legend* classes + tokens (no new CSS).
 function PermitLegend({ activeBuckets, onToggle, onReset }) {
-  const colourRows = [
-    { label: "Residential", colour: COLOURS.residential },
-    { label: "Commercial",  colour: COLOURS.commercial  },
-  ];
   const allActive = activeBuckets.size === ALL_BUCKET_IDS.length;
 
   return (
-    <aside className="legend">
-      <h2 className="legend-title">Permit type</h2>
+    <div className="legend">
+
+      {/* ── Permit type ─────────────────────────────── */}
+      <p className="legend-title">Permit type</p>
       <ul className="legend-list">
-        {colourRows.map((r) => (
+        {[
+          { label: "Residential", colour: COLOURS.residential },
+          { label: "Commercial",  colour: COLOURS.commercial  },
+        ].map((r) => (
           <li key={r.label} className="legend-row">
-            <span
-              className="legend-sw"
-              style={{
-                background: r.colour,
-                width: 14,
-                flex: "0 0 14px",
-                borderRadius: "50%",
-              }}
-            />
+            {/* SVG circle matches the map dot exactly —
+                crisp at any DPI unlike a CSS border-radius div */}
+            <svg
+              width="14" height="14"
+              viewBox="0 0 14 14"
+              aria-hidden="true"
+              style={{ flex: "0 0 14px" }}
+            >
+              <circle
+                cx="7" cy="7" r="5.5"
+                fill={r.colour}
+                stroke="rgba(255,255,255,0.9)"
+                strokeWidth="1.5"
+              />
+            </svg>
             <span className="legend-lab">{r.label}</span>
           </li>
         ))}
       </ul>
 
-      <div className="legend-divider">
-        Construction value
+      {/* ── Construction value ──────────────────────── */}
+      <div className="legend-divider"
+        style={{ display: "flex", alignItems: "center",
+          justifyContent: "space-between" }}
+      >
+        <span>Construction value</span>
         {!allActive && (
           <button
             type="button"
             onClick={onReset}
             style={{
-              marginLeft: 8,
               fontSize: 10,
-              padding: "1px 6px",
+              padding: "1px 7px",
               border: "1px solid var(--border)",
-              borderRadius: 3,
+              borderRadius: "var(--radius-sm)",
               background: "var(--bg-soft)",
               cursor: "pointer",
               color: "var(--text-muted)",
+              fontFamily: "inherit",
+              lineHeight: 1.6,
             }}
           >
-            All
+            Reset
           </button>
         )}
       </div>
 
-      <ul className="legend-list">
+      {/* Bucket rows — each is a toggle button.
+          SVG circle sized to bucket.radius * 2 px,
+          exactly matching the map dot proportions.
+          Active = filled + full opacity.
+          Inactive = outlined ring + 0.32 opacity on row. */}
+      <ul className="legend-list" style={{ marginTop: 4 }}>
         {VALUE_BUCKETS.map((b) => {
           const active = activeBuckets.has(b.id);
-          const dotPx = b.radius * 2;
+          const d = b.radius * 2;       // diameter in px
+          const r = b.radius - 1;       // SVG circle radius (inset 1px for stroke)
+          const c = b.radius;           // SVG centre
+
           return (
             <li key={b.id}>
               <button
                 type="button"
                 onClick={() => onToggle(b.id)}
-                className="legend-row"
+                aria-pressed={active}
+                title={active ? "Click to hide" : "Click to show"}
                 style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
                   width: "100%",
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  padding: "2px 0",
-                  opacity: active ? 1 : 0.35,
+                  padding: "3px 0",
+                  opacity: active ? 1 : 0.32,
+                  textAlign: "left",
+                  fontFamily: "inherit",
+                  transition: "opacity 150ms ease",
                 }}
-                aria-pressed={active}
-                title={active ? "Click to hide" : "Click to show"}
               >
-                <span
-                  style={{
-                    width: dotPx,
-                    height: dotPx,
-                    flex: `0 0 ${dotPx}px`,
-                    borderRadius: "50%",
-                    background: active ? "var(--text-muted)" : "none",
-                    border: active ? "none" : "2px solid var(--text-muted)",
-                    display: "inline-block",
-                  }}
-                />
-                <span className="legend-lab" style={{ marginLeft: 8 }}>
+                {/* SVG proportional circle — crisp at all DPI,
+                    sized to match map dot exactly.
+                    Container is fixed 38px wide so all labels
+                    left-align regardless of circle size. */}
+                <span style={{
+                  width: 38, display: "flex",
+                  alignItems: "center", justifyContent: "center",
+                  flex: "0 0 38px",
+                }}>
+                  <svg
+                    width={d} height={d}
+                    viewBox={`0 0 ${d} ${d}`}
+                    aria-hidden="true"
+                  >
+                    {active ? (
+                      /* Filled: solid grey + white halo stroke */
+                      <circle
+                        cx={c} cy={c} r={r}
+                        fill="var(--text-muted)"
+                        stroke="rgba(255,255,255,0.85)"
+                        strokeWidth="1.5"
+                      />
+                    ) : (
+                      /* Inactive: outlined ring only */
+                      <circle
+                        cx={c} cy={c} r={r}
+                        fill="none"
+                        stroke="var(--text-muted)"
+                        strokeWidth="1.5"
+                        strokeDasharray="2 1.5"
+                      />
+                    )}
+                  </svg>
+                </span>
+                <span style={{
+                  fontSize: "0.75rem",
+                  color: "var(--text)",
+                  lineHeight: 1.3,
+                }}>
                   {b.label}
                 </span>
               </button>
@@ -140,7 +192,18 @@ function PermitLegend({ activeBuckets, onToggle, onReset }) {
           );
         })}
       </ul>
-    </aside>
+
+      {/* Proportional scale note — cartographic convention */}
+      <p style={{
+        fontSize: "0.64rem",
+        color: "var(--text-subtle)",
+        marginTop: 4,
+        lineHeight: 1.4,
+      }}>
+        Circle size proportional to construction value.
+        Click any tier to show or hide.
+      </p>
+    </div>
   );
 }
 
@@ -218,19 +281,22 @@ export default function BuildingPermitsMap() {
   return (
     <article className="content-map">
       <aside className={`sb${collapsed ? " collapsed" : ""}`} aria-label="Map sidebar">
-        <p className="eyebrow">Building Activity</p>
-        <h1 className="sb-title">Edmonton — {year}</h1>
-        <p className="sb-sub">
-          226,184 permit points, 2009–2026. Orange = residential, blue =
-          commercial. Dot size = construction value tier. Filter by year, permit
-          type, and month below.
-        </p>
+        <div className="sb-header">
+          <p className="eyebrow">Building Activity</p>
+          <h1 className="sb-title">Edmonton — {year}</h1>
+          <p className="sb-sub">
+            226,184 permit points, 2009–2026. Orange = residential, violet =
+            commercial. Dot size = construction value tier. Filter by year,
+            permit type, and month below.
+          </p>
+        </div>
 
         <section className="sb-section">
-          <div className="opt-toggle">
-            <div className="opt-toggle-label">Year</div>
+          <div className="sb-select-field">
+            <span className="sb-select-label">Year</span>
             <select
-              className="search-input"
+              className="sb-select"
+              aria-label="Year"
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
             >
@@ -247,10 +313,11 @@ export default function BuildingPermitsMap() {
             onChange={setGroup}
           />
 
-          <div className="opt-toggle">
-            <div className="opt-toggle-label">Month</div>
+          <div className="sb-select-field">
+            <span className="sb-select-label">Month</span>
             <select
-              className="search-input"
+              className="sb-select"
+              aria-label="Month"
               value={month}
               onChange={(e) => setMonth(Number(e.target.value))}
             >
