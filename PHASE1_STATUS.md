@@ -263,3 +263,49 @@ section captures what happened around the website and repository in the same wee
   workflows (refresh data, edit site), with the Prof as the approval gate.
 - `AREF_Cost_Comparison.pdf`: free-tier stack vs Tableau (~$2,000/year), every
   tool explained.
+
+---
+
+## 10. Historical Pipeline — June 2026
+
+Extends the validated 2026 pipeline (§1–§8) backward across the full assessment
+history, producing one cleaned aggregate + choropleth GeoJSON per year and a
+single `manifest.json` for frontend year auto-discovery. The 2026 methodology is
+unchanged; this section records the historical backfill that runs the same rules
+across every available year.
+
+### Cleaning — `07_build_hist_clean.R`
+Historical row-level cleaning complete. Rules applied: **R1 + R3 + R_PARK_HIST**
+(the year-invariant parking variant for historical years). Aggregate scorecard:
+**Precision 0.9935, F1 0.8939**. The lower F1 vs. the 2026 rules (parking 0.989,
+R1 0.992, R3 0.974 — §2) is recall-driven, consistent with the historical
+parking variant trading recall for precision across the longer year span.
+
+### Aggregation — `08d_hist_aggregate.R`
+Historical Layer 2 aggregation complete. **14 years, 2012–2025**, using the same
+Stata3 formula port as the 2026 pipeline (§4) — identical column shape and
+suppression rules (values suppressed at N < 100).
+
+### GeoJSON build — `08e_hist_build_geojson.R`
+Historical choropleth GeoJSON build complete. **14 years**, one MapLibre-ready
+GeoJSON per year. **`no_data = 0` across all years** — every polygon resolves to
+a state for every historical year.
+
+### Manifest — `09a_emit_manifest.R`
+`manifest.json` emitted. **15 years, 2012–2026** (14 historical + 2026 current),
+`defaultYear = 2026`, with **per-year colour-scale domains** (min / q25 / median
+/ q75 / max / n_polygons per year). This is the contract the frontend reads for
+year auto-discovery — no year literals on the frontend.
+
+### Artifacts committed
+All **15 GeoJSONs** committed to
+`website/public/data/property-assessment/`, alongside `manifest.json`.
+
+### CC frontend work remaining
+The backend artifacts above are landed; the remaining work is frontend-only,
+sequenced per the build order in **STRUCTURE_UPDATE.md §5** (laid out there as
+Days 1–8, not "Sessions 1–6"). The immediate next step is wiring the Property
+Assessment year selector to read years and per-year colour scales from
+`manifest.json` (currently `dataSources.js` is still hardcoded to a single 2026
+dataset). [OPEN] Reconcile "Sessions 1–6" naming against STRUCTURE_UPDATE.md's
+Day 1–8 plan.
