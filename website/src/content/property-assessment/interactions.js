@@ -20,7 +20,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import maplibregl from "maplibre-gl";
-import { buildPopupHtml } from "./choroplethStyle.js";
+import { buildPopupHtml, POPUP_ROWS } from "./choroplethStyle.js";
 
 const SOURCE_ID = "nbhd";
 const FILL_LAYER_ID = "nbhd-fill";
@@ -135,6 +135,7 @@ export function installChoroplethInteractions(map, gj, year) {
       .setLngLat(e.lngLat)
       .setHTML(buildPopupHtml(f.properties, true, year))
       .addTo(map);
+    wireCopyButton(f.properties);
     // The popup's own close button (X) clears feature-state pinning.
     pinnedPopup.once("close", () => {
       if (pinnedId !== null) {
@@ -176,6 +177,7 @@ export function installChoroplethInteractions(map, gj, year) {
       .setLngLat([(minX + maxX) / 2, (minY + maxY) / 2])
       .setHTML(buildPopupHtml(feat.properties, true, year))
       .addTo(map);
+    wireCopyButton(feat.properties);
     pinnedPopup.once("close", () => {
       if (pinnedId !== null) {
         setPinned(pinnedId, false);
@@ -198,6 +200,29 @@ export function installChoroplethInteractions(map, gj, year) {
 }
 
 // ---- Helpers --------------------------------------------------------------
+
+// Wire the "Copy stats" button inside a freshly-mounted pinned popup. Deferred
+// to a microtask (setTimeout 0) so the popup HTML is in the DOM first; inline
+// onclick in MapLibre popup HTML is unreliable, hence addEventListener here.
+// Copies the neighbourhood name + one "label: value" line per non-null stat.
+function wireCopyButton(props) {
+  setTimeout(() => {
+    const btn = document.getElementById("pop-copy-btn");
+    if (!btn) return;
+    btn.addEventListener("click", () => {
+      const name = props.display_name || props.shapefile_name || "";
+      const rows = POPUP_ROWS
+        .filter(([key]) => props[key] != null)
+        .map(([key, label, fmt]) => `${label}: ${fmt(props[key])}`)
+        .join("\n");
+      navigator.clipboard
+        .writeText(`${name}\n${rows}`)
+        .then(() => { btn.textContent = "Copied!"; })
+        .catch(() => { btn.textContent = "Failed"; });
+    });
+  }, 0);
+}
+
 function flyToFeature(map, feat, opts = {}) {
   map.fitBounds(bboxOfGeom(feat.geometry), {
     padding: { top: 80, bottom: 80, left: 60, right: 60 },

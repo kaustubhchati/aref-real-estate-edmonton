@@ -256,7 +256,11 @@ export function buildPopupHtml(p, pinned, year) {
     );
   }
 
-  if (!pinned) {
+  if (pinned) {
+    // Copy-stats button — wired up in interactions.js after the popup mounts
+    // (inline onclick in MapLibre popup HTML is unreliable).
+    parts.push(`<button class="pop-copy-btn" id="pop-copy-btn">Copy stats</button>`);
+  } else {
     parts.push(`<div class="pop-pinned-hint">Click to pin · click polygon to zoom in.</div>`);
   }
   return parts.join("");

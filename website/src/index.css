@@ -18,6 +18,10 @@
   --border:      #e5e7eb;
   --accent:      #2b6cb0;
   --accent-soft: #ebf4fb;
+  /* Neutral button surfaces (base + hover), used by small UI buttons like the
+     popup "Copy stats" and the map-error retry. */
+  --surface-2:   #f4f2ee;
+  --surface-3:   #e8e5df;
 
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
@@ -594,6 +598,20 @@ p  { margin: 0 0 0.75rem; }
   border-top: 1px solid #f0f0f0;
   font-style: italic;
 }
+
+/* "Copy stats" button in the pinned popup (wired in interactions.js). */
+.pop-copy-btn {
+  margin-top: 8px;
+  width: 100%;
+  padding: 4px 0;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+.pop-copy-btn:hover { background: var(--surface-3); }
 
 /* ---- Report Card --------------------------------------------------------- */
 
