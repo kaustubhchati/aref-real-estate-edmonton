@@ -43,10 +43,10 @@ export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 // Perceptually uniform, colourblind-safe (Crameri 2023).
 const RAMP_VALUE = [
   { key: "min",    c: "#f0c97a", label: "min"    },
-  { key: "q25",    c: "#d4823a", label: "Q25"    },
-  { key: "median", c: "#a34428", label: "median" },
-  { key: "q75",    c: "#7d2828", label: "Q75"    },
-  { key: "max",    c: "#5a1525", label: "max"    },
+  { key: "q25",    c: "#e07030", label: "Q25"    },
+  { key: "median", c: "#c02a00", label: "median" },
+  { key: "q75",    c: "#961200", label: "Q75"    },
+  { key: "max",    c: "#7a0000", label: "max"    },
 ];
 
 // ── Amber-sienna (custom, YlOrBr family shifted)
