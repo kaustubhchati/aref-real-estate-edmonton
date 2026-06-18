@@ -235,7 +235,10 @@ export default function PropertyAssessmentMap() {
       el.removeEventListener("scroll", check);
       window.removeEventListener("resize", check);
     };
-  }, []);
+    // manifest in deps: the <aside ref={sbRef}> only exists after the manifest
+    // loads (early returns gate it), so re-run once the sidebar actually mounts
+    // and sbRef.current is non-null.
+  }, [manifest]);
 
   // All hooks above run every render; only now do we branch the output, so the
   // loading/error short-circuits never change hook order.
