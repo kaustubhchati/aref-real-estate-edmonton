@@ -243,7 +243,15 @@ export default function PropertyAssessmentMap() {
         >
           ≡
         </button>
-        {url ? (
+        {fetchError && url ? (
+          // The fetch failed for a real URL — a load failure, NOT "no data
+          // for this selection" (that's the !url case below). Different copy
+          // so the user knows it's worth retrying.
+          <EmptyState
+            title="Could not load data"
+            body={`The ${city} ${year} dataset failed to load. Try refreshing or select a different year.`}
+          />
+        ) : url ? (
           // key={url} forces a clean MapView remount when the data URL
           // changes (switching cities, or switching years that hit different
           // files). MapLibre destroys the old map in its cleanup; the new
