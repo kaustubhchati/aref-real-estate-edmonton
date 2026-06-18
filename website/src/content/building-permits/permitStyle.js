@@ -274,24 +274,6 @@ export function buildPermitFilter(year, group, month, activeBucketIds) {
   return ["all", ...clauses];
 }
 
-// The heatmap now respects the SAME group + month filter as the circle layer, so
-// picking "Commercial" reshapes the heat signature to commercial-only (not just
-// the dots). Identical clause logic to buildPermitFilter.
-export function buildHeatmapFilter(year, group, month) {
-  const clauses = [["==", ["get", "year"], year]];
-  if (group !== "All") {
-    clauses.push([
-      "==",
-      ["get", "job_group"],
-      group.toLowerCase(),
-    ]);
-  }
-  if (month !== 0) {
-    clauses.push(["==", ["get", "month_number"], month]);
-  }
-  return ["all", ...clauses];
-}
-
 // Convenience re-export so the page (which already imports from permitStyle) has
 // a single import point for the value-bucket tables rather than splitting across
 // two files. These live in dataSources.js (the option-list seam).

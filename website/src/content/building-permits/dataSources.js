@@ -26,8 +26,8 @@ export const JOB_GROUPS = ["All", "Residential", "Commercial"];
 export const DEFAULT_GROUP = ALL_GROUPS;
 
 // Month filter. value 0 is the "All months" sentinel (no month clause — see
-// buildPermitFilter / buildHeatmapFilter); 1–12 match the tile's month_number
-// field verbatim. Short labels keep the <select> narrow in the sidebar.
+// buildPermitFilter); 1–12 match the tile's month_number field verbatim. Short
+// labels keep the <select> narrow in the sidebar.
 export const MONTHS = [
   { value: 0,  label: "All months" },
   { value: 1,  label: "Jan" }, { value: 2,  label: "Feb" },
