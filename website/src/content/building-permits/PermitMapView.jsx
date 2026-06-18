@@ -134,27 +134,14 @@ export default function PermitMapView({ className = "", onLoad }) {
     map.addControl(new maplibregl.ScaleControl({ unit: "metric", maxWidth: 100 }), "bottom-right");
 
     map.on("load", () => {
-      console.log("[PermitMapView] map loaded, adding source");
       map.addSource(SOURCE_ID, {
         type: "vector",
         url: PERMITS_URL,
       });
-      console.log("[PermitMapView] source added, adding layer");
-      console.log("[PermitMapView] layer spec:",
-        JSON.stringify(permitCircleLayer()));
       map.addLayer({ ...permitCircleLayer(), source: SOURCE_ID });
-      console.log("[PermitMapView] layer added");
       wirePermitPopup(map);
       // Hand the live map to the page (last, so the layer it filters exists).
       if (onLoadRef.current) onLoadRef.current(map);
-    });
-
-    // Confirm the vector source actually finishes loading tiles.
-    map.on("sourcedata", (e) => {
-      if (e.sourceId === SOURCE_ID && e.isSourceLoaded) {
-        console.log("[PermitMapView] source loaded:",
-          SOURCE_ID, "tiles:", e.tile ? "yes" : "no");
-      }
     });
 
     // Surface map errors honestly instead of swallowing them — CLAUDE.md §6.
