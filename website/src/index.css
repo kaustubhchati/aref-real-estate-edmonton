@@ -373,12 +373,12 @@ p  { margin: 0 0 0.75rem; }
   color: #fff;
 }
 
-/* ---- Year select (dropdown — 15 years won't fit a segmented toggle) ------ */
-.year-select-field { margin: 0 0 12px; }
-.year-select-field:last-child { margin-bottom: 0; }
+/* ---- Sidebar dropdowns (Year, Metric — too many options for a toggle) ---- */
+.sb-select-field { margin: 0 0 12px; }
+.sb-select-field:last-child { margin-bottom: 0; }
 
 /* Same 11-px uppercase muted header as the other sidebar controls. */
-.year-select-label {
+.sb-select-label {
   display: block;
   font-size: 11px;
   text-transform: uppercase;
@@ -388,8 +388,8 @@ p  { margin: 0 0 0.75rem; }
   margin: 0 0 6px;
 }
 
-/* Matches .search-input so the two stacked controls read as one set. */
-.year-select {
+/* Matches .search-input so the stacked controls read as one set. */
+.sb-select {
   width: 100%;
   padding: 7px 9px;
   font-size: 12.5px;
@@ -400,7 +400,7 @@ p  { margin: 0 0 0.75rem; }
   border-radius: 4px;
   cursor: pointer;
 }
-.year-select:focus { outline: none; border-color: var(--accent); }
+.sb-select:focus { outline: none; border-color: var(--accent); }
 
 /* ---- Map loading state (manifest fetch in flight) ----------------------- */
 /* Absolute-fills .canvas-wrap and centres, same as .canvas-empty, so the

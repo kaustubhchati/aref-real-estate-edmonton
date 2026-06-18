@@ -35,7 +35,10 @@ import {
   MAP_VIEW,
   STATE_STYLE,
   GREY_STATES,
+  METRICS,
   stopsFromScale,
+  metricStops,
+  choroplethFillColor,
   choroplethLayers,
   choroplethImages,
 } from "./choroplethStyle.js";
@@ -53,7 +56,6 @@ import {
   useChoroplethInteractions,
   indexNamesForSearch,
 } from "./interactions.js";
-import { fmtCurrency } from "../../utils/format.js";
 
 const SIDEBAR_TRANSITION_MS = 260;
 
@@ -65,6 +67,7 @@ export default function PropertyAssessmentMap() {
   const [manifestError, setManifestError] = useState(null);
   const [city, setCity] = useState(DEFAULT_CITY);
   const [year, setYear] = useState(null);
+  const [metric, setMetric] = useState(METRICS[0].key);
 
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
@@ -93,10 +96,19 @@ export default function PropertyAssessmentMap() {
   const years = getYearsForCity(manifest, city);
   const url = year != null && years.includes(year) ? resolveDataUrl(city, year) : null;
 
-  // Colour ramp for the displayed year, from the manifest's per-year scale.
-  // stopsFromScale falls back to the locked STOPS when a year's scale is
-  // missing, so this is always a valid stops array.
-  const stops = stopsFromScale(getColourScale(manifest, city, year));
+  const selectedMetric = METRICS.find((m) => m.key === metric) ?? METRICS[0];
+
+  // Colour ramp for the current metric. median_assessvalue keeps its locked
+  // per-year manifest scale; the other metrics have no manifest scale, so their
+  // stops are computed from the loaded polygons (quantiles). gj is null until
+  // the fetch resolves — metricStops falls back to the locked STOPS until then.
+  // Memoised so its identity is stable between renders (the repaint effect and
+  // the Legend both depend on it).
+  const stops = useMemo(() => (
+    metric === "median_assessvalue"
+      ? stopsFromScale(getColourScale(manifest, city, year))
+      : metricStops(gj, metric)
+  ), [metric, manifest, city, year, gj]);
 
   // Switching city resets the year to that city's default in the same update,
   // so we never carry one city's year onto another (or onto a city with none).
@@ -127,6 +139,15 @@ export default function PropertyAssessmentMap() {
       .catch((err) => { if (!cancelled) setFetchError(err.message); });
     return () => { cancelled = true; };
   }, [url]);
+
+  // Repaint the fill when the metric or its colour scale changes, WITHOUT
+  // remounting the map (which would refetch the GeoJSON and reset zoom/pan).
+  // MapView reads `layers` only at mount, so live updates go through
+  // setPaintProperty — the mechanism MapView documents for exactly this.
+  useEffect(() => {
+    if (!map || !map.getLayer("nbhd-fill")) return;
+    map.setPaintProperty("nbhd-fill", "fill-color", choroplethFillColor(metric, stops));
+  }, [map, metric, stops]);
 
   const names = useMemo(() => (gj ? indexNamesForSearch(gj) : []), [gj]);
   const flyAndPinByName = useChoroplethInteractions(map, gj, year);
@@ -167,7 +188,7 @@ export default function PropertyAssessmentMap() {
     <article className="content-map">
       <aside className={`sb${collapsed ? " collapsed" : ""}`} aria-label="Map sidebar">
         <h1 className="sb-title">
-          {city} — median residential assessment{year != null ? `, ${year}` : ""}
+          {city} — residential assessment{year != null ? `, ${year}` : ""}
         </h1>
         <p className="sb-sub">
           Layer 1a-cleaned (parking + R1 + R3), neighbourhood aggregates.
@@ -184,16 +205,30 @@ export default function PropertyAssessmentMap() {
           {/* 15 years is too many for a segmented toggle (see OptionToggle's
               own note), so the year control is a native dropdown. years comes
               straight from the manifest. */}
-          <div className="year-select-field">
-            <span className="year-select-label">Year</span>
+          <div className="sb-select-field">
+            <span className="sb-select-label">Year</span>
             <select
-              className="year-select"
+              className="sb-select"
               aria-label="Year"
               value={year ?? ""}
               onChange={(e) => setYear(Number(e.target.value))}
             >
               {years.map((y) => (
                 <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+          {/* Which aggregate column the choropleth colours by. */}
+          <div className="sb-select-field">
+            <span className="sb-select-label">Metric</span>
+            <select
+              className="sb-select"
+              aria-label="Metric"
+              value={metric}
+              onChange={(e) => setMetric(e.target.value)}
+            >
+              {METRICS.map((m) => (
+                <option key={m.key} value={m.key}>{m.label}</option>
               ))}
             </select>
           </div>
@@ -219,17 +254,20 @@ export default function PropertyAssessmentMap() {
 
         <section className="sb-section">
           <Legend
-            title="Median assessed value"
+            title={selectedMetric.label}
             stops={stops}
-            format={fmtCurrency}
+            format={selectedMetric.fmt}
             greyTitle="Non-aggregated polygons"
             greyStates={GREY_STATES.map((k) => STATE_STYLE[k])}
           />
         </section>
 
         <p className="sb-ref">
-          Colour scale for {year} (from <code>manifest.json</code>):{" "}
-          {stops.map((s) => `${s.label} ${fmtCurrency(s.v)}`).join(" · ")}.
+          {selectedMetric.label} scale for {year} (
+          {metric === "median_assessvalue"
+            ? "from the manifest"
+            : "computed from this year's neighbourhoods"}
+          ): {stops.map((s) => `${s.label} ${selectedMetric.fmt(s.v)}`).join(" · ")}.
         </p>
       </aside>
 
@@ -265,7 +303,7 @@ export default function PropertyAssessmentMap() {
             view={MAP_VIEW}
             sourceId="nbhd"
             promoteId="Neighbourhood ID"
-            layers={choroplethLayers(stops)}
+            layers={choroplethLayers(stops, metric)}
             images={choroplethImages()}
             onLoad={setMap}
           />
