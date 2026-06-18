@@ -121,12 +121,26 @@ function buildPermitFilter(year, category) {
   return ["all", ...clauses];
 }
 
+// Match the .sb collapse transition (index.css) so we resize the map only after
+// the sidebar has finished shrinking/growing — resizing mid-animation leaves the
+// canvas at a stale width.
+const SIDEBAR_TRANSITION_MS = 220;
+
 export default function BuildingPermitsMap() {
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [category, setCategory] = useState(DEFAULT_CATEGORY);
   const [map, setMap] = useState(null);
   const [coverage, setCoverage] = useState([]);
   const [counts, setCounts] = useState([]);
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Hide/show the sidebar. MapLibre sizes its canvas to the container, so after
+  // the width transition finishes we tell the map to re-measure and fill the
+  // reclaimed space.
+  function toggleSidebar() {
+    setCollapsed((v) => !v);
+    if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS);
+  }
 
   // Re-apply the filter whenever the map is ready or a control changes. setFilter
   // is instant — it re-evaluates the already-loaded tiles, no network. Guard on
@@ -185,7 +199,7 @@ export default function BuildingPermitsMap() {
 
   return (
     <article className="content-map">
-      <aside className="sb" aria-label="Map sidebar">
+      <aside className={`sb${collapsed ? " collapsed" : ""}`} aria-label="Map sidebar">
         <p className="eyebrow">Building Activity</p>
         <h1 className="sb-title">Edmonton — {year}</h1>
         <p className="sb-sub">
@@ -198,7 +212,7 @@ export default function BuildingPermitsMap() {
           {/* Reuse the existing sidebar classes (no new CSS): .opt-toggle for
               spacing, .opt-toggle-label for the 11px label, .search-input for
               the bordered control — a <select> wears the input style fine. */}
-          <label className="opt-toggle">
+          <div className="opt-toggle">
             <div className="opt-toggle-label">Year</div>
             <select
               className="search-input"
@@ -209,9 +223,9 @@ export default function BuildingPermitsMap() {
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
-          </label>
+          </div>
 
-          <label className="opt-toggle">
+          <div className="opt-toggle">
             <div className="opt-toggle-label">Job category</div>
             <select
               className="search-input"
@@ -222,7 +236,7 @@ export default function BuildingPermitsMap() {
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
-          </label>
+          </div>
         </section>
 
         {/* Honest-absence note: only shown when some permits for the year lack
@@ -245,9 +259,25 @@ export default function BuildingPermitsMap() {
         <section className="sb-section">
           <PermitLegend />
         </section>
+
+        <p className="sb-ref">
+          Source: City of Edmonton Open Data (24uj-dj8v). 226,184 permit points,
+          2009–2026.
+        </p>
       </aside>
 
       <div className="canvas-wrap">
+        {/* Sidebar collapse control — overlays the map's top-left so the toggle
+            stays reachable whether the sidebar is open or hidden. */}
+        <button
+          type="button"
+          className="sb-toggle"
+          onClick={toggleSidebar}
+          aria-label={collapsed ? "Show sidebar" : "Hide sidebar"}
+          title="Toggle sidebar"
+        >
+          ≡
+        </button>
         {/* No url/gj here (PMTiles point map, no MapErrorBoundary); the loading
             signal is "map not ready yet" — skeleton shows until onLoad fires. */}
         {!map && <MapSkeleton />}
