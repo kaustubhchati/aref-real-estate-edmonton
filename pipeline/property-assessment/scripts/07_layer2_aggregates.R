@@ -214,6 +214,30 @@ cat(sprintf("Rows: %s neighbourhoods (incl. %s NA-id developing areas)\n",
             nrow(na_id_block)))
 
 
+# --- Year-over-year change: 2026 vs 2025 --------------------
+# Match the historical pipeline's yoy_pct_change (08d) so the 2026 production
+# aggregate carries the same column. Read the prior year's (gated) medians from
+# the historical aggregates and join on Neighbourhood name. yoy is NA wherever
+# either year is suppressed/missing or the neighbourhood is new in 2026. The
+# 2025 medians are themselves gated (N<100 → NA), so yoy only exists where both
+# years cleared the N<100 gate — consistent with 08d.
+prev_path <- "output/hist_aggregates/neighbourhood_aggregates_2025.csv"
+if (file.exists(prev_path)) {
+  prev_2025 <- read_csv(prev_path, show_col_types = FALSE) |>
+    select(Neighbourhood, median_2025 = median_assessvalue)
+  nbhd_agg_gated <- nbhd_agg_gated |>
+    left_join(prev_2025, by = "Neighbourhood") |>
+    mutate(yoy_pct_change = (median_assessvalue - median_2025) / median_2025 * 100) |>
+    select(-median_2025)
+  write_csv(nbhd_agg_gated, out_path)
+  cat(sprintf("Added yoy_pct_change (2026 vs 2025); %s neighbourhoods have a value. Re-wrote %s\n",
+              comma(sum(!is.na(nbhd_agg_gated$yoy_pct_change))), out_path))
+} else {
+  warning("2025 historical aggregate not found at ", prev_path,
+          " — yoy_pct_change not added. Run 08d first.")
+}
+
+
 # --- Summary print -----------------------------------------
 cat("\n--- Aggregate summary (gated, non-suppressed neighbourhoods only) ---\n")
 nbhd_agg_gated |>

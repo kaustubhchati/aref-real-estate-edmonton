@@ -83,7 +83,8 @@ aggregates <- read_csv(
     pct_with_unit                 = col_double(),
     avg_assessvalue_without_unit  = col_double(),
     avg_lotsize                   = col_double(),
-    suppressed                    = col_logical()
+    suppressed                    = col_logical(),
+    yoy_pct_change                = col_double()
   )
 )
 cat(sprintf("Loaded %s aggregate rows\n", comma(nrow(aggregates))))
@@ -212,7 +213,8 @@ geojson_ready <- joined |>
     median_yearbuilt             = median_yearbuilt,
     pct_with_unit                = pct_with_unit,
     avg_assessvalue_without_unit = avg_assessvalue_without_unit,
-    avg_lotsize                  = avg_lotsize
+    avg_lotsize                  = avg_lotsize,
+    yoy_pct_change               = yoy_pct_change
   )
 
 

@@ -174,15 +174,8 @@ cat("Years covered: ", paste(years_found, collapse = ", "), "\n")
 cat("Default year: ", max(years_found), "\n")
 cat("=============================================================\n")
 
-# Step 1 — copy 2026 recovered GeoJSON to website public folder
-file.copy(
-  from      = "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/pipeline/property-assessment/output/neighbourhoods_2026_recovered.geojson",
-  to        = "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/website/public/data/property-assessment/neighbourhoods_2026_recovered.geojson",
-  overwrite = TRUE
-)
-
-# Step 2 — verify all 15 files are now present
-list.files(
-  "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/website/public/data/property-assessment",
-  pattern = "neighbourhoods_.*_recovered\\.geojson"
-)
+# NOTE: 09a only EMITS the manifest (its stated purpose). Copying the 2026
+# GeoJSON into website/public is the build step's job (08b output → public),
+# done before running this script. A prior trailing file.copy() here pulled a
+# stale output/neighbourhoods_2026_recovered.geojson (old 402-polygon boundary,
+# no yoy) over the freshly built file and was removed 2026-06-18.
