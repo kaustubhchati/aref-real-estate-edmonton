@@ -89,3 +89,4 @@ pipeline/property-assessment/data/reference/neighbourhood_name_merges_*.csv
 pipeline/shared/data/
 **/building-permits/output/permits.pmtiles
 **/building-permits/output/permits.pmtiles
+**/building-permits/output/permit_geojson/*.geojson
