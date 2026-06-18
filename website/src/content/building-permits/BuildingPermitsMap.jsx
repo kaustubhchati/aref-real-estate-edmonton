@@ -52,19 +52,16 @@ function coverageForYear(rows, year) {
   return rows.find((r) => Number(r.year) === year) || null;
 }
 
-// Sidebar legend. Two keys: colour (job_group → hue) and dot size
-// (construction_value → radius). Colours come from permitStyle's COLOURS table
-// — imported, never re-hardcoded — so the legend can't drift from the map paint.
-// The size dots are APPROXIMATE pixel sizes standing in for the value→radius
-// ramp: an orientation cue, not the exact stops. Reuses the global .legend* CSS
-// (same classes the choropleth Legend uses); the size dots are plain inline-
-// styled circles, the same inline-swatch approach Legend.jsx itself uses.
+// Sidebar legend. One key: colour (job_group → hue). Dots are now a uniform
+// size (no value encoding), so there's no size key to show. Colours come from
+// permitStyle's COLOURS table — imported, never re-hardcoded — so the legend
+// can't drift from the map paint. Reuses the global .legend* CSS (same classes
+// the choropleth Legend uses).
 function PermitLegend() {
   const colourRows = [
     { label: "Residential", colour: COLOURS.residential },
     { label: "Commercial", colour: COLOURS.commercial },
   ];
-  const sizeDots = [6, 10, 14, 20]; // ascending diameters, small → large
 
   return (
     <aside className="legend">
@@ -82,23 +79,6 @@ function PermitLegend() {
           </li>
         ))}
       </ul>
-
-      <div className="legend-divider">Construction value</div>
-      <div className="legend-row" style={{ gap: 6 }}>
-        {sizeDots.map((d) => (
-          <span
-            key={d}
-            style={{
-              width: d,
-              height: d,
-              flex: `0 0 ${d}px`,
-              borderRadius: "50%",
-              background: "var(--text-muted)", // neutral: size, not group, is the point
-            }}
-          />
-        ))}
-        <span className="legend-lab"><small>lower → higher</small></span>
-      </div>
     </aside>
   );
 }
@@ -163,9 +143,8 @@ export default function BuildingPermitsMap() {
         <p className="eyebrow">Building Activity</p>
         <h1 className="sb-title">Edmonton — {year}</h1>
         <p className="sb-sub">
-          226,184 permit points, 2009–2026. Slate = residential, orange =
-          commercial; dot size scales with construction value. Filter by year,
-          permit type, and month below.
+          226,184 permit points, 2009–2026. Amber = residential, violet =
+          commercial. Filter by year, permit type, and month.
         </p>
 
         <section className="sb-section">

@@ -9,12 +9,13 @@
 // colour or size tweak is a one-file edit (CLAUDE.md §6: data-driven tables, one
 // source of truth).
 //
-// Two feature properties drive the look:
-//   • job_group         — "residential" | "commercial"  → colour
-//   • construction_value — raw $CAD, NULL for no-value rows → radius
+// One feature property drives the look:
+//   • job_group — "residential" | "commercial" → colour (amber / violet)
+// Dot SIZE is uniform (zoom-scaled only) — construction_value no longer encodes
+// radius; it survives only as a click-popup field.
 //
-// Scope: colour + size (step 3), plus the click-popup contract (step 4b) — see
-// PERMIT_POPUP_ROWS / buildPermitPopupHtml at the bottom.
+// Scope: colour (the dots) + the heatmap density layer + the click-popup contract
+// — see PERMIT_POPUP_ROWS / buildPermitPopupHtml at the bottom.
 // =============================================================================
 
 import { fmtCurrency } from "../../utils/format.js";
@@ -47,14 +48,14 @@ export const LAYER_ID = "permits-circles";
 export const HEATMAP_LAYER_ID = "permits-heat";
 
 // ---- Colour by job_group ---------------------------------------------------
-// Magenta (residential) vs teal (commercial): ~170° of hue separation, and both
-// hues are ABSENT from CARTO Voyager's blue/green/yellow/beige basemap, so dots
-// never blend into the map. The pair is colourblind-safe (deuteranopia +
-// protanopia) — magenta reads residential warmth, teal reads commercial/civic.
+// Amber (residential) vs deep violet (commercial): ~200° of hue separation, both
+// absent from CARTO Voyager's blue/green/yellow/beige basemap so dots never blend
+// into the map. Amber reads human/housing warmth; violet reads the commercial
+// minority and pops against the amber majority.
 export const COLOURS = {
-  residential: "#c0397a",  // deep magenta — absent from Voyager basemap
-  commercial:  "#00897b",  // teal — absent from Voyager basemap
-  fallback:    "#9aa0a6",  // neutral grey for any unknown group
+  residential: "#f5a623",  // warm amber — absent from Voyager, human/housing
+  commercial:  "#7b2d8b",  // deep violet — absent from Voyager, ~200° from amber
+  fallback:    "#9aa0a6",  // neutral grey
 };
 
 // ["match", job_group, ...] → fill colour. Built from COLOURS so the table above
@@ -68,115 +69,67 @@ function buildColourExpression() {
   ];
 }
 
-// ---- Size by construction_value --------------------------------------------
-// The spread is brutal: median ~$67k, max ~$480M — roughly four orders of
-// magnitude. A LINEAR radius ramp is unusable: scale so the $480M tower is a
-// readable dot and every sub-million permit collapses to a single invisible
-// pixel; scale so the small ones show and the tower becomes a blob that swallows
-// the map. So we TAME the domain with a square root before interpolating —
-// sqrt($480M) ≈ 21,900 vs sqrt($67k) ≈ 259, an ~85× span instead of ~7,000×,
-// which fits a legible 2–22px radius band. (sqrt, not log: construction_value
-// can be 0/NULL, and log(0) is -Infinity. sqrt(0) is a clean 0.)
-//
-// The value→radius stops are written inline in the zoom-aware expression below,
-// in RAW dollars with sqrt applied to each boundary. NULL construction_value
-// coalesces to 0 (via ["number", …, 0]) and lands on the first stop → the floor,
-// so no-value permits are small but NEVER invisible.
-//
-// Radius is ALSO zoom-aware: a fixed-pixel ramp is the same size at z7 as z14,
-// so low zoom collapses into an unreadable mass and high zoom makes small permits
-// invisible. So we interpolate on TWO axes — outer = zoom, inner = sqrt(value):
-// dots stay small at the city overview (density reads from overlap) and grow at
-// street level (individual permits become legible).
-function buildRadiusExpression() {
-  // Two-axis interpolation: outer = zoom, inner = construction_value (sqrt-tamed).
-  // At z7 (city overview) dots are small — density reads from overlap, not size.
-  // At z14 (street level) dots grow — individual permits are legible.
-  // The inner sqrt ramp is identical to before; only the scale factor changes.
-  const sqrtVal = ["sqrt", ["number", ["get", "construction_value"], 0]];
-  return [
-    "interpolate", ["linear"], ["zoom"],
-    7,  ["interpolate", ["linear"], sqrtVal,
-          0,           1.5,
-          Math.sqrt(    50_000),  2.5,
-          Math.sqrt(   500_000),  4,
-          Math.sqrt( 5_000_000),  6,
-          Math.sqrt(50_000_000),  9,
-          Math.sqrt(480_000_000), 13],
-    11, ["interpolate", ["linear"], sqrtVal,
-          0,           2.5,
-          Math.sqrt(    50_000),  4,
-          Math.sqrt(   500_000),  7,
-          Math.sqrt( 5_000_000), 11,
-          Math.sqrt(50_000_000), 16,
-          Math.sqrt(480_000_000), 22],
-    14, ["interpolate", ["linear"], sqrtVal,
-          0,           3.5,
-          Math.sqrt(    50_000),  6,
-          Math.sqrt(   500_000), 10,
-          Math.sqrt( 5_000_000), 16,
-          Math.sqrt(50_000_000), 22,
-          Math.sqrt(480_000_000), 30],
-  ];
-}
-
 // ---- The circle layer spec -------------------------------------------------
 // Returned WITHOUT `source` (PermitMapView fills that in), mirroring
-// choroplethLayers(). One layer: colour by job_group, size by construction_value,
-// semi-transparent so overlapping dots read as density, with a thin dark stroke
-// so individual dots stay distinct where they pile up.
+// choroplethLayers(). One layer: colour by job_group, UNIFORM zoom-scaled size
+// (no value encoding any more), with a thick white halo so dots stay distinct on
+// the light Voyager basemap.
 export function permitCircleLayer() {
   return {
     id: LAYER_ID,
     type: "circle",
     "source-layer": SOURCE_LAYER,
-    // Circles only appear from z10 up, where the heatmap is fading out. Without
-    // this floor they'd render UNDER nothing at low zoom (the heatmap owns z9–10)
-    // and the two layers would overlap with no clean crossover.
-    minzoom: 10,
+    // Below z11 the heatmap carries density; dots at z9 on 226k points are
+    // unreadable regardless of colour, so we just don't draw them down there.
+    minzoom: 11,
+    layout: {
+      // Draw commercial (the 16% minority) ON TOP of residential so the violet
+      // signal isn't buried under the amber majority (key=1 sorts above key=0).
+      "circle-sort-key": ["case",
+        ["==", ["get", "job_group"], "commercial"], 1,
+        0
+      ],
+    },
     paint: {
-      "circle-color":            buildColourExpression(),
-      "circle-radius":           buildRadiusExpression(),
-      // Start at 0 at z10 so circles are invisible until the heatmap (which fades
-      // out z10–12) hands off — no moment where both show at full weight. Visible
-      // from z11 onward, fuller as you zoom to street level.
+      // Uniform size — zoom-scaled only, no value encoding.
+      // At z11 dots are small enough to show density pattern.
+      // At z16+ they're large enough to click comfortably.
+      "circle-radius": [
+        "interpolate", ["linear"], ["zoom"],
+        11,  3.5,
+        13,  5.5,
+        15,  8.0,
+        18, 12.0,
+      ],
+      "circle-color": buildColourExpression(),
+      // Opacity: lower at mid-zoom (many overlapping dots),
+      // higher at street level (individual permit legibility).
       "circle-opacity": [
         "interpolate", ["linear"], ["zoom"],
-        10, 0.0,    // invisible until heatmap crossover starts
-        11, 0.65,
-        14, 0.82,
-        18, 0.90,
+        11, 0.70,
+        14, 0.85,
+        18, 0.92,
       ],
+      // White halo stroke: separates dots from basemap and
+      // from each other at all zoom levels. White works on
+      // Voyager's light background; dark stroke does not.
       "circle-stroke-width": [
         "interpolate", ["linear"], ["zoom"],
-        11, 0.5,
-        14, 1.0,
-        18, 1.5,
+        11, 1.0,
+        14, 1.5,
+        18, 2.0,
       ],
-      // White stroke (not dark): Voyager is a LIGHT basemap, so a white outline
-      // separates overlapping dots far better than the dark stroke a dark basemap
-      // would want.
-      "circle-stroke-color": [
-        "interpolate", ["linear"], ["zoom"],
-        11, "rgba(255,255,255,0.4)",  // soft white stroke at mid zoom
-        14, "rgba(255,255,255,0.75)", // stronger white at street level
-      ],
-      // circle-pitch-alignment is a PAINT property in MapLibre (not layout, where
-      // the original spec placed it — MapLibre would reject it there). "map" makes
-      // dots scale with apparent distance when the map is pitched, so they read as
-      // sitting on the surface instead of floating viewport-fixed.
-      "circle-pitch-alignment": "map",
+      "circle-stroke-color": "rgba(255,255,255,0.85)",
+      "circle-stroke-opacity": 1.0,
     },
   };
 }
 
 // ---- The heatmap layer spec ------------------------------------------------
-// Shown at the city overview (maxzoom 12) where 226k individual dots would be an
-// unreadable mass. Weight is the sqrt-tamed construction_value (same domain as
-// the circle radius), so the heat reads "where the high-value work is", not just
-// raw point density. Opacity ramps to 0 by z12 so it hands off cleanly to the
-// circle layer (which floors at z10) — a z10–12 crossover where both are partly
-// visible, then circles alone above z12.
+// A density CONTEXT layer at the city overview (maxzoom 12): equal weight per
+// point so it shows where permit ACTIVITY concentrates (not where the money is),
+// in a neutral lavender→deep-purple ramp that reads as background and doesn't
+// compete with the amber/violet dots that fade in at z11+.
 export function heatmapLayer() {
   return {
     id: HEATMAP_LAYER_ID,
@@ -184,40 +137,38 @@ export function heatmapLayer() {
     "source-layer": SOURCE_LAYER,
     maxzoom: 12,
     paint: {
-      "heatmap-weight": [
-        "interpolate", ["linear"],
-        ["sqrt", ["number", ["get", "construction_value"], 0]],
-        0,                        0.1,
-        Math.sqrt(   500_000),    0.4,
-        Math.sqrt( 5_000_000),    0.7,
-        Math.sqrt(50_000_000),    1.0,
-      ],
+      // Equal weight per point — density only, no value bias.
+      // WHY: construction_value weighting made commercial
+      // towers dominate the heatmap. Equal weight shows where
+      // permit ACTIVITY is concentrated, not where money is.
+      "heatmap-weight": 1,
+
       "heatmap-intensity": [
         "interpolate", ["linear"], ["zoom"],
-        9, 0.6,
-        12, 1.8,
+        9, 0.4,
+        12, 1.2,
       ],
-      // Magenta-tinted ramp aligned with the residential majority (~84% of
-      // permits drive the density signal), so the heatmap→dots handoff is
-      // coherent — the old blue→red ramp clashed with both the dot colours and
-      // the basemap.
+      // Neutral lavender-purple ramp: absent from Voyager,
+      // reads as "background density context" not foreground.
       "heatmap-color": [
         "interpolate", ["linear"], ["heatmap-density"],
-        0,   "rgba(0,0,0,0)",
-        0.15, "#f3e0eb",   // pale pink
-        0.35, "#d9748a",   // rose
-        0.55, "#c0397a",   // residential magenta
-        0.75, "#7b1c5c",   // deep magenta
-        1.0,  "#3d0033",   // near-black purple — peak density
+        0,    "rgba(0,0,0,0)",
+        0.1,  "rgba(196,180,220,0.3)",
+        0.3,  "rgba(160,130,200,0.55)",
+        0.6,  "rgba(120,80,170,0.75)",
+        0.85, "rgba(90,30,140,0.88)",
+        1.0,  "rgba(50,0,100,0.95)",
       ],
       "heatmap-radius": [
         "interpolate", ["linear"], ["zoom"],
-        9, 12,
-        12, 20,
+        9,  14,
+        12, 22,
       ],
+      // Full at z9, gone by z12 (dots take over at z11).
       "heatmap-opacity": [
         "interpolate", ["linear"], ["zoom"],
-        10, 1.0,
+        9,  0.85,
+        11, 0.55,
         12, 0.0,
       ],
     },
