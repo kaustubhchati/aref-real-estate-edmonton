@@ -309,3 +309,89 @@ Assessment year selector to read years and per-year colour scales from
 `manifest.json` (currently `dataSources.js` is still hardcoded to a single 2026
 dataset). [OPEN] Reconcile "Sessions 1–6" naming against STRUCTURE_UPDATE.md's
 Day 1–8 plan.
+
+> **Update (2026-06-18):** the year-selector item above is **done** — see §11.
+
+---
+
+## 11. Frontend build + design system — June 2026
+
+The Property Assessment map (first milestone, §8) shipped end-to-end and the
+whole site was restyled to a UAlberta-green design system. Every change below
+was verified in a real browser (headless Chrome / puppeteer) and merged to
+`main`. Grouped by theme; commit hashes in parentheses.
+
+### Manifest-driven data seam
+- `dataSources.js` rewritten to load `/manifest.json` at runtime
+  (`loadManifest`, `getYearsForCity`, `getDefaultYear`, `getColourScale`);
+  removed the hardcoded `YEARS` / `DATA_SOURCES` — **no year literals** in the
+  frontend (`7c68df3`, `b07b920`).
+- Year selector is a 15-year dropdown (2012–2026) auto-discovered from the
+  manifest, with per-year colour scales; distinct EmptyState for a failed
+  GeoJSON fetch (`23d3778`, `b07b920`, `55039e8`).
+- `manifest.json` gained a `last_updated` field (emitted by 09a); the sidebar
+  shows "Data last updated: …" (`c48093e`, `100d082`).
+
+### Pipeline (R) — `yoy_pct_change`
+- Historical: 08d computes per-neighbourhood YoY % change across 2012–2025;
+  08e passes it into the GeoJSONs and writes a portable (basename) build log
+  (`1810331`, `8535028`).
+- Production 2026: 07 joins the 2025 historical medians to add YoY (2026 vs
+  2025); 08/08b carry it into the recovered GeoJSON; rebuilding moved the 2026
+  map onto the current 407-polygon City boundary (was a stale 402-polygon
+  file) and resynced the manifest 2026 colour scale; removed 09a's stale
+  trailing copy that re-clobbered the rebuilt file (`241694a`).
+
+### Choropleth metrics & states
+- 4-metric toggle: median assessed, mean assessed, mean lot size, median year
+  built. Median keeps its locked manifest scale; the others compute ramp stops
+  from the loaded polygons' quantiles (`95ede0e`).
+- YoY metric: fixed blue→white→red diverging scale; "No prior year" EmptyState
+  for the earliest year; NA-yoy aggregated polygons render `no_data` grey;
+  deduped legend labels (`29fc3dc`, `f310b0d`).
+- Glass non-aggregated polygons — `rgba(255,255,255,0.08)` fill so the basemap
+  shows through, faint hover wash, outline-only legend swatches, and honest
+  per-state reason text in the popup (`4cfd12d`).
+- Popup shows the assessment-year header; "Copy stats" button on pinned popups
+  (`97b6f3e`, `a8934ac`).
+
+### Map rendering & robustness
+- Per-zoom outline width, 150 ms fill-opacity transition, neighbourhood name
+  labels (z≥11) and N-count labels on suppressed polygons (`c1ce364`,
+  `c04ef35`, `3c81108`, `90f8800`).
+- Custom Voyager basemap recolour (water / vegetation / land / roads), vendored
+  to `website/public/styles/custom-basemap.json` (`0de0b5a`).
+- `MapErrorBoundary` so a WebGL/MapLibre failure shows an inline fallback
+  instead of blanking the page; `MapSkeleton` loading shimmer that respects
+  `prefers-reduced-motion` (`b18aefa`, `7f2e3bd`).
+
+### Design system + shell
+- Tokens: Inter (`@import`), green/slate scales, semantic aliases, spacing /
+  elevation / radius scales, type scale, `.eyebrow`; UAlberta green
+  `#007a33` accent (`3e09f72`, `03440a0`).
+- Header: sticky dark `slate-950` with a green gradient underline (`2f334d4`).
+- Nav: sticky single **horizontal-scroll** row; React-controlled dropdowns
+  rendered as `position:fixed` overlays so they escape the scroll-clip; close
+  on outside-click / Escape / route change; active-parent highlight via a JS
+  route check (`02dc086`, `4d280a0`, `fb72a65`, `230b058`).
+- Footer: dark 3-column grid, green divider, compact padding (`dda1881`,
+  `ea998cf`).
+- Controls: pill toggles, custom select chevron, green focus rings (`54aa049`).
+- Popup + legend: rounded popup, circular close button, aligned swatches /
+  uniform legend row height (`4d39d9a`, `013127b`, `ef1a478`).
+- Map controls: rounded zoom group, frosted compact attribution + scale bar
+  (`281b362`).
+- Sidebar: collapse toggle removed (fixed sidebar); dynamic `{city} — {year}`
+  title with eyebrow section label; refreshed search copy; split, scannable
+  ref note (`1c2a3ac`, `0ec8202`, `ac2d9cb`).
+- Mobile (≤680px): stacked map layout, condensed header, single-column footer
+  (`4d39d9a`); a11y `scroll-padding-top:110px` so anchors/focus clear the
+  sticky header + nav (`f379877`).
+
+### Net state
+The live clone is the Property Assessment choropleth with a 15-year selector,
+4-metric + YoY toggle, manifest-driven per-year colour scales, glass
+non-aggregated states, a custom green basemap, and a full UAlberta-green design
+system across header / nav / footer / controls / popup / legend / sidebar —
+plus mobile and a11y passes. Building Permits shares the shell, tokens, and
+`MapSkeleton`.
