@@ -11,9 +11,11 @@
 // to diverge.
 //
 // Public surface:
-//   • installChoroplethInteractions(map, gj) → { flyAndPinByName, cleanup }
-//   • useChoroplethInteractions(map, gj)     → flyAndPinByName  (React hook)
-//   • indexNamesForSearch(gj)                → string[] (sorted display names)
+//   • installChoroplethInteractions(map, gj, year) → { flyAndPinByName, cleanup }
+//   • useChoroplethInteractions(map, gj, year)     → flyAndPinByName  (React hook)
+//   • indexNamesForSearch(gj)                      → string[] (sorted display names)
+//
+// `year` is the displayed assessment year, threaded into every popup header.
 // =============================================================================
 
 import { useEffect, useRef, useCallback } from "react";
@@ -36,18 +38,18 @@ const ID_PROPERTY = "Neighbourhood ID";
 //
 // The hook installs handlers exactly once when BOTH map and gj are ready,
 // and tears them down on unmount (and before re-install if either changes).
-export function useChoroplethInteractions(map, gj) {
+export function useChoroplethInteractions(map, gj, year) {
   const apiRef = useRef(null);
 
   useEffect(() => {
     if (!map || !gj) return undefined;
-    const api = installChoroplethInteractions(map, gj);
+    const api = installChoroplethInteractions(map, gj, year);
     apiRef.current = api;
     return () => {
       api.cleanup();
       apiRef.current = null;
     };
-  }, [map, gj]);
+  }, [map, gj, year]);
 
   // Stable identity for the search component — it doesn't need to re-render
   // when interactions re-install.
@@ -57,7 +59,7 @@ export function useChoroplethInteractions(map, gj) {
 }
 
 // ---- Plain-JS installer (the hook is a thin wrapper around this) ----------
-export function installChoroplethInteractions(map, gj) {
+export function installChoroplethInteractions(map, gj, year) {
   const hoverPopup = new maplibregl.Popup({
     closeButton: false, closeOnClick: false, offset: 8, maxWidth: "320px",
   });
@@ -109,7 +111,7 @@ export function installChoroplethInteractions(map, gj) {
     setHover(hoveredId, true);
     hoverPopup
       .setLngLat(e.lngLat)
-      .setHTML(buildPopupHtml(f.properties, false))
+      .setHTML(buildPopupHtml(f.properties, false, year))
       .addTo(map);
   }
 
@@ -131,7 +133,7 @@ export function installChoroplethInteractions(map, gj) {
     setPinned(pinnedId, true);
     pinnedPopup
       .setLngLat(e.lngLat)
-      .setHTML(buildPopupHtml(f.properties, true))
+      .setHTML(buildPopupHtml(f.properties, true, year))
       .addTo(map);
     // The popup's own close button (X) clears feature-state pinning.
     pinnedPopup.once("close", () => {
@@ -172,7 +174,7 @@ export function installChoroplethInteractions(map, gj) {
     const [[minX, minY], [maxX, maxY]] = bboxOfGeom(feat.geometry);
     pinnedPopup
       .setLngLat([(minX + maxX) / 2, (minY + maxY) / 2])
-      .setHTML(buildPopupHtml(feat.properties, true))
+      .setHTML(buildPopupHtml(feat.properties, true, year))
       .addTo(map);
     pinnedPopup.once("close", () => {
       if (pinnedId !== null) {

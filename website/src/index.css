@@ -524,6 +524,15 @@ p  { margin: 0 0 0.75rem; }
   letter-spacing: 0.04em;
   margin-bottom: 0.35rem;
 }
+/* Which assessment year this popup's numbers are from. Same muted subtitle
+   treatment as .pop-district. */
+.pop-year {
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.35rem;
+}
 .pop-state {
   display: inline-block;
   padding: 2px 6px;

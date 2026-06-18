@@ -129,7 +129,7 @@ export default function PropertyAssessmentMap() {
   }, [url]);
 
   const names = useMemo(() => (gj ? indexNamesForSearch(gj) : []), [gj]);
-  const flyAndPinByName = useChoroplethInteractions(map, gj);
+  const flyAndPinByName = useChoroplethInteractions(map, gj, year);
 
   function toggleSidebar() {
     setCollapsed((v) => !v);

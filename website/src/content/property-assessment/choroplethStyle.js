@@ -149,12 +149,14 @@ function escapeHtml(s) {
 }
 
 // Build the popup body for one feature. `pinned=true` suppresses the
-// "click to pin" footnote (the popup is already pinned).
+// "click to pin" footnote (the popup is already pinned). `year` is the
+// displayed assessment year, shown in the header so the numbers below are
+// never read out of context.
 //
 // This lives in the section's style file — not in interactions.js — because
 // the row table + state labels are the section's visual contract. Changing
 // a label or adding a row is a one-file edit here.
-export function buildPopupHtml(p, pinned) {
+export function buildPopupHtml(p, pinned, year) {
   const state = p.polygon_state;
   const meta = STATE_STYLE[state] || { label: state };
 
@@ -163,6 +165,9 @@ export function buildPopupHtml(p, pinned) {
   ];
   if (p.district) {
     parts.push(`<div class="pop-district">${escapeHtml(p.district)} district</div>`);
+  }
+  if (year != null) {
+    parts.push(`<div class="pop-year">${escapeHtml(String(year))} Assessment</div>`);
   }
   parts.push(`<div class="pop-state ${state}">${escapeHtml(meta.label)}</div>`);
 
