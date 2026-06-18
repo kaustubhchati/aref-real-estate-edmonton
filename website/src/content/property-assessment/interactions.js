@@ -96,26 +96,59 @@ export function installChoroplethInteractions(map, gj, year) {
   }
 
   // ---- Handlers (named so .off() can detach them on cleanup) -----------
+  let hoverTimer = null;
+  let lastHoveredId = null;
+
   function onMouseMove(e) {
     if (!e.features?.length) return;
     map.getCanvas().style.cursor = "pointer";
     const f = e.features[0];
 
-    // Suppress hover popup when it would just duplicate the pinned popup.
+    // Always update popup position smoothly on every move.
+    // Only update HTML (expensive DOM rebuild) when feature changes.
     if (pinnedId !== null && pinnedId === f.id) {
       hoverPopup.remove();
+      clearTimeout(hoverTimer);
       return;
     }
-    if (hoveredId !== null && hoveredId !== f.id) setHover(hoveredId, false);
-    hoveredId = f.id;
-    setHover(hoveredId, true);
-    hoverPopup
-      .setLngLat(e.lngLat)
-      .setHTML(buildPopupHtml(f.properties, false, year))
-      .addTo(map);
+
+    // Position update on every frame — keeps popup anchored
+    // to cursor without jitter from stale lngLat.
+    if (hoverPopup.isOpen()) {
+      hoverPopup.setLngLat(e.lngLat);
+    }
+
+    // Feature changed — reset hover state and delay timer.
+    if (f.id !== lastHoveredId) {
+      clearTimeout(hoverTimer);
+
+      if (hoveredId !== null && hoveredId !== f.id) {
+        setHover(hoveredId, false);
+      }
+      hoveredId = f.id;
+      setHover(hoveredId, true);
+
+      // Remove stale popup immediately when moving to a new feature.
+      hoverPopup.remove();
+      lastHoveredId = f.id;
+
+      // Show popup only after 300ms dwell on the same feature.
+      // This eliminates jitter when the cursor sweeps across the map
+      // and prevents the popup flashing on rapid movement.
+      hoverTimer = setTimeout(() => {
+        if (hoveredId === f.id) {
+          hoverPopup
+            .setLngLat(e.lngLat)
+            .setHTML(buildPopupHtml(f.properties, false, year))
+            .addTo(map);
+        }
+      }, 300);
+    }
   }
 
   function onMouseLeave() {
+    clearTimeout(hoverTimer);
+    lastHoveredId = null;
     clearHover();
   }
 
@@ -192,6 +225,7 @@ export function installChoroplethInteractions(map, gj, year) {
     map.off("mouseleave", FILL_LAYER_ID, onMouseLeave);
     map.off("click", FILL_LAYER_ID, onClickFill);
     map.off("click", onMapClick);
+    clearTimeout(hoverTimer);
     hoverPopup.remove();
     pinnedPopup.remove();
   }

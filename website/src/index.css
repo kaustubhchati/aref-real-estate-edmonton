@@ -823,21 +823,6 @@ p  { margin: 0 0 0.75rem; }
   .shell-footer-grid { grid-template-columns:1fr; gap:1.25rem; }
 }
 
-/* ---- Popup fade-in animation ----------------------------------------- */
-/* MapLibre's .maplibregl-popup appears instantly by default.
-   A 120ms opacity fade makes it feel intentional, not jarring.
-   prefers-reduced-motion: skip the animation entirely. */
-.maplibregl-popup {
-  animation: popup-fade-in 120ms ease-out both;
-}
-@keyframes popup-fade-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0);   }
-}
-@media (prefers-reduced-motion: reduce) {
-  .maplibregl-popup { animation: none; }
-}
-
 /* ---- Map control focus ring — match site green ----------------------- */
 /* MapLibre's zoom +/- and other controls use browser-default
    focus rings. Override to match the site's green focus style. */

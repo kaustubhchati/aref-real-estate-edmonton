@@ -56,50 +56,77 @@ const PERMITS_URL = `pmtiles://${R2_BASE_URL}/building-permits/permits.pmtiles`;
 // while hovering. One shared instance each, so re-clicking/-hovering repositions
 // rather than leaking popups. The effect's map.remove() disposes them.
 function wirePermitPopup(map) {
+  // Click popup — full detail, stays until dismissed.
   const popup = new maplibregl.Popup({
     closeButton: true,
     closeOnClick: true,
-    offset: 10,
+    offset: [0, -4],
     maxWidth: "320px",
+    anchor: "bottom",
   });
 
+  // Hover popup — lightweight, follows cursor.
   const hoverPopup = new maplibregl.Popup({
     closeButton: false,
     closeOnClick: false,
-    offset: 8,
+    offset: [0, -4],
     maxWidth: "220px",
+    anchor: "bottom",
   });
 
-  map.on("mousemove", LAYER_ID, (e) => {
-    if (!e.features?.length) return;
-    const f = e.features[0];
-    hoverPopup
-      .setLngLat(e.lngLat)
-      .setHTML(buildPermitHoverHtml(f.properties))
-      .addTo(map);
-  });
-
-  map.on("mouseleave", LAYER_ID, () => {
-    hoverPopup.remove();
-  });
+  let hoverTimer = null;
+  let lastHoveredId = null;
 
   map.on("click", LAYER_ID, (e) => {
     if (!e.features?.length) return;
     const f = e.features[0];
-    // Anchor on the dot's own coordinates (point geometry), not the click pixel,
-    // so the popup tip sits exactly on the permit.
+    // Anchor to the dot's exact geographic coordinates,
+    // not the click pixel. This means the popup tip
+    // always points to the dot regardless of where on
+    // the dot the user clicked, and doesn't drift when
+    // the map is panned after clicking.
     popup
       .setLngLat(f.geometry.coordinates)
       .setHTML(buildPermitPopupHtml(f.properties))
       .addTo(map);
   });
 
-  // A pointer cursor signals the dots are clickable.
+  map.on("mousemove", LAYER_ID, (e) => {
+    if (!e.features?.length) return;
+    const f = e.features[0];
+    const fid = f.id ?? f.properties?.address;
+
+    // Position update every frame — eliminates drift.
+    if (hoverPopup.isOpen()) {
+      hoverPopup.setLngLat(f.geometry.coordinates);
+    }
+
+    // Only rebuild HTML when feature changes.
+    if (fid !== lastHoveredId) {
+      clearTimeout(hoverTimer);
+      hoverPopup.remove();
+      lastHoveredId = fid;
+
+      hoverTimer = setTimeout(() => {
+        if (lastHoveredId === fid) {
+          hoverPopup
+            .setLngLat(f.geometry.coordinates)
+            .setHTML(buildPermitHoverHtml(f.properties))
+            .addTo(map);
+        }
+      }, 200);
+    }
+  });
+
+  map.on("mouseleave", LAYER_ID, () => {
+    clearTimeout(hoverTimer);
+    lastHoveredId = null;
+    hoverPopup.remove();
+    map.getCanvas().style.cursor = "";
+  });
+
   map.on("mouseenter", LAYER_ID, () => {
     map.getCanvas().style.cursor = "pointer";
-  });
-  map.on("mouseleave", LAYER_ID, () => {
-    map.getCanvas().style.cursor = "";
   });
 }
 
