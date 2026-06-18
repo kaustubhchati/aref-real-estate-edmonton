@@ -27,6 +27,7 @@ import ResearchCompetition from "./content/pages/ResearchCompetition.jsx";
 import Placeholder from "./content/Placeholder.jsx";
 import PropertyAssessmentMap from "./content/property-assessment/PropertyAssessmentMap.jsx";
 import BuildingPermitsMap from "./content/building-permits/BuildingPermitsMap.jsx";
+import PermitChoroplethMap from "./content/building-permits/PermitChoroplethMap.jsx";
 import ReportCard from "./content/report-card/ReportCard.jsx";
 
 import "./index.css";
@@ -49,6 +50,7 @@ createRoot(document.getElementById("root")).render(
           <Route path="/properties/property-assessment"         element={<PropertyAssessmentMap />} />
           <Route path="/building/dwelling-units"                element={<Placeholder title="Dwelling Units"             kind="map" />} />
           <Route path="/building/construction-improvement"      element={<BuildingPermitsMap />} />
+          <Route path="/building/permit-neighbourhoods"         element={<PermitChoroplethMap />} />
           <Route path="/real-estate/land-transfers"             element={<Placeholder title="Land Transfers"             kind="map" />} />
           <Route path="/amenities/air-quality"                  element={<Placeholder title="Air Quality"                kind="map" />} />
           <Route path="/amenities/community-services"           element={<Placeholder title="Community Services"         kind="map" />} />
