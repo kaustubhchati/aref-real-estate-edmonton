@@ -3,37 +3,42 @@
 # Layer 2 — compute per-neighbourhood aggregates from the
 # Layer 1a-cleaned 2026 frame.
 #
-# This is a direct port of Stata3 lines 79–92 (previous RA pipeline):
-#   Code_Stata_Property_assessment_edmonton_3.do
-#
-# Methodology note: the prev RA filtered to residential using their
-# internal_target (confidential 5-class flag) at line 76 BEFORE
-# aggregating. We filter using our PUBLIC-ONLY Layer 1a rules
-# (parking, R1, R3) instead. The aggregation logic downstream is
-# identical — only the upstream filter differs.
+# Direct port of Stata3 lines 79–92 (previous RA pipeline,
+# Code_Stata_Property_assessment_edmonton_3.do). The prev RA filtered to
+# residential via their confidential internal_target before aggregating; we
+# filter via our PUBLIC-ONLY Layer 1a rules (parking, R1, R3). Aggregation
+# logic downstream is identical — only the upstream filter differs.
 #
 # Inputs:
-#   - data/processed/assess_2026_clean.csv  (from script 06)
-#     This already has lot_size, year_built, legal_description, etc.
-#     joined in from Property Information.
+#   - data/processed/assess_2026_clean.csv  (from script 06; already has
+#     lot_size, year_built, legal_description joined from Property Information)
+#   - data/reference/neighbourhood_name_merges_<YYYYMMDD>.csv  (OPTIONAL,
+#     latest globbed) — pre-aggregation name/ID normalisation, see below.
 #
 # Output:
 #   - output/neighbourhood_aggregates_2026.csv
-#     One row per Neighbourhood ID, columns:
-#       Neighbourhood ID, Neighbourhood, n_properties,
-#       avall_public, median_assessvalue, sd_assessedvalue,
-#       median_yearbuilt, pct_with_unit,
-#       avg_assessvalue_without_unit, avg_lotsize
+#     One row per neighbourhood: Neighbourhood ID, Neighbourhood, n_properties,
+#     avall_public, median_assessvalue, sd_assessedvalue, median_yearbuilt,
+#     pct_with_unit, avg_assessvalue_without_unit, avg_lotsize, suppressed
+#
+# Name-merge step (added 2026-06-17):
+#   The City's 2026 boundary file (65fr-66s6) merges some neighbourhoods that
+#   the assessment data still lists under two names AND two IDs — e.g.
+#   HERITAGE VALLEY TOWN CENTRE (native id 5472, 15 props) and HERITAGE VALLEY
+#   TOWN CENTRE AREA (NA-id, 577 props) are one polygon (5472) in the new file.
+#   Left un-merged these form two group_by groups and collide on one polygon
+#   downstream (caught by 08/08b's dup-ID guard). The merge contract normalises
+#   variant name + id to a canonical target BEFORE aggregation, so medians/SDs
+#   are recomputed from the combined rows — never averaged from two summaries.
+#   Resolved by point-in-polygon (619/620 properties fall in 5472). Contract is
+#   versioned/dated/sourced per CLAUDE.md §4.4/§4.7.
 #
 # Sanity gate (port of Stata3 lines 120–128):
-#   Aggregates suppressed where n_properties < 100.
-#   The prev RA's second gate (|diffprop| > 0.10) needs the
-#   confidential 2023 aggregates to compute and is NOT applied
-#   here — that becomes a Phase 2 Sanity Agent rule using the
-#   confidential aggregates as a validation oracle (one-time read,
-#   never persisted to production).
+#   Aggregates suppressed where n_properties < 100. The prev RA's second gate
+#   (|diffprop| > 0.10) needs the confidential 2023 aggregates and is NOT
+#   applied here — deferred to the Phase 2 Sanity Agent (one-time oracle read,
+#   never persisted to production; CLAUDE.md §4.1).
 # ============================================================
-
 # --- Setup --------------------------------------------------
 library(tidyverse)
 library(scales)
@@ -75,6 +80,35 @@ assess_clean <- read_csv(
 )
 cat(sprintf("Loaded clean frame: %s rows\n", comma(nrow(assess_clean))))
 
+# --- Merge split assessment-side names before aggregating ----
+# The City's 2026 boundary merges neighbourhoods the assessment data lists under
+# two names AND two IDs (HERITAGE VALLEY TOWN CENTRE, native id 5472, 15 props;
+# HERITAGE VALLEY TOWN CENTRE AREA, NA-id, 577 — same place, one City polygon).
+# Un-merged they form two group_by groups and collide on one polygon downstream.
+# Normalise BOTH name and id to the canonical target before aggregating, so
+# medians/SDs are recomputed from the combined rows (not averaged from summaries).
+# Contract: data/reference/neighbourhood_name_merges_<YYYYMMDD>.csv
+name_merge_files <- sort(list.files(
+  "data/reference",
+  pattern = "^neighbourhood_name_merges_\\d{8}\\.csv$",
+  full.names = TRUE
+))
+if (length(name_merge_files) > 0) {
+  name_merges <- read_csv(tail(name_merge_files, 1), show_col_types = FALSE) |>
+    mutate(canonical_id = as.character(canonical_id))
+  cat(sprintf("Applying %d name merge(s) from %s\n",
+              nrow(name_merges), basename(tail(name_merge_files, 1))))
+  assess_clean <- assess_clean |>
+    left_join(name_merges |> select(variant_name, canonical_name, canonical_id),
+              by = c("Neighbourhood" = "variant_name")) |>
+    mutate(
+      `Neighbourhood ID` = coalesce(canonical_id, `Neighbourhood ID`),
+      Neighbourhood      = coalesce(canonical_name, Neighbourhood)
+    ) |>
+    select(-canonical_name, -canonical_id)
+} else {
+  cat("No name-merge file found; aggregating names as-is.\n")
+}
 
 # --- Derive unit_present (port of Stata3 lines 31–42) -------
 # stritrim → strtrim → strlower → normalize "X :" spacing → strpos "unit:"

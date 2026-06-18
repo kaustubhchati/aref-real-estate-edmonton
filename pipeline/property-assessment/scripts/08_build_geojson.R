@@ -3,44 +3,45 @@
 # Spatial join — attach Layer 2 aggregates to neighbourhood polygons
 # and write a GeoJSON file ready for MapLibre rendering.
 #
+# Boundary source (changed 2026-06-17): City of Edmonton Neighbourhoods CSV
+# (dataset 65fr-66s6), 407 polygons, WKT geometry in the "Geometry Multipolygon"
+# column, WGS84. Lives in pipeline/_shared so every section joins to the same
+# canonical geometry. Replaces the Jan-2023 EDM_neighborhood_boundary shapefile
+# (402 polygons). Read via read_csv + st_as_sf(wkt=...); no shapefile sidecars.
+#
 # Inputs:
 #   - output/neighbourhood_aggregates_2026.csv         (from script 07)
-#   - .../Data/Reference shapefile/Data_Reference_shapefile_EDM_neighborhood_boundary.shp
-#     plus its .shx, .dbf, .prj companions
-#     (Jan 2023 City of Edmonton shapefile, 402 polygons, WGS84)
+#   - ../_shared/data/.../City_of_Edmonton_-_Neighbourhoods_20260616.csv
+#     (407-polygon boundary CSV, WKT/WGS84)
 #   - data/processed/assess_2026_no_parking.csv        (for non-residential
 #     state detection — neighbourhoods entirely eliminated by R1+R3)
 #
 # Outputs:
-#   - output/neighbourhoods_2026.geojson               (choropleth source)
-#   - output/neighbourhoods_2026_not_rendered.csv      (NA-id developing areas
-#     with aggregates but no polygon to render)
+#   - output/neighbourhoods_2026_new_boundaries.geojson  (choropleth source,
+#     PRE-rescue — see 08b for the rescued/recovered build the frontend consumes)
+#   - output/neighbourhoods_2026_not_rendered.csv         (NA-id rows w/o polygon)
 #
 # Polygon render states (column `polygon_state`):
 #   aggregated                    — has data, N >= 100, render coloured
 #   suppressed_low_n              — has data, N < 100, render grey "suppressed"
 #   non_residential               — R1+R3 emptied the neighbourhood, render grey
 #   manufactured_home_community   — EVERGREEN (ID 2270), special-case grey
-#   no_data                       — polygon exists but no rows reach it at all
-#                                   (unusual; usually means a name in the
-#                                   shapefile that no longer has an ID match)
+#   no_data                       — polygon exists but no aggregate row reaches it
 #
 # Design notes:
-#   - Join key is `Neighbourhood ID` ↔ `neighbourh` (numeric). Stable across
-#     the Oliver→Wîhkwêntôwin rename and against case/spacing drift in names.
-#   - EVERGREEN (ID 2270) is hard-coded as its own state. The diagnostic that
-#     resolved it (May 19 2026: all 647 R1-survivors had NA lot_size, median
-#     value $50,500, median area 106 sqm — Edmonton's largest manufactured
-#     home community) is documented in YEAR_DRIFT_FINDINGS.md §3.4.
-#   - Coordinates are rounded to 6 decimal places (~10 cm precision) to
-#     reduce GeoJSON file size without visible loss at choropleth zoom.
-#   - Topology simplification is NOT applied. For 402 polygons the file
-#     stays under ~3 MB which is fine for inline-HTML demos.
-#
-# TODO (post-Friday):
-#   - relocate shapefile under the project's data/ tree for portability
-#   - consider 2026 boundary shapefile once UAlberta Library data services
-#     identifies the canonical current source
+#   - Join key is `Neighbourhood ID` ↔ `Neighbourhood Number` (numeric). Stable
+#     across the Oliver→Wîhkwêntôwin rename (the new file carries WÎHKWÊNTÔWIN
+#     natively at id 1151; stale OLIVER id 1150 is retired from source, so the
+#     old display-name override is no longer needed for that case).
+#   - EVERGREEN (ID 2270) is hard-coded as its own state — Edmonton's largest
+#     manufactured-home community (diagnostic in YEAR_DRIFT_FINDINGS.md §3.4).
+#   - DUPLICATE-ID GUARD: after the join, the script hard-stops if any polygon
+#     carries two aggregate rows (one-feature-per-polygon is required for the
+#     frontend's promoteId). Added 2026-06-17 after the City's boundary merge of
+#     Heritage Valley surfaced a silent fan-out; the structural merge fix lives
+#     in 07 (name-merge contract), this guard is the backstop.
+#   - Coordinates rounded to 6 dp (~10 cm) to trim file size; no topology
+#     simplification (407 polygons stays ~2 MB).
 # ============================================================
 
 # --- Setup --------------------------------------------------
@@ -52,16 +53,17 @@ dir.create("output", showWarnings = FALSE, recursive = TRUE)
 
 
 # --- Path config --------------------------------------------
-# Absolute path to the 2023 shapefile. Marked TODO above for cleanup.
-shapefile_path <- "data/raw/EDM_neighborhood_boundary.shp"
-
-if (!file.exists(shapefile_path)) {
-  stop("Shapefile not found at: ", shapefile_path,
-       "\n  Check that .shp/.shx/.dbf/.prj all live in the same folder",
-       "\n  with the same base name.")
+# New 2026 boundary source: City of Edmonton Neighbourhoods CSV (65fr-66s6),
+# 407 polygons, WKT geometry in the "Geometry Multipolygon" column, WGS84.
+# Lives in _shared so every section joins to the same canonical geometry.
+# Replaces the Jan-2023 EDM_neighborhood_boundary shapefile (402 polygons).
+boundary_path <- "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/pipeline/shared/data/City_of_Edmonton_-_Neighbourhoods_20260616.csv"
+file.exists(boundary_path)                       # TRUE or fix the path
+names(read_csv(boundary_path, n_max = 0))        # confirm "Geometry Multipolygon" present
+if (!file.exists(boundary_path)) {
+  stop("Boundary CSV not found at: ", boundary_path,
+       "\n  Expected the City Neighbourhoods CSV in pipeline/_shared/data/neighbourhoods/.")
 }
-
-
 # --- Load aggregates ----------------------------------------
 agg_path <- "output/neighbourhood_aggregates_2026.csv"
 if (!file.exists(agg_path)) {
@@ -107,15 +109,21 @@ cat(sprintf("Non-residential neighbourhood IDs (R1+R3 emptied): %d\n",
             length(non_residential_ids)))
 
 
-# --- Load shapefile -----------------------------------------
-nbhd_polygons <- st_read(shapefile_path, quiet = TRUE)
+# --- Load boundary CSV + build sf from WKT ------------------
+# read_csv then st_as_sf on the WKT column. crs=4326 because the City serves
+# lon/lat WGS84 (same CRS the assessment Latitude/Longitude use). No shapefile
+# sidecars needed — the geometry is inline WKT text.
+boundary_raw <- read_csv(boundary_path, show_col_types = FALSE)
 
-# Cast neighbourh to character integer (drops the trailing .0 from float repr)
-# to match the character-keyed Neighbourhood ID in our data.
-nbhd_polygons <- nbhd_polygons |>
-  mutate(`Neighbourhood ID` = as.character(as.integer(neighbourh)))
-
-cat(sprintf("Loaded shapefile: %s polygons, CRS = %s\n",
+nbhd_polygons <- boundary_raw |>
+  st_as_sf(wkt = "Geometry Multipolygon", crs = 4326) |>
+  # Join key: Neighbourhood Number (numeric) -> character, matching our
+  # character-keyed Neighbourhood ID. Same ID-join contract as the shapefile's
+  # `neighbourh`; only the column name changed.
+  mutate(`Neighbourhood ID` = as.character(as.integer(`Neighbourhood Number`)))
+sum(is.na(nbhd_polygons$`Neighbourhood ID`))   # expect 0
+nrow(nbhd_polygons)                             # expect 407
+cat(sprintf("Loaded boundary CSV: %s polygons, CRS = %s\n",
             comma(nrow(nbhd_polygons)),
             st_crs(nbhd_polygons)$Name %||% "unknown"))
 
@@ -142,7 +150,7 @@ joined <- joined |>
     ),
     # Display name override: 2023 shapefile says OLIVER, current data says
     # WÎHKWÊNTÔWIN. Prefer the assessment-data name when present.
-    display_name = coalesce(Neighbourhood, name)
+    display_name = coalesce(Neighbourhood, `Neighbourhood Name`)
   )
 
 state_summary <- joined |>
@@ -152,7 +160,12 @@ state_summary <- joined |>
 cat("\n--- Polygon state breakdown ---\n")
 print(state_summary)
 
-
+#duplicate handler 
+dup_ids <- joined$`Neighbourhood ID`[duplicated(joined$`Neighbourhood ID`)]
+if (length(dup_ids) > 0) {
+  print(joined |> st_drop_geometry() |> filter(`Neighbourhood ID` %in% dup_ids))
+  stop("Duplicate Neighbourhood IDs after join: ", paste(unique(dup_ids), collapse = ", "))
+}
 # --- Sanity checks ------------------------------------------
 # Every polygon should have exactly one state.
 stopifnot(all(!is.na(joined$polygon_state)))
@@ -189,8 +202,8 @@ geojson_ready <- joined |>
   transmute(
     `Neighbourhood ID`           = `Neighbourhood ID`,
     display_name                 = display_name,
-    shapefile_name               = name,
-    district                     = district,
+    shapefile_name               = `Neighbourhood Name`,
+    district                     = `Planning District`,
     polygon_state                = polygon_state,
     n_properties                 = n_properties,
     median_assessvalue           = median_assessvalue,
@@ -211,7 +224,7 @@ geojson_ready <- st_set_precision(geojson_ready, 1e6) |>
 
 
 # --- Write GeoJSON ------------------------------------------
-geojson_path <- "output/neighbourhoods_2026.geojson"
+geojson_path <- "output/neighbourhoods_2026_new_boundaries.geojson"
 # Remove existing file if present — st_write won't overwrite by default
 if (file.exists(geojson_path)) file.remove(geojson_path)
 
@@ -241,10 +254,7 @@ print(state_summary)
 
 if ("aggregated" %in% state_summary$polygon_state) {
   agg_vals <- joined |>
-    st_drop_geometry() |>list.files("/Users/kaustubhchati/Desktop", 
-           pattern = "\\.shp$", 
-           recursive = TRUE, 
-           full.names = TRUE)
+    st_drop_geometry() |>
     filter(polygon_state == "aggregated") |>
     pull(median_assessvalue)
   
@@ -255,3 +265,15 @@ if ("aggregated" %in% state_summary$polygon_state) {
   cat(sprintf("  Q75: $%s\n", comma(round(quantile(agg_vals, 0.75, na.rm = TRUE)))))
   cat(sprintf("  Max: $%s\n", comma(round(max(agg_vals, na.rm = TRUE)))))
 }
+
+
+setdiff(aggregates$`Neighbourhood ID`, nbhd_polygons$`Neighbourhood ID`) |> length()   # 1, the NA
+aggregates |> filter(is.na(`Neighbourhood ID`) | `Neighbourhood ID` == "NA")           # see what that NA row holds
+
+aggregates |> filter(`Neighbourhood ID` %in% c("5462","5464"))   # expect 0 rows
+joined |> st_drop_geometry() |>
+  filter(`Neighbourhood ID` %in% c("5462","5464")) |>
+  select(`Neighbourhood ID`, `Neighbourhood Name`, polygon_state, n_properties)
+joined |> st_drop_geometry() |>
+  filter(`Neighbourhood ID` %in% c("1150","1151")) |>
+  select(`Neighbourhood ID`, `Neighbourhood Name`, display_name, polygon_state)

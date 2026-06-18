@@ -1,49 +1,56 @@
 # ============================================================
 # 08b_name_fallback_rescue.R
-# Rescue NA-id aggregate rows by matching them to no_data polygons
-# via a hand-curated, version-controlled name mapping table.
+# Rescue NA-id aggregate rows by matching them to polygons via a hand-curated,
+# version-controlled name→ID mapping table, then re-run the 08 spatial join.
+#
+# Boundary source (changed 2026-06-17): City of Edmonton Neighbourhoods CSV
+# (65fr-66s6), 407 polygons, WKT/WGS84, in pipeline/_shared. Replaces the
+# Jan-2023 shapefile. Read via read_csv + st_as_sf(wkt=...).
 #
 # Inputs:
 #   - output/neighbourhood_aggregates_2026.csv               (from script 07)
-#   - data/raw/EDM_neighborhood_boundary.shp + companions    (Jan 2023 shapefile)
+#   - ../_shared/data/.../City_of_Edmonton_-_Neighbourhoods_20260616.csv
 #   - data/processed/assess_2026_no_parking.csv              (non-residential check)
-#   - data/reference/neighbourhood_name_mappings_20260519.csv (curated mappings,
-#                                                              date in filename)
+#   - data/reference/neighbourhood_name_mappings_20260617.csv (curated mappings,
+#     7 rows; date in filename — latest is authoritative, CLAUDE.md §4.4)
 #
 # Outputs:
-#   - output/neighbourhoods_2026_recovered.geojson           (corrected choropleth)
-#   - output/neighbourhoods_2026_not_rendered_recovered.csv  (truly orphan rows)
-#   - output/name_mapping_audit_log_<date>.csv               (audit trail)
+#   - output/neighbourhoods_2026_recovered_new_boundaries.geojson  (the choropleth
+#     source the FRONTEND consumes — rescued build, supersedes 08's pre-rescue file)
+#   - output/neighbourhoods_2026_not_rendered_recovered.csv         (unresolved rows)
+#   - output/name_mapping_audit_log_<date>.csv                      (audit trail)
 #
-# What this script does:
-#   1. Loads the curated mapping table (8 mappings as of 2026-05-19)
-#   2. For each NA-id aggregate row, looks up the shapefile_id via
-#      assessment_name match in the mapping table
-#   3. Substitutes the resolved ID into the aggregates frame
-#   4. Re-runs the spatial join logic from script 08
-#   5. Writes a parallel GeoJSON (not overwriting 08's output)
-#   6. Writes an audit log showing which mappings fired
+# What this does:
+#   1. Load the curated mapping table (7 mappings as of 2026-06-17).
+#   2. For each NA-id aggregate row, resolve a Neighbourhood ID via assessment_name.
+#   3. Substitute the resolved ID; re-run the 08 spatial-join + state logic.
+#   4. Write a rescued GeoJSON (parallel to 08's pre-rescue output) + audit log.
 #
-# Design intent:
-#   The mapping table is the Phase-2 Sanity Agent's contract. It is
-#   versioned, self-documenting (reason + source per row), and
-#   produced by human research with named provenance. Future refreshes
-#   will append rows here; the Sanity Agent will read this same file.
+# Two validation guards (both added 2026-06-17 after real failures in development):
+#   - TARGET-EXISTS: a mapping is only "rescued" if its resolved_id actually
+#     exists in the boundary file. A mapped-but-missing target → status
+#     "unresolved_target_missing", not a false success. (Caught Chappelle/Heritage
+#     Valley/Lewis Farms IDs that the 2026 file renumbered.)
+#   - DUPLICATE-ID: hard-stop if any polygon carries two aggregate rows after the
+#     join (one-feature-per-polygon required by the frontend promoteId).
 #
-#   This script does NOT do fuzzy matching. Every mapping is explicit.
-#   If a new NA-id row appears in a future refresh that's not in the
-#   mapping table, it stays unresolved and surfaces as a no_data
-#   polygon for human review.
+# 2026 boundary reconciliation (resolved this refresh, evidence in the audit log
+# and the mapping CSV `source` column):
+#   - CHAPPELLE        5462 → 5471  (1:1 renumber)
+#   - LEWIS FARMS INDUSTRIAL → 4261 (reclassified to Business Employment;
+#                                    point-in-polygon 100/103)
+#   - HERITAGE VALLEY TOWN CENTRE   merged 15+577 → 592 at id 5472 in script 07
+#     (no longer rescued here — native id after the 07 name-merge)
 #
-# Polygons that stay no_data BY DESIGN (not addressable by this script):
-#   - OLIVER (id 1150)        : historical/secondary boundary, the active
-#                               Wîhkwêntôwin polygon at id 1151 joins fine
-#   - WINDERMERE AREA (5575)  : umbrella structure-plan container, 6 sub-
-#                               neighbourhoods carry the properties
-#   - EDM RESEARCH & DEV PARK : industrial/research zone, zero residential
-#     (6190)                    by City designation
-#   - PLACE LARUE (4400)      : 0-residential-population commercial zone
-#                               per City 2014 + 2019 census
+# Mapping is explicit, never fuzzy (CLAUDE.md §4.7). New NA-id rows in a future
+# refresh that aren't in the table stay unresolved and surface for human review.
+# This script is the operational prototype of the Phase-2 Sanity Agent's
+# cross-product reconciliation capability.
+#
+# Polygons that stay no_data BY DESIGN (legitimately zero-residential per City):
+#   - EDMONTON RESEARCH & DEVELOPMENT PARK (6190) — industrial/research zone
+#   - LEWIS FARMS (4260)                          — parent, properties sit in 4261
+#   - PLACE LARUE (4400)                          — 0-pop commercial zone
 # ============================================================
 
 # --- Setup --------------------------------------------------
@@ -55,13 +62,13 @@ stopifnot(dir.exists("output"))
 
 
 # --- Path config --------------------------------------------
-shapefile_path <- "data/raw/EDM_neighborhood_boundary.shp"
+boundary_path <- "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/pipeline/shared/data/City_of_Edmonton_-_Neighbourhoods_20260616.csv"
 aggregates_path <- "output/neighbourhood_aggregates_2026.csv"
 post_parking_path <- "data/processed/assess_2026_no_parking.csv"
-mapping_path <- "data/reference/neighbourhood_name_mappings_20260519.csv"
+mapping_path <- "data/reference/neighbourhood_name_mappings_20260617.csv"
 
 # Hard fail with actionable errors if any input is missing
-for (p in c(shapefile_path, aggregates_path, post_parking_path, mapping_path)) {
+for (p in c(boundary_path, aggregates_path, post_parking_path, mapping_path)) {
   if (!file.exists(p)) stop("Missing input: ", p)
 }
 
@@ -112,7 +119,10 @@ na_id_rows <- aggregates |>
   filter(is.na(`Neighbourhood ID`) | `Neighbourhood ID` == "NA")
 cat(sprintf("NA-id aggregate rows to attempt rescue: %d\n", nrow(na_id_rows)))
 
-
+nbhd_polygons <- read_csv(boundary_path, show_col_types = FALSE) |>
+  st_as_sf(wkt = "Geometry Multipolygon", crs = 4326) |>
+  st_set_geometry("geometry") |>
+  mutate(`Neighbourhood ID` = as.character(as.integer(`Neighbourhood Number`)))
 # --- Apply the mapping --------------------------------------
 # Left-join NA-id rows against mapping by assessment_name.
 # If a match: rewrite Neighbourhood ID with the resolved shapefile_id.
@@ -130,11 +140,16 @@ audit_log <- rescued |>
     n_properties_in_aggregate = n_properties,
     resolved_to_shapefile_id = resolved_id,
     mapping_reason = reason,
-    status = if_else(is.na(resolved_id), "unresolved", "rescued")
+    target_exists = resolved_id %in% nbhd_polygons$`Neighbourhood ID`,
+    status = case_when(
+      is.na(resolved_id)                                      ~ "unresolved_no_mapping",
+      !(resolved_id %in% nbhd_polygons$`Neighbourhood ID`)    ~ "unresolved_target_missing",
+      TRUE                                                    ~ "rescued"
+    )
   )
 
-n_rescued <- sum(audit_log$status == "rescued")
-n_unresolved <- sum(audit_log$status == "unresolved")
+n_rescued    <- sum(audit_log$status == "rescued")
+n_unresolved <- sum(audit_log$status != "rescued")
 
 cat(sprintf("\n--- Rescue results ---\n"))
 cat(sprintf("Successfully rescued:  %d\n", n_rescued))
@@ -167,9 +182,6 @@ ids_in_aggregates <- unique(aggregates_rescued$`Neighbourhood ID`)
 non_residential_ids <- setdiff(ids_in_data, ids_in_aggregates)
 non_residential_ids <- non_residential_ids[non_residential_ids != "NA"]
 
-nbhd_polygons <- st_read(shapefile_path, quiet = TRUE) |>
-  mutate(`Neighbourhood ID` = as.character(as.integer(neighbourh)))
-
 joined <- nbhd_polygons |>
   left_join(aggregates_rescued, by = "Neighbourhood ID")
 
@@ -184,7 +196,7 @@ joined <- joined |>
       !is.na(n_properties) & n_properties >= 100 ~ "aggregated",
       TRUE ~ "no_data"
     ),
-    display_name = coalesce(Neighbourhood, name)
+    display_name = coalesce(Neighbourhood, `Neighbourhood Name`)
   )
 
 state_summary <- joined |>
@@ -194,14 +206,20 @@ state_summary <- joined |>
 cat("\n--- Polygon state breakdown (RECOVERED) ---\n")
 print(state_summary)
 
-
+#duplicate handler
+dup_ids <- joined$`Neighbourhood ID`[duplicated(joined$`Neighbourhood ID`)]
+if (length(dup_ids) > 0) {
+  print(joined |> st_drop_geometry() |> filter(`Neighbourhood ID` %in% dup_ids))
+  stop("Duplicate Neighbourhood IDs after join: ", paste(unique(dup_ids), collapse = ", "))
+}
 # --- Identify truly orphan polygons -------------------------
 # These are no_data polygons even after rescue. By design, includes:
 #   OLIVER 1150, WINDERMERE AREA 5575, EDM R&D PARK 6190, PLACE LARUE 4400
 remaining_no_data <- joined |>
   st_drop_geometry() |>
   filter(polygon_state == "no_data") |>
-  select(`Neighbourhood ID`, shapefile_name = name, district)
+  # remaining_no_data block:
+  select(`Neighbourhood ID`, shapefile_name = `Neighbourhood Name`, district = `Planning District`)
 
 cat(sprintf("\nPolygons that remain no_data: %d\n", nrow(remaining_no_data)))
 cat("(these are legitimately empty by City designation — see header comments)\n")
@@ -214,8 +232,8 @@ geojson_ready <- joined |>
   transmute(
     `Neighbourhood ID`           = `Neighbourhood ID`,
     display_name                 = display_name,
-    shapefile_name               = name,
-    district                     = district,
+    shapefile_name               = `Neighbourhood Name`,
+    district                     = `Planning District`,
     polygon_state                = polygon_state,
     n_properties                 = n_properties,
     median_assessvalue           = median_assessvalue,
@@ -229,7 +247,7 @@ geojson_ready <- joined |>
   st_set_precision(1e6) |>
   st_make_valid()
 
-geojson_path <- "output/neighbourhoods_2026_recovered.geojson"
+geojson_path <- "output/neighbourhoods_2026_recovered_new_boundaries.geojson"
 if (file.exists(geojson_path)) file.remove(geojson_path)
 st_write(geojson_ready, geojson_path, driver = "GeoJSON", quiet = TRUE)
 
