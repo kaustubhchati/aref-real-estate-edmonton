@@ -309,8 +309,7 @@ export default function BuildingPermitsMap() {
           <h1 className="sb-title">Edmonton — {year}</h1>
           <p className="sb-sub">
             226,184 permit points, 2009–2026. Orange = residential, violet =
-            commercial. Dot size = construction value tier. Filter by year,
-            permit type, and month below.
+            commercial. Dot size = construction value tier.
           </p>
         </div>
 
@@ -334,7 +333,7 @@ export default function BuildingPermitsMap() {
               directly: "show the orange/violet dots". */}
           <div style={{ marginBottom: 12 }}>
             <div className="opt-toggle-label">Permit type</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "nowrap", overflow: "hidden" }}>
               {[
                 { key: "All",         colour: null },
                 { key: "Residential", colour: COLOURS.residential },
