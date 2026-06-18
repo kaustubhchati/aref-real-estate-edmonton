@@ -147,6 +147,11 @@ export default function PropertyAssessmentMap() {
   // unmounts cleanly and map.remove() inside its useEffect cleanup destroys
   // the old MapLibre instance.
   useEffect(() => {
+    // Reset-on-url-change is intentional: clear the stale map + data the instant
+    // the selection (url) changes, before the new fetch resolves, so the prior
+    // city/year never flashes under the new one. The rule flags synchronous
+    // setState in an effect but it is safe and deliberate here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMap(null);
     setGj(null);
     setFetchError(null);
