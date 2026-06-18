@@ -255,14 +255,14 @@ export default function PropertyAssessmentMap() {
         <section className="sb-section">
           <SearchInput
             label="Search neighbourhood"
-            placeholder="Type a name…"
+            placeholder="Search neighbourhood…"
             hint={
               fetchError
                 ? `Search unavailable: ${fetchError}`
                 : !url
                   ? "Search will return when data lands."
                   : gj
-                    ? "Press Enter to fly to it."
+                    ? "Enter a name and press Return to fly to it."
                     : "Loading…"
             }
             names={names}
@@ -280,15 +280,10 @@ export default function PropertyAssessmentMap() {
           />
         </section>
 
-        <p className="sb-ref">
-          {selectedMetric.label} scale for {year} (
-          {metric === "yoy_pct_change"
-            ? "fixed diverging scale"
-            : metric === "median_assessvalue"
-              ? "from the manifest"
-              : "computed from this year's neighbourhoods"}
-          ): {stops.map((s) => `${s.label} ${selectedMetric.fmt(s.v)}`).join(" · ")}.
-        </p>
+        <div className="sb-ref">
+          <p>Scale: {selectedMetric.label} for {city} {year}.</p>
+          <p>N&lt;100 suppressed · parking + R1 + R3 cleaned.</p>
+        </div>
       </aside>
 
       <div className="canvas-wrap">
