@@ -3,21 +3,16 @@
 //
 // The Building Permits map mount — a MapLibre canvas owned by THIS section.
 //
-// Why a separate mount instead of the shared components/MapView.jsx?
-// MapView loads a single GeoJSON source (type: "geojson", data: <url>). Permits
-// is 226,184 points served as PMTiles vector tiles (type: "vector", pmtiles://).
-// MapView can't express that, and bending it to would couple two unrelated data
-// shapes. Per the project's sectional-map approach (CLAUDE.md §3), each section
-// owns its mount; we generalise only on a real second need. So this file MIRRORS
-// MapView's lifecycle shape — single create-on-mount useEffect, map.remove()
-// teardown, StrictMode-safe, honest error surfacing — but loads a vector source.
+// Why a separate mount instead of the shared components/MapView.jsx? MapView
+// loads a single GeoJSON source; permits is 226,184 points served as PMTiles
+// vector tiles (pmtiles://). This file MIRRORS MapView's lifecycle shape —
+// single create-on-mount useEffect, map.remove() teardown, StrictMode-safe,
+// honest error surfacing — but loads a vector source.
 //
 // Props:
 //   • className — extra class on the canvas div.
 //   • onLoad    — optional (map) => void, called once after the source + layer
-//                 are installed. The page uses this to grab the map instance so
-//                 it can drive live filters (year / job category) via setFilter.
-//                 Same single hook the shared MapView exposes, same reason.
+//                 are installed; the page uses it to drive live filters.
 // =============================================================================
 
 import { useEffect, useRef } from "react";
@@ -34,35 +29,25 @@ import {
   buildPermitHoverHtml,
 } from "./permitStyle.js";
 
-// Register the PMTiles protocol ONCE at module load, not inside the effect.
-// WHY: MapLibre only knows http(s) URLs out of the box. PMTiles needs a protocol
-// handler so MapLibre can read pmtiles:// URLs (it reads tiles by byte-range from
-// the single .pmtiles file). Registering here — once per module — means repeated
-// mounts (StrictMode double-mount, route revisits) don't re-register the handler.
+// Register the PMTiles protocol ONCE at module load. MapLibre only knows http(s)
+// out of the box; PMTiles needs a handler so it can read pmtiles:// URLs by
+// byte-range. Once per module → repeated mounts don't re-register.
 const protocol = new Protocol();
 maplibregl.addProtocol("pmtiles", protocol.tile);
 
-// The PMTiles vector source this mount loads. (Look-and-feel — basemap, view,
-// the circle layer's colour/size — lives in permitStyle.js; this file only wires
-// the data source into the map.) The source-layer name lives in the layer spec.
 const SOURCE_ID = "permits";
 
-// The permits .pmtiles is hosted on Cloudflare R2, NOT served from the site's own
-// /public assets. WHY: PMTiles reads tiles by HTTP range request (byte ranges into
-// the single .pmtiles file). Cloudflare Pages does NOT honor range requests on
-// static assets — it returns the whole file — so pmtiles:// fails there. R2 does
-// honor them, so the tile must live in an R2 bucket exposed at this public URL.
+// The permits .pmtiles is hosted on Cloudflare R2 (NOT /public): PMTiles reads
+// tiles by HTTP range request, which Cloudflare Pages does not honor on static
+// assets but R2 does.
 const R2_BASE_URL = "https://pub-600ea350470345bbb93a035ad72875d5.r2.dev";
 
-// The pmtiles:// prefix is required: it routes the URL through the registered
-// PMTiles protocol handler (see addProtocol above) instead of a plain fetch.
+// The pmtiles:// prefix routes the URL through the registered protocol handler.
 const PERMITS_URL = `pmtiles://${R2_BASE_URL}/building-permits/permits.pmtiles`;
 
-// Click a dot → show a popup at that point; pointer cursor while hovering a dot.
-// WHY one shared Popup instance: re-clicking another dot just repositions and
-// refills it (setLngLat/setHTML/addTo), so we never leak popups. No explicit
-// teardown is needed — the effect's map.remove() disposes the popup and these
-// handlers together with the map.
+// Click a dot → pinned popup; hover a dot → light preview popup; pointer cursor
+// while hovering. One shared instance each, so re-clicking/-hovering repositions
+// rather than leaking popups. The effect's map.remove() disposes them.
 function wirePermitPopup(map) {
   const popup = new maplibregl.Popup({
     closeButton: true,
@@ -71,10 +56,6 @@ function wirePermitPopup(map) {
     maxWidth: "300px",
   });
 
-  // A second, lighter popup that follows the pointer to preview the dot under it
-  // (address + category). No close button — it lives only while hovering and is
-  // removed on mouseleave. Separate instance from the click popup so a pinned
-  // click popup isn't disturbed by hovering nearby dots.
   const hoverPopup = new maplibregl.Popup({
     closeButton: false,
     closeOnClick: false,
@@ -121,10 +102,9 @@ export default function PermitMapView({ className = "", onLoad }) {
   // onLoad is read from a ref so the page can pass a fresh callback between
   // renders without re-mounting the map (same trick as the shared MapView).
   const onLoadRef = useRef(onLoad);
-  // Live-callback pattern: ref is updated during render so the
-  // effect always reads the latest onLoad without re-mounting
-  // the map. The rule flags ref writes outside effects but this
-  // is safe and intentional — see MapView.jsx / PermitMapView.jsx.
+  // Live-callback pattern: ref is updated during render so the effect always
+  // reads the latest onLoad without re-mounting. The rule flags ref writes
+  // outside effects but this is safe and intentional — see MapView.jsx.
   // eslint-disable-next-line react-hooks/refs
   onLoadRef.current = onLoad;
 
@@ -139,9 +119,6 @@ export default function PermitMapView({ className = "", onLoad }) {
       zoom: MAP_VIEW.zoom,
       minZoom: MAP_VIEW.minZoom,
       maxZoom: MAP_VIEW.maxZoom,
-      // Edmonton metro bounds — keep panning from drifting to Calgary or the
-      // Arctic. Loose enough that zooming out to z7 still shows full city context.
-      maxBounds: [[-114.5, 52.8], [-112.2, 54.0]],
       attributionControl: true,
     });
 
@@ -150,8 +127,6 @@ export default function PermitMapView({ className = "", onLoad }) {
 
     map.on("error", (e) => {
       // Surface map errors honestly instead of swallowing them — CLAUDE.md §6.
-      // A wrong source-layer name does NOT error here (it just renders nothing),
-      // but a bad URL / unreachable tile / style problem will show up here.
       const err = e?.error;
       console.error("[PermitMapView]", err?.message || err || e);
     });
@@ -162,12 +137,10 @@ export default function PermitMapView({ className = "", onLoad }) {
         url: PERMITS_URL,
       });
 
-      // One circle layer from permitStyle.js, reading this source. The spec is
-      // returned without `source`; we fill it in here so the style file stays
-      // source-agnostic.
+      // One circle layer from permitStyle.js; the spec is returned without
+      // `source`, filled in here so the style file stays source-agnostic.
       map.addLayer({ ...permitCircleLayer(), source: SOURCE_ID });
 
-      // Click-popup + hover cursor on the dots (step 4b).
       wirePermitPopup(map);
 
       // Hand the live map to the page (last, so the layer it filters exists).

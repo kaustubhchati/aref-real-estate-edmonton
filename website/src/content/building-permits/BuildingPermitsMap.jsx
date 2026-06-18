@@ -1,17 +1,14 @@
 // =============================================================================
 // BuildingPermitsMap.jsx
 //
-// The Building Permits route (nav leaf "Construction & Improvement").
-//
-// Composition mirrors property-assessment/PropertyAssessmentMap.jsx: a .sb
+// The Building Permits route (nav leaf "Construction & Improvement"). A .sb
 // sidebar of controls beside a full-bleed .canvas-wrap holding the map. This is
-// a POINT-symbol map (orange/slate dots from a PMTiles vector source), so it
-// uses its OWN mount (PermitMapView), not the shared components/MapView.jsx.
+// a POINT-symbol map (orange/blue dots from a PMTiles vector source), so it uses
+// its OWN mount (PermitMapView), not the shared components/MapView.jsx.
 //
-// Three live filters — Year, Permit type (job_group), and Month. All 18 years
-// live in one PMTiles, so filtering is CLIENT-SIDE via map.setFilter (instant,
-// no refetch); nothing reloads when the user changes a control. Both the circle
-// and heatmap layers share the same filter.
+// Four live, client-side filters — Year, Permit type (job_group), Month, and the
+// interactive construction-value tiers — applied via map.setFilter (instant, no
+// refetch). All 18 years live in one PMTiles.
 // =============================================================================
 
 import { useEffect, useState } from "react";
@@ -35,30 +32,25 @@ import {
   MONTHS,
   DEFAULT_MONTH,
 } from "./dataSources.js";
-// Reusing the site's only CSV parser (it lives in report-card). It now has two
-// consumers, so by the "extract on second use" rule it should move to utils/ —
-// deferred, since this task touches only building-permits files.
 import { parseCsvAsObjects } from "../report-card/parseCsv.js";
 import { fmtNumber } from "../../utils/format.js";
 
 // Per-year coverage table — how many permits exist vs. how many are mappable.
-// Served from /public beside the tiles (a tiny 18-row CSV), NOT from R2: it's a
-// plain static fetch, not range-requested like the .pmtiles.
+// Served from /public (a tiny 18-row CSV), a plain static fetch.
 const COVERAGE_URL = "/data/building-permits/permits_coverage.csv";
 
-// Find the coverage row for one year. Every CSV cell is a string, so compare
-// year numerically. Returns null when the year isn't in the table (caller then
-// shows nothing).
+// Find the coverage row for one year. CSV cells are strings, so compare year
+// numerically. Returns null when the year isn't in the table.
 function coverageForYear(rows, year) {
   return rows.find((r) => Number(r.year) === year) || null;
 }
 
-// Sidebar legend. Two parts: a static colour key (job_group → hue) and an
-// INTERACTIVE construction-value size key — each tier is a button that toggles
-// whether that bucket's dots show on the map. Active tier = filled dot; inactive
-// = outlined ring (the map dots vanish, the ring says "this tier exists but is
-// hidden"). Tiers + radii come from VALUE_BUCKETS, the same table the map paints
-// from, so the legend can't drift. Reuses the global .legend* CSS (no new CSS).
+// Sidebar legend. A static colour key (job_group → hue) plus an INTERACTIVE
+// construction-value size key — each tier is a button that toggles whether that
+// bucket's dots show. Active tier = filled dot; inactive = outlined ring (map
+// dots vanish; the ring says "this tier exists but is hidden"). Tiers + radii
+// come from VALUE_BUCKETS, the same table the map paints from. Reuses the global
+// .legend* CSS (no new CSS).
 function PermitLegend({ activeBuckets, onToggle, onReset }) {
   const colourRows = [
     { label: "Residential", colour: COLOURS.residential },
@@ -125,8 +117,6 @@ function PermitLegend({ activeBuckets, onToggle, onReset }) {
                   cursor: "pointer",
                   padding: "2px 0",
                   opacity: active ? 1 : 0.35,
-                  // Inactive bucket: label muted, dot outlined.
-                  // Dots on map vanish — legend ring signals "off".
                 }}
                 aria-pressed={active}
                 title={active ? "Click to hide" : "Click to show"}
@@ -137,19 +127,12 @@ function PermitLegend({ activeBuckets, onToggle, onReset }) {
                     height: dotPx,
                     flex: `0 0 ${dotPx}px`,
                     borderRadius: "50%",
-                    background: active
-                      ? "var(--text-muted)"
-                      : "none",
-                    border: active
-                      ? "none"
-                      : "2px solid var(--text-muted)",
+                    background: active ? "var(--text-muted)" : "none",
+                    border: active ? "none" : "2px solid var(--text-muted)",
                     display: "inline-block",
                   }}
                 />
-                <span
-                  className="legend-lab"
-                  style={{ marginLeft: 8 }}
-                >
+                <span className="legend-lab" style={{ marginLeft: 8 }}>
                   {b.label}
                 </span>
               </button>
@@ -162,8 +145,7 @@ function PermitLegend({ activeBuckets, onToggle, onReset }) {
 }
 
 // Match the .sb collapse transition (index.css) so we resize the map only after
-// the sidebar has finished shrinking/growing — resizing mid-animation leaves the
-// canvas at a stale width.
+// the sidebar has finished its width transition.
 const SIDEBAR_TRANSITION_MS = 220;
 
 export default function BuildingPermitsMap() {
@@ -178,8 +160,14 @@ export default function BuildingPermitsMap() {
     () => new Set(DEFAULT_ACTIVE_BUCKETS)
   );
 
-  // Toggle one value tier on/off (immutably — clone, mutate the clone, return it
-  // so React sees a new Set reference and re-renders + re-filters).
+  // Hide/show the sidebar; resize the map once the width transition completes.
+  function toggleSidebar() {
+    setCollapsed((v) => !v);
+    if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS);
+  }
+
+  // Toggle one value tier on/off (immutably — clone, mutate, return a new Set so
+  // React re-renders and the filter effect re-runs).
   function toggleBucket(id) {
     setActiveBuckets((prev) => {
       const next = new Set(prev);
@@ -196,18 +184,9 @@ export default function BuildingPermitsMap() {
     setActiveBuckets(new Set(ALL_BUCKET_IDS));
   }
 
-  // Hide/show the sidebar. MapLibre sizes its canvas to the container, so after
-  // the width transition finishes we tell the map to re-measure and fill the
-  // reclaimed space.
-  function toggleSidebar() {
-    setCollapsed((v) => !v);
-    if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS);
-  }
-
-  // Re-apply the dot layer's filter whenever the map is ready or a control
-  // changes (year, permit type, month, or the active value tiers). setFilter is
-  // instant — it re-evaluates the already-loaded tiles, no network. Guard on
-  // `map` so we don't call setFilter before onLoad hands us the instance.
+  // Re-apply the dot filter whenever the map is ready or a control changes
+  // (year, permit type, month, or the active value tiers). setFilter is instant.
+  // Guard on `map` so we don't call it before onLoad hands us the instance.
   useEffect(() => {
     if (!map) return;
     map.setFilter(
@@ -216,8 +195,8 @@ export default function BuildingPermitsMap() {
     );
   }, [map, year, group, month, activeBuckets]);
 
-  // Load the coverage table ONCE on mount. It's supplementary to the map, so a
-  // failed load just hides the note (logged, not thrown — the map still works).
+  // Load the coverage table ONCE on mount. Supplementary to the map, so a failed
+  // load just hides the note (logged, not thrown — the map still works).
   useEffect(() => {
     let cancelled = false;
     fetch(COVERAGE_URL)
@@ -230,11 +209,9 @@ export default function BuildingPermitsMap() {
     return () => { cancelled = true; };
   }, []);
 
-  // No-coordinate count for the selected year. WHY surface this: the share is
-  // small in older years (~2-5%) but spikes recently — ~28% in 2025, ~35% in
-  // 2026 — because of City geocoding lag. The map only plots permits that HAVE
-  // coordinates, so without this line it silently understates recent years.
-  // Stating the absence is honest; dropping the rows quietly is not.
+  // No-coordinate count for the selected year. The map only plots permits that
+  // HAVE coordinates; the no-coord share spikes in recent years (City geocoding
+  // lag), so stating it is honest rather than silently understating.
   const cov = coverageForYear(coverage, year);
   const nNoCoord = cov ? Number(cov.n_no_coord) : 0;
 
@@ -245,14 +222,11 @@ export default function BuildingPermitsMap() {
         <h1 className="sb-title">Edmonton — {year}</h1>
         <p className="sb-sub">
           226,184 permit points, 2009–2026. Orange = residential, blue =
-          commercial. Click value tiers below to show or hide by construction
-          value.
+          commercial. Dot size = construction value tier. Filter by year, permit
+          type, and month below.
         </p>
 
         <section className="sb-section">
-          {/* Reuse the existing sidebar classes (no new CSS): .opt-toggle for
-              spacing, .opt-toggle-label for the 11px label, .search-input for
-              the bordered control — a <select> wears the input style fine. */}
           <div className="opt-toggle">
             <div className="opt-toggle-label">Year</div>
             <select
@@ -287,9 +261,8 @@ export default function BuildingPermitsMap() {
           </div>
         </section>
 
-        {/* Honest-absence note: only shown when some permits for the year lack
-            coordinates. Reuses the .sb-sub caption style (same as the subtitle
-            above) — no new CSS. Updates live because `year` drives `cov`. */}
+        {/* Honest-absence note: shown only when some permits for the year lack
+            coordinates. Reuses the .sb-sub caption style — no new CSS. */}
         {nNoCoord > 0 && (
           <p className="sb-sub">
             {fmtNumber(nNoCoord)} of {fmtNumber(cov.n_total)} permits
@@ -313,8 +286,7 @@ export default function BuildingPermitsMap() {
       </aside>
 
       <div className="canvas-wrap">
-        {/* Sidebar collapse control — overlays the map's top-left so the toggle
-            stays reachable whether the sidebar is open or hidden. */}
+        {/* Sidebar collapse control — overlays the map's top-left. */}
         <button
           type="button"
           className="sb-toggle"
@@ -324,8 +296,7 @@ export default function BuildingPermitsMap() {
         >
           ≡
         </button>
-        {/* No url/gj here (PMTiles point map, no MapErrorBoundary); the loading
-            signal is "map not ready yet" — skeleton shows until onLoad fires. */}
+        {/* PMTiles point map (no MapErrorBoundary); skeleton shows until onLoad. */}
         {!map && <MapSkeleton />}
         <PermitMapView className="canvas" onLoad={setMap} />
       </div>
