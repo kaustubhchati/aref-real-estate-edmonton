@@ -283,6 +283,7 @@ export default function PropertyAssessmentMap() {
         <div className="sb-ref">
           <p>Scale: {selectedMetric.label} for {city} {year}.</p>
           <p>N&lt;100 suppressed · parking + R1 + R3 cleaned.</p>
+          <p>Data last updated: {manifest?.last_updated ?? "—"}</p>
         </div>
       </aside>
 
