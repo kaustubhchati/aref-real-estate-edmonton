@@ -162,81 +162,40 @@ p  { margin: 0 0 0.75rem; }
 
 /* ---- Nav ----------------------------------------------------------------- */
 
-.shell-nav {
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
-  padding: 0 1.25rem;
-}
+.shell-nav { background:var(--bg); border-bottom:1px solid var(--border-soft);
+  padding:0 1.5rem; position:sticky; top:56px; z-index:90;
+  box-shadow:var(--shadow-sm); }
+.shell-nav-list { list-style:none; margin:0; padding:0; display:flex; }
 
-.shell-nav-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-}
-
+/* Each top-level item is the positioning context for its dropdown (kept from
+   the prior rules — the absolute sublist anchors to this, not the sticky nav). */
 .shell-nav-item { position: relative; }
 
-.shell-nav-link {
-  display: inline-block;
-  padding: 0.65rem 0.9rem;
-  color: var(--text);
-  font-size: 0.95rem;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-}
-.shell-nav-link:hover {
-  background: var(--accent-soft);
-  text-decoration: none;
-}
-.shell-nav-link.is-active,
-.shell-nav-link.active {
-  /* react-router v6/v7 NavLink toggles .active by default */
-  border-bottom-color: var(--accent);
-  color: var(--accent);
-}
+.shell-nav-link { display:inline-flex; align-items:center; padding:0 0.875rem;
+  height:44px; color:var(--text-muted); font-size:0.875rem; font-weight:500;
+  border-bottom:2px solid transparent;
+  transition:color 150ms ease, border-color 150ms ease; }
+.shell-nav-link:hover { color:var(--text); background:var(--bg-soft);
+  text-decoration:none; }
+.shell-nav-link.is-active, .shell-nav-link.active {
+  color:var(--accent); border-bottom-color:var(--accent); }
 
-/* Group dropdown — native <details>/<summary>, styled to look like the
-   other links. The marker is hidden because the row of summary text is
-   the affordance. */
+/* Hide the native <details> disclosure marker so only the ▾ from ::after shows
+   (kept from the prior rules). */
 .shell-nav-group { display: inline-block; }
-
-.shell-nav-summary {
-  list-style: none;
-  user-select: none;
-}
+.shell-nav-summary { list-style: none; user-select: none; }
 .shell-nav-summary::-webkit-details-marker { display: none; }
-.shell-nav-summary::after {
-  content: " ▾";
-  font-size: 0.7em;
-  color: var(--text-muted);
-}
+.shell-nav-summary::after { content:" ▾"; font-size:0.65em;
+  color:var(--text-subtle); }
 
-.shell-nav-sublist {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  z-index: 10;
-  list-style: none;
-  margin: 0;
-  padding: 0.25rem 0;
-  min-width: 14rem;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-.shell-nav-sublist .shell-nav-link {
-  display: block;
-  padding: 0.5rem 1rem;
-  border-bottom: none;
-}
-.shell-nav-sublist .shell-nav-link.is-active,
-.shell-nav-sublist .shell-nav-link.active {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
+.shell-nav-sublist { position:absolute; top:calc(100% + 1px); left:0;
+  z-index:200; list-style:none; margin:0; padding:0.375rem 0; min-width:15rem;
+  background:var(--bg); border:1px solid var(--border-soft);
+  border-radius:var(--radius-md); box-shadow:var(--shadow-lg); }
+.shell-nav-sublist .shell-nav-link { height:38px; border-bottom:none;
+  border-radius:0; }
+.shell-nav-sublist .shell-nav-link:hover { background:var(--accent-soft);
+  color:var(--accent-dark); }
 
 /* ---- Footer -------------------------------------------------------------- */
 

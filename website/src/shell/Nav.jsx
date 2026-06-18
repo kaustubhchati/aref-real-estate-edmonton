@@ -14,10 +14,19 @@
 //     free; styling lives in index.css.
 // =============================================================================
 
-import { NavLink } from "react-router-dom";
+import { useEffect } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { siteConfig } from "../config/siteConfig.js";
 
 export default function Nav() {
+  // Close any open dropdown when the route changes — otherwise the <details>
+  // menu stays open after you click through to a child page.
+  const location = useLocation();
+  useEffect(() => {
+    document.querySelectorAll(".shell-nav-group[open]")
+      .forEach((el) => el.removeAttribute("open"));
+  }, [location.pathname]);
+
   return (
     <nav className="shell-nav" aria-label="Primary">
       <ul className="shell-nav-list">
@@ -45,8 +54,7 @@ function NavLeaf({ leaf }) {
 }
 
 // One top-level group whose children expand from a <details> dropdown.
-// We do NOT close-on-route-change here on purpose — keeping the menu open
-// after a click is a small detail that matters less than legible code.
+// The dropdown closes on route change via the effect in Nav() above.
 function NavGroup({ group }) {
   return (
     <li className="shell-nav-item shell-nav-item-group">
