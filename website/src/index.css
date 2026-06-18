@@ -11,13 +11,14 @@
 /* ---- Base ---------------------------------------------------------------- */
 
 :root {
-  --text:        #1f2937;
+  --text:        #1a1f2e;
   --text-muted:  #6b7280;
   --bg:          #ffffff;
-  --bg-soft:     #f7f7f5;
+  --bg-soft:     #f5f6f2;
   --border:      #e5e7eb;
-  --accent:      #2b6cb0;
-  --accent-soft: #ebf4fb;
+  --accent:      #007a33;
+  --accent-soft: #e6f4ec;
+  --accent-dark: #005c26;
   /* Neutral button surfaces (base + hover), used by small UI buttons like the
      popup "Copy stats" and the map-error retry. */
   --surface-2:   #f4f2ee;
