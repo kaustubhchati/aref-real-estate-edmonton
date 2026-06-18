@@ -190,6 +190,9 @@ p  { margin: 0 0 0.75rem; }
   font-family: inherit; cursor: pointer; }
 .shell-nav-summary::after { content:" ▾"; font-size:0.65em;
   color:var(--text-subtle); }
+/* The group button has border:0, so .shell-nav-link.is-active's border-bottom-
+   color alone shows no underline — restore the 2px width when active. */
+.shell-nav-summary.is-active { border-bottom:2px solid var(--accent); }
 
 /* position:fixed + coords are set inline by NavGroup (getBoundingClientRect)
    so the menu escapes the nav row's overflow-x scroll container. */

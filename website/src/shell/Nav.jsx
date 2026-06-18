@@ -62,6 +62,13 @@ function NavGroup({ group }) {
   const summaryRef = useRef(null);
   const location = useLocation();
 
+  // Highlight the group label when the current route is one of its children —
+  // works whether the dropdown is open or closed (the children aren't in the
+  // DOM when closed, so a CSS :has() can't do this).
+  const isGroupActive = group.children.some(
+    (child) => location.pathname.startsWith(child.to)
+  );
+
   function toggle() {
     if (!open && summaryRef.current) {
       const r = summaryRef.current.getBoundingClientRect();
@@ -93,7 +100,7 @@ function NavGroup({ group }) {
       <button
         ref={summaryRef}
         type="button"
-        className="shell-nav-link shell-nav-summary"
+        className={`shell-nav-link shell-nav-summary${isGroupActive ? " is-active" : ""}`}
         onClick={toggle}
         aria-expanded={open}
       >
