@@ -71,3 +71,11 @@ secrets.json
 **/data/raw/General_Building_Permits_*.csv
 **/building-permits/output/permits.geojson
 
+pipeline/property-assessment/output/Screenshot*
+pipeline/property-assessment/output/hist_parking_*.csv
+pipeline/property-assessment/output/parking_*.csv
+pipeline/property-assessment/output/name_mapping_audit_log_*.csv
+pipeline/property-assessment/output/neighbourhoods_2026_new_boundaries.geojson
+pipeline/property-assessment/output/neighbourhoods_2026_recovered_new_boundaries.geojson
+pipeline/property-assessment/output/pa_hist_clean_*.csv
+pipeline/property-assessment/data/reference/neighbourhood_name_merges_*.csv
