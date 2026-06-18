@@ -27,14 +27,25 @@ export default function Legend({
     <aside className="legend">
       <h2 className="legend-title">{title}</h2>
       <ul className="legend-list">
-        {stops.map((s) => (
-          <li key={s.label} className="legend-row">
-            <span className="legend-sw" style={{ background: s.c }} />
-            <span className="legend-lab">
-              {format(s.v)} <small>· {s.label}</small>
-            </span>
-          </li>
-        ))}
+        {stops.map((s) => {
+          const formatted = format(s.v);
+          // Hide the "· label" suffix when the label is just the value again
+          // — the YoY stops label "-15%" duplicates the formatted "-15.0%".
+          // Compare numerically so "-15%" and "-15.0%" count as equal; role
+          // labels like "min"/"median" aren't numeric, so they're kept.
+          const num = (t) => parseFloat(String(t).replace(/[^0-9.-]/g, ""));
+          const labelIsValue =
+            !Number.isNaN(num(s.label)) && num(s.label) === num(formatted);
+          return (
+            <li key={s.label} className="legend-row">
+              <span className="legend-sw" style={{ background: s.c }} />
+              <span className="legend-lab">
+                {formatted}
+                {!labelIsValue && <small> · {s.label}</small>}
+              </span>
+            </li>
+          );
+        })}
       </ul>
 
       <div className="legend-divider">{greyTitle}</div>

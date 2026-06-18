@@ -298,12 +298,27 @@ export function makeDotPattern(size = 10, dotColor = "rgba(60,55,42,0.55)") {
 //       reading the chosen metric column
 // otherwise → that state's flat fillColor (or fallback grey).
 function buildFillColourExpression(metricKey, stops) {
-  const interp = ["interpolate", ["linear"], ["number", ["get", metricKey], 0]];
+  const isYoy = metricKey === "yoy_pct_change";
+  // yoy can be null on an aggregated polygon (new since the prior year). Coalesce
+  // missing values to a sentinel OUTSIDE the YOY_STOPS range so we can detect
+  // "no value" without relying on MapLibre null-comparison semantics. Non-yoy
+  // metrics never miss on an aggregated polygon, so they keep the 0 fallback.
+  const MISSING = -999;
+  const value = ["number", ["get", metricKey], isYoy ? MISSING : 0];
+  const interp = ["interpolate", ["linear"], value];
   for (const s of stops) interp.push(s.v, s.c);
+
+  // For yoy, paint an aggregated-but-missing polygon as no_data grey (honest)
+  // instead of letting the sentinel clamp to an extreme ramp colour. Only
+  // aggregated polygons take this path, so suppressed / non-residential / etc.
+  // keep their own state colours below.
+  const aggregatedFill = isYoy
+    ? ["case", ["==", value, MISSING], STATE_STYLE.no_data.fillColor, interp]
+    : interp;
 
   return [
     "case",
-    ["==", ["get", "polygon_state"], "aggregated"],                  interp,
+    ["==", ["get", "polygon_state"], "aggregated"],                  aggregatedFill,
     ["==", ["get", "polygon_state"], "suppressed_low_n"],            STATE_STYLE.suppressed_low_n.fillColor,
     ["==", ["get", "polygon_state"], "non_residential"],             STATE_STYLE.non_residential.fillColor,
     ["==", ["get", "polygon_state"], "manufactured_home_community"], STATE_STYLE.manufactured_home_community.fillColor,
