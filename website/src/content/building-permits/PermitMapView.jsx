@@ -58,9 +58,9 @@ const PERMITS_URL = `pmtiles://${R2_BASE_URL}/building-permits/permits.pmtiles`;
 function wirePermitPopup(map) {
   const popup = new maplibregl.Popup({
     closeButton: true,
-    closeOnClick: false,
+    closeOnClick: true,
     offset: 10,
-    maxWidth: "300px",
+    maxWidth: "320px",
   });
 
   const hoverPopup = new maplibregl.Popup({

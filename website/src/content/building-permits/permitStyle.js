@@ -129,8 +129,13 @@ export function permitCircleLayer() {
 }
 
 // ---- Popups ----------------------------------------------------------------
-// `asText` is the section's null convention: null / undefined / "" → em-dash.
-const asText = (v) => (v == null || v === "" ? "—" : String(v));
+// Capitalise the first letter — job_group arrives lower-case in the tile
+// ("residential" → "Residential"). null / undefined / "" → the project em-dash,
+// the same null convention the other popup formatters use.
+const capitalise = (v) =>
+  v == null || v === ""
+    ? "—"
+    : String(v).charAt(0).toUpperCase() + String(v).slice(1);
 
 // Strip the City's internal code suffix from building_type.
 // "Indoor Recreational Buildings (560)" → "Indoor Recreational Buildings"
@@ -151,39 +156,98 @@ function escapeHtml(s) {
   ));
 }
 
-// One row per field for the click popup, IN DISPLAY ORDER.
-// Tuple: [propertyKey, displayLabel, formatter, isHeadline]. job_description
-// leads as the bold headline; job_group is the classification label.
-export const PERMIT_POPUP_ROWS = [
-  ["job_description",    "Description",        asText,           true ],
-  ["address",            "Address",            asText,           false],
-  ["job_group",          "Permit type",        asText,           false],
-  ["building_type",      "Building type",      stripBuildingCode,false],
-  ["work_type",          "Work type",          stripWorkCode,    false],
-  ["construction_value", "Construction value", fmtCurrency,      false],
-];
-
+// Click popup — mirrors the assessment popup's shape: address as the bold
+// pop-name header, capitalised permit type as the muted pop-district subtitle, a
+// colour-coded job-group badge, the construction-value headline row, then the
+// detail rows, closing with the pinned-dismiss hint.
 export function buildPermitPopupHtml(p) {
-  return PERMIT_POPUP_ROWS.map(([key, label, fmt, headline]) => (
-    `<div class="pop-row${headline ? " headline" : ""}">` +
-      `<span class="pop-k">${label}</span>` +
-      `<span class="pop-v">${escapeHtml(fmt(p[key]))}</span>` +
-    `</div>`
-  )).join("");
+  const group = capitalise(p.job_group ?? "");
+
+  const badgeBg = p.job_group === "commercial"
+    ? "#f3e8ff" : "#fff3e0";
+  const badgeColor = p.job_group === "commercial"
+    ? "#7b2fa0" : "#e65100";
+
+  return [
+    // Address as location anchor — pop-name role,
+    // mirrors neighbourhood name in assessment popup.
+    `<div class="pop-name">${
+      escapeHtml(p.address ?? "—")
+    }</div>`,
+
+    // Capitalised job group — pop-district role.
+    `<div class="pop-district">${
+      escapeHtml(group)
+    }</div>`,
+
+    // Colour-coded badge matching map dot colour.
+    // Inline style because pop-state CSS classes are
+    // keyed to polygon states, not job groups.
+    `<div style="margin-bottom:0.5rem;">
+      <span class="pop-state" style="
+        background:${badgeBg};
+        color:${badgeColor};
+        border:1px solid ${badgeColor}22;
+      ">${escapeHtml(group)} permit</span>
+    </div>`,
+
+    // Headline row: construction value bold + bordered.
+    // Mirrors median_assessvalue headline in assessment.
+    `<div class="pop-row headline">
+      <span class="pop-k">Construction value</span>
+      <span class="pop-v">${
+        escapeHtml(fmtCurrency(p.construction_value))
+      }</span>
+    </div>`,
+
+    // Standard rows — description, building, work type.
+    `<div class="pop-row">
+      <span class="pop-k">Description</span>
+      <span class="pop-v">${
+        escapeHtml(stripWorkCode(p.job_description ?? ""))
+      }</span>
+    </div>`,
+
+    `<div class="pop-row">
+      <span class="pop-k">Building type</span>
+      <span class="pop-v">${
+        escapeHtml(stripBuildingCode(p.building_type ?? ""))
+      }</span>
+    </div>`,
+
+    `<div class="pop-row">
+      <span class="pop-k">Work type</span>
+      <span class="pop-v">${
+        escapeHtml(stripWorkCode(p.work_type ?? ""))
+      }</span>
+    </div>`,
+
+    // Pinned hint — same pattern as assessment popup.
+    `<div class="pop-pinned-hint">Click map to dismiss</div>`,
+
+  ].join("");
 }
 
-// Hover popup: a slim two-row preview (address + permit type) shown while the
-// pointer is over a dot, distinct from the full click popup.
+// Hover popup: a slim preview shown while the pointer is over a dot. Leads with
+// the construction value (the primary quantitative signal), then the permit type.
 export function buildPermitHoverHtml(p) {
+  const group = capitalise(p.job_group ?? "");
   return [
-    ["address",   "Address",     asText],
-    ["job_group", "Permit type", asText],
-  ].map(([key, label, fmt]) => (
-    `<div class="pop-row">` +
-      `<span class="pop-k">${label}</span>` +
-      `<span class="pop-v">${escapeHtml(fmt(p[key]))}</span>` +
-    `</div>`
-  )).join("");
+    // Construction value as headline — the primary
+    // quantitative signal on hover. NOT address.
+    `<div class="pop-row headline">
+      <span class="pop-k">Construction value</span>
+      <span class="pop-v">${
+        escapeHtml(fmtCurrency(p.construction_value))
+      }</span>
+    </div>`,
+
+    // Capitalised permit type as context row.
+    `<div class="pop-row">
+      <span class="pop-k">Permit type</span>
+      <span class="pop-v">${escapeHtml(group)}</span>
+    </div>`,
+  ].join("");
 }
 
 // ---- Client-side filter ----------------------------------------------------
