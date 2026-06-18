@@ -822,3 +822,48 @@ p  { margin: 0 0 0.75rem; }
   .canvas-wrap { min-height:55svh; }
   .shell-footer-grid { grid-template-columns:1fr; gap:1.25rem; }
 }
+
+/* ---- Popup fade-in animation ----------------------------------------- */
+/* MapLibre's .maplibregl-popup appears instantly by default.
+   A 120ms opacity fade makes it feel intentional, not jarring.
+   prefers-reduced-motion: skip the animation entirely. */
+.maplibregl-popup {
+  animation: popup-fade-in 120ms ease-out both;
+}
+@keyframes popup-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+@media (prefers-reduced-motion: reduce) {
+  .maplibregl-popup { animation: none; }
+}
+
+/* ---- Map control focus ring — match site green ----------------------- */
+/* MapLibre's zoom +/- and other controls use browser-default
+   focus rings. Override to match the site's green focus style. */
+.maplibregl-ctrl button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--green-100);
+}
+
+/* ---- Legend lab — tabular numbers ------------------------------------ */
+/* Prevents legend value labels shifting width when switching
+   years (numbers change but column width should stay stable). */
+.legend-lab {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Sidebar bottom-scroll shadow ------------------------------------ */
+/* Signals to the user that sidebar content continues below
+   the visible area. Shown via a class toggled by JS below. */
+.sb-scroll-shadow {
+  box-shadow: inset 0 -14px 10px -10px rgba(0,0,0,0.06);
+}
+
+/* ---- Active metric accent in sb-select ------------------------------- */
+/* Subtle left-border accent on the metric/year select when
+   it has a non-default value — signals the control is active. */
+.sb-select:not([data-default="true"]) {
+  border-left: 2.5px solid var(--accent);
+  padding-left: 8px;
+}

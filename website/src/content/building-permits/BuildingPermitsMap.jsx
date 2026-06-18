@@ -11,7 +11,7 @@
 // refetch). All 18 years live in one PMTiles.
 // =============================================================================
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import PermitMapView from "./PermitMapView.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
@@ -234,6 +234,25 @@ function PermitLegend({
 // the sidebar has finished its width transition.
 const SIDEBAR_TRANSITION_MS = 220;
 
+// Animate a number from 0 → target on mount (ease-out cubic). Signals the figure
+// is computed, not static copy. Returns the current integer value.
+function useCountUp(target, duration = 900) {
+  const [val, setVal] = useState(0);
+  const ref = useRef(null);
+  useEffect(() => {
+    const start = performance.now();
+    const tick = (now) => {
+      const p = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - p, 3); // ease-out cubic
+      setVal(Math.round(target * ease));
+      if (p < 1) ref.current = requestAnimationFrame(tick);
+    };
+    ref.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(ref.current);
+  }, [target, duration]);
+  return val;
+}
+
 export default function BuildingPermitsMap() {
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [group, setGroup] = useState(DEFAULT_GROUP);
@@ -295,6 +314,33 @@ export default function BuildingPermitsMap() {
     return () => { cancelled = true; };
   }, []);
 
+  // Count-up of the permit-point total shown in sb-sub.
+  const permitCount = useCountUp(226184);
+
+  // Reflect the current selection in the browser tab title; restore on unmount.
+  useEffect(() => {
+    document.title = `Building Activity · Edmonton ${year} | AREF`;
+    return () => { document.title = "AREF Open Data Centre"; };
+  }, [year]);
+
+  // Bottom-shadow cue when the sidebar overflows (content continues below).
+  const sbRef = useRef(null);
+  useEffect(() => {
+    const el = sbRef.current;
+    if (!el) return;
+    const check = () => {
+      const overflows = el.scrollHeight > el.clientHeight + 4;
+      el.classList.toggle("sb-scroll-shadow", overflows);
+    };
+    check();
+    el.addEventListener("scroll", check);
+    window.addEventListener("resize", check);
+    return () => {
+      el.removeEventListener("scroll", check);
+      window.removeEventListener("resize", check);
+    };
+  }, []);
+
   // No-coordinate count for the selected year. The map only plots permits that
   // HAVE coordinates; the no-coord share spikes in recent years (City geocoding
   // lag), so stating it is honest rather than silently understating.
@@ -303,13 +349,13 @@ export default function BuildingPermitsMap() {
 
   return (
     <article className="content-map">
-      <aside className={`sb${collapsed ? " collapsed" : ""}`} aria-label="Map sidebar">
+      <aside ref={sbRef} className={`sb${collapsed ? " collapsed" : ""}`} aria-label="Map sidebar">
         <div className="sb-header">
           <p className="eyebrow">Building Activity</p>
           <h1 className="sb-title">Edmonton — {year}</h1>
           <p className="sb-sub">
-            226,184 permit points, 2009–2026. Orange = residential, violet =
-            commercial. Dot size = construction value tier.
+            {permitCount.toLocaleString()} permit points, 2009–2026. Orange =
+            residential, violet = commercial. Dot size = construction value tier.
           </p>
         </div>
 

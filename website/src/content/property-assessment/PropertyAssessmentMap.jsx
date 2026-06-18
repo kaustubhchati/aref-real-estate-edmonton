@@ -23,7 +23,7 @@
 // EmptyState.
 // =============================================================================
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import MapView from "../../components/MapView.jsx";
 import Legend from "../../components/Legend.jsx";
@@ -62,6 +62,25 @@ import {
 // the sidebar has finished shrinking/growing — resizing mid-animation leaves the
 // canvas at a stale width.
 const SIDEBAR_TRANSITION_MS = 220;
+
+// Animate a number from 0 → target on mount (ease-out cubic). Signals the figure
+// is computed, not static copy. Returns the current integer value.
+function useCountUp(target, duration = 900) {
+  const [val, setVal] = useState(0);
+  const ref = useRef(null);
+  useEffect(() => {
+    const start = performance.now();
+    const tick = (now) => {
+      const p = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - p, 3); // ease-out cubic
+      setVal(Math.round(target * ease));
+      if (p < 1) ref.current = requestAnimationFrame(tick);
+    };
+    ref.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(ref.current);
+  }, [target, duration]);
+  return val;
+}
 
 export default function PropertyAssessmentMap() {
   // The manifest is the source of truth for which years exist. Until it loads,
@@ -188,6 +207,36 @@ export default function PropertyAssessmentMap() {
   const names = useMemo(() => (gj ? indexNamesForSearch(gj) : []), [gj]);
   const flyAndPinByName = useChoroplethInteractions(map, gj, year);
 
+  // Count-up of the cleaned property count (PHASE1_STATUS §5) shown in sb-sub.
+  const propCount = useCountUp(365406);
+
+  // Reflect the current selection in the browser tab title; restore on unmount.
+  useEffect(() => {
+    const m = METRICS.find((x) => x.key === metric);
+    document.title = m
+      ? `${m.label} · ${city} ${year} | AREF`
+      : `Property Assessment | AREF`;
+    return () => { document.title = "AREF Open Data Centre"; };
+  }, [metric, city, year]);
+
+  // Bottom-shadow cue when the sidebar overflows (content continues below).
+  const sbRef = useRef(null);
+  useEffect(() => {
+    const el = sbRef.current;
+    if (!el) return;
+    const check = () => {
+      const overflows = el.scrollHeight > el.clientHeight + 4;
+      el.classList.toggle("sb-scroll-shadow", overflows);
+    };
+    check();
+    el.addEventListener("scroll", check);
+    window.addEventListener("resize", check);
+    return () => {
+      el.removeEventListener("scroll", check);
+      window.removeEventListener("resize", check);
+    };
+  }, []);
+
   // All hooks above run every render; only now do we branch the output, so the
   // loading/error short-circuits never change hook order.
   if (manifestError) {
@@ -217,16 +266,16 @@ export default function PropertyAssessmentMap() {
 
   return (
     <article className="content-map">
-      <aside className={`sb${collapsed ? " collapsed" : ""}`} aria-label="Map sidebar">
+      <aside ref={sbRef} className={`sb${collapsed ? " collapsed" : ""}`} aria-label="Map sidebar">
         <div className="sb-header">
           <p className="eyebrow">Properties & Land</p>
           <h1 className="sb-title">
             {city} — {year}
           </h1>
           <p className="sb-sub">
-            Layer 1a-cleaned residential assessment,
-            neighbourhood aggregates. Hover any polygon
-            for detail; click to pin.
+            {propCount.toLocaleString()} Layer 1a-cleaned residential
+            properties, neighbourhood aggregates. Hover any polygon for
+            detail; click to pin.
           </p>
         </div>
 
@@ -245,6 +294,7 @@ export default function PropertyAssessmentMap() {
             <select
               className="sb-select"
               aria-label="Year"
+              data-default={year === years[0] ? "true" : "false"}
               value={year ?? ""}
               onChange={(e) => setYear(Number(e.target.value))}
             >
@@ -259,6 +309,7 @@ export default function PropertyAssessmentMap() {
             <select
               className="sb-select"
               aria-label="Metric"
+              data-default={metric === METRICS[0].key ? "true" : "false"}
               value={metric}
               onChange={(e) => setMetric(e.target.value)}
             >

@@ -26,27 +26,74 @@ export default function Legend({
   return (
     <aside className="legend">
       <h2 className="legend-title">{title}</h2>
-      <ul className="legend-list">
-        {stops.map((s) => {
-          const formatted = format(s.v);
-          // Hide the "· label" suffix when the label is just the value again
-          // — the YoY stops label "-15%" duplicates the formatted "-15.0%".
-          // Compare numerically so "-15%" and "-15.0%" count as equal; role
-          // labels like "min"/"median" aren't numeric, so they're kept.
-          const num = (t) => parseFloat(String(t).replace(/[^0-9.-]/g, ""));
-          const labelIsValue =
-            !Number.isNaN(num(s.label)) && num(s.label) === num(formatted);
-          return (
-            <li key={s.label} className="legend-row">
-              <span className="legend-sw" style={{ background: s.c }} />
-              <span className="legend-lab">
-                {formatted}
-                {!labelIsValue && <small> · {s.label}</small>}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+
+      {/* Gradient bar — honest representation of MapLibre's
+          continuous linear interpolation. Discrete swatches
+          imply stepped classification which isn't what renders.
+          Bar width = full legend width; ticks at each stop. */}
+      <div style={{ marginBottom: 8 }}>
+
+        {/* Continuous gradient bar */}
+        <div style={{
+          height: 12,
+          borderRadius: 3,
+          background: `linear-gradient(to right, ${
+            stops.map((s) => s.c).join(", ")
+          })`,
+          marginBottom: 4,
+        }} />
+
+        {/* Tick labels — value + role label below each stop.
+            Flex with space-between so first/last align to
+            bar edges; middle stops distribute evenly. */}
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+        }}>
+          {stops.map((s) => {
+            const formatted = format(s.v);
+            const num = (t) =>
+              parseFloat(String(t).replace(/[^0-9.-]/g, ""));
+            const labelIsValue =
+              !Number.isNaN(num(s.label)) &&
+              num(s.label) === num(formatted);
+            return (
+              <div
+                key={s.label}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: s === stops[0]
+                    ? "flex-start"
+                    : s === stops[stops.length - 1]
+                      ? "flex-end"
+                      : "center",
+                  maxWidth: `${100 / stops.length}%`,
+                }}
+              >
+                <span style={{
+                  fontSize: "0.68rem",
+                  fontVariantNumeric: "tabular-nums",
+                  color: "var(--text)",
+                  lineHeight: 1.2,
+                  whiteSpace: "nowrap",
+                }}>
+                  {formatted}
+                </span>
+                {!labelIsValue && (
+                  <span style={{
+                    fontSize: "0.60rem",
+                    color: "var(--text-subtle)",
+                    lineHeight: 1.2,
+                  }}>
+                    {s.label}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {greyStates?.length > 0 && (
         <>
