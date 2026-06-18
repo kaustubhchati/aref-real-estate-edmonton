@@ -206,7 +206,8 @@ for (agg_path in sort(agg_candidates)) {
       median_yearbuilt             = median_yearbuilt,
       pct_with_unit                = pct_with_unit,
       avg_assessvalue_without_unit = avg_assessvalue_without_unit,
-      avg_lotsize                  = avg_lotsize
+      avg_lotsize                  = avg_lotsize,
+      yoy_pct_change               = yoy_pct_change
     ) |>
     st_set_precision(1e6) |>
     st_make_valid()
@@ -241,7 +242,7 @@ for (agg_path in sort(agg_candidates)) {
     n_suppressed      = get_n("suppressed_low_n"),
     n_non_residential = get_n("non_residential"),
     n_no_data         = get_n("no_data"),
-    geojson_path      = geojson_path,
+    geojson_path      = basename(geojson_path),   # filename only — out_dir is absolute, keep the log portable
     file_size_mb      = file_mb
   ))
 }
