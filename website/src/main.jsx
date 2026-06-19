@@ -21,7 +21,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./shell/Layout.jsx";
 import Home from "./content/pages/Home.jsx";
 import About from "./content/pages/About.jsx";
-import Download from "./content/pages/Download.jsx";
+import DownloadPage from "./content/download/DownloadPage.jsx";
 import Feedback from "./content/pages/Feedback.jsx";
 import ResearchCompetition from "./content/pages/ResearchCompetition.jsx";
 import Placeholder from "./content/Placeholder.jsx";
@@ -40,7 +40,7 @@ createRoot(document.getElementById("root")).render(
           {/* Text pages — real stubs */}
           <Route path="/"                      element={<Home />} />
           <Route path="/about"                 element={<About />} />
-          <Route path="/download"              element={<Download />} />
+          <Route path="/download"              element={<DownloadPage />} />
           <Route path="/feedback"              element={<Feedback />} />
           <Route path="/research-competition"  element={<ResearchCompetition />} />
 

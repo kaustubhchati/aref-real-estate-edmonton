@@ -30,6 +30,53 @@ export const siteConfig = {
     logoAlt:      "{Organization} logo",
   },
 
+  // ---- Download catalogue -------------------------------------------------
+  // Publicly released CSV datasets, served as static files from
+  // website/public/downloads/. DownloadPage.jsx renders this array — adding a
+  // dataset is one entry here plus dropping the file in public/downloads/.
+  downloads: [
+    {
+      id: "pa-neighbourhood-2026",
+      label: "Property Assessment — 2026 Neighbourhood Aggregates",
+      description:
+        "Layer 1a-cleaned residential assessment aggregated to " +
+        "407 Edmonton neighbourhoods. Includes median/mean assessed " +
+        "value, lot size, year built, condo share, and year-over-year " +
+        "change. Suppressed where N < 100.",
+      file: "/downloads/neighbourhood_aggregates_2026.csv",
+      size: "45 KB",
+      rows: "407 neighbourhoods",
+      section: "Properties & Land",
+      year: 2026,
+    },
+    {
+      id: "permits-category-counts",
+      label: "Building Permits — Counts by Year and Category",
+      description:
+        "Per-year, per-job-category permit counts for Edmonton, " +
+        "2009–2026. 12 job categories. Useful for trend analysis " +
+        "and sector breakdowns.",
+      file: "/downloads/permits_category_counts.csv",
+      size: "5 KB",
+      rows: "18 years × 12 categories",
+      section: "Building Activity",
+      year: 2026,
+    },
+    {
+      id: "permits-coverage",
+      label: "Building Permits — Mapping Coverage by Year",
+      description:
+        "Per-year counts of total permits, mapped permits, and " +
+        "permits missing coordinates. Documents geocoding lag " +
+        "for 2024–2026 years.",
+      file: "/downloads/permits_coverage.csv",
+      size: "< 1 KB",
+      rows: "18 years",
+      section: "Building Activity",
+      year: 2026,
+    },
+  ],
+
   // ---- Navigation tree ---------------------------------------------------
   // Mirrors the live UAlberta site's nav (CLAUDE.md §6). Each node is either:
   //   • a leaf  — { label, kind: 'page' | 'map' | 'tables', to }
