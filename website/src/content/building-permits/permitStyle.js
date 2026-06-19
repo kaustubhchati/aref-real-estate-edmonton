@@ -139,7 +139,9 @@ const capitalise = (v) =>
 
 // Strip the City's internal code suffix from building_type.
 // "Indoor Recreational Buildings (560)" → "Indoor Recreational Buildings"
-const stripBuildingCode = (v) =>
+// Exported so the sidebar's last-clicked panel (BuildingPermitsMap) formats
+// building_type the same way the popup does.
+export const stripBuildingCode = (v) =>
   v == null || v === "" ? "—" : String(v).replace(/\s*\(\d+\)\s*$/, "").trim();
 
 // Strip the City's internal code prefix from work_type.
@@ -229,20 +231,28 @@ export function buildPermitPopupHtml(p) {
 }
 
 // Hover popup: a slim preview shown while the pointer is over a dot. Leads with
-// the construction value (the primary quantitative signal), then the permit type.
+// the address (location anchor), then building type, construction value, and
+// permit type. Mirrors the 3-row sidebar panel for this section.
 export function buildPermitHoverHtml(p) {
   const group = capitalise(p.job_group ?? "");
   return [
-    // Construction value as headline — the primary
-    // quantitative signal on hover. NOT address.
-    `<div class="pop-row headline">
+    // Address as the bold header — the location anchor.
+    `<div class="pop-name">${escapeHtml(p.address ?? "—")}</div>`,
+
+    `<div class="pop-row">
+      <span class="pop-k">Building type</span>
+      <span class="pop-v">${
+        escapeHtml(stripBuildingCode(p.building_type ?? ""))
+      }</span>
+    </div>`,
+
+    `<div class="pop-row">
       <span class="pop-k">Construction value</span>
       <span class="pop-v">${
         escapeHtml(fmtCurrency(p.construction_value))
       }</span>
     </div>`,
 
-    // Capitalised permit type as context row.
     `<div class="pop-row">
       <span class="pop-k">Permit type</span>
       <span class="pop-v">${escapeHtml(group)}</span>

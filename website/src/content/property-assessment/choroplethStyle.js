@@ -295,7 +295,12 @@ export function buildPopupHtml(p, pinned, year) {
   parts.push(`<div class="pop-state ${state}">${escapeHtml(meta.label)}</div>`);
 
   if (state === "aggregated") {
-    for (const [key, label, fmt, headline] of POPUP_ROWS) {
+    // Hover popup (pinned=false) is a slim preview: the headline metric + N
+    // properties only. The pinned (click) popup keeps every detail row.
+    const rows = pinned
+      ? POPUP_ROWS
+      : POPUP_ROWS.filter(([key, , , headline]) => headline || key === "n_properties");
+    for (const [key, label, fmt, headline] of rows) {
       parts.push(
         `<div class="pop-row${headline ? " headline" : ""}">` +
           `<span class="pop-k">${label}</span>` +
@@ -328,9 +333,8 @@ export function buildPopupHtml(p, pinned, year) {
     // Copy-stats button — wired up in interactions.js after the popup mounts
     // (inline onclick in MapLibre popup HTML is unreliable).
     parts.push(`<button class="pop-copy-btn" id="pop-copy-btn">Copy stats</button>`);
-  } else {
-    parts.push(`<div class="pop-pinned-hint">Click to pin · click polygon to zoom in.</div>`);
   }
+  // Hover popup has no pinned hint — it's a quick preview, not an action prompt.
   return parts.join("");
 }
 

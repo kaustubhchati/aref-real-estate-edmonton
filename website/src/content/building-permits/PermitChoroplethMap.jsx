@@ -32,6 +32,7 @@ import {
   permitChoroplethLayers,
   buildPermitChoroplethPopupHtml,
 } from "./permitChoroplethStyle.js";
+import { fmtNumber } from "../../utils/format.js";
 
 // Years with a committed GeoJSON (public/data/building-permits/permit-neighbourhoods/).
 // Newest-first so the <select> opens on recent years; 2026 is the default.
@@ -198,7 +199,7 @@ export default function PermitChoroplethMap() {
                 f.properties, false, yearRef.current))
               .addTo(map);
           }
-        }, 300);
+        }, 900);
       }
     }
 
@@ -307,16 +308,15 @@ export default function PermitChoroplethMap() {
         ) : hoveredFeature.polygon_state === "aggregated" ? (
           <section className="sb-section sb-hover-panel">
             <p className="sb-hover-name">{hoveredFeature.display_name}</p>
-            <p className="sb-hover-district">
-              {hoveredFeature.district ?? hoveredFeature.planning_district ?? ""}
-            </p>
             <div className="sb-hover-rows">
-              {[selectedMetric, ...PERMIT_CHOROPLETH_METRICS.filter((m) => m.key !== metric)].map((m) => (
-                <div className="sb-hover-row" key={m.key}>
-                  <span className="sb-hover-k">{m.label}</span>
-                  <span className="sb-hover-v">{m.fmt(hoveredFeature[m.key])}</span>
-                </div>
-              ))}
+              <div className="sb-hover-row">
+                <span className="sb-hover-k">{selectedMetric.label}</span>
+                <span className="sb-hover-v">{selectedMetric.fmt(hoveredFeature[metric])}</span>
+              </div>
+              <div className="sb-hover-row">
+                <span className="sb-hover-k">N permits</span>
+                <span className="sb-hover-v">{fmtNumber(hoveredFeature.n_permits)}</span>
+              </div>
             </div>
           </section>
         ) : (

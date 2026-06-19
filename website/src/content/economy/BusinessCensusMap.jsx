@@ -35,6 +35,7 @@ import {
   bcensusLayers,
   buildBusinessCensusPopupHtml,
 } from "./businessCensusStyle.js";
+import { fmtNumber } from "../../utils/format.js";
 
 // Single committed GeoJSON — survey year 2025, no year axis.
 const DATA_URL = "/data/economy/business_census_2025.geojson";
@@ -179,7 +180,7 @@ export default function BusinessCensusMap() {
               .setHTML(buildBusinessCensusPopupHtml(f.properties, false))
               .addTo(map);
           }
-        }, 300);
+        }, 900);
       }
     }
 
@@ -274,28 +275,15 @@ export default function BusinessCensusMap() {
         ) : hoveredFeature.census_state === "data" ? (
           <section className="sb-section sb-hover-panel">
             <p className="sb-hover-name">{hoveredFeature.display_name}</p>
-            <p className="sb-hover-district">
-              {hoveredFeature.district ?? hoveredFeature.planning_district ?? ""}
-            </p>
             <div className="sb-hover-rows">
-              {[selectedMetric, ...METRICS.filter((m) => m.key !== metric)].map((m) => (
-                <div className="sb-hover-row" key={m.key}>
-                  <span className="sb-hover-k">{m.label}</span>
-                  <span className="sb-hover-v">{m.fmt(hoveredFeature[m.key])}</span>
-                </div>
-              ))}
-              {hoveredFeature.yoy_businesses_pct != null && (
-                <div className="sb-hover-row">
-                  <span className="sb-hover-k">YoY businesses</span>
-                  <span className={`sb-hover-v ${
-                    hoveredFeature.yoy_businesses_pct > 0 ? "positive"
-                    : hoveredFeature.yoy_businesses_pct < 0 ? "negative" : ""
-                  }`}>
-                    {hoveredFeature.yoy_businesses_pct > 0 ? "+" : ""}
-                    {hoveredFeature.yoy_businesses_pct}%
-                  </span>
-                </div>
-              )}
+              <div className="sb-hover-row">
+                <span className="sb-hover-k">Businesses (2025)</span>
+                <span className="sb-hover-v">{fmtNumber(hoveredFeature.n_businesses_2025)}</span>
+              </div>
+              <div className="sb-hover-row">
+                <span className="sb-hover-k">Employees (2025)</span>
+                <span className="sb-hover-v">{fmtNumber(hoveredFeature.n_employees_2025)}</span>
+              </div>
             </div>
           </section>
         ) : (

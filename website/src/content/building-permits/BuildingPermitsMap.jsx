@@ -22,6 +22,7 @@ import {
   VALUE_BUCKETS,
   ALL_BUCKET_IDS,
   DEFAULT_ACTIVE_BUCKETS,
+  stripBuildingCode,
 } from "./permitStyle.js";
 import {
   YEARS,
@@ -31,7 +32,7 @@ import {
   DEFAULT_MONTH,
 } from "./dataSources.js";
 import { parseCsvAsObjects } from "../report-card/parseCsv.js";
-import { fmtNumber } from "../../utils/format.js";
+import { fmtNumber, fmtCurrency } from "../../utils/format.js";
 
 // Per-year coverage table — how many permits exist vs. how many are mappable.
 // Served from /public (a tiny 18-row CSV), a plain static fetch.
@@ -277,6 +278,9 @@ export default function BuildingPermitsMap() {
   const [month, setMonth] = useState(DEFAULT_MONTH);
   const [map, setMap] = useState(null);
   const [coverage, setCoverage] = useState([]);
+  // Pattern B (point map): stats for the LAST CLICKED dot — point-map hover is
+  // on dots, not polygons, so the sidebar panel updates on click, not hover.
+  const [clickedFeature, setClickedFeature] = useState(null);
   // Factory init so new Set(...) runs ONCE on mount, not every render.
   const [activeBuckets, setActiveBuckets] = useState(
     () => new Set(DEFAULT_ACTIVE_BUCKETS)
@@ -499,6 +503,27 @@ export default function BuildingPermitsMap() {
           />
         </section>
 
+        {/* Pattern B — last-clicked dot panel (point map: click, not hover). */}
+        {clickedFeature ? (
+          <section className="sb-section sb-hover-panel">
+            <p className="sb-hover-name">{clickedFeature.address ?? "—"}</p>
+            <div className="sb-hover-rows">
+              <div className="sb-hover-row">
+                <span className="sb-hover-k">Building type</span>
+                <span className="sb-hover-v">{stripBuildingCode(clickedFeature.building_type ?? "")}</span>
+              </div>
+              <div className="sb-hover-row">
+                <span className="sb-hover-k">Construction value</span>
+                <span className="sb-hover-v">{fmtCurrency(clickedFeature.construction_value)}</span>
+              </div>
+            </div>
+          </section>
+        ) : (
+          <section className="sb-section sb-hover-panel sb-hover-empty">
+            <p className="sb-hover-hint">Click a permit dot for detail</p>
+          </section>
+        )}
+
         <p className="sb-ref" style={{
           borderTop: "1px solid var(--border-soft)",
           paddingTop: 10,
@@ -513,7 +538,7 @@ export default function BuildingPermitsMap() {
       <div className="canvas-wrap">
         {/* PMTiles point map (no MapErrorBoundary); skeleton shows until onLoad. */}
         {!map && <MapSkeleton />}
-        <PermitMapView className="canvas" onLoad={setMap} />
+        <PermitMapView className="canvas" onLoad={setMap} onPick={setClickedFeature} />
       </div>
     </article>
   );

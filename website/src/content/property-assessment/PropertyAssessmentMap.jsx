@@ -57,6 +57,7 @@ import {
   useChoroplethInteractions,
   indexNamesForSearch,
 } from "./interactions.js";
+import { fmtNumber } from "../../utils/format.js";
 
 // Animate a number from 0 → target on mount (ease-out cubic). Signals the figure
 // is computed, not static copy. Returns the current integer value.
@@ -90,6 +91,8 @@ export default function PropertyAssessmentMap() {
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
   const [fetchError, setFetchError] = useState(null);
+  // Pattern B — hovered neighbourhood properties for the sidebar stat panel.
+  const [hoveredFeature, setHoveredFeature] = useState(null);
 
   // Load the manifest once on mount. We seed the year in the SAME update as the
   // manifest so there's no frame where the manifest is loaded but no year is
@@ -191,7 +194,7 @@ export default function PropertyAssessmentMap() {
   }, [map, metric, stops]);
 
   const names = useMemo(() => (gj ? indexNamesForSearch(gj) : []), [gj]);
-  const flyAndPinByName = useChoroplethInteractions(map, gj, year);
+  const flyAndPinByName = useChoroplethInteractions(map, gj, year, setHoveredFeature);
 
   // Count-up of the cleaned property count (PHASE1_STATUS §5) shown in sb-sub.
   const propCount = useCountUp(365406);
@@ -340,6 +343,32 @@ export default function PropertyAssessmentMap() {
             format={selectedMetric.fmt}
           />
         </section>
+
+        {/* Pattern B — live hover stat panel: name + selected metric + N props. */}
+        {!hoveredFeature ? (
+          <section className="sb-section sb-hover-panel sb-hover-empty">
+            <p className="sb-hover-hint">Hover a neighbourhood to see its stats</p>
+          </section>
+        ) : hoveredFeature.polygon_state === "aggregated" ? (
+          <section className="sb-section sb-hover-panel">
+            <p className="sb-hover-name">{hoveredFeature.display_name}</p>
+            <div className="sb-hover-rows">
+              <div className="sb-hover-row">
+                <span className="sb-hover-k">{selectedMetric.label}</span>
+                <span className="sb-hover-v">{selectedMetric.fmt(hoveredFeature[metric])}</span>
+              </div>
+              <div className="sb-hover-row">
+                <span className="sb-hover-k">N properties</span>
+                <span className="sb-hover-v">{fmtNumber(hoveredFeature.n_properties)}</span>
+              </div>
+            </div>
+          </section>
+        ) : (
+          <section className="sb-section sb-hover-panel sb-hover-muted">
+            <p className="sb-hover-name">{hoveredFeature.display_name}</p>
+            <p className="sb-hover-district sb-hover-state">No data</p>
+          </section>
+        )}
 
         <div className="sb-ref">
           <p>

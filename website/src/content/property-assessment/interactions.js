@@ -38,12 +38,18 @@ const ID_PROPERTY = "Neighbourhood ID";
 //
 // The hook installs handlers exactly once when BOTH map and gj are ready,
 // and tears them down on unmount (and before re-install if either changes).
-export function useChoroplethInteractions(map, gj, year) {
+export function useChoroplethInteractions(map, gj, year, onHover) {
   const apiRef = useRef(null);
+  // onHover (hovered feature properties → sidebar panel) is read through a ref
+  // so changing it doesn't tear down and re-install the map handlers.
+  const onHoverRef = useRef(onHover);
+  useEffect(() => { onHoverRef.current = onHover; }, [onHover]);
 
   useEffect(() => {
     if (!map || !gj) return undefined;
-    const api = installChoroplethInteractions(map, gj, year);
+    const api = installChoroplethInteractions(map, gj, year, (props) => {
+      onHoverRef.current?.(props);
+    });
     apiRef.current = api;
     return () => {
       api.cleanup();
@@ -59,7 +65,7 @@ export function useChoroplethInteractions(map, gj, year) {
 }
 
 // ---- Plain-JS installer (the hook is a thin wrapper around this) ----------
-export function installChoroplethInteractions(map, gj, year) {
+export function installChoroplethInteractions(map, gj, year, onHover) {
   const hoverPopup = new maplibregl.Popup({
     closeButton: false, closeOnClick: false, offset: 8, maxWidth: "320px",
   });
@@ -132,7 +138,10 @@ export function installChoroplethInteractions(map, gj, year) {
       hoverPopup.remove();
       lastHoveredId = f.id;
 
-      // Show popup only after 300ms dwell on the same feature.
+      // Update the sidebar hover panel immediately on enter.
+      onHover?.(f.properties);
+
+      // Show popup only after 900ms dwell on the same feature.
       // This eliminates jitter when the cursor sweeps across the map
       // and prevents the popup flashing on rapid movement.
       hoverTimer = setTimeout(() => {
@@ -142,7 +151,7 @@ export function installChoroplethInteractions(map, gj, year) {
             .setHTML(buildPopupHtml(f.properties, false, year))
             .addTo(map);
         }
-      }, 300);
+      }, 900);
     }
   }
 
@@ -150,6 +159,8 @@ export function installChoroplethInteractions(map, gj, year) {
     clearTimeout(hoverTimer);
     lastHoveredId = null;
     clearHover();
+    // Clear the sidebar hover panel when the cursor leaves the fill.
+    onHover?.(null);
   }
 
   function onClickFill(e) {

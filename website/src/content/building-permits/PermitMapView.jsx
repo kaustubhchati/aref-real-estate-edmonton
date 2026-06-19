@@ -55,7 +55,7 @@ const PERMITS_URL = `pmtiles://${R2_BASE_URL}/building-permits/permits.pmtiles`;
 // Click a dot → pinned popup; hover a dot → light preview popup; pointer cursor
 // while hovering. One shared instance each, so re-clicking/-hovering repositions
 // rather than leaking popups. The effect's map.remove() disposes them.
-function wirePermitPopup(map) {
+function wirePermitPopup(map, onPickRef) {
   // Click popup — full detail, stays until dismissed.
   const popup = new maplibregl.Popup({
     closeButton: true,
@@ -89,6 +89,8 @@ function wirePermitPopup(map) {
       .setLngLat(f.geometry.coordinates)
       .setHTML(buildPermitPopupHtml(f.properties))
       .addTo(map);
+    // Surface the clicked dot to the page for the sidebar's last-clicked panel.
+    onPickRef?.current?.(f.properties);
   });
 
   map.on("mousemove", LAYER_ID, (e) => {
@@ -114,7 +116,7 @@ function wirePermitPopup(map) {
             .setHTML(buildPermitHoverHtml(f.properties))
             .addTo(map);
         }
-      }, 200);
+      }, 900);
     }
   });
 
@@ -130,7 +132,7 @@ function wirePermitPopup(map) {
   });
 }
 
-export default function PermitMapView({ className = "", onLoad }) {
+export default function PermitMapView({ className = "", onLoad, onPick }) {
   const containerRef = useRef(null);
 
   // onLoad is read from a ref so the page can pass a fresh callback between
@@ -141,6 +143,11 @@ export default function PermitMapView({ className = "", onLoad }) {
   // outside effects but this is safe and intentional — see MapView.jsx.
   // eslint-disable-next-line react-hooks/refs
   onLoadRef.current = onLoad;
+
+  // Same live-callback pattern for onPick (clicked dot → sidebar panel).
+  const onPickRef = useRef(onPick);
+  // eslint-disable-next-line react-hooks/refs
+  onPickRef.current = onPick;
 
   // Single effect: create on mount, remove on unmount. Same shape as MapView.
   useEffect(() => {
@@ -166,7 +173,7 @@ export default function PermitMapView({ className = "", onLoad }) {
         url: PERMITS_URL,
       });
       map.addLayer({ ...permitCircleLayer(), source: SOURCE_ID });
-      wirePermitPopup(map);
+      wirePermitPopup(map, onPickRef);
       // Hand the live map to the page (last, so the layer it filters exists).
       if (onLoadRef.current) onLoadRef.current(map);
     });
