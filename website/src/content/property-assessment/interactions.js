@@ -67,11 +67,17 @@ export function useChoroplethInteractions(map, gj, year, onHover) {
 // ---- Plain-JS installer (the hook is a thin wrapper around this) ----------
 export function installChoroplethInteractions(map, gj, year, onHover) {
   const hoverPopup = new maplibregl.Popup({
-    closeButton: false, closeOnClick: false, offset: 8, maxWidth: "320px",
+    className: "popup-hover",        // Tier 2 — slim styling (see index.css)
+    closeButton: false, closeOnClick: false, offset: 8, maxWidth: "220px",
   });
   const pinnedPopup = new maplibregl.Popup({
     closeButton: true, closeOnClick: false, offset: 8, maxWidth: "320px",
   });
+
+  // Tier 3 fly-to is bound to dblclick below; disable MapLibre's default
+  // double-click-to-zoom so it doesn't fight our handler (must be done now,
+  // not in the handler — the default fires first).
+  map.doubleClickZoom.disable();
 
   // promoteId rewrites every feature.id to the value of "Neighbourhood ID".
   // We track ids — not array indices — so feature-state survives source updates.
@@ -102,7 +108,8 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
   }
 
   // ---- Handlers (named so .off() can detach them on cleanup) -----------
-  let hoverTimer = null;
+  let hoverTimer = null;      // Tier 2 popup dwell (900ms)
+  let sidebarTimer = null;    // Tier 1 sidebar panel debounce (450ms) — separate
   let lastHoveredId = null;
 
   function onMouseMove(e) {
@@ -138,8 +145,10 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
       hoverPopup.remove();
       lastHoveredId = f.id;
 
-      // Update the sidebar hover panel immediately on enter.
-      onHover?.(f.properties);
+      // Tier 1 sidebar panel: debounce 450ms on its own timer (independent of
+      // the 900ms Tier 2 popup timer below).
+      clearTimeout(sidebarTimer);
+      sidebarTimer = setTimeout(() => onHover?.(f.properties), 450);
 
       // Show popup only after 900ms dwell on the same feature.
       // This eliminates jitter when the cursor sweeps across the map
@@ -157,18 +166,18 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
 
   function onMouseLeave() {
     clearTimeout(hoverTimer);
+    clearTimeout(sidebarTimer);
     lastHoveredId = null;
     clearHover();
     // Clear the sidebar hover panel when the cursor leaves the fill.
     onHover?.(null);
   }
 
+  // Tier 3 — single click opens the full pinned popup. Does NOT fly (fly-to is
+  // double-click only now).
   function onClickFill(e) {
     if (!e.features?.length) return;
     const f = e.features[0];
-    // promoteId puts the property value into f.id, but we still need the
-    // original feature for geometry (fitBounds wants the bbox).
-    const fullFeat = findFeatureById(gj, f.id);
 
     clearHover();
     clearPinned();
@@ -187,7 +196,13 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
         pinnedId = null;
       }
     });
+  }
 
+  // Fly-to — double click only. Does not open or close any popup.
+  function onDblClickFill(e) {
+    e.preventDefault();   // stop MapLibre's default zoom (also disabled above)
+    if (!e.features?.length) return;
+    const fullFeat = findFeatureById(gj, e.features[0].id);
     if (fullFeat) flyToFeature(map, fullFeat);
   }
 
@@ -200,6 +215,7 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
   map.on("mousemove", FILL_LAYER_ID, onMouseMove);
   map.on("mouseleave", FILL_LAYER_ID, onMouseLeave);
   map.on("click", FILL_LAYER_ID, onClickFill);
+  map.on("dblclick", FILL_LAYER_ID, onDblClickFill);
   map.on("click", onMapClick);
 
   // ---- Search-driven fly-to + pin --------------------------------------
@@ -235,8 +251,10 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
     map.off("mousemove", FILL_LAYER_ID, onMouseMove);
     map.off("mouseleave", FILL_LAYER_ID, onMouseLeave);
     map.off("click", FILL_LAYER_ID, onClickFill);
+    map.off("dblclick", FILL_LAYER_ID, onDblClickFill);
     map.off("click", onMapClick);
     clearTimeout(hoverTimer);
+    clearTimeout(sidebarTimer);
     hoverPopup.remove();
     pinnedPopup.remove();
   }

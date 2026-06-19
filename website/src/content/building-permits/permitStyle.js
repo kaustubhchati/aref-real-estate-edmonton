@@ -230,21 +230,13 @@ export function buildPermitPopupHtml(p) {
   ].join("");
 }
 
-// Hover popup: a slim preview shown while the pointer is over a dot. Leads with
-// the address (location anchor), then building type, construction value, and
-// permit type. Mirrors the 3-row sidebar panel for this section.
+// Tier 2 hover popup: a slim preview shown while the pointer dwells on a dot.
+// Address header + construction value + building type — same fields as the
+// point-map's last-clicked sidebar panel.
 export function buildPermitHoverHtml(p) {
-  const group = capitalise(p.job_group ?? "");
   return [
     // Address as the bold header — the location anchor.
     `<div class="pop-name">${escapeHtml(p.address ?? "—")}</div>`,
-
-    `<div class="pop-row">
-      <span class="pop-k">Building type</span>
-      <span class="pop-v">${
-        escapeHtml(stripBuildingCode(p.building_type ?? ""))
-      }</span>
-    </div>`,
 
     `<div class="pop-row">
       <span class="pop-k">Construction value</span>
@@ -254,8 +246,10 @@ export function buildPermitHoverHtml(p) {
     </div>`,
 
     `<div class="pop-row">
-      <span class="pop-k">Permit type</span>
-      <span class="pop-v">${escapeHtml(group)}</span>
+      <span class="pop-k">Building type</span>
+      <span class="pop-v">${
+        escapeHtml(stripBuildingCode(p.building_type ?? ""))
+      }</span>
     </div>`,
   ].join("");
 }

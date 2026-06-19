@@ -294,26 +294,59 @@ export const PERMIT_CHOROPLETH_POPUP_ROWS = [
   ["units_added_total",         "Units added",               fmtInt,      false ],
 ];
 
-export function buildPermitChoroplethPopupHtml(p, pinned, year) {
+// `detail` selects the tier; `metric` is the currently-selected metric key,
+// used only by Tier 2 to pick the headline row.
+//   detail=false → Tier 2 (slim hover): name + district + selected-metric
+//                  headline + permit count.
+//   detail=true  → Tier 3 (pinned click): name + district + year + state badge
+//                  + every row + dismiss hint.
+export function buildPermitChoroplethPopupHtml(p, detail, year, metric) {
   const state = p.polygon_state;
   const name  = p.display_name ?? "—";
 
   const parts = [
     `<div class="pop-name">${escapeHtml(name)}</div>`,
   ];
-  if (year != null) {
-    parts.push(
-      `<div class="pop-year">${escapeHtml(String(year))} Permits</div>`
-    );
+  if (p.district) {
+    parts.push(`<div class="pop-district">${escapeHtml(p.district)} district</div>`);
   }
 
+  // ---- Tier 2 — slim hover preview ----
+  if (!detail) {
+    if (state === "aggregated") {
+      const sel = PERMIT_CHOROPLETH_POPUP_ROWS.find(([key]) => key === metric)
+        ?? PERMIT_CHOROPLETH_POPUP_ROWS[0];
+      const [sk, sl, sfmt] = sel;
+      parts.push(
+        `<div class="pop-row headline">` +
+          `<span class="pop-k">${sl}</span>` +
+          `<span class="pop-v">${sfmt(p[sk])}</span>` +
+        `</div>`
+      );
+      // Always show permit count, unless it is already the headline.
+      if (sk !== "n_permits") {
+        parts.push(
+          `<div class="pop-row">` +
+            `<span class="pop-k">Permit count</span>` +
+            `<span class="pop-v">${fmtInt(p.n_permits)}</span>` +
+          `</div>`
+        );
+      }
+    } else {
+      parts.push(`<div class="pop-reason">No permit data for this neighbourhood.</div>`);
+    }
+    return parts.join("");
+  }
+
+  // ---- Tier 3 — full pinned detail ----
+  if (year != null) {
+    parts.push(`<div class="pop-year">${escapeHtml(String(year))} Permits</div>`);
+  }
   if (state === "aggregated") {
-    const stateLabel = STATE_STYLE.aggregated.label;
     parts.push(
-      `<div class="pop-state aggregated">${escapeHtml(stateLabel)}</div>`
+      `<div class="pop-state aggregated">${escapeHtml(STATE_STYLE.aggregated.label)}</div>`
     );
-    for (const [key, label, fmt, headline] of
-         PERMIT_CHOROPLETH_POPUP_ROWS) {
+    for (const [key, label, fmt, headline] of PERMIT_CHOROPLETH_POPUP_ROWS) {
       parts.push(
         `<div class="pop-row${headline ? " headline" : ""}">` +
           `<span class="pop-k">${label}</span>` +
@@ -340,11 +373,6 @@ export function buildPermitChoroplethPopupHtml(p, pinned, year) {
         `for this neighbourhood in ${year ?? "this year"}.</div>`
     );
   }
-
-  if (pinned) {
-    parts.push(
-      `<div class="pop-pinned-hint">Click map to dismiss</div>`
-    );
-  }
+  parts.push(`<div class="pop-pinned-hint">Click map to dismiss</div>`);
   return parts.join("");
 }

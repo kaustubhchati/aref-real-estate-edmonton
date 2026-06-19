@@ -43,6 +43,34 @@ const DATA_URL = "/data/economy/business_census_2025.geojson";
 const SOURCE_ID = "bcensus";
 const FILL_LAYER_ID = "bcensus-fill";
 
+// ---- Fly-to helpers (double-click). promoteId is "neighbourhood_id". --------
+function findFeatureById(gj, id) {
+  for (const f of gj?.features ?? []) {
+    if (String(f.properties?.neighbourhood_id) === String(id)) return f;
+  }
+  return null;
+}
+// [[minLng,minLat],[maxLng,maxLat]] for fitBounds — walks nested coord arrays.
+function bboxOfGeom(geom) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  function walk(c) {
+    if (typeof c[0] === "number") {
+      if (c[0] < minX) minX = c[0];
+      if (c[0] > maxX) maxX = c[0];
+      if (c[1] < minY) minY = c[1];
+      if (c[1] > maxY) maxY = c[1];
+    } else for (const inner of c) walk(inner);
+  }
+  walk(geom.coordinates);
+  return [[minX, minY], [maxX, maxY]];
+}
+function flyToFeature(map, feat) {
+  map.fitBounds(bboxOfGeom(feat.geometry), {
+    padding: { top: 80, bottom: 80, left: 60, right: 60 },
+    duration: 900, maxZoom: 14,
+  });
+}
+
 export default function BusinessCensusMap() {
   const [metric, setMetric] = useState(METRICS[0].key);
   const [map, setMap] = useState(null);
@@ -59,6 +87,9 @@ export default function BusinessCensusMap() {
   // the latest setHoveredFeature without re-registering on every render.
   const setHoveredFeatureRef = useRef(setHoveredFeature);
   useEffect(() => { setHoveredFeatureRef.current = setHoveredFeature; }, [setHoveredFeature]);
+  // gj read via ref so the once-installed dblclick handler sees the loaded data.
+  const gjRef = useRef(gj);
+  useEffect(() => { gjRef.current = gj; }, [gj]);
 
   // Ramp stops computed from the loaded polygons' quantiles for the chosen
   // metric (falls back to BCENSUS_STOPS until gj resolves). Memoised so the
@@ -117,17 +148,23 @@ export default function BusinessCensusMap() {
     if (!map) return undefined;
 
     const hoverPopup = new maplibregl.Popup({
+      className: "popup-hover",        // Tier 2 — slim styling (see index.css)
       closeButton: false, closeOnClick: false,
-      offset: 8, maxWidth: "300px",
+      offset: 8, maxWidth: "220px",
     });
     const pinnedPopup = new maplibregl.Popup({
       closeButton: true, closeOnClick: false,
       offset: 8, maxWidth: "320px",
     });
 
+    // Fly-to is double-click only; disable the default double-click zoom so it
+    // doesn't fight our handler (must be done before the default fires).
+    map.doubleClickZoom.disable();
+
     let hoveredId = null;
     let pinnedId = null;
-    let hoverTimer = null;
+    let hoverTimer = null;      // Tier 2 popup dwell (900ms)
+    let sidebarTimer = null;    // Tier 1 sidebar debounce (450ms)
     let lastHoveredId = null;
 
     function setHover(id, on) {
@@ -170,9 +207,12 @@ export default function BusinessCensusMap() {
         setHover(hoveredId, true);
         hoverPopup.remove();
         lastHoveredId = f.id;
-        // Pattern B: update the sidebar hover panel immediately on enter.
-        setHoveredFeatureRef.current(f.properties);
-        // Show only after 300ms dwell — no flash on cursor sweep.
+        // Tier 1 sidebar panel — debounce 450ms (separate from the 900ms popup).
+        clearTimeout(sidebarTimer);
+        sidebarTimer = setTimeout(
+          () => setHoveredFeatureRef.current(f.properties), 450
+        );
+        // Tier 2 popup — show after 900ms dwell.
         hoverTimer = setTimeout(() => {
           if (hoveredId === f.id) {
             hoverPopup
@@ -185,11 +225,13 @@ export default function BusinessCensusMap() {
     }
 
     function onLeave() {
+      clearTimeout(sidebarTimer);
       clearHover();
-      // Pattern B: clear the sidebar hover panel when the cursor leaves the fill.
+      // Tier 1: clear the sidebar panel when the cursor leaves the fill.
       setHoveredFeatureRef.current(null);
     }
 
+    // Tier 3 — single click opens the full pinned popup. Does NOT fly.
     function onFillClick(e) {
       if (!e.features?.length) return;
       const f = e.features[0];
@@ -206,6 +248,14 @@ export default function BusinessCensusMap() {
       });
     }
 
+    // Fly-to — double click only. Does not open or close any popup.
+    function onDblClick(e) {
+      e.preventDefault();
+      if (!e.features?.length) return;
+      const fullFeat = findFeatureById(gjRef.current, e.features[0].id);
+      if (fullFeat) flyToFeature(map, fullFeat);
+    }
+
     function onMapClick(e) {
       // Click on empty basemap (not a polygon) clears the pin.
       const hits = map.queryRenderedFeatures(e.point, { layers: [FILL_LAYER_ID] });
@@ -215,14 +265,17 @@ export default function BusinessCensusMap() {
     map.on("mousemove", FILL_LAYER_ID, onMove);
     map.on("mouseleave", FILL_LAYER_ID, onLeave);
     map.on("click", FILL_LAYER_ID, onFillClick);
+    map.on("dblclick", FILL_LAYER_ID, onDblClick);
     map.on("click", onMapClick);
 
     return () => {
       map.off("mousemove", FILL_LAYER_ID, onMove);
       map.off("mouseleave", FILL_LAYER_ID, onLeave);
       map.off("click", FILL_LAYER_ID, onFillClick);
+      map.off("dblclick", FILL_LAYER_ID, onDblClick);
       map.off("click", onMapClick);
       clearTimeout(hoverTimer);
+      clearTimeout(sidebarTimer);
       hoverPopup.remove();
       pinnedPopup.remove();
     };

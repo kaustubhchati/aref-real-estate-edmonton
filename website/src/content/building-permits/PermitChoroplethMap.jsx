@@ -50,6 +50,34 @@ function dataUrl(year) {
   return `/data/building-permits/permit-neighbourhoods/permit_neighbourhoods_${year}.geojson`;
 }
 
+// ---- Fly-to helpers (double-click). promoteId is "Neighbourhood ID". --------
+function findFeatureById(gj, id) {
+  for (const f of gj?.features ?? []) {
+    if (String(f.properties?.["Neighbourhood ID"]) === String(id)) return f;
+  }
+  return null;
+}
+// [[minLng,minLat],[maxLng,maxLat]] for fitBounds — walks nested coord arrays.
+function bboxOfGeom(geom) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  function walk(c) {
+    if (typeof c[0] === "number") {
+      if (c[0] < minX) minX = c[0];
+      if (c[0] > maxX) maxX = c[0];
+      if (c[1] < minY) minY = c[1];
+      if (c[1] > maxY) maxY = c[1];
+    } else for (const inner of c) walk(inner);
+  }
+  walk(geom.coordinates);
+  return [[minX, minY], [maxX, maxY]];
+}
+function flyToFeature(map, feat) {
+  map.fitBounds(bboxOfGeom(feat.geometry), {
+    padding: { top: 80, bottom: 80, left: 60, right: 60 },
+    duration: 900, maxZoom: 14,
+  });
+}
+
 export default function PermitChoroplethMap() {
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [metric, setMetric] = useState(PERMIT_CHOROPLETH_METRICS[0].key);
@@ -78,10 +106,14 @@ export default function PermitChoroplethMap() {
   const yearRef = useRef(year);
   useEffect(() => { yearRef.current = year; }, [year]);
 
-  // The interaction handler is installed once (deps:[map]); a ref lets it call
-  // the latest setHoveredFeature without re-registering on every render.
+  // The interaction handler is installed once (deps:[map]); refs let it read the
+  // latest setter / metric / gj without re-registering on every render.
   const setHoveredFeatureRef = useRef(setHoveredFeature);
   useEffect(() => { setHoveredFeatureRef.current = setHoveredFeature; }, [setHoveredFeature]);
+  const metricRef = useRef(metric);
+  useEffect(() => { metricRef.current = metric; }, [metric]);
+  const gjRef = useRef(gj);
+  useEffect(() => { gjRef.current = gj; }, [gj]);
 
   // Reflect the current selection in the browser tab title; restore on unmount.
   useEffect(() => {
@@ -135,17 +167,23 @@ export default function PermitChoroplethMap() {
     if (!map) return undefined;
 
     const hoverPopup = new maplibregl.Popup({
+      className: "popup-hover",        // Tier 2 — slim styling (see index.css)
       closeButton: false, closeOnClick: false,
-      offset: 8, maxWidth: "300px",
+      offset: 8, maxWidth: "220px",
     });
     const pinnedPopup = new maplibregl.Popup({
       closeButton: true, closeOnClick: false,
       offset: 8, maxWidth: "320px",
     });
 
+    // Fly-to is double-click only; disable the default double-click zoom so it
+    // doesn't fight our handler (must be done before the default fires).
+    map.doubleClickZoom.disable();
+
     let hoveredId = null;
     let pinnedId = null;
-    let hoverTimer = null;
+    let hoverTimer = null;      // Tier 2 popup dwell (900ms)
+    let sidebarTimer = null;    // Tier 1 sidebar debounce (450ms)
     let lastHoveredId = null;
 
     function setHover(id, on) {
@@ -188,15 +226,18 @@ export default function PermitChoroplethMap() {
         setHover(hoveredId, true);
         hoverPopup.remove();
         lastHoveredId = f.id;
-        // Pattern B: update the sidebar hover panel immediately on enter.
-        setHoveredFeatureRef.current(f.properties);
-        // Show only after 300ms dwell — no flash on cursor sweep.
+        // Tier 1 sidebar panel — debounce 450ms (separate from the 900ms popup).
+        clearTimeout(sidebarTimer);
+        sidebarTimer = setTimeout(
+          () => setHoveredFeatureRef.current(f.properties), 450
+        );
+        // Tier 2 popup — show after 900ms dwell, with the selected metric.
         hoverTimer = setTimeout(() => {
           if (hoveredId === f.id) {
             hoverPopup
               .setLngLat(e.lngLat)
               .setHTML(buildPermitChoroplethPopupHtml(
-                f.properties, false, yearRef.current))
+                f.properties, false, yearRef.current, metricRef.current))
               .addTo(map);
           }
         }, 900);
@@ -204,11 +245,13 @@ export default function PermitChoroplethMap() {
     }
 
     function onLeave() {
+      clearTimeout(sidebarTimer);
       clearHover();
-      // Pattern B: clear the sidebar hover panel when the cursor leaves the fill.
+      // Tier 1: clear the sidebar panel when the cursor leaves the fill.
       setHoveredFeatureRef.current(null);
     }
 
+    // Tier 3 — single click opens the full pinned popup. Does NOT fly.
     function onFillClick(e) {
       if (!e.features?.length) return;
       const f = e.features[0];
@@ -219,11 +262,19 @@ export default function PermitChoroplethMap() {
       pinnedPopup
         .setLngLat(e.lngLat)
         .setHTML(buildPermitChoroplethPopupHtml(
-          f.properties, true, yearRef.current))
+          f.properties, true, yearRef.current, metricRef.current))
         .addTo(map);
       pinnedPopup.once("close", () => {
         if (pinnedId !== null) { setPinned(pinnedId, false); pinnedId = null; }
       });
+    }
+
+    // Fly-to — double click only. Does not open or close any popup.
+    function onDblClick(e) {
+      e.preventDefault();
+      if (!e.features?.length) return;
+      const fullFeat = findFeatureById(gjRef.current, e.features[0].id);
+      if (fullFeat) flyToFeature(map, fullFeat);
     }
 
     function onMapClick(e) {
@@ -235,14 +286,17 @@ export default function PermitChoroplethMap() {
     map.on("mousemove", FILL_LAYER_ID, onMove);
     map.on("mouseleave", FILL_LAYER_ID, onLeave);
     map.on("click", FILL_LAYER_ID, onFillClick);
+    map.on("dblclick", FILL_LAYER_ID, onDblClick);
     map.on("click", onMapClick);
 
     return () => {
       map.off("mousemove", FILL_LAYER_ID, onMove);
       map.off("mouseleave", FILL_LAYER_ID, onLeave);
       map.off("click", FILL_LAYER_ID, onFillClick);
+      map.off("dblclick", FILL_LAYER_ID, onDblClick);
       map.off("click", onMapClick);
       clearTimeout(hoverTimer);
+      clearTimeout(sidebarTimer);
       hoverPopup.remove();
       pinnedPopup.remove();
     };

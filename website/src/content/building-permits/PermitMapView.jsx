@@ -65,8 +65,9 @@ function wirePermitPopup(map, onPickRef) {
     anchor: "bottom",
   });
 
-  // Hover popup — lightweight, follows cursor.
+  // Hover popup — lightweight, follows cursor. Tier 2 slim styling via class.
   const hoverPopup = new maplibregl.Popup({
+    className: "popup-hover",
     closeButton: false,
     closeOnClick: false,
     offset: [0, -4],
@@ -91,6 +92,14 @@ function wirePermitPopup(map, onPickRef) {
       .addTo(map);
     // Surface the clicked dot to the page for the sidebar's last-clicked panel.
     onPickRef?.current?.(f.properties);
+  });
+
+  // Fly-to — double click only. Does not open or close any popup.
+  map.on("dblclick", LAYER_ID, (e) => {
+    if (!e.features?.length) return;
+    const f = e.features[0];
+    e.preventDefault();
+    map.flyTo({ center: f.geometry.coordinates, zoom: 15, duration: 900 });
   });
 
   map.on("mousemove", LAYER_ID, (e) => {
@@ -166,6 +175,10 @@ export default function PermitMapView({ className = "", onLoad, onPick }) {
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new maplibregl.ScaleControl({ unit: "metric", maxWidth: 100 }), "bottom-right");
+
+    // Fly-to is bound to double-click (in wirePermitPopup); disable the default
+    // double-click-to-zoom so it doesn't fight our handler.
+    map.doubleClickZoom.disable();
 
     map.on("load", () => {
       map.addSource(SOURCE_ID, {

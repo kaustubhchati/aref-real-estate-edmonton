@@ -1,6 +1,12 @@
 // =============================================================================
 // interactions.js  (Building Permits neighbourhood choropleth)
 //
+// NOTE: currently UNUSED. The live Permit Neighbourhoods map wires its
+// interactions INLINE in PermitChoroplethMap.jsx (source id "pnbhd"); this
+// module's layer ids ("permit-nbhd") are stale and nothing imports it. Kept as
+// a reference and updated to the three-tier scheme for consistency, but the
+// behaviour that ships comes from the inline handler.
+//
 // Section-specific map behaviour for the permit choropleth: hover popup,
 // click-to-pin popup, click-empty-to-clear, and feature-state hover/pin on the
 // fill layer. Mirrors property-assessment/interactions.js but TRIMMED — this
@@ -41,6 +47,9 @@ export function installChoroplethInteractions(map, gj, metric) {
   const pinnedPopup = new maplibregl.Popup({
     closeButton: true, closeOnClick: false, offset: 8, maxWidth: "320px",
   });
+
+  // Fly-to is double-click only; disable the default double-click zoom.
+  map.doubleClickZoom.disable();
 
   // promoteId rewrites every feature.id to "Neighbourhood ID", so feature-state
   // survives source updates. Track ids, not array indices.
@@ -94,12 +103,10 @@ export function installChoroplethInteractions(map, gj, metric) {
     clearHover();
   }
 
+  // Tier 3 — single click opens the full pinned popup. Does NOT fly.
   function onClickFill(e) {
     if (!e.features?.length) return;
     const f = e.features[0];
-    // promoteId puts the property value into f.id, but we still need the
-    // original feature for geometry (fitBounds wants the bbox).
-    const fullFeat = findFeatureById(gj, f.id);
 
     clearHover();
     clearPinned();
@@ -117,7 +124,13 @@ export function installChoroplethInteractions(map, gj, metric) {
         pinnedId = null;
       }
     });
+  }
 
+  // Fly-to — double click only. Does not open or close any popup.
+  function onDblClickFill(e) {
+    e.preventDefault();
+    if (!e.features?.length) return;
+    const fullFeat = findFeatureById(gj, e.features[0].id);
     if (fullFeat) flyToFeature(map, fullFeat);
   }
 
@@ -130,12 +143,14 @@ export function installChoroplethInteractions(map, gj, metric) {
   map.on("mousemove", FILL_LAYER_ID, onMouseMove);
   map.on("mouseleave", FILL_LAYER_ID, onMouseLeave);
   map.on("click", FILL_LAYER_ID, onClickFill);
+  map.on("dblclick", FILL_LAYER_ID, onDblClickFill);
   map.on("click", onMapClick);
 
   function cleanup() {
     map.off("mousemove", FILL_LAYER_ID, onMouseMove);
     map.off("mouseleave", FILL_LAYER_ID, onMouseLeave);
     map.off("click", FILL_LAYER_ID, onClickFill);
+    map.off("dblclick", FILL_LAYER_ID, onDblClickFill);
     map.off("click", onMapClick);
     hoverPopup.remove();
     pinnedPopup.remove();

@@ -279,7 +279,11 @@ function escapeHtml(s) {
 // This lives in the section's style file — not in interactions.js — because
 // the row table + state labels are the section's visual contract. Changing
 // a label or adding a row is a one-file edit here.
-export function buildPopupHtml(p, pinned, year) {
+// `detail` selects the tier:
+//   detail=false → Tier 2 (slim hover): name + district + headline + N props.
+//   detail=true  → Tier 3 (pinned click): name + district + year + state badge
+//                  + every row + copy button + dismiss hint.
+export function buildPopupHtml(p, detail, year) {
   const state = p.polygon_state;
   const meta = STATE_STYLE[state] || { label: state };
 
@@ -289,15 +293,18 @@ export function buildPopupHtml(p, pinned, year) {
   if (p.district) {
     parts.push(`<div class="pop-district">${escapeHtml(p.district)} district</div>`);
   }
-  if (year != null) {
+  // Year label + state badge are Tier 3 only — the slim hover stays terse.
+  if (detail && year != null) {
     parts.push(`<div class="pop-year">${escapeHtml(String(year))} Assessment</div>`);
   }
-  parts.push(`<div class="pop-state ${state}">${escapeHtml(meta.label)}</div>`);
+  if (detail) {
+    parts.push(`<div class="pop-state ${state}">${escapeHtml(meta.label)}</div>`);
+  }
 
   if (state === "aggregated") {
-    // Hover popup (pinned=false) is a slim preview: the headline metric + N
-    // properties only. The pinned (click) popup keeps every detail row.
-    const rows = pinned
+    // Tier 2 (detail=false) is a slim preview: the headline metric + N
+    // properties only. Tier 3 (detail=true) keeps every row.
+    const rows = detail
       ? POPUP_ROWS
       : POPUP_ROWS.filter(([key, , , headline]) => headline || key === "n_properties");
     for (const [key, label, fmt, headline] of rows) {
@@ -329,12 +336,13 @@ export function buildPopupHtml(p, pinned, year) {
     parts.push(`<div class="pop-reason">No assessment data for this boundary. Area may be unregistered, recently annexed, or a planning placeholder.</div>`);
   }
 
-  if (pinned) {
+  if (detail) {
     // Copy-stats button — wired up in interactions.js after the popup mounts
     // (inline onclick in MapLibre popup HTML is unreliable).
     parts.push(`<button class="pop-copy-btn" id="pop-copy-btn">Copy stats</button>`);
+    parts.push(`<div class="pop-pinned-hint">Click map to dismiss</div>`);
   }
-  // Hover popup has no pinned hint — it's a quick preview, not an action prompt.
+  // Tier 2 hover has no hint — it's a quick preview, not an action prompt.
   return parts.join("");
 }
 

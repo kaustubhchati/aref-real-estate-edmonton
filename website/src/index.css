@@ -663,6 +663,14 @@ p  { margin: 0 0 0.75rem; }
   font-size:0.8rem; border-radius:var(--radius-lg);
   min-width:220px; max-width:270px; box-shadow:var(--shadow-lg);
   border:1px solid var(--border-soft); font-family:var(--font-sans); }
+
+/* Tier 2 hover popup — slimmer than the Tier 3 pinned popup. */
+.maplibregl-popup.popup-hover .maplibregl-popup-content {
+  padding: 7px 10px;
+  min-width: 160px;
+  max-width: 220px;
+  font-size: 11.5px;
+}
 .maplibregl-popup-close-button {
   font-size: 0.9rem;
   padding: 0;
