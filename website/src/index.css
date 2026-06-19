@@ -178,8 +178,8 @@ p  { margin: 0 0 0.75rem; }
   padding:0 1.5rem; position:sticky; top:56px; z-index:90;
   box-shadow:var(--shadow-sm); }
 .shell-nav-list { list-style:none; margin:0; padding:0; display:flex;
-  flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;
-  -ms-overflow-style:none; scroll-behavior:smooth;
+  flex-wrap:nowrap; justify-content:space-evenly; overflow-x:auto;
+  scrollbar-width:none; -ms-overflow-style:none; scroll-behavior:smooth;
   -webkit-overflow-scrolling:touch; }
 .shell-nav-list::-webkit-scrollbar { display:none; }
 
