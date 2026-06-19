@@ -1,0 +1,408 @@
+neighbourhood_id,display_name,civic_ward,planning_district,census_state,n_businesses_2025,n_employees_2025,n_businesses_2024,n_employees_2024,yoy_businesses_change,yoy_employees_change,yoy_businesses_pct,yoy_employees_pct
+2010,ABBOTTSFIELD,Métis,North Central,data,33,369,22,315,11,54,50,17.1
+3460,ALBANY,Anirniq,Northwest,data,45,788,NA,NA,NA,NA,NA,NA
+1010,ALBERTA AVENUE,Métis,North Central,data,179,1567,157,1415,22,152,14,10.7
+4010,ALBERTA PARK INDUSTRIAL,Nakota Isga,Jasper Place,data,195,3412,161,3479,34,-67,21.1,-1.9
+6669,ALCES,Sspomitapi,Ellerslie,data,1,24,NA,NA,NA,NA,NA,NA
+4020,ALDERGROVE,Nakota Isga,West Edmonton,data,19,189,13,93,6,96,46.2,103.2
+5458,ALLARD,Ipiihkoohkanipiaohtsi,Southwest,data,14,200,NA,NA,NA,NA,NA,NA
+5010,ALLENDALE,papastew,Scona,data,96,1071,79,946,17,125,21.5,13.2
+5505,AMBLESIDE,pihêsiwin,Southwest,data,221,3744,NA,NA,NA,NA,NA,NA
+4011,ANTHONY HENDAY,Nakota Isga,West Henday,data,5,34,2,24,3,10,150,41.7
+4018,ANTHONY HENDAY BIG LAKE,Nakota Isga,West Henday,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+4016,ANTHONY HENDAY CASTLEDOWNS,Anirniq,Northwest,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+4022,ANTHONY HENDAY CLAREVIEW,Dene,Horse Hill,data,1,155,NA,NA,NA,NA,NA,NA
+4019,ANTHONY HENDAY ENERGY PARK,Dene,Horse Hill,data,2,14,NA,NA,NA,NA,NA,NA
+4021,ANTHONY HENDAY HORSE HILL,Dene,Northeast,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+4017,ANTHONY HENDAY LAKE DISTRICT,tastawiyiniwak,Northeast,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+4015,ANTHONY HENDAY MISTATIM,Anirniq,Northwest,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+4023,ANTHONY HENDAY RAMPART,Anirniq,Northwest,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+4014,ANTHONY HENDAY SOUTH,Ipiihkoohkanipiaohtsi,Whitemud,data,7,152,NA,NA,NA,NA,NA,NA
+4024,ANTHONY HENDAY SOUTH BLACKBURNE,Ipiihkoohkanipiaohtsi,Southwest,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+6665,ANTHONY HENDAY SOUTH EAST,Sspomitapi,Ellerslie,data,2,11,NA,NA,NA,NA,NA,NA
+4012,ANTHONY HENDAY SOUTH WEST,sipiwiyiniwak,West Edmonton,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+4013,ANTHONY HENDAY TERWILLEGAR,pihêsiwin,Whitemud,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+6010,ARGYLL,papastew,Scona,data,2,52,3,22,-1,30,-33.3,136.4
+4030,ARMSTRONG INDUSTRIAL,Nakota Isga,Jasper Place,data,91,3609,81,2229,10,1380,12.3,61.9
+5020,ASPEN GARDENS,papastew,Whitemud,data,1,60,NA,NA,NA,NA,NA,NA
+6445,ASTER,Sspomitapi,Mill Woods and Meadows,data,21,199,NA,NA,NA,NA,NA,NA
+3010,ATHLONE,Anirniq,Northwest,data,23,354,NA,NA,NA,NA,NA,NA
+6020,AVONMORE,Métis,Southeast,data,8,201,7,80,1,121,14.3,151.2
+2020,BALWIN,tastawiyiniwak,Northeast,data,56,811,NA,NA,NA,NA,NA,NA
+2030,BANNERMAN,Dene,Northeast,data,30,768,NA,NA,NA,NA,NA,NA
+3020,BARANOW,Anirniq,Northwest,data,107,1573,NA,NA,NA,NA,NA,NA
+3030,BATURYN,tastawiyiniwak,Northwest,data,18,210,NA,NA,NA,NA,NA,NA
+2040,BEACON HEIGHTS,Métis,North Central,data,75,702,58,714,17,-12,29.3,-1.7
+5030,BEARSPAW,Ipiihkoohkanipiaohtsi,Whitemud,data,3,64,NA,NA,NA,NA,NA,NA
+3040,BEAUMARIS,tastawiyiniwak,Northwest,data,47,526,NA,NA,NA,NA,NA,NA
+5040,BELGRAVIA,papastew,Scona,data,5,80,2,9,3,71,150,788.9
+2050,BELLE RIVE,tastawiyiniwak,Northwest,data,12,249,NA,NA,NA,NA,NA,NA
+2060,BELLEVUE,Métis,North Central,data,11,144,7,67,4,77,57.1,114.9
+4040,BELMEAD,Nakota Isga,West Edmonton,data,55,503,55,580,0,-77,0,-13.3
+2070,BELMONT,Dene,Northeast,data,34,538,NA,NA,NA,NA,NA,NA
+2080,BELVEDERE,Dene,Northeast,data,127,1758,NA,NA,NA,NA,NA,NA
+2090,BERGMAN,Métis,North Central,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+2100,BEVERLY HEIGHTS,Métis,North Central,data,81,700,58,490,23,210,39.7,42.9
+6030,BISSET,Sspomitapi,Mill Woods and Meadows,data,6,153,NA,NA,NA,NA,NA,NA
+5590,BLACKBURNE,Ipiihkoohkanipiaohtsi,Southwest,data,4,63,NA,NA,NA,NA,NA,NA
+5453,BLACKMUD CREEK,Ipiihkoohkanipiaohtsi,Southwest,data,17,421,NA,NA,NA,NA,NA,NA
+5050,BLACKMUD CREEK RAVINE,Ipiihkoohkanipiaohtsi,Whitemud,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+1111,BLATCHFORD AREA,O-day'min,North Central,data,94,6386,85,5913,9,473,10.6,8
+5060,BLUE QUILL,Ipiihkoohkanipiaohtsi,Whitemud,data,43,414,NA,NA,NA,NA,NA,NA
+5070,BLUE QUILL ESTATES,Ipiihkoohkanipiaohtsi,Whitemud,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+4050,BONAVENTURE INDUSTRIAL,Anirniq,Jasper Place,data,256,5127,223,4405,33,722,14.8,16.4
+6040,BONNIE DOON,Métis,Southeast,data,169,1756,145,1426,24,330,16.6,23.1
+1020,BOYLE STREET,O-day'min,Central,data,199,6193,152,5417,47,776,30.9,14.3
+5080,BRANDER GARDENS,pihêsiwin,Whitemud,data,27,418,NA,NA,NA,NA,NA,NA
+4700,BRECKENRIDGE GREENS,Nakota Isga,West Henday,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+2110,BRINTNELL,Dene,Northeast,data,48,526,NA,NA,NA,NA,NA,NA
+4060,BRITANNIA YOUNGSTOWN,Nakota Isga,Jasper Place,data,188,2553,138,1815,50,738,36.2,40.7
+5090,BROOKSIDE,pihêsiwin,Whitemud,data,5,82,NA,NA,NA,NA,NA,NA
+3050,BROWN INDUSTRIAL,Anirniq,Jasper Place,data,8,415,10,380,-2,35,-20,9.2
+5100,BULYEA HEIGHTS,pihêsiwin,Whitemud,data,9,168,NA,NA,NA,NA,NA,NA
+3060,CAERNARVON,Anirniq,Northwest,data,35,447,NA,NA,NA,NA,NA,NA
+3070,CALDER,Anirniq,Northwest,data,52,424,NA,NA,NA,NA,NA,NA
+5110,CALGARY TRAIL NORTH,papastew,Scona,data,352,6211,297,4967,55,1244,18.5,25
+5120,CALGARY TRAIL SOUTH,papastew,Whitemud,data,160,2743,NA,NA,NA,NA,NA,NA
+5457,CALLAGHAN,Ipiihkoohkanipiaohtsi,Southwest,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+4070,CALLINGWOOD NORTH,sipiwiyiniwak,West Edmonton,data,28,467,19,304,9,163,47.4,53.6
+4080,CALLINGWOOD SOUTH,sipiwiyiniwak,West Edmonton,data,122,1407,122,1583,0,-176,0,-11.1
+4466,CAMERON HEIGHTS,sipiwiyiniwak,West Edmonton,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+2120,CANON RIDGE,Dene,Northeast,data,5,54,NA,NA,NA,NA,NA,NA
+4090,CANORA,Nakota Isga,Jasper Place,data,96,977,47,546,49,431,104.3,78.9
+3080,CANOSSA,Anirniq,Northwest,data,1,10,NA,NA,NA,NA,NA,NA
+6061,CAPILANO,Métis,Southeast,data,12,126,9,79,3,47,33.3,59.5
+4100,CARLETON SQUARE INDUSTRIAL,Nakota Isga,Jasper Place,data,58,905,50,790,8,115,16,14.6
+3090,CARLISLE,Anirniq,Northwest,data,16,169,NA,NA,NA,NA,NA,NA
+3470,CARLTON,Anirniq,Northwest,data,3,86,NA,NA,NA,NA,NA,NA
+5130,CARTER CREST,pihêsiwin,Whitemud,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+5466,CASHMAN,Ipiihkoohkanipiaohtsi,Southwest,data,29,925,NA,NA,NA,NA,NA,NA
+2130,CASSELMAN,Dene,Northeast,data,17,112,NA,NA,NA,NA,NA,NA
+5467,CAVANAGH,Ipiihkoohkanipiaohtsi,Southwest,data,7,55,NA,NA,NA,NA,NA,NA
+1030,CENTRAL MCDOUGALL,O-day'min,Central,data,403,4416,313,2686,90,1730,28.8,64.4
+3120,CHAMBERY,tastawiyiniwak,Northwest,data,1,4,NA,NA,NA,NA,NA,NA
+5471,CHAPPELLE,Ipiihkoohkanipiaohtsi,Southwest,data,103,1088,NA,NA,NA,NA,NA,NA
+6661,CHARLESWORTH,Karhiio,Ellerslie,data,52,775,NA,NA,NA,NA,NA,NA
+2145,CLAREVIEW TOWN CENTRE,Dene,Northeast,data,91,2038,NA,NA,NA,NA,NA,NA
+2160,CLOVER BAR AREA,Dene,Northeast,data,87,4921,NA,NA,NA,NA,NA,NA
+6070,CLOVERDALE,Métis,Southeast,data,13,241,9,175,4,66,44.4,37.7
+6090,CORONET ADDITION INDUSTRIAL,Métis,Southeast,data,182,2195,170,2500,12,-305,7.1,-12.2
+6100,CORONET INDUSTRIAL,papastew,Southeast,data,440,8426,420,8436,20,-10,4.8,-0.1
+6110,CPR IRVINE,papastew,Scona,data,97,1313,90,1464,7,-151,7.8,-10.3
+6140,CRAWFORD PLAINS,Sspomitapi,Mill Woods and Meadows,data,17,169,NA,NA,NA,NA,NA,NA
+3140,CRESTWOOD,Nakota Isga,Jasper Place,data,29,353,25,264,4,89,16,33.7
+1070,CROMDALE,Métis,North Central,data,47,627,24,336,23,291,95.8,86.6
+8889,CROSSROADS,Ipiihkoohkanipiaohtsi,Rabbit Hill,data,10,228,NA,NA,NA,NA,NA,NA
+2462,CRYSTALLINA NERA EAST,tastawiyiniwak,Northeast,data,16,169,NA,NA,NA,NA,NA,NA
+2463,CRYSTALLINA NERA WEST,tastawiyiniwak,Northeast,data,4,13,NA,NA,NA,NA,NA,NA
+3150,CUMBERLAND,Anirniq,Northwest,data,31,396,NA,NA,NA,NA,NA,NA
+2611,CY BECKER,Dene,Northeast,data,2,15,NA,NA,NA,NA,NA,NA
+6150,DALY GROVE,Sspomitapi,Mill Woods and Meadows,data,29,223,NA,NA,NA,NA,NA,NA
+6160,DAVIES INDUSTRIAL EAST,Métis,Southeast,data,252,3926,230,4431,22,-505,9.6,-11.4
+6170,DAVIES INDUSTRIAL WEST,Métis,Southeast,data,379,5332,333,5841,46,-509,13.8,-8.7
+4110,DECHENE,sipiwiyiniwak,West Edmonton,data,26,450,21,244,5,206,23.8,84.4
+6663,DECOTEAU,Sspomitapi,Ellerslie,data,3,30,NA,NA,NA,NA,NA,NA
+1080,DELTON,Métis,North Central,data,21,119,14,116,7,3,50,2.6
+2230,DELWOOD,tastawiyiniwak,Northeast,data,11,192,NA,NA,NA,NA,NA,NA
+5463,DESROCHERS AREA,Ipiihkoohkanipiaohtsi,Southwest,data,32,336,NA,NA,NA,NA,NA,NA
+3160,DOMINION INDUSTRIAL,Anirniq,Jasper Place,data,176,4148,174,4653,2,-505,1.1,-10.9
+4120,DONSDALE,sipiwiyiniwak,West Edmonton,data,2,346,1,325,1,21,100,6.5
+3170,DOVERCOURT,Anirniq,Central,data,38,294,14,141,24,153,171.4,108.5
+1090,DOWNTOWN,O-day'min,Central,data,1950,89016,1632,69353,318,19663,19.5,28.4
+5160,DUGGAN,papastew,Whitemud,data,25,229,NA,NA,NA,NA,NA,NA
+3180,DUNLUCE,Anirniq,Northwest,data,33,640,NA,NA,NA,NA,NA,NA
+6180,EASTGATE BUSINESS PARK,Métis,Southeast,data,226,6476,190,4196,36,2280,18.9,54.3
+1100,EASTWOOD,Métis,North Central,data,141,1382,93,900,48,482,51.6,53.6
+2241,EAUX CLAIRES,tastawiyiniwak,Northwest,data,104,1940,NA,NA,NA,NA,NA,NA
+2251,EBBERS,Dene,Northeast,data,8,109,NA,NA,NA,NA,NA,NA
+4462,EDGEMONT,sipiwiyiniwak,West Henday,data,33,374,NA,NA,NA,NA,NA,NA
+4130,EDMISTON INDUSTRIAL,Nakota Isga,Jasper Place,data,93,3328,83,3358,10,-30,12,-0.9
+2681,EDMONTON ENERGY AND TECHNOLOGY PARK,Dene,Horse Hill,data,4,38,NA,NA,NA,NA,NA,NA
+1120,EDMONTON NORTHLANDS,Métis,North Central,data,5,127,2,125,3,2,150,1.6
+6190,EDMONTON RESEARCH AND DEVELOPMENT PARK,Karhiio,Mill Woods and Meadows,data,48,1406,NA,NA,NA,NA,NA,NA
+8887,EDMONTON SOUTH CENTRAL,Ipiihkoohkanipiaohtsi,Rabbit Hill,data,13,64,NA,NA,NA,NA,NA,NA
+8885,EDMONTON SOUTH CENTRAL EAST,Karhiio,Ellerslie,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+8886,EDMONTON SOUTH EAST,Sspomitapi,Ellerslie,data,1,3,NA,NA,NA,NA,NA,NA
+8888,EDMONTON SOUTH WEST,pihêsiwin,Rabbit Hill,data,5,33,NA,NA,NA,NA,NA,NA
+6200,EKOTA,Karhiio,Mill Woods and Meadows,data,2,65,NA,NA,NA,NA,NA,NA
+6211,ELLERSLIE,Karhiio,Ellerslie,data,42,378,NA,NA,NA,NA,NA,NA
+6214,ELLERSLIE INDUSTRIAL,Karhiio,Ellerslie,data,388,6107,NA,NA,NA,NA,NA,NA
+4140,ELMWOOD,sipiwiyiniwak,Jasper Place,data,13,241,4,28,9,213,225,760.7
+1130,ELMWOOD PARK,Métis,North Central,data,12,65,3,11,9,54,300,490.9
+3190,ELSINORE,tastawiyiniwak,Northwest,data,3,13,NA,NA,NA,NA,NA,NA
+5170,EMPIRE PARK,papastew,Scona,data,253,3943,233,3710,20,233,8.6,6.3
+5180,ERMINESKIN,Ipiihkoohkanipiaohtsi,Whitemud,data,81,797,NA,NA,NA,NA,NA,NA
+2260,EVANSDALE,tastawiyiniwak,Northwest,data,41,658,NA,NA,NA,NA,NA,NA
+2270,EVERGREEN,Dene,Horse Hill,data,7,42,NA,NA,NA,NA,NA,NA
+5190,FALCONER HEIGHTS,pihêsiwin,Whitemud,data,66,689,NA,NA,NA,NA,NA,NA
+6230,FOREST HEIGHTS,Métis,Southeast,data,56,589,30,301,26,288,86.7,95.7
+2280,FRASER,Dene,Northeast,data,8,104,NA,NA,NA,NA,NA,NA
+6240,FULTON PLACE,Métis,Southeast,data,7,112,5,56,2,56,40,100
+4150,GAGNON ESTATE INDUSTRIAL,Anirniq,Jasper Place,data,31,1180,29,880,2,300,6.9,34.1
+6250,GAINER INDUSTRIAL,Métis,Southeast,data,60,633,44,544,16,89,36.4,16.4
+4160,GARIEPY,sipiwiyiniwak,West Edmonton,data,3,83,1,12,2,71,200,591.7
+5200,GARNEAU,papastew,Scona,data,274,3664,202,2632,72,1032,35.6,39.2
+4170,GARSIDE INDUSTRIAL,Anirniq,Jasper Place,data,195,3283,160,3077,35,206,21.9,6.7
+6260,GIRARD INDUSTRIAL,Métis,Southeast,data,132,1806,116,2388,16,-582,13.8,-24.4
+4720,GLASTONBURY,sipiwiyiniwak,West Henday,data,54,955,NA,NA,NA,NA,NA,NA
+2290,GLENGARRY,tastawiyiniwak,Northwest,data,121,1806,NA,NA,NA,NA,NA,NA
+3200,GLENORA,Nakota Isga,Central,data,60,1233,52,608,8,625,15.4,102.8
+5578,GLENRIDDING HEIGHTS,pihêsiwin,Southwest,data,16,96,NA,NA,NA,NA,NA,NA
+5579,GLENRIDDING RAVINE,pihêsiwin,Southwest,data,10,145,NA,NA,NA,NA,NA,NA
+4180,GLENWOOD,Nakota Isga,Jasper Place,data,267,2829,230,2242,37,587,16.1,26.2
+6270,GOLD BAR,Métis,Southeast,data,12,186,11,138,1,48,9.1,34.8
+3490,GOODRIDGE CORNERS,Anirniq,Northwest,data,6,1167,NA,NA,NA,NA,NA,NA
+2311,GORMAN,Dene,Northeast,data,61,1472,NA,NA,NA,NA,NA,NA
+5210,GRANDVIEW HEIGHTS,papastew,Scona,data,9,456,5,63,4,393,80,623.8
+4551,GRANVILLE,sipiwiyiniwak,West Henday,data,49,943,NA,NA,NA,NA,NA,NA
+5468,GRAYDON HILL,Ipiihkoohkanipiaohtsi,Southwest,data,1,1,NA,NA,NA,NA,NA,NA
+5220,GREENFIELD,papastew,Whitemud,data,26,375,NA,NA,NA,NA,NA,NA
+6280,GREENVIEW,Karhiio,Mill Woods and Meadows,data,12,135,NA,NA,NA,NA,NA,NA
+3111,GRIESBACH,Anirniq,Northwest,data,73,708,NA,NA,NA,NA,NA,NA
+3210,GROVENOR,Nakota Isga,Jasper Place,data,59,575,54,531,5,44,9.3,8.3
+5610,HADDOW,pihêsiwin,Whitemud,data,14,173,NA,NA,NA,NA,NA,NA
+3220,HAGMANN ESTATE INDUSTRIAL,Anirniq,Northwest,data,111,1314,NA,NA,NA,NA,NA,NA
+2320,HAIRSINE,Dene,Northeast,data,9,73,NA,NA,NA,NA,NA,NA
+4190,HAWIN PARK ESTATE INDUSTRIAL,Nakota Isga,Jasper Place,data,81,2181,70,1121,11,1060,15.7,94.6
+4473,HAWKS RIDGE,Nakota Isga,West Henday,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+5465,HAYS RIDGE AREA,Ipiihkoohkanipiaohtsi,Southwest,data,27,348,NA,NA,NA,NA,NA,NA
+6290,HAZELDEAN,papastew,Scona,data,35,518,31,477,4,41,12.9,8.6
+5230,HENDERSON ESTATES,pihêsiwin,Whitemud,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+5456,HERITAGE VALLEY AREA,Ipiihkoohkanipiaohtsi,Southwest,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+5472,HERITAGE VALLEY TOWN CENTRE,Ipiihkoohkanipiaohtsi,Southwest,data,59,776,NA,NA,NA,NA,NA,NA
+4200,HIGH PARK,Nakota Isga,Jasper Place,data,51,336,42,561,9,-225,21.4,-40.1
+4210,HIGH PARK INDUSTRIAL,Anirniq,Jasper Place,data,85,1544,76,1450,9,94,11.8,6.5
+2330,HIGHLANDS,Métis,North Central,data,63,656,55,605,8,51,14.5,8.4
+6300,HILLVIEW,Karhiio,Mill Woods and Meadows,data,18,277,NA,NA,NA,NA,NA,NA
+5620,HODGSON,pihêsiwin,Whitemud,data,24,273,NA,NA,NA,NA,NA,NA
+2340,HOLLICK-KENYON,Dene,Northeast,data,41,581,NA,NA,NA,NA,NA,NA
+6310,HOLYROOD,Métis,Southeast,data,20,172,11,76,9,96,81.8,126.3
+2350,HOMESTEADER,Dene,Northeast,data,68,796,NA,NA,NA,NA,NA,NA
+3480,HUDSON,Anirniq,Northwest,data,3,72,NA,NA,NA,NA,NA,NA
+3230,HUFF BREMNER ESTATE INDUSTRIAL,Anirniq,Jasper Place,data,320,5110,268,4588,52,522,19.4,11.4
+6320,IDYLWYLDE,Métis,Southeast,data,24,215,17,203,7,12,41.2,5.9
+2360,INDUSTRIAL HEIGHTS,Métis,Northeast,data,66,853,NA,NA,NA,NA,NA,NA
+3240,INGLEWOOD,Anirniq,Central,data,183,1636,65,827,118,809,181.5,97.8
+6330,JACKSON HEIGHTS,Sspomitapi,Mill Woods and Meadows,data,15,172,NA,NA,NA,NA,NA,NA
+4220,JAMIESON PLACE,sipiwiyiniwak,West Edmonton,data,5,75,4,24,1,51,25,212.5
+4230,JASPER PARK,sipiwiyiniwak,Jasper Place,data,84,767,70,693,14,74,20,10.7
+6340,KAMEYOSEK,Karhiio,Mill Woods and Meadows,data,23,582,NA,NA,NA,NA,NA,NA
+5250,KEHEEWIN,Ipiihkoohkanipiaohtsi,Whitemud,data,89,1484,NA,NA,NA,NA,NA,NA
+5573,KENDAL,pihêsiwin,Southwest,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+6350,KENILWORTH,Métis,Southeast,data,82,657,92,1160,-10,-503,-10.9,-43.4
+2380,KENNEDALE INDUSTRIAL,Dene,Northeast,data,158,2834,NA,NA,NA,NA,NA,NA
+3250,KENSINGTON,Anirniq,Northwest,data,49,406,NA,NA,NA,NA,NA,NA
+2390,KERNOHAN,Dene,Northeast,data,12,146,NA,NA,NA,NA,NA,NA
+5574,KESWICK,pihêsiwin,Southwest,data,36,268,NA,NA,NA,NA,NA,NA
+2400,KILDARE,tastawiyiniwak,Northeast,data,133,1395,NA,NA,NA,NA,NA,NA
+2410,KILKENNY,tastawiyiniwak,Northeast,data,31,590,NA,NA,NA,NA,NA,NA
+2420,KILLARNEY,tastawiyiniwak,Northwest,data,104,931,NA,NA,NA,NA,NA,NA
+6360,KING EDWARD PARK,Métis,Southeast,data,100,833,85,885,15,-52,17.6,-5.9
+4477,KINGLET GARDENS,Nakota Isga,West Henday,data,2,17,NA,NA,NA,NA,NA,NA
+6370,KINISKI GARDENS,Sspomitapi,Mill Woods and Meadows,data,12,143,NA,NA,NA,NA,NA,NA
+4475,KINOKAMAU PLAINS AREA,Nakota Isga,Jasper Place,data,83,1952,67,1630,16,322,23.9,19.8
+2430,KIRKNESS,Dene,Northeast,data,6,35,NA,NA,NA,NA,NA,NA
+2440,KLARVATTEN,tastawiyiniwak,Northwest,data,35,262,NA,NA,NA,NA,NA,NA
+4240,LA PERLE,Nakota Isga,West Edmonton,data,27,270,16,131,11,139,68.8,106.1
+2450,LAGO LINDO,tastawiyiniwak,Northwest,data,5,95,NA,NA,NA,NA,NA,NA
+6380,LAMBTON INDUSTRIAL,Métis,Southeast,data,83,1535,69,1037,14,498,20.3,48
+5260,LANSDOWNE,papastew,Scona,data,16,165,6,42,10,123,166.7,292.9
+6390,LARKSPUR,Sspomitapi,Mill Woods and Meadows,data,71,1328,NA,NA,NA,NA,NA,NA
+3260,LAUDERDALE,Anirniq,Northwest,data,82,625,NA,NA,NA,NA,NA,NA
+6444,LAUREL,Sspomitapi,Mill Woods and Meadows,data,4,70,NA,NA,NA,NA,NA,NA
+3270,LAURIER HEIGHTS,sipiwiyiniwak,Jasper Place,data,20,183,12,92,8,91,66.7,98.9
+6400,LEE RIDGE,Karhiio,Mill Woods and Meadows,data,46,764,NA,NA,NA,NA,NA,NA
+5630,LEGER,pihêsiwin,Whitemud,data,27,601,NA,NA,NA,NA,NA,NA
+5270,LENDRUM PLACE,papastew,Scona,data,41,896,35,328,6,568,17.1,173.2
+4260,LEWIS FARMS,Nakota Isga,West Henday,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+4261,LEWIS FARMS BUSINESS EMPLOYMENT,Nakota Isga,West Henday,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+3280,LORELEI,tastawiyiniwak,Northwest,data,35,348,NA,NA,NA,NA,NA,NA
+4270,LYMBURN,sipiwiyiniwak,West Edmonton,data,16,287,9,100,7,187,77.8,187
+4280,LYNNWOOD,sipiwiyiniwak,Jasper Place,data,15,144,11,55,4,89,36.4,161.8
+5452,MACEWAN,Ipiihkoohkanipiaohtsi,Southwest,data,28,400,NA,NA,NA,NA,NA,NA
+5477,MACTAGGART,pihêsiwin,Whitemud,data,39,699,NA,NA,NA,NA,NA,NA
+5476,MAGRATH HEIGHTS,pihêsiwin,Whitemud,data,28,437,NA,NA,NA,NA,NA,NA
+5280,MALMO PLAINS,papastew,Scona,data,7,97,6,27,1,70,16.7,259.3
+6441,MAPLE,Sspomitapi,Mill Woods and Meadows,data,3,137,NA,NA,NA,NA,NA,NA
+6410,MAPLE RIDGE,Sspomitapi,Southeast,data,4,18,3,38,1,-20,33.3,-52.6
+6420,MAPLE RIDGE INDUSTRIAL,Sspomitapi,Southeast,data,35,1419,39,1249,-4,170,-10.3,13.6
+2671,MARQUIS,Dene,Horse Hill,data,2,81,NA,NA,NA,NA,NA,NA
+2500,MATT BERRY,Dene,Northeast,data,15,168,NA,NA,NA,NA,NA,NA
+6667,MATTSON,Karhiio,Ellerslie,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+4290,MAYFIELD,Nakota Isga,Jasper Place,data,35,307,27,198,8,109,29.6,55.1
+2511,MAYLIEWAN,tastawiyiniwak,Northeast,data,18,220,NA,NA,NA,NA,NA,NA
+3290,MCARTHUR INDUSTRIAL,Anirniq,Northwest,data,38,748,NA,NA,NA,NA,NA,NA
+1140,MCCAULEY,O-day'min,Central,data,379,5657,306,4081,73,1576,23.9,38.6
+2522,MCCONACHIE,Dene,Northeast,data,51,583,NA,NA,NA,NA,NA,NA
+6430,MCINTYRE INDUSTRIAL,Karhiio,Southeast,data,468,9771,427,9161,41,610,9.6,6.7
+5290,MCKERNAN,papastew,Scona,data,27,542,24,269,3,273,12.5,101.5
+2530,MCLEOD,Dene,Northeast,data,3,101,NA,NA,NA,NA,NA,NA
+4300,MCNAMARA INDUSTRIAL,Nakota Isga,Jasper Place,data,316,5030,278,4831,38,199,13.7,4.1
+3300,MCQUEEN,Nakota Isga,Jasper Place,data,33,732,16,323,17,409,106.2,126.6
+4310,MEADOWLARK PARK,sipiwiyiniwak,Jasper Place,data,83,1307,86,1226,-3,81,-3.5,6.6
+6668,MELTWATER,Sspomitapi,Ellerslie,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+6450,MENISA,Karhiio,Mill Woods and Meadows,data,13,171,NA,NA,NA,NA,NA,NA
+6460,MEYOKUMIN,Karhiio,Mill Woods and Meadows,data,27,458,NA,NA,NA,NA,NA,NA
+6470,MEYONOHK,Karhiio,Mill Woods and Meadows,data,22,230,NA,NA,NA,NA,NA,NA
+6480,MICHAELS PARK,Karhiio,Mill Woods and Meadows,data,19,232,NA,NA,NA,NA,NA,NA
+6491,MILL CREEK RAVINE NORTH,papastew,Southeast,data,1,3,NA,NA,NA,NA,NA,NA
+6492,MILL CREEK RAVINE SOUTH,papastew,Scona,data,6,81,2,18,4,63,200,350
+6500,MILL WOODS GOLF COURSE,Karhiio,Mill Woods and Meadows,data,2,92,NA,NA,NA,NA,NA,NA
+6510,MILL WOODS PARK,Karhiio,Mill Woods and Meadows,data,7,247,NA,NA,NA,NA,NA,NA
+6520,MILL WOODS TOWN CENTRE,Karhiio,Mill Woods and Meadows,data,162,1971,NA,NA,NA,NA,NA,NA
+2541,MILLER,Dene,Northeast,data,17,296,NA,NA,NA,NA,NA,NA
+6530,MINCHAU,Sspomitapi,Mill Woods and Meadows,data,12,141,NA,NA,NA,NA,NA,NA
+4320,MISTATIM INDUSTRIAL,Anirniq,Jasper Place,data,428,10121,302,6600,126,3521,41.7,53.3
+4330,MITCHELL INDUSTRIAL,Anirniq,Jasper Place,data,107,2142,82,1810,25,332,30.5,18.3
+2550,MONTROSE,Métis,North Central,data,105,1047,65,540,40,507,61.5,93.9
+4340,MORIN INDUSTRIAL,Nakota Isga,Jasper Place,data,112,2035,94,2475,18,-440,19.1,-17.8
+6540,MORRIS INDUSTRIAL,Métis,Southeast,data,95,1350,90,1869,5,-519,5.6,-27.8
+2560,NEWTON,Métis,North Central,data,21,363,10,162,11,201,110,124.1
+3310,NORTH GLENORA,Nakota Isga,Central,data,8,104,2,18,6,86,300,477.8
+2580,NORTHMOUNT,tastawiyiniwak,Northwest,data,50,760,NA,NA,NA,NA,NA,NA
+4350,NORWESTER INDUSTRIAL,Nakota Isga,Jasper Place,data,85,1958,76,1549,9,409,11.8,26.4
+5300,OGILVIE RIDGE,pihêsiwin,Whitemud,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+4360,OLESKIW,sipiwiyiniwak,West Edmonton,data,18,220,17,184,1,36,5.9,19.6
+4380,ORMSBY PLACE,sipiwiyiniwak,West Edmonton,data,6,92,2,5,4,87,200,1740
+6550,OTTEWELL,Métis,Southeast,data,75,1466,63,1113,12,353,19,31.7
+2590,OVERLANDERS,Dene,Northeast,data,10,158,NA,NA,NA,NA,NA,NA
+3320,OXFORD,Anirniq,Northwest,data,3,18,NA,NA,NA,NA,NA,NA
+2600,OZERNA,tastawiyiniwak,Northeast,data,9,86,NA,NA,NA,NA,NA,NA
+5469,PAISLEY,Ipiihkoohkanipiaohtsi,Southwest,data,2,7,NA,NA,NA,NA,NA,NA
+6560,PAPASCHASE INDUSTRIAL,Karhiio,Southeast,data,471,5667,377,6599,94,-932,24.9,-14.1
+5310,PARKALLEN,papastew,Scona,data,44,405,33,273,11,132,33.3,48.4
+1160,PARKDALE,Métis,North Central,data,88,871,71,769,17,102,23.9,13.3
+3330,PARKVIEW,sipiwiyiniwak,Jasper Place,data,9,315,5,79,4,236,80,298.7
+6570,PARSONS INDUSTRIAL,Karhiio,Mill Woods and Meadows,data,483,7492,NA,NA,NA,NA,NA,NA
+4390,PATRICIA HEIGHTS,sipiwiyiniwak,Jasper Place,data,13,163,10,120,3,43,30,35.8
+3340,PEMBINA,Anirniq,Northwest,data,125,1773,NA,NA,NA,NA,NA,NA
+4478,PINTAIL LANDING,Nakota Isga,West Henday,data,2,121,NA,NA,NA,NA,NA,NA
+4400,PLACE LARUE,Nakota Isga,West Edmonton,data,121,3603,103,3316,18,287,17.5,8.7
+5320,PLEASANTVIEW,papastew,Scona,data,106,1145,100,1381,6,-236,6,-17.1
+6580,POLLARD MEADOWS,Sspomitapi,Mill Woods and Meadows,data,5,273,NA,NA,NA,NA,NA,NA
+4710,POTTER GREENS,Nakota Isga,West Henday,data,9,132,NA,NA,NA,NA,NA,NA
+4410,POUNDMAKER INDUSTRIAL,Nakota Isga,Jasper Place,data,21,430,15,304,6,126,40,41.4
+3350,PRINCE CHARLES,Anirniq,Central,data,77,1469,48,773,29,696,60.4,90
+1170,PRINCE RUPERT,O-day'min,Central,data,171,3669,147,2735,24,934,16.3,34.1
+6590,PYLYPOW INDUSTRIAL,Sspomitapi,Southeast,data,322,6807,288,6289,34,518,11.8,8.2
+2692,QUARRY RIDGE,Dene,Horse Hill,data,1,25,NA,NA,NA,NA,NA,NA
+5330,QUEEN ALEXANDRA,papastew,Scona,data,237,2580,146,1780,91,800,62.3,44.9
+1180,QUEEN MARY PARK,O-day'min,Central,data,573,6133,393,4044,180,2089,45.8,51.7
+4420,QUESNELL HEIGHTS,sipiwiyiniwak,Jasper Place,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+3360,RAMPART INDUSTRIAL,Anirniq,Northwest,data,39,1158,NA,NA,NA,NA,NA,NA
+5340,RAMSAY HEIGHTS,pihêsiwin,Whitemud,data,15,159,NA,NA,NA,NA,NA,NA
+3370,RAPPERSWILL,Anirniq,Northwest,data,38,669,NA,NA,NA,NA,NA,NA
+5350,RHATIGAN RIDGE,pihêsiwin,Whitemud,data,13,250,NA,NA,NA,NA,NA,NA
+6600,RICHFIELD,Karhiio,Mill Woods and Meadows,data,7,159,NA,NA,NA,NA,NA,NA
+5451,RICHFORD,Ipiihkoohkanipiaohtsi,Southwest,data,13,123,NA,NA,NA,NA,NA,NA
+5360,RIDEAU PARK,papastew,Whitemud,data,64,906,NA,NA,NA,NA,NA,NA
+4430,RIO TERRACE,sipiwiyiniwak,Jasper Place,data,1,60,NA,NA,NA,NA,NA,NA
+6610,RITCHIE,papastew,Scona,data,272,2378,233,2366,39,12,16.7,0.5
+4467,RIVER VALLEY CAMERON,sipiwiyiniwak,West Edmonton,data,2,111,1,53,1,58,100,109.4
+3380,RIVER VALLEY CAPITOL HILL,Nakota Isga,Jasper Place,data,2,6,1,8,1,-2,100,-25
+5401,RIVER VALLEY FORT EDMONTON,pihêsiwin,Whitemud,data,2,89,NA,NA,NA,NA,NA,NA
+3381,RIVER VALLEY GLENORA,Nakota Isga,Central,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+6620,RIVER VALLEY GOLD BAR,Métis,Southeast,data,1,169,1,173,0,-4,0,-2.3
+2630,RIVER VALLEY HERMITAGE,Dene,Northeast,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+2640,RIVER VALLEY HIGHLANDS,Métis,North Central,data,1,16,1,16,0,0,0,0
+5571,RIVER VALLEY KENDAL,pihêsiwin,Southwest,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+5572,RIVER VALLEY KESWICK,pihêsiwin,Southwest,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+1190,RIVER VALLEY KINNAIRD,Métis,North Central,data,2,21,2,204,0,-183,0,-89.7
+3382,RIVER VALLEY LAURIER,sipiwiyiniwak,Jasper Place,data,3,91,3,132,0,-41,0,-31.1
+4440,RIVER VALLEY LESSARD NORTH,sipiwiyiniwak,Jasper Place,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+5370,RIVER VALLEY MAYFAIR,papastew,Scona,data,2,124,2,110,0,14,0,12.7
+4451,RIVER VALLEY OLESKIW,sipiwiyiniwak,West Edmonton,data,1,120,1,120,0,0,0,0
+6630,RIVER VALLEY RIVERSIDE,Métis,Southeast,data,2,30,2,31,0,-1,0,-3.2
+2650,RIVER VALLEY RUNDLE,Métis,North Central,data,5,64,2,47,3,17,150,36.2
+5380,RIVER VALLEY TERWILLEGAR,pihêsiwin,Whitemud,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+1200,RIVER VALLEY VICTORIA,O-day'min,Central,data,6,322,5,308,1,14,20,4.5
+5390,RIVER VALLEY WALTERDALE,papastew,Scona,data,10,219,10,181,0,38,0,21
+5400,RIVER VALLEY WHITEMUD,papastew,Scona,data,1,30,1,30,0,0,0,0
+5405,RIVER VALLEY WINDERMERE,pihêsiwin,Southwest,data,2,191,NA,NA,NA,NA,NA,NA
+4469,RIVER'S EDGE,sipiwiyiniwak,West Henday,data,1,30,NA,NA,NA,NA,NA,NA
+1210,RIVERDALE,O-day'min,Central,data,18,451,11,310,7,141,63.6,45.5
+4463,RIVERVIEW AREA,sipiwiyiniwak,West Henday,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+6640,ROPER INDUSTRIAL,Karhiio,Southeast,data,318,8979,298,7453,20,1526,6.7,20.5
+6650,ROSEDALE INDUSTRIAL,papastew,Southeast,data,165,2281,160,2900,5,-619,3.1,-21.3
+4750,ROSENTHAL,Nakota Isga,West Henday,data,4,10,NA,NA,NA,NA,NA,NA
+1220,ROSSDALE,O-day'min,Central,data,21,716,15,591,6,125,40,21.2
+3390,ROSSLYN,Anirniq,Northwest,data,45,901,NA,NA,NA,NA,NA,NA
+5430,ROYAL GARDENS,papastew,Whitemud,data,20,380,NA,NA,NA,NA,NA,NA
+2660,RUNDLE HEIGHTS,Métis,North Central,data,25,258,18,108,7,150,38.9,138.9
+2670,RURAL NORTH EAST HORSE HILL,Dene,Horse Hill,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+2690,RURAL NORTH EAST SOUTH STURGEON,Dene,Horse Hill,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+5454,RUTHERFORD,Ipiihkoohkanipiaohtsi,Southwest,data,39,428,NA,NA,NA,NA,NA,NA
+6670,SAKAW,Karhiio,Mill Woods and Meadows,data,13,127,NA,NA,NA,NA,NA,NA
+6680,SATOO,Karhiio,Mill Woods and Meadows,data,8,101,NA,NA,NA,NA,NA,NA
+2700,SCHONSEE,tastawiyiniwak,Northeast,data,18,285,NA,NA,NA,NA,NA,NA
+4487,SECORD,Nakota Isga,West Henday,data,33,463,NA,NA,NA,NA,NA,NA
+4490,SHEFFIELD INDUSTRIAL,Nakota Isga,Jasper Place,data,95,1281,84,1193,11,88,13.1,7.4
+3410,SHERBROOKE,Anirniq,Central,data,22,190,8,79,14,111,175,140.5
+4500,SHERWOOD,sipiwiyiniwak,Jasper Place,data,21,133,11,93,10,40,90.9,43
+2710,SIFTON PARK,Dene,Northeast,data,5,76,NA,NA,NA,NA,NA,NA
+6442,SILVER BERRY,Sspomitapi,Mill Woods and Meadows,data,66,968,NA,NA,NA,NA,NA,NA
+5460,SKYRATTLER,Ipiihkoohkanipiaohtsi,Whitemud,data,23,334,NA,NA,NA,NA,NA,NA
+6195,SOUTH EDMONTON COMMON,Karhiio,Mill Woods and Meadows,data,191,4834,NA,NA,NA,NA,NA,NA
+5642,SOUTH TERWILLEGAR,pihêsiwin,Whitemud,data,8,34,NA,NA,NA,NA,NA,NA
+6690,SOUTHEAST INDUSTRIAL,Sspomitapi,Southeast,data,261,7085,240,5809,21,1276,8.8,22
+1230,SPRUCE AVENUE,O-day'min,North Central,data,258,4570,253,4169,5,401,2,9.6
+4474,STARLING,Nakota Isga,West Henday,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+5470,STEINHAUER,Ipiihkoohkanipiaohtsi,Whitemud,data,40,1114,NA,NA,NA,NA,NA,NA
+4486,STEWART GREENS,Nakota Isga,West Henday,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+4468,STILLWATER,sipiwiyiniwak,West Henday,data,1,2,NA,NA,NA,NA,NA,NA
+4510,STONE INDUSTRIAL,Nakota Isga,Jasper Place,data,336,6880,309,6546,27,334,8.7,5.1
+5480,STRATHCONA,papastew,Scona,data,536,4267,304,3909,232,358,76.3,9.2
+6700,STRATHCONA INDUSTRIAL PARK,Karhiio,Mill Woods and Meadows,data,853,12514,NA,NA,NA,NA,NA,NA
+5151,STRATHCONA JUNCTION,papastew,Scona,data,252,3232,232,3052,20,180,8.6,5.9
+6710,STRATHEARN,Métis,Southeast,data,23,125,18,137,5,-12,27.8,-8.8
+4730,SUDER GREENS,Nakota Isga,West Henday,data,22,350,NA,NA,NA,NA,NA,NA
+4520,SUMMERLEA,sipiwiyiniwak,West Edmonton,data,540,9192,520,8837,20,355,3.8,4
+6213,SUMMERSIDE,Karhiio,Ellerslie,data,197,3590,NA,NA,NA,NA,NA,NA
+4530,SUNWAPTA INDUSTRIAL,Nakota Isga,Jasper Place,data,53,1159,49,804,4,355,8.2,44.2
+5490,SWEET GRASS,Ipiihkoohkanipiaohtsi,Whitemud,data,6,97,NA,NA,NA,NA,NA,NA
+6443,TAMARACK,Sspomitapi,Mill Woods and Meadows,data,106,1433,NA,NA,NA,NA,NA,NA
+6720,TAWA,Karhiio,Mill Woods and Meadows,data,96,5553,NA,NA,NA,NA,NA,NA
+4540,TERRA LOSA,Nakota Isga,West Edmonton,data,116,1762,108,1687,8,75,7.4,4.4
+6730,TERRACE HEIGHTS,Métis,Southeast,data,104,732,87,635,17,97,19.5,15.3
+5640,TERWILLEGAR TOWNE,pihêsiwin,Whitemud,data,43,543,NA,NA,NA,NA,NA,NA
+4461,THE HAMPTONS,sipiwiyiniwak,West Henday,data,56,535,NA,NA,NA,NA,NA,NA
+6216,THE ORCHARDS AT ELLERSLIE,Karhiio,Ellerslie,data,22,358,NA,NA,NA,NA,NA,NA
+4464,THE UPLANDS,sipiwiyiniwak,West Henday,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+4560,THORNCLIFF,sipiwiyiniwak,West Edmonton,data,23,233,18,270,5,-37,27.8,-13.7
+6750,TIPASKAN,Karhiio,Mill Woods and Meadows,data,16,241,NA,NA,NA,NA,NA,NA
+4471,TRUMPETER AREA,Nakota Isga,West Henday,data,5,94,NA,NA,NA,NA,NA,NA
+6760,TWEDDLE PLACE,Karhiio,Mill Woods and Meadows,data,8,210,NA,NA,NA,NA,NA,NA
+5511,TWIN BROOKS,Ipiihkoohkanipiaohtsi,Whitemud,data,4,100,NA,NA,NA,NA,NA,NA
+5520,UNIVERSITY OF ALBERTA,papastew,Scona,data,132,23828,98,1926,34,21902,34.7,1137.2
+5530,UNIVERSITY OF ALBERTA FARM,papastew,Scona,data,20,2820,18,2261,2,559,11.1,24.7
+1240,VIRGINIA PARK,Métis,North Central,data,6,390,3,29,3,361,100,1244.8
+6662,WALKER,Karhiio,Ellerslie,data,78,1131,NA,NA,NA,NA,NA,NA
+4740,WEBBER GREENS,Nakota Isga,West Henday,data,21,518,NA,NA,NA,NA,NA,NA
+4570,WEDGEWOOD HEIGHTS,sipiwiyiniwak,West Edmonton,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+6770,WEINLOS,Sspomitapi,Mill Woods and Meadows,data,13,151,NA,NA,NA,NA,NA,NA
+6780,WEIR INDUSTRIAL,Métis,Southeast,data,271,5241,239,5132,32,109,13.4,2.1
+3430,WELLINGTON,Anirniq,Northwest,data,17,141,NA,NA,NA,NA,NA,NA
+4580,WEST JASPER PLACE,Nakota Isga,Jasper Place,data,146,1641,114,1623,32,18,28.1,1.1
+4590,WEST MEADOWLARK PARK,sipiwiyiniwak,Jasper Place,data,19,3786,8,177,11,3609,137.5,2039
+4600,WEST SHEFFIELD INDUSTRIAL,Nakota Isga,Jasper Place,data,287,2907,248,3282,39,-375,15.7,-11.4
+5540,WESTBROOK ESTATES,papastew,Whitemud,data,21,435,NA,NA,NA,NA,NA,NA
+3440,WESTMOUNT,O-day'min,Central,data,502,6852,426,5986,76,866,17.8,14.5
+4610,WESTRIDGE,sipiwiyiniwak,West Edmonton,data,1,20,1,20,0,0,0,0
+4620,WESTVIEW VILLAGE,Nakota Isga,West Henday,data,8,81,NA,NA,NA,NA,NA,NA
+1250,WESTWOOD,O-day'min,North Central,data,122,854,88,515,34,339,38.6,65.8
+4630,WHITE INDUSTRIAL,Nakota Isga,Jasper Place,data,115,3911,103,2556,12,1355,11.7,53
+5550,WHITEMUD CREEK RAVINE NORTH,papastew,Scona,data,1,22,NA,NA,NA,NA,NA,NA
+5560,WHITEMUD CREEK RAVINE SOUTH,papastew,Whitemud,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+5565,WHITEMUD CREEK RAVINE TWIN BROOKS,Ipiihkoohkanipiaohtsi,Whitemud,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+6790,WILD ROSE,Sspomitapi,Mill Woods and Meadows,data,18,224,NA,NA,NA,NA,NA,NA
+4640,WILSON INDUSTRIAL,Nakota Isga,Jasper Place,data,422,5504,363,5595,59,-91,16.3,-1.6
+5570,WINDERMERE,pihêsiwin,Southwest,data,139,1697,NA,NA,NA,NA,NA,NA
+5580,WINDSOR PARK,papastew,Scona,data,10,138,7,66,3,72,42.9,109.1
+4650,WINTERBURN INDUSTRIAL AREA EAST,Nakota Isga,West Henday,data,149,4261,NA,NA,NA,NA,NA,NA
+4670,WINTERBURN INDUSTRIAL AREA WEST,Nakota Isga,West Henday,no_data,NA,NA,NA,NA,NA,NA,NA,NA
+3450,WOODCROFT,Anirniq,Central,data,57,1372,42,860,15,512,35.7,59.5
+1151,WÎHKWÊNTÔWIN,O-day'min,Central,data,896,14342,718,8969,178,5373,24.8,59.9
+1270,YELLOWHEAD CORRIDOR EAST,Métis,North Central,data,166,2235,155,2178,11,57,7.1,2.6
+1280,YELLOWHEAD CORRIDOR WEST,Anirniq,North Central,data,1,14,NA,NA,NA,NA,NA,NA
+2720,YORK,Dene,Northeast,data,56,946,NA,NA,NA,NA,NA,NA
+4660,YOUNGSTOWN INDUSTRIAL,Nakota Isga,Jasper Place,data,131,3123,122,2095,9,1028,7.4,49.1
