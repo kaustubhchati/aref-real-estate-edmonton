@@ -299,7 +299,7 @@ p  { margin: 0 0 0.75rem; }
   top: 0;
   left: 0;
   bottom: 0;
-  width: 280px;
+  width: 300px;
   z-index: 10;
   background: rgba(250, 250, 248, 0.95);
   border-right: 0.5px solid rgba(0, 0, 0, 0.12);
@@ -315,11 +315,11 @@ p  { margin: 0 0 0.75rem; }
 }
 
 /* Fixed-width content holder: keeps the sidebar content at a stable width so the
-   scrollbar-gutter reservation can't reflow it. 248px = 280px sidebar − 32px
+   scrollbar-gutter reservation can't reflow it. 268px = 300px sidebar − 32px
    horizontal padding (16px each side). flex-shrink:0 guards the width if a future
    .sb ever becomes a flex container. */
 .sb-inner {
-  width: 248px;
+  width: 268px;
   flex-shrink: 0;
 }
 
