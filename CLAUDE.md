@@ -1,11 +1,12 @@
 # CLAUDE.md
 
-> **Version: v1.0 — authoritative. Supersedes all prior versions (v0.1–v0.3).**
+> **Version: v1.1 — authoritative. Supersedes all prior versions (v0.1–v1.0).**
 > This is the single source of project context for every Claude Code session — read it first.
 > If any other note, comment, or older doc frames *the website* as an "agent-driven platform,"
 > that framing is **retired** — see §1.
 > Owner: KC (Research Assistant, UAlberta). Verifier: Olivia. Supervisor: Prof. Haifang Huang.
-> Last updated: 2026-05-21.
+> Last updated: 2026-06-18. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
+> current open work tracked in **PHASE2_STATUS.md**.
 
 ---
 
@@ -78,11 +79,11 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
 │   ├─ _shared/                  #   used by EVERY section: API fetch helper, neighbourhood
 │   │                            #   shapefile + join, tippecanoe→PMTiles step, theme,
 │   │                            #   validation template
-│   ├─ property-assessment/      #   one folder per section (the only one built today)
+│   ├─ property-assessment/      #   BUILT — Layer 1a + 2, historical backfill, manifest
 │   │   ├─ scripts/              #     01_load … 09_build
 │   │   ├─ data/                 #     raw/  processed/  validation/  reference/
 │   │   └─ output/               #     this section's products: GeoJSON / PMTiles / CSVs
-│   ├─ building-permits/         #   (added when built — copy the pattern)
+│   ├─ building-permits/         #   BUILT — point PMTiles (R2) + neighbourhood aggregates
 │   ├─ crime/                    #   (added when built)
 │   └─ …
 │
@@ -117,8 +118,9 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
 - Backend → frontend handoff is one copy: a section's `output/` → `website/public/data/`.
 - Restricted/confidential inputs live **only** in a section's `data/` (`raw/` or `validation/`)
   and are **gitignored** — never committed, never deployed.
-- **Fit note:** only create folders for sections that exist. Today: `property-assessment` +
-  `_shared`. Copy the pattern per new section — no empty stubs.
+- **Fit note:** only create folders for sections that exist. Built today: `property-assessment`,
+  `building-permits`, plus the shared boundary helpers. Copy the pattern per new section — no empty
+  stubs. (Note: the shared dir on disk is `pipeline/shared/`, not `_shared/` — see §10.)
 
 ---
 
@@ -194,6 +196,12 @@ Units `map`, Construction & Improvement `map` · Real Estate Market Activity →
 `tables` · Download `page` · Research Competition `page` · About Us `page` · Feedback `page`.
 Footer (funder line, data partners, territorial acknowledgment, logo, copyright) — all from `siteConfig`.
 
+**Built / live (2026-06):** Property Assessment `map` (5-metric choropleth), Construction &
+Improvement `map` (Building Permits point map), plus an **added** Permit Neighbourhoods `map`
+(neighbourhood choropleth, under Building Activity — our addition, not on the live source site),
+and the Download `page` (serves 3 cleaned CSVs from `public/downloads/`, `siteConfig.downloads`).
+Everything else remains a placeholder.
+
 **Legibility standard — VERY IMPORTANT.** This code is maintained by people learning web dev
 (Olivia) and inherited by future RAs. **Legibility beats cleverness, always.**
 - The bar: *as sophisticated as the least-experienced maintainer can follow, and no more.*
@@ -214,8 +222,9 @@ Edmonton Open Data → (quarterly, on laptop) pipeline/<section>/ fetch→clean�
   → copied to website/public/data/<section>/ → Vite build → website/dist/ → git push → host
 ```
 The Edmonton portal is touched **only at refresh time** on the laptop, never on a visit.
-**Fit note:** the neighbourhood choropleth is 402 polygons — load it as plain GeoJSON. Reserve
-PMTiles for high-volume layers (parcel-level properties, permit points) where it earns its keep.
+**Fit note:** the neighbourhood choropleth is 407 polygons (City of Edmonton Neighbourhoods CSV
+65fr-66s6, adopted as the boundary source — §10) — load it as plain GeoJSON. Reserve PMTiles for
+high-volume layers (parcel-level properties, permit points) where it earns its keep.
 
 ---
 
@@ -235,6 +244,13 @@ PMTiles for high-volume layers (parcel-level properties, permit points) where it
 ---
 
 ## 8. First milestone — the live clone
+
+> **✅ ACHIEVED (2026-06).** The live clone shipped and went well beyond one map: the
+> Property Assessment choropleth (5 metrics, per-metric palettes, gradient legend, full
+> popup), the Building Permits point map, and an added Permit Neighbourhoods choropleth —
+> all on the shared shell + custom basemap, deployed to Cloudflare Pages. Final Phase-1
+> frontend state is in **PHASE1_STATUS.md §11–§12**. The original step list is kept below
+> for the historical record.
 
 Goal: a navigable shell with **one** working map, committed and deployed.
 
@@ -282,13 +298,14 @@ Result: the **live clone** — shell + one real map — the proof the frame work
 
 ## 10. `[OPEN]`
 
-| `[OPEN]` | Resolve by |
-|---|---|
-| Reconcile the colour-scale source reference (live page cites `PHASE1_STATUS.md §5`; confirm) | Before locking the React map |
-| Calgary section: mirror Edmonton pipeline or use the RE-prefix filter? | Calgary work start |
-| Identify canonical 2026 boundary shapefile (UAlberta Library data services) | Parallel track |
-| R3b: optional catch for ~104 "building and land" manufactured-home FNs | Before R4, probably unnecessary |
-| Scoreboard schema columns (`dataset`, `city`, `layer`, …) for multi-section scoring | Before second section's rules |
+| `[OPEN]` | Resolve by | Status |
+|---|---|---|
+| Reconcile the colour-scale source reference (live page cites `PHASE1_STATUS.md §5`; confirm) | Before locking the React map | ✅ **Resolved** — per-year manifest scales + per-metric palettes locked (PHASE1 §12) |
+| Calgary section: mirror Edmonton pipeline or use the RE-prefix filter? | Calgary work start | Open |
+| Identify canonical 2026 boundary shapefile (UAlberta Library data services) | Parallel track | ✅ **Resolved** — City of Edmonton Neighbourhoods CSV (`65fr-66s6`, 407 rows, WKT/WGS84) adopted as the boundary source; 08/08b read `read_csv` + `st_as_sf` |
+| R3b: optional catch for ~104 "building and land" manufactured-home FNs | Before R4, probably unnecessary | ↗ Carried to Phase 2 (low priority) |
+| Scoreboard schema columns (`dataset`, `city`, `layer`, …) for multi-section scoring | Before second section's rules | Open |
+| Shared pipeline dir is `pipeline/shared/` on disk, but §3 prose/diagram say `_shared/` | Doc cleanup | Open — reconcile name (rename dir or fix §3) |
 
 ---
 
@@ -312,6 +329,12 @@ When in doubt, load §2 (locked architecture) and §9 (negative rules) — the l
 Revise when: a locked decision changes (§2), a new section is wired (§3), a new rule is validated
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
+- **v1.1 (2026-06-18)** — Phase 1 closed. Marked §8 first-milestone ✅ achieved (Property
+  Assessment + Building Permits point map + added Permit Neighbourhoods choropleth + Download
+  page, all live on Cloudflare Pages). §3: building-permits now built. §6: boundary 402 → 407
+  (City of Edmonton Neighbourhoods `65fr-66s6`); added a "built / live" nav note. §10: resolved
+  the colour-scale and boundary-shapefile `[OPEN]`s, carried R3b to Phase 2, logged the
+  `shared/` vs `_shared/` naming discrepancy. Added PHASE2_STATUS.md as the live-status doc.
 - **v1.0 (2026-05-21)** — Consolidated authority. Corrected framing: the website is a free-tier
   static replication, NOT an agentic platform (agentic platform reclassified as parked future).
   Added website build spec (React/Vite/PMTiles, shell/content, `siteConfig`, legibility standard),
