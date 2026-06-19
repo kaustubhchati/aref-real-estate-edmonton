@@ -97,6 +97,7 @@ export const siteConfig = {
     { label: "Activity", kind: "group", children: [
       { label: "Dwelling Units",             kind: "map", to: "/activity/dwelling-units" },
       { label: "Construction & Improvement", kind: "map", to: "/activity/construction-improvement" },
+      { label: "Permit Neighbourhoods",      kind: "map", to: "/activity/permit-neighbourhoods" },
       { label: "Land Transfers",             kind: "map", to: "/activity/land-transfers" },
     ]},
 

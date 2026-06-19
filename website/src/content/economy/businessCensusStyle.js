@@ -61,10 +61,12 @@ export const METRICS = [
   { key: "n_employees_2025",  label: "Employees (2025)",  fmt: fmtInt },
 ];
 
-// ---- Colour ramp — OrRd (light → dark red-orange) ---------------------
-// Both metrics use the same OrRd ramp; values are heavily right-skewed
-// (businesses max ~1950, employees max ~89016) so the stop VALUES come
-// from quantiles, not the colours.
+// ---- Colour ramp — cream → Ferrari red (shared $-value family) --------
+// Matches property-assessment's RAMP_VALUE so $-and-count choropleths read
+// the same across the site: warm cream → peach → orange → red-orange →
+// Ferrari red. Both metrics use this same ramp; values are heavily
+// right-skewed (businesses max ~1950, employees max ~89016) so the stop
+// VALUES come from quantiles, not the colours.
 //
 // label is "" on every stop on purpose: these are quantile descriptors
 // (min/Q25/…), not meaningful category names, and the shared Legend would
@@ -72,11 +74,11 @@ export const METRICS = [
 // numeric stop value. Empty label → Legend renders only the formatted
 // number. `key` still drives the buildStops scale lookup.
 const RAMP_ORRD = [
-  { key: "min",    c: "#fef0d9", label: "" },
-  { key: "q25",    c: "#fdcc8a", label: "" },
-  { key: "median", c: "#fc8d59", label: "" },
-  { key: "q75",    c: "#e34a33", label: "" },
-  { key: "max",    c: "#b30000", label: "" },
+  { key: "min",    c: "#f5f0e8", label: "" },
+  { key: "q25",    c: "#f5c4a0", label: "" },
+  { key: "median", c: "#f07840", label: "" },
+  { key: "q75",    c: "#e03818", label: "" },
+  { key: "max",    c: "#cc0000", label: "" },
 ];
 
 const METRIC_RAMP = {
