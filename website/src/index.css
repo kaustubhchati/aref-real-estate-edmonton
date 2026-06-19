@@ -272,6 +272,7 @@ p  { margin: 0 0 0.75rem; }
   max-width: none;
   flex: 1;
   display: flex;
+  position: relative;  /* anchor for the absolute .sb overlay */
   margin: 0;
   min-height: 0;       /* let flex children shrink instead of overflowing */
   border-top: 1px solid var(--border);
@@ -281,10 +282,19 @@ p  { margin: 0 0 0.75rem; }
 
 /* ----- Sidebar ----- */
 
+/* Apple-style fixed overlay: floats over the left edge of the map (which now
+   fills the full .content-map width underneath). Absolutely positioned, full
+   height, frosted light background, hairline right border, no shadow. Restored
+   to in-flow stacking on mobile (media query below). */
 .sb {
-  flex: 0 0 300px;
-  background: #fafaf8;
-  border-right: 1px solid var(--border);
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  z-index: 10;
+  background: rgba(250, 250, 248, 0.92);
+  border-right: 0.5px solid rgba(0, 0, 0, 0.10);
   overflow-y: auto;
   /* Reserve the vertical scrollbar's space whether or not it's showing, so the
      content width never jumps when it appears/disappears. */
@@ -297,11 +307,11 @@ p  { margin: 0 0 0.75rem; }
 }
 
 /* Fixed-width content holder: keeps the sidebar content at a stable width so the
-   scrollbar-gutter reservation can't reflow it. 268px = 300px sidebar − 32px
+   scrollbar-gutter reservation can't reflow it. 248px = 280px sidebar − 32px
    horizontal padding (16px each side). flex-shrink:0 guards the width if a future
    .sb ever becomes a flex container. */
 .sb-inner {
-  width: 268px;
+  width: 248px;
   flex-shrink: 0;
 }
 
@@ -576,6 +586,9 @@ p  { margin: 0 0 0.75rem; }
 /* ---- Map popups ---------------------------------------------------------- */
 /* Targets MapLibre's default popup container; classnames inside the popup
    body are emitted by buildPopupHtml() in choroplethStyle.js. */
+/* Keep popups above the absolute sidebar overlay (.sb is z-index:10) so one
+   opening near the left edge of the map is never hidden behind it. */
+.maplibregl-popup { z-index: 20; }
 .maplibregl-popup-content { padding:0.75rem 0.875rem;
   font-size:0.8rem; border-radius:var(--radius-lg);
   min-width:220px; max-width:270px; box-shadow:var(--shadow-lg);
@@ -801,9 +814,10 @@ p  { margin: 0 0 0.75rem; }
   .shell-header-separator, .shell-header-org { display:none; }
   .shell-nav { top:50px; }
   .content-map { flex-direction:column; }
-  /* Mobile is a column: the sidebar stacks above the map at a capped height. */
-  .sb { flex:0 0 auto; width:100%; max-height:45svh;
-    border-right:none; border-bottom:1px solid var(--border-soft); }
+  /* Mobile is a column: restore the sidebar to in-flow so it stacks above the
+     map at a capped height (overrides the desktop absolute overlay). */
+  .sb { position:relative; flex:0 0 auto; width:100%; max-height:45svh;
+    border-right:none; border-bottom:0.5px solid rgba(0,0,0,0.10); }
   .canvas-wrap { min-height:55svh; }
   .shell-footer-grid { grid-template-columns:1fr; gap:1.25rem; }
 }

@@ -24,7 +24,7 @@ export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 
 export const MAP_VIEW = {
   center: [-113.4938, 53.5461],
-  zoom: 9.6,
+  zoom: 10.2,
   minZoom: 7,
   maxZoom: 18,
 };

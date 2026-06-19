@@ -20,7 +20,7 @@ import { fmtCurrency, fmtNumber, fmtPct, fmtYear, fmtArea } from "../../utils/fo
 // which the page resolves from the (city, year) controls.)
 export const MAP_VIEW = {
   center: [-113.4938, 53.5461],
-  zoom: 9.6,
+  zoom: 10.2,
   minZoom: 7,
   maxZoom: 17,
 };
