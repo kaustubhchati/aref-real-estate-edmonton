@@ -88,42 +88,39 @@ export const siteConfig = {
   nav: [
     { label: "Home", kind: "page", to: "/" },
 
-    { label: "Data Collection", kind: "group", children: [
-      { label: "Neighbourhood Profile", kind: "map", to: "/data-collection/neighbourhood-profile" },
+    { label: "Properties & Land", kind: "group", children: [
+      { label: "Properties",          kind: "map",    to: "/properties/properties" },
+      { label: "Property Assessment", kind: "map",    to: "/properties/property-assessment" },
+      { label: "Zoning",              kind: "map",    to: "/properties/zoning" },
     ]},
 
-    { label: "Properties & Property Assessment", kind: "group", children: [
-      { label: "Properties",          kind: "map", to: "/properties/properties" },
-      { label: "Property Assessment", kind: "map", to: "/properties/property-assessment" },
-    ]},
-
-    { label: "Building Activity", kind: "group", children: [
-      { label: "Dwelling Units",             kind: "map", to: "/building/dwelling-units" },
-      { label: "Construction & Improvement", kind: "map", to: "/building/construction-improvement" },
-      { label: "Permit Neighbourhoods",      kind: "map", to: "/building/permit-neighbourhoods" },
-    ]},
-
-    { label: "Real Estate Market Activity", kind: "group", children: [
-      { label: "Land Transfers", kind: "map", to: "/real-estate/land-transfers" },
+    { label: "Activity", kind: "group", children: [
+      { label: "Dwelling Units",             kind: "map", to: "/activity/dwelling-units" },
+      { label: "Construction & Improvement", kind: "map", to: "/activity/construction-improvement" },
+      { label: "Land Transfers",             kind: "map", to: "/activity/land-transfers" },
     ]},
 
     { label: "Amenities", kind: "group", children: [
-      { label: "Air Quality",           kind: "map", to: "/amenities/air-quality" },
-      { label: "Community Services",    kind: "map", to: "/amenities/community-services" },
-      { label: "Crime",                 kind: "map", to: "/amenities/crime" },
       { label: "Public School",         kind: "map", to: "/amenities/public-school" },
       { label: "Public Transportation", kind: "map", to: "/amenities/public-transportation" },
+      { label: "Parks",                 kind: "map", to: "/amenities/parks" },
+      { label: "Playgrounds",           kind: "map", to: "/amenities/playgrounds" },
+      { label: "Recreation Facilities", kind: "map", to: "/amenities/recreation-facilities" },
+      { label: "Bike Routes",           kind: "map", to: "/amenities/bike-routes" },
+      { label: "EV Charging",           kind: "map", to: "/amenities/ev-charging" },
+      { label: "Vegetation",            kind: "map", to: "/amenities/vegetation" },
     ]},
 
-    { label: "Businesses", kind: "group", children: [
-      { label: "Business Licences", kind: "map", to: "/businesses/business-licences" },
-      { label: "Business Counts",   kind: "map", to: "/businesses/business-counts" },
+    { label: "Economy", kind: "group", children: [
+      { label: "Business Counts",   kind: "map",    to: "/economy/business-counts" },
+      { label: "Business Licences", kind: "map",    to: "/economy/business-licences" },
+      { label: "Salary Ranges",     kind: "tables", to: "/economy/salary-ranges" },
     ]},
 
     { label: "Neighbourhood Report Card", kind: "tables", to: "/report-card" },
-    { label: "Download",                  kind: "page",   to: "/download" },
-    { label: "Research Competition",      kind: "page",   to: "/research-competition" },
-    { label: "About Us",                  kind: "page",   to: "/about" },
-    { label: "Feedback",                  kind: "page",   to: "/feedback" },
+    { label: "Download",             kind: "page", to: "/download" },
+    { label: "Research Competition", kind: "page", to: "/research-competition" },
+    { label: "About Us",             kind: "page", to: "/about" },
+    { label: "Feedback",             kind: "page", to: "/feedback" },
   ],
 };

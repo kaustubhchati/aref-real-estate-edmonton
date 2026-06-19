@@ -28,6 +28,7 @@ import Placeholder from "./content/Placeholder.jsx";
 import PropertyAssessmentMap from "./content/property-assessment/PropertyAssessmentMap.jsx";
 import BuildingPermitsMap from "./content/building-permits/BuildingPermitsMap.jsx";
 import PermitChoroplethMap from "./content/building-permits/PermitChoroplethMap.jsx";
+import BusinessCensusMap from "./content/economy/BusinessCensusMap.jsx";
 import ReportCard from "./content/report-card/ReportCard.jsx";
 
 import "./index.css";
@@ -45,20 +46,24 @@ createRoot(document.getElementById("root")).render(
           <Route path="/research-competition"  element={<ResearchCompetition />} />
 
           {/* Map routes — placeholders until each section is built */}
-          <Route path="/data-collection/neighbourhood-profile"  element={<Placeholder title="Neighbourhood Profile"      kind="map" />} />
           <Route path="/properties/properties"                  element={<Placeholder title="Properties"                 kind="map" />} />
           <Route path="/properties/property-assessment"         element={<PropertyAssessmentMap />} />
-          <Route path="/building/dwelling-units"                element={<Placeholder title="Dwelling Units"             kind="map" />} />
-          <Route path="/building/construction-improvement"      element={<BuildingPermitsMap />} />
-          <Route path="/building/permit-neighbourhoods"         element={<PermitChoroplethMap />} />
-          <Route path="/real-estate/land-transfers"             element={<Placeholder title="Land Transfers"             kind="map" />} />
-          <Route path="/amenities/air-quality"                  element={<Placeholder title="Air Quality"                kind="map" />} />
-          <Route path="/amenities/community-services"           element={<Placeholder title="Community Services"         kind="map" />} />
-          <Route path="/amenities/crime"                        element={<Placeholder title="Crime"                      kind="map" />} />
+          <Route path="/properties/zoning"                      element={<Placeholder title="Zoning"                     kind="map" />} />
+          <Route path="/activity/dwelling-units"                element={<Placeholder title="Dwelling Units"             kind="map" />} />
+          <Route path="/activity/construction-improvement"      element={<BuildingPermitsMap />} />
+          <Route path="/activity/permit-neighbourhoods"         element={<PermitChoroplethMap />} />
+          <Route path="/activity/land-transfers"                element={<Placeholder title="Land Transfers"             kind="map" />} />
           <Route path="/amenities/public-school"                element={<Placeholder title="Public School"              kind="map" />} />
           <Route path="/amenities/public-transportation"        element={<Placeholder title="Public Transportation"      kind="map" />} />
-          <Route path="/businesses/business-licences"           element={<Placeholder title="Business Licences"          kind="map" />} />
-          <Route path="/businesses/business-counts"             element={<Placeholder title="Business Counts"            kind="map" />} />
+          <Route path="/amenities/parks"                        element={<Placeholder title="Parks"                      kind="map" />} />
+          <Route path="/amenities/playgrounds"                  element={<Placeholder title="Playgrounds"                kind="map" />} />
+          <Route path="/amenities/recreation-facilities"        element={<Placeholder title="Recreation Facilities"      kind="map" />} />
+          <Route path="/amenities/bike-routes"                  element={<Placeholder title="Bike Routes"                kind="map" />} />
+          <Route path="/amenities/ev-charging"                  element={<Placeholder title="EV Charging"                kind="map" />} />
+          <Route path="/amenities/vegetation"                   element={<Placeholder title="Vegetation"                 kind="map" />} />
+          <Route path="/economy/business-counts"                element={<BusinessCensusMap />} />
+          <Route path="/economy/business-licences"              element={<Placeholder title="Business Licences"          kind="map" />} />
+          <Route path="/economy/salary-ranges"                  element={<Placeholder title="Salary Ranges"              kind="tables" />} />
 
           {/* Report Card — Edmonton table; Calgary will join when its pipeline lands. */}
           <Route path="/report-card" element={<ReportCard />} />
