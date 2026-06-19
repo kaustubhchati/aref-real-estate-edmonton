@@ -210,7 +210,7 @@ export default function PermitChoroplethMap() {
       const f = e.features[0];
 
       // Suppress hover popup when it would just duplicate the pinned popup.
-      if (pinnedId !== null && pinnedId === f.id) {
+      if (pinnedId !== null) {
         hoverPopup.remove();
         clearTimeout(hoverTimer);
         return;
@@ -229,7 +229,7 @@ export default function PermitChoroplethMap() {
         // Tier 1 sidebar panel — debounce 450ms (separate from the 900ms popup).
         clearTimeout(sidebarTimer);
         sidebarTimer = setTimeout(
-          () => setHoveredFeatureRef.current(f.properties), 450
+          () => setHoveredFeatureRef.current(f.properties), 200
         );
         // Tier 2 popup — show after 900ms dwell, with the selected metric.
         hoverTimer = setTimeout(() => {

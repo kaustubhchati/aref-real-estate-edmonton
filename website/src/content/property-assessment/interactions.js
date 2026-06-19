@@ -119,7 +119,7 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
 
     // Always update popup position smoothly on every move.
     // Only update HTML (expensive DOM rebuild) when feature changes.
-    if (pinnedId !== null && pinnedId === f.id) {
+    if (pinnedId !== null) {
       hoverPopup.remove();
       clearTimeout(hoverTimer);
       return;
@@ -148,7 +148,7 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
       // Tier 1 sidebar panel: debounce 450ms on its own timer (independent of
       // the 900ms Tier 2 popup timer below).
       clearTimeout(sidebarTimer);
-      sidebarTimer = setTimeout(() => onHover?.(f.properties), 450);
+      sidebarTimer = setTimeout(() => onHover?.(f.properties), 200);
 
       // Show popup only after 900ms dwell on the same feature.
       // This eliminates jitter when the cursor sweeps across the map

@@ -118,6 +118,9 @@ function wirePermitPopup(map, onPickRef) {
       hoverPopup.remove();
       lastHoveredId = fid;
 
+      // Suppress Tier 2 hover while a Tier 3 click popup is open.
+      if (popup.isOpen()) return;
+
       hoverTimer = setTimeout(() => {
         if (lastHoveredId === fid) {
           hoverPopup
