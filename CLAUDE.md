@@ -76,7 +76,7 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
 ├─ REFRESH_NOTES.md              # quarterly refresh log Olivia reviews
 │
 ├─ pipeline/                     # BACKEND — R, runs on the laptop, never deploys
-│   ├─ _shared/                  #   used by EVERY section: API fetch helper, neighbourhood
+│   ├─ shared/                   #   used by EVERY section: API fetch helper, neighbourhood
 │   │                            #   shapefile + join, tippecanoe→PMTiles step, theme,
 │   │                            #   validation template
 │   ├─ property-assessment/      #   BUILT — Layer 1a + 2, historical backfill, manifest
@@ -114,13 +114,13 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
 - **Sections mirror across the repo.** `pipeline/<section>/` ↔ `website/src/content/<section>/`.
 - **Each pipeline section is self-contained** (`scripts/ data/ output/`) and runs its own
   fetch → clean → aggregate → output. Anything used by *every* section lives in
-  `pipeline/_shared/` — never duplicated (the neighbourhood shapefile especially).
+  `pipeline/shared/` — never duplicated (the neighbourhood shapefile especially).
 - Backend → frontend handoff is one copy: a section's `output/` → `website/public/data/`.
 - Restricted/confidential inputs live **only** in a section's `data/` (`raw/` or `validation/`)
   and are **gitignored** — never committed, never deployed.
 - **Fit note:** only create folders for sections that exist. Built today: `property-assessment`,
-  `building-permits`, plus the shared boundary helpers. Copy the pattern per new section — no empty
-  stubs. (Note: the shared dir on disk is `pipeline/shared/`, not `_shared/` — see §10.)
+  `building-permits`, plus the shared boundary helpers in `pipeline/shared/`. Copy the pattern per
+  new section — no empty stubs.
 
 ---
 
@@ -288,7 +288,7 @@ Result: the **live clone** — shell + one real map — the proof the frame work
 - Hardcode org / university / professor / author names — `siteConfig` only. (§6.)
 - Add a runtime database, server, or API. (§1.)
 - Introduce stacks beyond React + Vite + PMTiles + MapLibre (+ Recharts for charts). (§2.)
-- Duplicate shared pipeline pieces into sections — they live in `pipeline/_shared/`. (§3.)
+- Duplicate shared pipeline pieces into sections — they live in `pipeline/shared/`. (§3.)
 - Over-engineer, or merge code Olivia can't read. (§6.)
 
 **Both**
@@ -305,7 +305,6 @@ Result: the **live clone** — shell + one real map — the proof the frame work
 | Identify canonical 2026 boundary shapefile (UAlberta Library data services) | Parallel track | ✅ **Resolved** — City of Edmonton Neighbourhoods CSV (`65fr-66s6`, 407 rows, WKT/WGS84) adopted as the boundary source; 08/08b read `read_csv` + `st_as_sf` |
 | R3b: optional catch for ~104 "building and land" manufactured-home FNs | Before R4, probably unnecessary | ↗ Carried to Phase 2 (low priority) |
 | Scoreboard schema columns (`dataset`, `city`, `layer`, …) for multi-section scoring | Before second section's rules | Open |
-| Shared pipeline dir is `pipeline/shared/` on disk, but §3 prose/diagram say `_shared/` | Doc cleanup | Open — reconcile name (rename dir or fix §3) |
 
 ---
 
@@ -333,8 +332,9 @@ Revise when: a locked decision changes (§2), a new section is wired (§3), a ne
   Assessment + Building Permits point map + added Permit Neighbourhoods choropleth + Download
   page, all live on Cloudflare Pages). §3: building-permits now built. §6: boundary 402 → 407
   (City of Edmonton Neighbourhoods `65fr-66s6`); added a "built / live" nav note. §10: resolved
-  the colour-scale and boundary-shapefile `[OPEN]`s, carried R3b to Phase 2, logged the
-  `shared/` vs `_shared/` naming discrepancy. Added PHASE2_STATUS.md as the live-status doc.
+  the colour-scale and boundary-shapefile `[OPEN]`s, carried R3b to Phase 2. Fixed §3/§9 to use
+  the correct shared dir name `pipeline/shared/` (was `_shared/`). Added PHASE2_STATUS.md as the
+  live-status doc.
 - **v1.0 (2026-05-21)** — Consolidated authority. Corrected framing: the website is a free-tier
   static replication, NOT an agentic platform (agentic platform reclassified as parked future).
   Added website build spec (React/Vite/PMTiles, shell/content, `siteConfig`, legibility standard),
