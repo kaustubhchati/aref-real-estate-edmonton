@@ -311,7 +311,8 @@ export default function BuildingPermitsMap() {
   // Hide/show the sidebar; resize the map once the width transition completes.
   function toggleSidebar() {
     setCollapsed((v) => !v);
-    if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS);
+    // +10ms buffer so the canvas resizes AFTER the CSS transition fully settles.
+    if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS + 10);
   }
 
   // Toggle one value tier on/off (immutably — clone, mutate, return a new Set so
@@ -393,6 +394,8 @@ export default function BuildingPermitsMap() {
   return (
     <article className="content-map">
       <aside ref={sbRef} className={`sb${collapsed ? " collapsed" : ""}`} aria-label="Map sidebar">
+        {/* Fixed-width holder so content never reflows as .sb animates its width — see .sb-inner in index.css. */}
+        <div className="sb-inner">
         <div className="sb-header">
           <p className="eyebrow">Building Activity</p>
           <h1 className="sb-title">Edmonton — {year}</h1>
@@ -540,6 +543,7 @@ export default function BuildingPermitsMap() {
           Source: City of Edmonton Open Data (24uj-dj8v). 226,184 permit points,
           2009–2026.
         </p>
+        </div>{/* /sb-inner */}
       </aside>
 
       <div className="canvas-wrap">

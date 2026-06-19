@@ -286,29 +286,44 @@ p  { margin: 0 0 0.75rem; }
   background: #fafaf8;
   border-right: 1px solid var(--border);
   overflow-y: auto;
+  /* Reserve the vertical scrollbar's space whether or not it's showing, so the
+     content width never jumps when it appears/disappears. overflow-x:hidden
+     clips the fixed-width .sb-inner cleanly as .sb's flex-basis animates to 0. */
+  scrollbar-gutter: stable;
+  overflow-x: hidden;
   padding: 14px 16px 18px 16px;
   font-size: 12.5px;
   line-height: 1.4;
   color: var(--text);
-  /* Animate the collapse driven by .sb-toggle (BuildingPermitsMap). The JS
-     resizes the map after this same 220ms, so keep the two in sync. */
-  transition: flex-basis 220ms ease, max-height 220ms ease, padding 220ms ease;
+  /* Collapse animates ONE box-model property — flex-basis (the desktop width).
+     Transitioning padding and max-height alongside it reflowed the content every
+     frame (padding 16→0) and snapped the height (max-height none→0 can't
+     interpolate) — that was the jitter. Padding now stays constant and max-height
+     is mobile-only (overridden below). The JS map.resize() fires after this same
+     220ms (+10ms buffer), so keep the two in sync. */
+  transition: flex-basis 220ms ease;
 }
 
-/* Collapsed sidebar: shrink to zero on the layout's main axis (width in the
-   desktop row, height in the mobile column) and hide its contents. min-width:0
-   lets the flex item shrink past its content size; overflow hides the clipped
-   text mid-animation. */
+/* Collapsed sidebar: shrink to zero on the desktop row's main axis (flex-basis,
+   the animated property). min-width:0 lets the flex item shrink past its content
+   size; overflow:hidden clips the content as it narrows. Padding is kept (not
+   zeroed) so the content box width doesn't jump — only flex-basis animates. The
+   mobile column collapses via max-height instead (in the media query below). */
 .sb.collapsed {
   flex-basis: 0;
   min-width: 0;
-  max-height: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-  padding-left: 0;
-  padding-right: 0;
   border-right-color: transparent;
   overflow: hidden;
+}
+
+/* Fixed-width content holder: keeps the sidebar's content laid out at its open
+   width while .sb's flex-basis animates 300px → 0, so nothing reflows during the
+   collapse — .sb just clips it (overflow-x:hidden). 268px = 300px flex-basis −
+   32px horizontal padding (16px each side). flex-shrink:0 guards the width if a
+   future .sb ever becomes a flex container. */
+.sb-inner {
+  width: 268px;
+  flex-shrink: 0;
 }
 
 /* The ≡ control, overlaying the map's top-left corner so it stays reachable
@@ -830,8 +845,12 @@ p  { margin: 0 0 0.75rem; }
   .shell-header-separator, .shell-header-org { display:none; }
   .shell-nav { top:50px; }
   .content-map { flex-direction:column; }
+  /* Mobile is a column: the collapse axis is height, so animate max-height
+     (45svh→0 interpolates cleanly, unlike desktop's none→0). */
   .sb { flex:0 0 auto; width:100%; max-height:45svh;
-    border-right:none; border-bottom:1px solid var(--border-soft); }
+    border-right:none; border-bottom:1px solid var(--border-soft);
+    transition:max-height 220ms ease; }
+  .sb.collapsed { max-height:0; }
   .canvas-wrap { min-height:55svh; }
   .shell-footer-grid { grid-template-columns:1fr; gap:1.25rem; }
 }

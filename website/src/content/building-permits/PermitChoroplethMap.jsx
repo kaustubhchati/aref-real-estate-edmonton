@@ -82,7 +82,8 @@ export default function PermitChoroplethMap() {
   // Hide/show the sidebar; resize the map once the width transition completes.
   function toggleSidebar() {
     setCollapsed((v) => !v);
-    if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS);
+    // +10ms buffer so the canvas resizes AFTER the CSS transition fully settles.
+    if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS + 10);
   }
 
   // Reflect the current selection in the browser tab title; restore on unmount.
@@ -249,6 +250,8 @@ export default function PermitChoroplethMap() {
   return (
     <article className="content-map">
       <aside className={`sb${collapsed ? " collapsed" : ""}`} aria-label="Map sidebar">
+        {/* Fixed-width holder so content never reflows as .sb animates its width — see .sb-inner in index.css. */}
+        <div className="sb-inner">
         <div className="sb-header">
           <p className="eyebrow">Building Activity</p>
           <h1 className="sb-title">Edmonton — {year}</h1>
@@ -301,6 +304,7 @@ export default function PermitChoroplethMap() {
             Building permit aggregates by neighbourhood, {year}.
           </p>
         </div>
+        </div>{/* /sb-inner */}
       </aside>
 
       <div className="canvas-wrap">

@@ -102,7 +102,8 @@ export default function PropertyAssessmentMap() {
   // reclaimed space.
   function toggleSidebar() {
     setCollapsed((v) => !v);
-    if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS);
+    // +10ms buffer so the canvas resizes AFTER the CSS transition fully settles.
+    if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS + 10);
   }
 
   // Load the manifest once on mount. We seed the year in the SAME update as the
@@ -270,6 +271,8 @@ export default function PropertyAssessmentMap() {
   return (
     <article className="content-map">
       <aside ref={sbRef} className={`sb${collapsed ? " collapsed" : ""}`} aria-label="Map sidebar">
+        {/* Fixed-width holder so content never reflows as .sb animates its width — see .sb-inner in index.css. */}
+        <div className="sb-inner">
         <div className="sb-header">
           <p className="eyebrow">Properties & Land</p>
           <h1 className="sb-title">
@@ -356,6 +359,7 @@ export default function PropertyAssessmentMap() {
           </p>
           <p>Data last updated: {manifest?.last_updated ?? "—"}</p>
         </div>
+        </div>{/* /sb-inner */}
       </aside>
 
       <div className="canvas-wrap">
