@@ -36,17 +36,18 @@ export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 //   c     = fill colour at that stop
 //   label = role in the IQR (shown in the legend)
 
-// ── Lajolla (Crameri Scientific Colour Maps, shifted)
-// Gold → terracotta → wine-red. For $ value metrics.
-// Shifted +20% from canonical to fix min visibility on
-// cream Voyager basemap. Wine-red max avoids near-black.
-// Perceptually uniform, colourblind-safe (Crameri 2023).
+// ── Cream → Ferrari red (custom warm sequential)
+// Warm cream → peach → orange → red-orange → Ferrari red.
+// For $ value metrics. Replaces the old Lajolla gold→wine-red
+// ramp, whose burgundy/dark-brown max read as muddy at the
+// high end. This ramp keeps a single warm hue family climbing
+// in saturation so "high value" reads as vivid red, not brown.
 const RAMP_VALUE = [
-  { key: "min",    c: "#f0c97a", label: "min"    },
-  { key: "q25",    c: "#e07030", label: "Q25"    },
-  { key: "median", c: "#c02a00", label: "median" },
-  { key: "q75",    c: "#961200", label: "Q75"    },
-  { key: "max",    c: "#7a0000", label: "max"    },
+  { key: "min",    c: "#f5f0e8", label: "min"    },
+  { key: "q25",    c: "#f5c4a0", label: "Q25"    },
+  { key: "median", c: "#f07840", label: "median" },
+  { key: "q75",    c: "#e03818", label: "Q75"    },
+  { key: "max",    c: "#cc0000", label: "max"    },
 ];
 
 // ── Amber-sienna (custom, YlOrBr family shifted)
