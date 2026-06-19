@@ -1,5 +1,5 @@
 # Open Data Centre for Alberta Urban Real Estate (Dev Build)
-# MAP FEATURE LIVE: Property Assessment. Building Permits. 
+# MAPS LIVE: Property Assessment · Building Permits · Permit Neighbourhoods. Download page live.
 A **free-tier, static replication** of the public real-estate data website at
 `realestatedata.srv.ualberta.ca` — the Tableau Public dashboards rebuilt as our own maps and
 pages, fed by an R data pipeline. Phase 1 delivers Edmonton property-assessment cleaning
@@ -21,8 +21,11 @@ The bar is "researchers and the public can rely on it," not five-nines uptime.
 
 - **[CLAUDE.md](./CLAUDE.md)** — authoritative project context: locked architecture, pipeline
   invariants, website build spec, repo conventions, negative rules. Read this first.
-- **[PHASE1_STATUS.md](./PHASE1_STATUS.md)** — pipeline state: validated rules, coverage math,
-  Layer 2 acceptance criteria, open items.
+- **[PHASE1_STATUS.md](./PHASE1_STATUS.md)** — Phase 1 pipeline + frontend state, now **closed /
+  archive** (June 18, 2026): validated rules, coverage math, Layer 2 acceptance criteria, and the
+  final frontend state.
+- **[PHASE2_STATUS.md](./PHASE2_STATUS.md)** — current status: carried-forward items, new Phase 2
+  workstreams (agent pipeline, boundary migration, infrastructure), and the prioritised next actions.
 
 ## Layout (see CLAUDE.md §3)
 

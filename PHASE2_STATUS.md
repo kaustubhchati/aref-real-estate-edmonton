@@ -8,7 +8,7 @@
 
 Phase 2 picks up all carried-forward items from Phase 1
 and adds the next-priority workstreams: remaining frontend
-sections, agent pipeline, and Prof deliverables.
+sections, agent pipeline, and infrastructure.
 
 ---
 
@@ -41,9 +41,15 @@ sections, agent pipeline, and Prof deliverables.
       one `<layer>_coverage.csv`.
       Air Quality + Business Licences held pending
       volatility/density resolution.
-- [ ] **Permit Neighbourhoods choropleth** — 18-year
-      GeoJSONs built and committed, route wired. Pending
-      Olivia QA before ship.
+- [ ] **Permit Neighbourhoods choropleth** — BUILT with full
+      Property Assessment parity: custom basemap, fill/outline/
+      highlight/label layer stack (pnbhd-* ids), 3 polygon states,
+      300ms-delay hover popup + click-to-pin + feature-state, 4
+      metrics (count / total + median construction value / units
+      added) with per-metric ramps + live repaint, 2009–2026 year
+      selector. 18-year GeoJSONs committed; route wired; deployed
+      to the demo (eslint + build + local-dev verified). Only
+      remaining: Olivia QA sign-off.
 - [ ] **Zoning choropleth** — nav leaf exists, no backend
       data yet.
 - [ ] **Business Counts** — migrated from StatCan to
@@ -109,6 +115,12 @@ sections, agent pipeline, and Prof deliverables.
   per-metric palettes, gradient legend, full popup.
 - Building Permits point map — production, live,
   PMTiles on R2, interactive legend, standard popup.
+- Permit Neighbourhoods choropleth — built (full assessment
+  parity), deployed to demo; awaiting Olivia QA sign-off.
+- Download page — `/download` serves 3 cleaned CSVs
+  (2026 neighbourhood aggregates + permit category counts +
+  permit coverage) from `website/public/downloads/`,
+  data-driven from `siteConfig.downloads`.
 - Cloudflare Pages (demo) + R2 (tiles) infrastructure.
 - React + Vite + MapLibre + PMTiles stack (locked).
 - Tippecanoe recipe locked:
@@ -126,7 +138,8 @@ sections, agent pipeline, and Prof deliverables.
    VALLEY IDs) — blocks next pipeline refresh.
 2. Point layers batch — R pipeline first, then Pattern A
    frontend (one CC session per layer).
-3. Permit Neighbourhoods — Olivia QA, then ship.
+3. Permit Neighbourhoods choropleth — Olivia QA sign-off
+   (now built with full assessment parity, deployed to demo).
 4. Add collaborators + branch protection.
 5. Layer 1b (LISA I) — stretch goal before agent work.
 6. Begin Sanity Agent scaffolding.
