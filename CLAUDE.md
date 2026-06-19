@@ -1,11 +1,12 @@
 # CLAUDE.md
 
-> **Version: v1.1 — authoritative. Supersedes all prior versions (v0.1–v1.0).**
+> **Version: v1.2 — authoritative. Supersedes all prior versions (v0.1–v1.1).**
 > This is the single source of project context for every Claude Code session — read it first.
 > If any other note, comment, or older doc frames *the website* as an "agent-driven platform,"
 > that framing is **retired** — see §1.
-> Owner: KC (Research Assistant, UAlberta). Verifier: Olivia. Supervisor: Prof. Haifang Huang.
-> Last updated: 2026-06-18. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
+> Owner / **builder**: KC (Research Assistant, UAlberta) — direct-push authority to `main` (§7).
+> Verifier: Olivia (post-hoc review, §7). Supervisor: Prof. Haifang Huang.
+> Last updated: 2026-06-19. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
 > current open work tracked in **PHASE2_STATUS.md**.
 
 ---
@@ -143,8 +144,9 @@ These bind every pipeline script. (Carried from the validated phase-1 methodolog
 - **4.5 Audit traceability.** Every artifact records what produced it (rule_id, year;
   `date_curated`/`curated_by` on reference rows).
 - **4.6 Human-gated promotion.** No cleaned data reaches a public surface without explicit human
-  review — even at 100% oracle scores. For the website, that gate is Olivia's PR review before
-  merge to the deploy branch (§7).
+  review — even at 100% oracle scores. For the website, that human is **KC**: as the builder with
+  direct-push authority (§7), KC's own review before pushing to `main` satisfies this gate. A
+  future RA who is not KC still routes through Olivia's PR review before merge.
 - **4.7 Cross-product reconciliation via curated mappings.** When two City products disagree on
   a name/ID, reconcile through explicit, sourced, dated mapping tables under `data/reference/` —
   never fuzzy matching or silent auto-correction. Non-destructive (`_recovered` artifacts).
@@ -230,16 +232,20 @@ high-volume layers (parcel-level properties, permit points) where it earns its k
 
 ## 7. How we work — team & handoff
 
-- **KC** builds. **Olivia** (PhD candidate, learning web dev) is the verifier and the
-  human-review gate.
-- Workflow: build on a branch → open a PR → Olivia reviews for **(1)** data correctness,
-  **(2)** does the map look right, **(3)** can she read it → merge to the deploy branch →
-  auto-deploy. Reviewing every change is also how she stays current.
+- **KC** is the **builder** and has **direct-push authority to `main`** — KC may commit and push
+  to `main` without a prior review or preview by anyone else. This is the owner's standing
+  decision (2026-06-19); a session does not need to ask before pushing when KC is driving.
+- **Olivia** (PhD candidate, learning web dev) is the verifier. Her review is no longer a
+  *blocking gate* on KC's pushes — it now happens **post-hoc** (review the pushed commit / live
+  site) and is still how she stays current and catches issues. She reviews for **(1)** data
+  correctness, **(2)** does the map look right, **(3)** can she read it.
+- When a future RA (not KC) builds, fall back to the branch → PR → Olivia-review → merge flow —
+  direct-push is KC's authority, not a blanket relaxation for everyone.
 - Keep `README.md` and `REFRESH_NOTES.md` current. Everything must be **clone-and-run** for a
   future RA — no laptop-only magic, no undocumented steps. Generated code is reviewed like any
   other; it is never a black box.
-- Git: small focused commits (what + why); one concern per branch/PR; never commit raw/restricted
-  data, secrets, `dist/`, or `node_modules/`; the deploy branch is protected (reviewed PRs only).
+- Git: small focused commits (what + why); one concern per push; never commit raw/restricted
+  data, secrets, `dist/`, or `node_modules/`.
 
 ---
 
@@ -328,6 +334,11 @@ When in doubt, load §2 (locked architecture) and §9 (negative rules) — the l
 Revise when: a locked decision changes (§2), a new section is wired (§3), a new rule is validated
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
+- **v1.2 (2026-06-19)** — Workflow change: KC is the **builder** with **direct-push authority to
+  `main`** — may commit and push without prior preview/review by others (owner's standing
+  decision). §7 rewritten: Olivia's review moves from blocking gate to **post-hoc**; the
+  branch → PR → review flow now applies to non-KC contributors only. §4.6 updated so KC's
+  pre-push review satisfies the human-promotion gate. Header `Owner` line and version bumped.
 - **v1.1 (2026-06-18)** — Phase 1 closed. Marked §8 first-milestone ✅ achieved (Property
   Assessment + Building Permits point map + added Permit Neighbourhoods choropleth + Download
   page, all live on Cloudflare Pages). §3: building-permits now built. §6: boundary 402 → 407
