@@ -293,8 +293,8 @@ p  { margin: 0 0 0.75rem; }
   bottom: 0;
   width: 280px;
   z-index: 10;
-  background: rgba(250, 250, 248, 0.92);
-  border-right: 0.5px solid rgba(0, 0, 0, 0.10);
+  background: rgba(250, 250, 248, 0.95);
+  border-right: 0.5px solid rgba(0, 0, 0, 0.12);
   overflow-y: auto;
   /* Reserve the vertical scrollbar's space whether or not it's showing, so the
      content width never jumps when it appears/disappears. */
@@ -353,8 +353,11 @@ p  { margin: 0 0 0.75rem; }
 
 .canvas-wrap {
   position: relative;
-  flex: 1 1 auto;
+  /* The only in-flow flex child now (.sb is absolute/out of flow), so it fills
+     the full .content-map width — the map runs edge-to-edge under the sidebar. */
+  flex: 1 1 100%;
   min-width: 0;        /* allow shrinking in flex */
+  width: 100%;
 }
 
 .canvas {
@@ -816,7 +819,7 @@ p  { margin: 0 0 0.75rem; }
   .content-map { flex-direction:column; }
   /* Mobile is a column: restore the sidebar to in-flow so it stacks above the
      map at a capped height (overrides the desktop absolute overlay). */
-  .sb { position:relative; flex:0 0 auto; width:100%; max-height:45svh;
+  .sb { position:relative; bottom:auto; flex:0 0 auto; width:100%; max-height:45svh;
     border-right:none; border-bottom:0.5px solid rgba(0,0,0,0.10); }
   .canvas-wrap { min-height:55svh; }
   .shell-footer-grid { grid-template-columns:1fr; gap:1.25rem; }
