@@ -340,6 +340,51 @@ p  { margin: 0 0 0.75rem; }
 
 .sb-section { margin: 0 0 12px; }
 
+/* ---- Pattern B — live hover stat panel ---------------------------------- */
+.sb-hover-panel {
+  background: rgba(46,125,50,0.05);
+  border: 0.5px solid rgba(46,125,50,0.15);
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-height: 60px;
+}
+.sb-hover-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 1px;
+  line-height: 1.3;
+}
+.sb-hover-district {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 6px;
+}
+.sb-hover-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sb-hover-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11px;
+  padding: 2px 0;
+  border-bottom: 0.5px solid rgba(0,0,0,0.06);
+}
+.sb-hover-row:last-child { border-bottom: none; }
+.sb-hover-k { color: var(--text-muted); }
+.sb-hover-v { font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.sb-hover-v.positive { color: #c0392b; }
+.sb-hover-v.negative { color: #1565c0; }
+.sb-hover-muted { background: rgba(0,0,0,0.02); border-color: rgba(0,0,0,0.08); }
+.sb-hover-empty { background: transparent; border: 0.5px dashed rgba(0,0,0,0.12); }
+.sb-hover-hint { font-size: 10.5px; color: var(--text-muted); font-style: italic; margin: 0; text-align: center; padding: 8px 0; }
+.sb-hover-state { margin: 0; font-style: italic; }
+
 .sb-ref {
   font-size: 10.5px;
   color: var(--text-muted);
@@ -422,6 +467,13 @@ p  { margin: 0 0 0.75rem; }
 .opt-toggle-btn.active { background:var(--bg); color:var(--accent-dark);
   font-weight:600; box-shadow:var(--shadow-sm); }
 
+/* Pattern A — gel treatment for a wrapped OptionToggle (the city switch):
+   darker track + a raised, glossy active pill. */
+.opt-toggle-gel .opt-toggle-buttons { background:#dedad4; }
+.opt-toggle-gel .opt-toggle-btn.active {
+  box-shadow:0 1px 0 rgba(255,255,255,0.9) inset, 0 -1px 0 rgba(0,0,0,0.06) inset, 0 1px 2px rgba(0,0,0,0.10);
+}
+
 /* ---- Sidebar dropdowns (Year, Metric — too many options for a toggle) ---- */
 .sb-select-field { margin: 0 0 8px; }
 .sb-select-field:last-child { margin-bottom: 0; }
@@ -439,13 +491,20 @@ p  { margin: 0 0 0.75rem; }
 
 /* Selector adapted from `.sb-select-wrap select` to `.sb-select`: the markup is
    <select class="sb-select"> inside .sb-select-field; there is no .sb-select-wrap. */
+/* Gel selects (Patterns A/B/C): a cream gradient layered BEHIND the existing
+   dropdown caret, with raised inset highlights + a soft drop shadow. Done here,
+   not as an inline `background` on each <select>, because that shorthand would
+   clobber the caret's background-image. One rule covers every .sb-select. */
 .sb-select {
   width:100%; padding:7px 28px 7px 10px; font-size:0.82rem;
-  font-family:inherit; color:var(--text); background:var(--bg-soft);
-  border:1px solid var(--border); border-radius:var(--radius-md);
-  appearance:none; cursor:pointer;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat:no-repeat; background-position:right 10px center; }
+  font-family:inherit; color:var(--text);
+  background-color:#f1eee8;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"), linear-gradient(180deg, #f8f6f2 0%, #edeae4 100%);
+  background-repeat:no-repeat, no-repeat;
+  background-position:right 10px center, left top;
+  box-shadow:0 1px 0 rgba(255,255,255,0.9) inset, 0 -1px 0 rgba(0,0,0,0.06) inset, 0 1px 2px rgba(0,0,0,0.10);
+  border:1px solid rgba(0,0,0,0.14); border-radius:var(--radius-md);
+  appearance:none; cursor:pointer; }
 .sb-select:focus { outline:none; border-color:var(--accent);
   box-shadow:0 0 0 3px var(--green-100); }
 

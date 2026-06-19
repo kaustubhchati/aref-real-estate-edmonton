@@ -47,9 +47,17 @@ export default function BusinessCensusMap() {
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
   const [fetchError, setFetchError] = useState(null);
+  // Live hover stat panel (Pattern B): the neighbourhood's properties while the
+  // cursor is over it, null otherwise. Set from the map interaction handler.
+  const [hoveredFeature, setHoveredFeature] = useState(null);
 
   const selectedMetric =
     METRICS.find((m) => m.key === metric) ?? METRICS[0];
+
+  // The interaction handler is installed once (deps:[map]); a ref lets it call
+  // the latest setHoveredFeature without re-registering on every render.
+  const setHoveredFeatureRef = useRef(setHoveredFeature);
+  useEffect(() => { setHoveredFeatureRef.current = setHoveredFeature; }, [setHoveredFeature]);
 
   // Ramp stops computed from the loaded polygons' quantiles for the chosen
   // metric (falls back to BCENSUS_STOPS until gj resolves). Memoised so the
@@ -161,6 +169,8 @@ export default function BusinessCensusMap() {
         setHover(hoveredId, true);
         hoverPopup.remove();
         lastHoveredId = f.id;
+        // Pattern B: update the sidebar hover panel immediately on enter.
+        setHoveredFeatureRef.current(f.properties);
         // Show only after 300ms dwell — no flash on cursor sweep.
         hoverTimer = setTimeout(() => {
           if (hoveredId === f.id) {
@@ -175,6 +185,8 @@ export default function BusinessCensusMap() {
 
     function onLeave() {
       clearHover();
+      // Pattern B: clear the sidebar hover panel when the cursor leaves the fill.
+      setHoveredFeatureRef.current(null);
     }
 
     function onFillClick(e) {
@@ -252,6 +264,46 @@ export default function BusinessCensusMap() {
             format={selectedMetric.fmt}
           />
         </section>
+
+        {/* Pattern B — live hover stat panel. Selected metric leads, then the
+            other metric, then year-over-year business change (coloured). */}
+        {!hoveredFeature ? (
+          <section className="sb-section sb-hover-panel sb-hover-empty">
+            <p className="sb-hover-hint">Hover a neighbourhood to see its stats</p>
+          </section>
+        ) : hoveredFeature.census_state === "data" ? (
+          <section className="sb-section sb-hover-panel">
+            <p className="sb-hover-name">{hoveredFeature.display_name}</p>
+            <p className="sb-hover-district">
+              {hoveredFeature.district ?? hoveredFeature.planning_district ?? ""}
+            </p>
+            <div className="sb-hover-rows">
+              {[selectedMetric, ...METRICS.filter((m) => m.key !== metric)].map((m) => (
+                <div className="sb-hover-row" key={m.key}>
+                  <span className="sb-hover-k">{m.label}</span>
+                  <span className="sb-hover-v">{m.fmt(hoveredFeature[m.key])}</span>
+                </div>
+              ))}
+              {hoveredFeature.yoy_businesses_pct != null && (
+                <div className="sb-hover-row">
+                  <span className="sb-hover-k">YoY businesses</span>
+                  <span className={`sb-hover-v ${
+                    hoveredFeature.yoy_businesses_pct > 0 ? "positive"
+                    : hoveredFeature.yoy_businesses_pct < 0 ? "negative" : ""
+                  }`}>
+                    {hoveredFeature.yoy_businesses_pct > 0 ? "+" : ""}
+                    {hoveredFeature.yoy_businesses_pct}%
+                  </span>
+                </div>
+              )}
+            </div>
+          </section>
+        ) : (
+          <section className="sb-section sb-hover-panel sb-hover-muted">
+            <p className="sb-hover-name">{hoveredFeature.display_name}</p>
+            <p className="sb-hover-district sb-hover-state">No data</p>
+          </section>
+        )}
 
         <div className="sb-ref">
           <p>

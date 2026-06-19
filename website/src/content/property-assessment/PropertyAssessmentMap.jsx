@@ -271,12 +271,16 @@ export default function PropertyAssessmentMap() {
         </div>
 
         <section className="sb-section">
-          <OptionToggle
-            label="City"
-            options={CITIES}
-            value={city}
-            onChange={changeCity}
-          />
+          {/* opt-toggle-gel wrapper gives the segmented control its gel track +
+              raised active pill (see .opt-toggle-gel in index.css). */}
+          <div className="opt-toggle-gel">
+            <OptionToggle
+              label="City"
+              options={CITIES}
+              value={city}
+              onChange={changeCity}
+            />
+          </div>
           {/* 15 years is too many for a segmented toggle (see OptionToggle's
               own note), so the year control is a native dropdown. years comes
               straight from the manifest. */}

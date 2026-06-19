@@ -101,16 +101,6 @@ function PermitLegend({ activeBuckets, onToggle, onReset, activeGroup }) {
   // micro=4, small=6, medium=8, large=11, major=15
   const TIER_RADII = [4, 6, 8, 11, 15];
 
-  // Active card border/bg colours driven by active group.
-  const activeBorder = isAll
-    ? "#c0530b"
-    : activeGroup === "Residential" ? resColour : comColour;
-  const activeBg = isAll
-    ? `linear-gradient(135deg, ${resColour}14 50%, ${comColour}14 50%)`
-    : activeGroup === "Residential"
-      ? `${resColour}18`
-      : `${comColour}18`;
-
   return (
     <div className="legend">
 
@@ -189,10 +179,18 @@ function PermitLegend({ activeBuckets, onToggle, onReset, activeGroup }) {
                 padding: "7px 3px 6px",
                 minHeight: 52,
                 borderRadius: 7,
-                border: `1.5px solid ${
-                  active ? activeBorder : "var(--border-soft)"
-                }`,
-                background: active ? activeBg : "transparent",
+                // Gel tier card: green raised when active, cream raised when
+                // inactive. The group colour (orange/violet/split) still reads
+                // from the circle inside the card, so coding isn't lost.
+                border: active
+                  ? "1.5px solid rgba(46,125,50,0.35)"
+                  : "1px solid rgba(0,0,0,0.12)",
+                background: active
+                  ? "linear-gradient(180deg, #e8f5e9 0%, #c8e6c9 100%)"
+                  : "linear-gradient(180deg, #f8f6f2 0%, #e8e4dc 100%)",
+                boxShadow: active
+                  ? "0 1px 0 rgba(255,255,255,0.8) inset, 0 -1px 0 rgba(0,0,0,0.08) inset, 0 1px 3px rgba(46,125,50,0.18)"
+                  : "0 1px 0 rgba(255,255,255,0.9) inset, 0 -1px 0 rgba(0,0,0,0.06) inset, 0 1px 2px rgba(0,0,0,0.10)",
                 cursor: "pointer",
                 fontFamily: "inherit",
                 transition:
@@ -214,8 +212,8 @@ function PermitLegend({ activeBuckets, onToggle, onReset, activeGroup }) {
                 e.currentTarget.style.opacity =
                   activeBuckets.has(b.id) ? "1" : "0.42";
                 e.currentTarget.style.borderColor = active
-                  ? activeBorder
-                  : "var(--border-soft)";
+                  ? "rgba(46,125,50,0.35)"
+                  : "rgba(0,0,0,0.12)";
                 e.currentTarget.style.filter = "";
               }}
             >
@@ -273,25 +271,6 @@ function PermitLegend({ activeBuckets, onToggle, onReset, activeGroup }) {
   );
 }
 
-// Animate a number from 0 → target on mount (ease-out cubic). Signals the figure
-// is computed, not static copy. Returns the current integer value.
-function useCountUp(target, duration = 900) {
-  const [val, setVal] = useState(0);
-  const ref = useRef(null);
-  useEffect(() => {
-    const start = performance.now();
-    const tick = (now) => {
-      const p = Math.min((now - start) / duration, 1);
-      const ease = 1 - Math.pow(1 - p, 3); // ease-out cubic
-      setVal(Math.round(target * ease));
-      if (p < 1) ref.current = requestAnimationFrame(tick);
-    };
-    ref.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(ref.current);
-  }, [target, duration]);
-  return val;
-}
-
 export default function BuildingPermitsMap() {
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [group, setGroup] = useState(DEFAULT_GROUP);
@@ -346,9 +325,6 @@ export default function BuildingPermitsMap() {
     return () => { cancelled = true; };
   }, []);
 
-  // Count-up of the permit-point total shown in sb-sub.
-  const permitCount = useCountUp(226184);
-
   // Reflect the current selection in the browser tab title; restore on unmount.
   useEffect(() => {
     document.title = `Building Activity · Edmonton ${year}`;
@@ -387,10 +363,6 @@ export default function BuildingPermitsMap() {
         <div className="sb-header">
           <p className="eyebrow">Building Activity</p>
           <h1 className="sb-title">Edmonton — {year}</h1>
-          <p className="sb-sub">
-            {permitCount.toLocaleString()} permit points, 2009–2026. Orange =
-            residential, violet = commercial. Dot size = construction value tier.
-          </p>
         </div>
 
         <section className="sb-section">
@@ -452,6 +424,10 @@ export default function BuildingPermitsMap() {
                       fontFamily: "inherit",
                       cursor: "pointer",
                       lineHeight: 1.5,
+                      // Gel: raised glossy lift on the active chip only.
+                      boxShadow: isActive
+                        ? "0 1px 0 rgba(255,255,255,0.8) inset, 0 1px 3px rgba(0,0,0,0.14)"
+                        : undefined,
                       transition:
                         "background 150ms, border-color 150ms, color 150ms",
                     }}
