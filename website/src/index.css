@@ -148,6 +148,12 @@ p  { margin: 0 0 0.75rem; }
   scroll-margin-top: 110px;
 }
 
+/* Map pages go full-bleed: lift shell-main's 1100px reading-column cap when it
+   contains a .content-map, so the map — and its left-edge sidebar overlay —
+   start at the viewport's left edge instead of a centred column (that centring
+   was the "ghost gap"). Text pages (no .content-map) keep the 1100px column. */
+.shell-main:has(.content-map) { max-width: none; }
+
 /* ---- Header -------------------------------------------------------------- */
 
 .shell-header {
@@ -272,9 +278,11 @@ p  { margin: 0 0 0.75rem; }
   max-width: none;
   flex: 1;
   display: flex;
-  position: relative;  /* anchor for the absolute .sb overlay */
+  position: relative;  /* containing block for the absolute .sb overlay */
   margin: 0;
   min-height: 0;       /* let flex children shrink instead of overflowing */
+  width: 100%;
+  overflow: hidden;    /* clip the absolute sidebar to the map region */
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   background: var(--bg);
