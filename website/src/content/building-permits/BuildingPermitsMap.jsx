@@ -362,8 +362,8 @@ export default function BuildingPermitsMap() {
 
   // Reflect the current selection in the browser tab title; restore on unmount.
   useEffect(() => {
-    document.title = `Building Activity · Edmonton ${year} | AREF`;
-    return () => { document.title = "AREF Open Data Centre"; };
+    document.title = `Building Activity · Edmonton ${year}`;
+    return () => { document.title = "Open Data Centre"; };
   }, [year]);
 
   // Bottom-shadow cue when the sidebar overflows (content continues below).

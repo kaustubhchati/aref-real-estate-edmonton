@@ -72,8 +72,8 @@ export default function BusinessCensusMap() {
 
   // Reflect the current selection in the browser tab title; restore on unmount.
   useEffect(() => {
-    document.title = "Business Counts · Edmonton 2025 | AREF";
-    return () => { document.title = "AREF Open Data Centre"; };
+    document.title = "Business Counts · Edmonton 2025";
+    return () => { document.title = "Open Data Centre"; };
   }, []);
 
   // Fetch the GeoJSON (MapView loads the same URL into the source; the fetched

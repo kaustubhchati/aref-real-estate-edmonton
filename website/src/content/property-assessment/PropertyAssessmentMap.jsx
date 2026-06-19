@@ -214,9 +214,9 @@ export default function PropertyAssessmentMap() {
   useEffect(() => {
     const m = METRICS.find((x) => x.key === metric);
     document.title = m
-      ? `${m.label} · ${city} ${year} | AREF`
-      : `Property Assessment | AREF`;
-    return () => { document.title = "AREF Open Data Centre"; };
+      ? `${m.label} · ${city} ${year}`
+      : `Property Assessment`;
+    return () => { document.title = "Open Data Centre"; };
   }, [metric, city, year]);
 
   // Bottom-shadow cue when the sidebar overflows (content continues below).

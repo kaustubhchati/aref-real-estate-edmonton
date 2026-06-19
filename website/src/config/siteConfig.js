@@ -15,19 +15,19 @@
 
 export const siteConfig = {
   // ---- Identity (placeholders — fill before public launch) ---------------
-  org:    "{University Name}",
-  centre: "{Data Centre Name}",
-  dept:   "{Department}",
+  org:    "University of Alberta",
+  centre: "Open Data Centre",
+  dept:   "Department of Economics",
   funder: "{Funder}",
 
   // ---- Footer copy (placeholders) ----------------------------------------
   // Each line corresponds to one block in the footer (Footer.jsx).
   footer: {
-    funderLine:   "Funded by {Funder}",
-    partnersLine: "Data partners: {Data Partner 1}, {Data Partner 2}",
-    territorial:  "{Territorial acknowledgment placeholder.}",
-    copyright:    "© {Year} {Organization Name}",
-    logoAlt:      "{Organization} logo",
+    funderLine:   "Department of Economics, University of Alberta",
+    partnersLine: "Data: City of Edmonton Open Data Portal",
+    territorial:  "The University of Alberta acknowledges that we are located on Treaty 6 territory, and respects the histories, languages, and cultures of First Nations, Métis, Inuit, and all First Peoples of Canada.",
+    copyright:    "© 2026 University of Alberta — Open Data Centre",
+    logoAlt:      "University of Alberta logo",
   },
 
   // ---- Download catalogue -------------------------------------------------

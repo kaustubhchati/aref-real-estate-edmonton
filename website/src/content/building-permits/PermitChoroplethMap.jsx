@@ -87,8 +87,8 @@ export default function PermitChoroplethMap() {
 
   // Reflect the current selection in the browser tab title; restore on unmount.
   useEffect(() => {
-    document.title = `Permit Neighbourhoods · Edmonton ${year} | AREF`;
-    return () => { document.title = "AREF Open Data Centre"; };
+    document.title = `Permit Neighbourhoods · Edmonton ${year}`;
+    return () => { document.title = "Open Data Centre"; };
   }, [year]);
 
   // Fetch the year's GeoJSON (MapView loads the same URL into the source; the

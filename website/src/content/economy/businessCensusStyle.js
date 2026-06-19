@@ -65,12 +65,18 @@ export const METRICS = [
 // Both metrics use the same OrRd ramp; values are heavily right-skewed
 // (businesses max ~1950, employees max ~89016) so the stop VALUES come
 // from quantiles, not the colours.
+//
+// label is "" on every stop on purpose: these are quantile descriptors
+// (min/Q25/…), not meaningful category names, and the shared Legend would
+// otherwise print the descriptor as a second line bleeding behind the
+// numeric stop value. Empty label → Legend renders only the formatted
+// number. `key` still drives the buildStops scale lookup.
 const RAMP_ORRD = [
-  { key: "min",    c: "#fef0d9", label: "min"    },
-  { key: "q25",    c: "#fdcc8a", label: "Q25"    },
-  { key: "median", c: "#fc8d59", label: "median" },
-  { key: "q75",    c: "#e34a33", label: "Q75"    },
-  { key: "max",    c: "#b30000", label: "max"    },
+  { key: "min",    c: "#fef0d9", label: "" },
+  { key: "q25",    c: "#fdcc8a", label: "" },
+  { key: "median", c: "#fc8d59", label: "" },
+  { key: "q75",    c: "#e34a33", label: "" },
+  { key: "max",    c: "#b30000", label: "" },
 ];
 
 const METRIC_RAMP = {
