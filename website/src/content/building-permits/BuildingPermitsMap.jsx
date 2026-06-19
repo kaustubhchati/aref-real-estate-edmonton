@@ -273,10 +273,6 @@ function PermitLegend({ activeBuckets, onToggle, onReset, activeGroup }) {
   );
 }
 
-// Match the .sb collapse transition (index.css) so we resize the map only after
-// the sidebar has finished its width transition.
-const SIDEBAR_TRANSITION_MS = 220;
-
 // Animate a number from 0 → target on mount (ease-out cubic). Signals the figure
 // is computed, not static copy. Returns the current integer value.
 function useCountUp(target, duration = 900) {
@@ -302,18 +298,10 @@ export default function BuildingPermitsMap() {
   const [month, setMonth] = useState(DEFAULT_MONTH);
   const [map, setMap] = useState(null);
   const [coverage, setCoverage] = useState([]);
-  const [collapsed, setCollapsed] = useState(false);
   // Factory init so new Set(...) runs ONCE on mount, not every render.
   const [activeBuckets, setActiveBuckets] = useState(
     () => new Set(DEFAULT_ACTIVE_BUCKETS)
   );
-
-  // Hide/show the sidebar; resize the map once the width transition completes.
-  function toggleSidebar() {
-    setCollapsed((v) => !v);
-    // +10ms buffer so the canvas resizes AFTER the CSS transition fully settles.
-    if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS + 10);
-  }
 
   // Toggle one value tier on/off (immutably — clone, mutate, return a new Set so
   // React re-renders and the filter effect re-runs).
@@ -393,7 +381,7 @@ export default function BuildingPermitsMap() {
 
   return (
     <article className="content-map">
-      <aside ref={sbRef} className={`sb${collapsed ? " collapsed" : ""}`} aria-label="Map sidebar">
+      <aside ref={sbRef} className="sb" aria-label="Map sidebar">
         {/* Fixed-width holder so content never reflows as .sb animates its width — see .sb-inner in index.css. */}
         <div className="sb-inner">
         <div className="sb-header">
@@ -547,16 +535,6 @@ export default function BuildingPermitsMap() {
       </aside>
 
       <div className="canvas-wrap">
-        {/* Sidebar collapse control — overlays the map's top-left. */}
-        <button
-          type="button"
-          className="sb-toggle"
-          onClick={toggleSidebar}
-          aria-label={collapsed ? "Show sidebar" : "Hide sidebar"}
-          title="Toggle sidebar"
-        >
-          ≡
-        </button>
         {/* PMTiles point map (no MapErrorBoundary); skeleton shows until onLoad. */}
         {!map && <MapSkeleton />}
         <PermitMapView className="canvas" onLoad={setMap} />

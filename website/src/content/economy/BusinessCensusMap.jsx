@@ -42,16 +42,11 @@ const DATA_URL = "/data/economy/business_census_2025.geojson";
 const SOURCE_ID = "bcensus";
 const FILL_LAYER_ID = "bcensus-fill";
 
-// Match the .sb collapse transition (index.css) so we resize the map only after
-// the sidebar has finished its width transition.
-const SIDEBAR_TRANSITION_MS = 220;
-
 export default function BusinessCensusMap() {
   const [metric, setMetric] = useState(METRICS[0].key);
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
   const [fetchError, setFetchError] = useState(null);
-  const [collapsed, setCollapsed] = useState(false);
 
   const selectedMetric =
     METRICS.find((m) => m.key === metric) ?? METRICS[0];
@@ -63,13 +58,6 @@ export default function BusinessCensusMap() {
     () => bcensusMetricStops(gj, metric),
     [gj, metric]
   );
-
-  // Hide/show the sidebar; resize the map once the width transition completes.
-  function toggleSidebar() {
-    setCollapsed((v) => !v);
-    // +10ms buffer so the canvas resizes AFTER the CSS transition fully settles.
-    if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS + 10);
-  }
 
   // Reflect the current selection in the browser tab title; restore on unmount.
   useEffect(() => {
@@ -229,7 +217,7 @@ export default function BusinessCensusMap() {
 
   return (
     <article className="content-map">
-      <aside className={`sb${collapsed ? " collapsed" : ""}`} aria-label="Map sidebar">
+      <aside className="sb" aria-label="Map sidebar">
         {/* Fixed-width holder so content never reflows as .sb animates its width — see .sb-inner in index.css. */}
         <div className="sb-inner">
         <div className="sb-header">
@@ -280,17 +268,6 @@ export default function BusinessCensusMap() {
       </aside>
 
       <div className="canvas-wrap">
-        {/* Sidebar collapse control — overlays the map's top-left. */}
-        <button
-          type="button"
-          className="sb-toggle"
-          onClick={toggleSidebar}
-          aria-label={collapsed ? "Show sidebar" : "Hide sidebar"}
-          title="Toggle sidebar"
-        >
-          ≡
-        </button>
-
         {fetchError ? (
           <EmptyState
             title="Could not load data"

@@ -44,10 +44,6 @@ const DEFAULT_YEAR = 2026;
 const SOURCE_ID = "pnbhd";
 const FILL_LAYER_ID = "pnbhd-fill";
 
-// Match the .sb collapse transition (index.css) so we resize the map only after
-// the sidebar has finished its width transition.
-const SIDEBAR_TRANSITION_MS = 220;
-
 // One file per year at a stable path; year is the only thing that varies.
 function dataUrl(year) {
   return `/data/building-permits/permit-neighbourhoods/permit_neighbourhoods_${year}.geojson`;
@@ -59,7 +55,6 @@ export default function PermitChoroplethMap() {
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
   const [fetchError, setFetchError] = useState(null);
-  const [collapsed, setCollapsed] = useState(false);
 
   const url = dataUrl(year);
   const selectedMetric =
@@ -78,13 +73,6 @@ export default function PermitChoroplethMap() {
   // they always see the current selection without being re-registered.
   const yearRef = useRef(year);
   useEffect(() => { yearRef.current = year; }, [year]);
-
-  // Hide/show the sidebar; resize the map once the width transition completes.
-  function toggleSidebar() {
-    setCollapsed((v) => !v);
-    // +10ms buffer so the canvas resizes AFTER the CSS transition fully settles.
-    if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS + 10);
-  }
 
   // Reflect the current selection in the browser tab title; restore on unmount.
   useEffect(() => {
@@ -249,7 +237,7 @@ export default function PermitChoroplethMap() {
 
   return (
     <article className="content-map">
-      <aside className={`sb${collapsed ? " collapsed" : ""}`} aria-label="Map sidebar">
+      <aside className="sb" aria-label="Map sidebar">
         {/* Fixed-width holder so content never reflows as .sb animates its width — see .sb-inner in index.css. */}
         <div className="sb-inner">
         <div className="sb-header">
@@ -308,17 +296,6 @@ export default function PermitChoroplethMap() {
       </aside>
 
       <div className="canvas-wrap">
-        {/* Sidebar collapse control — overlays the map's top-left. */}
-        <button
-          type="button"
-          className="sb-toggle"
-          onClick={toggleSidebar}
-          aria-label={collapsed ? "Show sidebar" : "Hide sidebar"}
-          title="Toggle sidebar"
-        >
-          ≡
-        </button>
-
         {fetchError ? (
           <EmptyState
             title="Could not load data"

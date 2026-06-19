@@ -58,11 +58,6 @@ import {
   indexNamesForSearch,
 } from "./interactions.js";
 
-// Match the .sb collapse transition (index.css) so we resize the map only after
-// the sidebar has finished shrinking/growing — resizing mid-animation leaves the
-// canvas at a stale width.
-const SIDEBAR_TRANSITION_MS = 220;
-
 // Animate a number from 0 → target on mount (ease-out cubic). Signals the figure
 // is computed, not static copy. Returns the current integer value.
 function useCountUp(target, duration = 900) {
@@ -95,16 +90,6 @@ export default function PropertyAssessmentMap() {
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
   const [fetchError, setFetchError] = useState(null);
-  const [collapsed, setCollapsed] = useState(false);
-
-  // Hide/show the sidebar. MapLibre sizes its canvas to the container, so after
-  // the width transition finishes we tell the map to re-measure and fill the
-  // reclaimed space.
-  function toggleSidebar() {
-    setCollapsed((v) => !v);
-    // +10ms buffer so the canvas resizes AFTER the CSS transition fully settles.
-    if (map) setTimeout(() => map.resize(), SIDEBAR_TRANSITION_MS + 10);
-  }
 
   // Load the manifest once on mount. We seed the year in the SAME update as the
   // manifest so there's no frame where the manifest is loaded but no year is
@@ -270,7 +255,7 @@ export default function PropertyAssessmentMap() {
 
   return (
     <article className="content-map">
-      <aside ref={sbRef} className={`sb${collapsed ? " collapsed" : ""}`} aria-label="Map sidebar">
+      <aside ref={sbRef} className="sb" aria-label="Map sidebar">
         {/* Fixed-width holder so content never reflows as .sb animates its width — see .sb-inner in index.css. */}
         <div className="sb-inner">
         <div className="sb-header">
@@ -363,17 +348,6 @@ export default function PropertyAssessmentMap() {
       </aside>
 
       <div className="canvas-wrap">
-        {/* Sidebar collapse control — overlays the map's top-left so the toggle
-            stays reachable whether the sidebar is open or hidden. */}
-        <button
-          type="button"
-          className="sb-toggle"
-          onClick={toggleSidebar}
-          aria-label={collapsed ? "Show sidebar" : "Hide sidebar"}
-          title="Toggle sidebar"
-        >
-          ≡
-        </button>
         {fetchError && url ? (
           // The fetch failed for a real URL — a load failure, NOT "no data
           // for this selection" (that's the !url case below). Different copy
