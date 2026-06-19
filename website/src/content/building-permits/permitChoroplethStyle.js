@@ -66,32 +66,36 @@ export const PERMIT_CHOROPLETH_METRICS = [
   { key: "units_added_total",          label: "Units added",               fmt: fmtInt      },
 ];
 
-// ---- Colour ramps — one per metric (same architecture as assessment) --
-// Permit count: YlOrBr amber (earth tones, distinct from assessment)
+// ---- Colour ramp — cream → Ferrari red (shared $-value family) --------
+// Standardised to match property-assessment's RAMP_VALUE so count/value
+// choropleths read the same across the site: warm cream → peach → orange →
+// red-orange → Ferrari red. All four permit metrics use this one ramp; the
+// three array names are kept (RAMP_COUNT/RAMP_VALUE/RAMP_UNITS) so the
+// METRIC_RAMP wiring below is unchanged, but they now hold identical stops.
 const RAMP_COUNT = [
-  { key: "min",    c: "#fedf9a", label: "min"    },
-  { key: "q25",    c: "#fdb455", label: "Q25"    },
-  { key: "median", c: "#e87520", label: "median" },
-  { key: "q75",    c: "#c04a12", label: "Q75"    },
-  { key: "max",    c: "#8b3a12", label: "max"    },
+  { key: "min",    c: "#f5f0e8", label: "min"    },
+  { key: "q25",    c: "#f5c4a0", label: "Q25"    },
+  { key: "median", c: "#f07840", label: "median" },
+  { key: "q75",    c: "#e03818", label: "Q75"    },
+  { key: "max",    c: "#cc0000", label: "max"    },
 ];
 
-// Construction value (total + median): Lajolla warm arc
+// Construction value (total + median): same cream → Ferrari red ramp.
 const RAMP_VALUE = [
-  { key: "min",    c: "#f0c97a", label: "min"    },
-  { key: "q25",    c: "#d4823a", label: "Q25"    },
-  { key: "median", c: "#b03a28", label: "median" },
-  { key: "q75",    c: "#872020", label: "Q75"    },
-  { key: "max",    c: "#5c0a0a", label: "max"    },
+  { key: "min",    c: "#f5f0e8", label: "min"    },
+  { key: "q25",    c: "#f5c4a0", label: "Q25"    },
+  { key: "median", c: "#f07840", label: "median" },
+  { key: "q75",    c: "#e03818", label: "Q75"    },
+  { key: "max",    c: "#cc0000", label: "max"    },
 ];
 
-// Units added: Purples (distinct from both)
+// Units added: same cream → Ferrari red ramp.
 const RAMP_UNITS = [
-  { key: "min",    c: "#e0d4f0", label: "min"    },
-  { key: "q25",    c: "#b998e0", label: "Q25"    },
-  { key: "median", c: "#8a4fcf", label: "median" },
-  { key: "q75",    c: "#5c1fa8", label: "Q75"    },
-  { key: "max",    c: "#3d0075", label: "max"    },
+  { key: "min",    c: "#f5f0e8", label: "min"    },
+  { key: "q25",    c: "#f5c4a0", label: "Q25"    },
+  { key: "median", c: "#f07840", label: "median" },
+  { key: "q75",    c: "#e03818", label: "Q75"    },
+  { key: "max",    c: "#cc0000", label: "max"    },
 ];
 
 const METRIC_RAMP = {

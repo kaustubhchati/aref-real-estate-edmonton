@@ -123,9 +123,7 @@ p  { margin: 0 0 0.75rem; }
 
 .shell {
   /* Pin the shell to exactly the viewport so a map page can fill the height
-     between Nav and Footer (Footer sits at the viewport bottom, no scroll).
-     overflow:hidden keeps the shell itself from scrolling — long pages scroll
-     inside .shell-main instead (see below). */
+     between Nav and Footer (Footer sits at the viewport bottom, no scroll). */
   height: 100svh;
   overflow: hidden;
   display: flex;
@@ -133,20 +131,20 @@ p  { margin: 0 0 0.75rem; }
 }
 
 .shell-main {
-  flex: 1;
+  flex: 1 1 0;
   width: 100%;
   max-width: 1100px;
   margin: 0 auto;
-  padding: 2rem 1.25rem;
+  min-height: 0;
+  /* No padding here: map pages fill edge-to-edge (content-map margin:0); text
+     pages restore their own padding via .content-page/.content-placeholder. */
+  padding: 0;
   /* Flex column so a map page child can flex-fill the remaining height
      between Nav and Footer. Text-page children fall back to natural size
      (default `flex: 0 1 auto`), so this doesn't change their layout. */
   display: flex;
   flex-direction: column;
-  /* auto (not hidden): a map page flex-fills exactly so nothing overflows and
-     no scrollbar shows, while a long text/table page (e.g. the 407-row Report
-     Card) scrolls here instead of being clipped by the pinned shell. */
-  overflow: auto;
+  overflow: hidden;
   scroll-margin-top: 110px;
 }
 
@@ -222,28 +220,34 @@ p  { margin: 0 0 0.75rem; }
 /* ---- Footer -------------------------------------------------------------- */
 
 .shell-footer { background:var(--slate-950);
-  border-top:2px solid var(--green-700); padding:1rem 1.5rem 0.75rem; }
+  border-top:2px solid var(--green-700); padding:0.5rem 1.5rem 0.4rem; }
 .shell-footer-inner { max-width:1100px; margin:0 auto; }
 .shell-footer-grid { display:grid;
   grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-  gap:1rem; margin-bottom:0.75rem; }
+  gap:0.4rem; margin-bottom:0.3rem; }
 .shell-footer-col-label { font-size:0.65rem; font-weight:700;
   text-transform:uppercase; letter-spacing:0.12em;
   color:#4caf72; margin:0 0 0.25rem; }
-.shell-footer-line { margin:0.1rem 0; font-size:0.75rem;
+.shell-footer-line { margin:0; font-size:0.75rem;
   color:rgba(255,255,255,0.55); line-height:1.5; }
-.shell-footer-territorial { font-style:italic; font-size:0.72rem;
+.shell-footer-territorial { display:none; font-style:italic; font-size:0.72rem;
   color:rgba(255,255,255,0.4); line-height:1.4; }
 .shell-footer-divider { border:none;
   border-top:1px solid rgba(255,255,255,0.08); margin:0 0 0.5rem; }
 .shell-footer-copy { text-align:center; font-size:0.7rem;
-  color:rgba(255,255,255,0.3); margin:0; }
+  color:rgba(255,255,255,0.3); margin:0; padding-top:0.25rem; }
 
 /* ---- Content pages ------------------------------------------------------- */
 
 .content-page,
 .content-placeholder {
   max-width: 48rem;
+  /* shell-main dropped its padding (so map pages go full-bleed); text pages
+     restore the original 2rem/1.25rem inset here. */
+  padding: 2rem 1.25rem;
+  /* shell-main is overflow:hidden, so a text/placeholder page taller than the
+     viewport must scroll inside itself rather than be clipped. */
+  overflow-y: auto;
 }
 
 .content-placeholder-kind {
@@ -261,14 +265,14 @@ p  { margin: 0 0 0.75rem; }
 /* ---- Map pages ----------------------------------------------------------- */
 
 /* Open layout matching pipeline/property-assessment/scripts/09_build_choropleth.html:
-   left sidebar + flex-filling map. Full-bleed within shell-main's max-width
-   (negative margins cancel its 2rem/1.25rem padding) and flex-1 so the map
-   takes whatever vertical space sits between Nav and Footer. */
+   left sidebar + flex-filling map. shell-main now has no padding, so the map is
+   full-bleed with margin:0 (no negative-margin cancel needed) and flex-1 so the
+   map takes whatever vertical space sits between Nav and Footer. */
 .content-map {
   max-width: none;
   flex: 1;
   display: flex;
-  margin: -2rem -1.25rem;
+  margin: 0;
   min-height: 0;       /* let flex children shrink instead of overflowing */
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
@@ -747,7 +751,7 @@ p  { margin: 0 0 0.75rem; }
 
 /* Page widens past the text-page max so 9 columns + tabular numerics
    actually fit without horizontal scroll on a laptop. */
-.report-card { max-width: 1100px; }
+.report-card { max-width: 1100px; overflow-y: auto; }
 
 .report-card-controls {
   display: flex;
