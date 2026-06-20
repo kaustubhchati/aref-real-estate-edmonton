@@ -87,158 +87,166 @@ cat("Rows after join:", nrow(assess_full), "\n")
 cat("Rows with NA lot_size:", sum(is.na(assess_full$lot_size)), "\n\n")
 
 
-# --- Load oracle --------------------------------------------
-oracle <- read_csv("data/validation/edmonton_row_labels_2023.csv",
-                   show_col_types = FALSE)
-cat("Oracle rows:", nrow(oracle), "\n")
+# --- Load oracle (operator-only; requires 03's bridge file, skipped on clean clone) ---
+# Depends on data/validation/edmonton_row_labels_2023.csv (built by 03 with
+# AREF_CONF_PATH set). Absent on a clean clone — skip the whole rule body then.
+if (file.exists("data/validation/edmonton_row_labels_2023.csv")) {
+
+  oracle <- read_csv("data/validation/edmonton_row_labels_2023.csv",
+                     show_col_types = FALSE)
+  cat("Oracle rows:", nrow(oracle), "\n")
 
 
-# --- Join to oracle -----------------------------------------
-validation <- assess_full |>
-  inner_join(oracle, by = "Account Number")
+  # --- Join to oracle -----------------------------------------
+  validation <- assess_full |>
+    inner_join(oracle, by = "Account Number")
 
-cat("Public rows (post-R1):    ", nrow(assess_full), "\n")
-cat("Oracle rows:              ", nrow(oracle), "\n")
-cat("Joined (intersection):    ", nrow(validation), "\n\n")
-
-
-# --- Ground truth: manufactured home Luc 1 descriptions -----
-# Enumerated from 2023 confidential Luc 1 Description column (script 03).
-# "building only"       = leased land, no lot_size → catchable by this rule.
-# "building and land"   = owned land, has lot_size → structural FN for this rule.
-manufactured_descriptions <- c(
-  "Manufactured home (building only)",
-  "Manufactured home (building and land)"
-)
-
-validation <- validation |>
-  mutate(is_mfh_conf = luc_1_desc %in% manufactured_descriptions)
-
-cat("Confidential MFH rows (all types):    ", sum(validation$is_mfh_conf), "\n")
-cat("  building only (catchable):           ",
-    sum(validation$luc_1_desc == "Manufactured home (building only)", na.rm = TRUE), "\n")
-cat("  building and land (structural FN):   ",
-    sum(validation$luc_1_desc == "Manufactured home (building and land)", na.rm = TRUE), "\n\n")
+  cat("Public rows (post-R1):    ", nrow(assess_full), "\n")
+  cat("Oracle rows:              ", nrow(oracle), "\n")
+  cat("Joined (intersection):    ", nrow(validation), "\n\n")
 
 
-# --- Predicate (R3: drop rows where lot_size is NA) ---------
-validation <- validation |>
-  mutate(pred_drop = is.na(lot_size))
-
-
-# --- Confusion matrix (polarity = drop) ----------------------
-# pred_drop TRUE  + is_mfh_conf TRUE  -> TP (correctly flagged for removal)
-# pred_drop TRUE  + is_mfh_conf FALSE -> FP (wrongly flagged)
-# pred_drop FALSE + is_mfh_conf TRUE  -> FN (missed manufactured homes)
-# pred_drop FALSE + is_mfh_conf FALSE -> TN (correctly retained)
-tp <- sum(validation$pred_drop == TRUE  & validation$is_mfh_conf == TRUE)
-fp <- sum(validation$pred_drop == TRUE  & validation$is_mfh_conf == FALSE)
-fn <- sum(validation$pred_drop == FALSE & validation$is_mfh_conf == TRUE)
-tn <- sum(validation$pred_drop == FALSE & validation$is_mfh_conf == FALSE)
-
-precision    <- tp / (tp + fp)
-recall       <- tp / (tp + fn)
-f1           <- 2 * precision * recall / (precision + recall)
-rows_kept    <- tp + fp   # rows flagged for removal
-rows_dropped <- fn + tn   # rows flowing to production
-
-cat("--- Validation metrics ---\n")
-cat(sprintf("TP: %d  FP: %d  FN: %d  TN: %d\n", tp, fp, fn, tn))
-cat(sprintf("Precision: %s\n", percent(precision, accuracy = 0.01)))
-cat(sprintf("Recall:    %s\n", percent(recall,    accuracy = 0.01)))
-cat(sprintf("F1:        %s\n", percent(f1,        accuracy = 0.01)))
-cat(sprintf("Rows flagged for removal (pred TRUE):    %d\n", rows_kept))
-cat(sprintf("Rows flowing to production (pred FALSE): %d\n", rows_dropped))
-
-
-# --- FP/FN breakdown ----------------------------------------
-false_positives <- validation |>
-  filter(pred_drop == TRUE,  is_mfh_conf == FALSE) |>
-  count(luc_1_desc, sort = TRUE)
-
-false_negatives <- validation |>
-  filter(pred_drop == FALSE, is_mfh_conf == TRUE) |>
-  count(luc_1_desc, sort = TRUE)
-
-cat("\n--- False positives (flagged, oracle says not manufactured home) ---\n")
-print(false_positives)
-
-cat("\n--- False negatives (oracle says MFH, not flagged) ---\n")
-cat("Expected: ~104 rows of type 'building and land' (structural FN)\n")
-print(false_negatives)
-
-
-# --- Write per-rule artefacts (§6.2 naming) -----------------
-val_file   <- sprintf("output/%s_%s_validation_%s.csv", rule_id, rule_slug, year_tag)
-err_file   <- sprintf("output/%s_%s_errors_%s.csv",     rule_id, rule_slug, year_tag)
-board_file <- sprintf("output/rule_scorecards_%s.csv",  year_tag)
-
-validation_summary <- tibble(
-  rule_id    = rule_id,
-  rule_slug  = rule_slug,
-  rule_label = rule_label,
-  year       = year_tag,
-  metric     = c("precision", "recall", "f1",
-                 "true_pos", "false_pos", "false_neg", "true_neg",
-                 "rows_scored"),
-  value      = c(precision, recall, f1,
-                 tp, fp, fn, tn,
-                 nrow(validation))
-)
-write_csv(validation_summary, val_file)
-cat("\nWrote:", val_file, "\n")
-
-bind_rows(
-  false_positives |> mutate(error_type = "false_positive"),
-  false_negatives |> mutate(error_type = "false_negative")
-) |>
-  mutate(rule_id = rule_id, rule_slug = rule_slug) |>
-  select(rule_id, rule_slug, luc_1_desc, n, error_type) |>
-  write_csv(err_file)
-cat("Wrote:", err_file, "\n")
-
-
-# --- Update scoreboard (remove-then-append, never overwrite) -
-# See CLAUDE.md §7.3: this is the only acceptable scoreboard update pattern.
-scoreboard_row <- tibble(
-  rule_id      = rule_id,
-  rule_slug    = rule_slug,
-  rule_label   = rule_label,
-  polarity     = rule_polarity,
-  year         = year_tag,
-  precision    = precision,
-  recall       = recall,
-  f1           = f1,
-  true_pos     = tp,
-  false_pos    = fp,
-  false_neg    = fn,
-  true_neg     = tn,
-  rows_scored  = nrow(validation),
-  rows_kept    = rows_kept,
-  rows_dropped = rows_dropped,
-  notes        = paste(
-    "Removes manufactured homes on leased land via NA lot_size",
-    "(Property Information join, dkk9-cj3x). Ground truth: 2 Luc 1 strings",
-    "(building only + building and land). Structural FNs: ~104 rows of type",
-    "'building and land' own their lot and have lot_size > 0 — not catchable",
-    "by this predicate. See [OPEN] R3b for a follow-on rule targeting those."
+  # --- Ground truth: manufactured home Luc 1 descriptions -----
+  # Enumerated from 2023 confidential Luc 1 Description column (script 03).
+  # "building only"       = leased land, no lot_size → catchable by this rule.
+  # "building and land"   = owned land, has lot_size → structural FN for this rule.
+  manufactured_descriptions <- c(
+    "Manufactured home (building only)",
+    "Manufactured home (building and land)"
   )
-)
 
-if (file.exists(board_file)) {
-  existing <- read_csv(board_file,
-                       col_types = cols(year = col_character(), .default = col_guess()),
-                       show_col_types = FALSE)
-  for (col in setdiff(names(scoreboard_row), names(existing))) {
-    message(sprintf("Scoreboard migration: adding column '%s'", col))
-    existing[[col]] <- NA
+  validation <- validation |>
+    mutate(is_mfh_conf = luc_1_desc %in% manufactured_descriptions)
+
+  cat("Confidential MFH rows (all types):    ", sum(validation$is_mfh_conf), "\n")
+  cat("  building only (catchable):           ",
+      sum(validation$luc_1_desc == "Manufactured home (building only)", na.rm = TRUE), "\n")
+  cat("  building and land (structural FN):   ",
+      sum(validation$luc_1_desc == "Manufactured home (building and land)", na.rm = TRUE), "\n\n")
+
+
+  # --- Predicate (R3: drop rows where lot_size is NA) ---------
+  validation <- validation |>
+    mutate(pred_drop = is.na(lot_size))
+
+
+  # --- Confusion matrix (polarity = drop) ----------------------
+  # pred_drop TRUE  + is_mfh_conf TRUE  -> TP (correctly flagged for removal)
+  # pred_drop TRUE  + is_mfh_conf FALSE -> FP (wrongly flagged)
+  # pred_drop FALSE + is_mfh_conf TRUE  -> FN (missed manufactured homes)
+  # pred_drop FALSE + is_mfh_conf FALSE -> TN (correctly retained)
+  tp <- sum(validation$pred_drop == TRUE  & validation$is_mfh_conf == TRUE)
+  fp <- sum(validation$pred_drop == TRUE  & validation$is_mfh_conf == FALSE)
+  fn <- sum(validation$pred_drop == FALSE & validation$is_mfh_conf == TRUE)
+  tn <- sum(validation$pred_drop == FALSE & validation$is_mfh_conf == FALSE)
+
+  precision    <- tp / (tp + fp)
+  recall       <- tp / (tp + fn)
+  f1           <- 2 * precision * recall / (precision + recall)
+  rows_kept    <- tp + fp   # rows flagged for removal
+  rows_dropped <- fn + tn   # rows flowing to production
+
+  cat("--- Validation metrics ---\n")
+  cat(sprintf("TP: %d  FP: %d  FN: %d  TN: %d\n", tp, fp, fn, tn))
+  cat(sprintf("Precision: %s\n", percent(precision, accuracy = 0.01)))
+  cat(sprintf("Recall:    %s\n", percent(recall,    accuracy = 0.01)))
+  cat(sprintf("F1:        %s\n", percent(f1,        accuracy = 0.01)))
+  cat(sprintf("Rows flagged for removal (pred TRUE):    %d\n", rows_kept))
+  cat(sprintf("Rows flowing to production (pred FALSE): %d\n", rows_dropped))
+
+
+  # --- FP/FN breakdown ----------------------------------------
+  false_positives <- validation |>
+    filter(pred_drop == TRUE,  is_mfh_conf == FALSE) |>
+    count(luc_1_desc, sort = TRUE)
+
+  false_negatives <- validation |>
+    filter(pred_drop == FALSE, is_mfh_conf == TRUE) |>
+    count(luc_1_desc, sort = TRUE)
+
+  cat("\n--- False positives (flagged, oracle says not manufactured home) ---\n")
+  print(false_positives)
+
+  cat("\n--- False negatives (oracle says MFH, not flagged) ---\n")
+  cat("Expected: ~104 rows of type 'building and land' (structural FN)\n")
+  print(false_negatives)
+
+
+  # --- Write per-rule artefacts (§6.2 naming) -----------------
+  val_file   <- sprintf("output/%s_%s_validation_%s.csv", rule_id, rule_slug, year_tag)
+  err_file   <- sprintf("output/%s_%s_errors_%s.csv",     rule_id, rule_slug, year_tag)
+  board_file <- sprintf("output/rule_scorecards_%s.csv",  year_tag)
+
+  validation_summary <- tibble(
+    rule_id    = rule_id,
+    rule_slug  = rule_slug,
+    rule_label = rule_label,
+    year       = year_tag,
+    metric     = c("precision", "recall", "f1",
+                   "true_pos", "false_pos", "false_neg", "true_neg",
+                   "rows_scored"),
+    value      = c(precision, recall, f1,
+                   tp, fp, fn, tn,
+                   nrow(validation))
+  )
+  write_csv(validation_summary, val_file)
+  cat("\nWrote:", val_file, "\n")
+
+  bind_rows(
+    false_positives |> mutate(error_type = "false_positive"),
+    false_negatives |> mutate(error_type = "false_negative")
+  ) |>
+    mutate(rule_id = rule_id, rule_slug = rule_slug) |>
+    select(rule_id, rule_slug, luc_1_desc, n, error_type) |>
+    write_csv(err_file)
+  cat("Wrote:", err_file, "\n")
+
+
+  # --- Update scoreboard (remove-then-append, never overwrite) -
+  # See CLAUDE.md §7.3: this is the only acceptable scoreboard update pattern.
+  scoreboard_row <- tibble(
+    rule_id      = rule_id,
+    rule_slug    = rule_slug,
+    rule_label   = rule_label,
+    polarity     = rule_polarity,
+    year         = year_tag,
+    precision    = precision,
+    recall       = recall,
+    f1           = f1,
+    true_pos     = tp,
+    false_pos    = fp,
+    false_neg    = fn,
+    true_neg     = tn,
+    rows_scored  = nrow(validation),
+    rows_kept    = rows_kept,
+    rows_dropped = rows_dropped,
+    notes        = paste(
+      "Removes manufactured homes on leased land via NA lot_size",
+      "(Property Information join, dkk9-cj3x). Ground truth: 2 Luc 1 strings",
+      "(building only + building and land). Structural FNs: ~104 rows of type",
+      "'building and land' own their lot and have lot_size > 0 — not catchable",
+      "by this predicate. See [OPEN] R3b for a follow-on rule targeting those."
+    )
+  )
+
+  if (file.exists(board_file)) {
+    existing <- read_csv(board_file,
+                         col_types = cols(year = col_character(), .default = col_guess()),
+                         show_col_types = FALSE)
+    for (col in setdiff(names(scoreboard_row), names(existing))) {
+      message(sprintf("Scoreboard migration: adding column '%s'", col))
+      existing[[col]] <- NA
+    }
+    updated <- existing |>
+      filter(rule_id != !!rule_id) |>
+      bind_rows(scoreboard_row)
+  } else {
+    updated <- scoreboard_row
   }
-  updated <- existing |>
-    filter(rule_id != !!rule_id) |>
-    bind_rows(scoreboard_row)
-} else {
-  updated <- scoreboard_row
-}
 
-write_csv(updated, board_file)
-cat("Wrote:", board_file, sprintf("(%d rules)\n", nrow(updated)))
+  write_csv(updated, board_file)
+  cat("Wrote:", board_file, sprintf("(%d rules)\n", nrow(updated)))
+
+} else {
+  message("Oracle labels not found (data/validation/edmonton_row_labels_2023.csv) — skipping manufactured-homes validation. Run 03 with AREF_CONF_PATH set to generate it. Expected on a clean clone.")
+}
