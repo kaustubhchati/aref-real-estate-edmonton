@@ -62,11 +62,13 @@ cat("AREF — Manifest Emission\n")
 cat("Generated:", format(Sys.time(), "%Y-%m-%d %H:%M %Z"), "\n")
 cat("=============================================================\n\n")
 
+source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
+
 # Run directly in console — no need to edit the script file
 # Override the two path variables then source
 
-public_dir    <- "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/website/public/data/property-assessment"
-manifest_path <- "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/website/public/manifest.json"
+public_dir    <- website_path("public", "data", "property-assessment")
+manifest_path <- website_path("public", "manifest.json")
 
 
 
