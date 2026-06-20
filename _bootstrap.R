@@ -36,3 +36,9 @@ section_path <- function(section, ...) file.path(ROOT, "pipeline", section, ...)
 # website_path(): a target in the frontend tree — use ONLY in designated
 # handoff scripts, never in ordinary pipeline scripts
 website_path <- function(...) file.path(ROOT, "website", ...)
+
+# conf_path(): operator-local confidential validation oracle. Lives OUTSIDE the
+# repo by design (gitignored, never in production). Set AREF_CONF_PATH in your
+# ~/.Renviron to point at the file. Returns "" if unset/absent, so validation
+# scripts can skip gracefully on any machine without the oracle (e.g. a clean clone).
+conf_path <- function() Sys.getenv("AREF_CONF_PATH", unset = "")
