@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aref.ualberta.ca/schemas/refresh_report.v1.json",
+  "title": "Refresh Report (v1)",
+  "description": "Structured output of the read-only Refresh Report agent: what changed in a pipeline refresh. DESIGN ARTIFACT — not yet in use.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["report_version", "generated_at", "pipeline_run", "sections", "overall_status"],
+  "properties": {
+    "report_version": {
+      "type": "string",
+      "const": "1",
+      "description": "Schema major version this document conforms to."
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "pipeline_run": {
+      "type": "string",
+      "description": "Identifier or path of the whirl run this report describes."
+    },
+    "overall_status": {
+      "type": "string",
+      "enum": ["ok", "warn", "error"],
+      "description": "Worst status across all sections/scripts."
+    },
+    "new_year_detected": {
+      "type": ["string", "null"],
+      "description": "The new data year if this refresh introduced one, else null."
+    },
+    "sections": {
+      "type": "array",
+      "description": "Per-section summary.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["section", "status"],
+        "properties": {
+          "section": { "type": "string" },
+          "status": { "type": "string", "enum": ["ok", "warn", "error"] },
+          "row_count": { "type": ["integer", "null"], "minimum": 0 },
+          "row_count_delta": {
+            "type": ["integer", "null"],
+            "description": "Change in row count vs. previous refresh (may be negative)."
+          },
+          "scripts_with_issues": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Names of scripts that errored or warned."
+          },
+          "rule_drift": {
+            "type": "array",
+            "description": "Precision/recall changes for validated rules.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["rule"],
+              "properties": {
+                "rule": { "type": "string" },
+                "precision_delta": { "type": ["number", "null"] },
+                "recall_delta": { "type": ["number", "null"] },
+                "f1_delta": { "type": ["number", "null"] }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

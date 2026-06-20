@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aref.ualberta.ca/schemas/agent_run.v1.json",
+  "title": "Agent Run (v1)",
+  "description": "One record per agent invocation, appended as a single line to runs/agent_runs.jsonl. DESIGN ARTIFACT — not yet in use.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "agent", "agent_version", "timestamp", "status"],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "description": "Unique id for this agent invocation."
+    },
+    "agent": {
+      "type": "string",
+      "description": "Agent name, e.g. 'refresh_report'."
+    },
+    "agent_version": {
+      "type": "string",
+      "description": "Version of the agent/prompt that produced this run."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 start time of the invocation."
+    },
+    "pipeline_run": {
+      "type": ["string", "null"],
+      "description": "Identifier or path of the pipeline run this agent read (e.g. the whirl summary)."
+    },
+    "model": {
+      "type": ["string", "null"],
+      "description": "Model used, if any."
+    },
+    "tokens_in": { "type": ["integer", "null"], "minimum": 0 },
+    "tokens_out": { "type": ["integer", "null"], "minimum": 0 },
+    "cost_usd": { "type": ["number", "null"], "minimum": 0 },
+    "duration_seconds": { "type": ["number", "null"], "minimum": 0 },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "warn", "error"],
+      "description": "Outcome of the invocation."
+    },
+    "output_artifact": {
+      "type": ["string", "null"],
+      "description": "Path to the structured output this run produced, if any."
+    },
+    "notes": {
+      "type": ["string", "null"],
+      "description": "Optional free-text note (errors, context)."
+    }
+  }
+}
