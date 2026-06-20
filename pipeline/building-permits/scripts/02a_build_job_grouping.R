@@ -134,7 +134,7 @@ for (g in c("residential", "commercial")) {
 cat("\n--- Split among rows WITH coordinates (the rendered universe) ---\n")
 permits_grouped |>
   mutate(has_coord = !is.na(LATITUDE) & !is.na(LONGITUDE)) |>
-  filter(has_coord) |
+  filter(has_coord) |>
   count(job_group) |>
   mutate(pct = percent(n / sum(n), 0.1)) |>
   print()
