@@ -110,11 +110,11 @@ if (length(info_only_cols) > 0) {
 # What got them, under what names? Print the actuals.
 
 expected_info_fields <- c(
-  "Lot Size",
-  "Year Built",
+  "lot_size",
+  "year_built",
   "Total Gross Area",
-  "Zoning",
-  "Legal Description",
+  "zoning",
+  "legal_description",
   "Suite",
   "Garage"
 )
@@ -325,11 +325,9 @@ if (file.exists(conf_path())) {
   # --- Section B prep: snake_case aliases for ergonomic referencing ---
   assess_full_labelled <- assess_full_labelled |>
     mutate(
-      lot_size          = `Lot Size`,
-      year_built        = `Year Built`,
-      total_gross_area  = `Total Gross Area`,
-      zoning            = Zoning,
-      legal_description = `Legal Description`
+      # PI source migrated to snake_case (lot_size/year_built/zoning/legal_description
+      # already arrive snake_case); only Total Gross Area remains TitleCase and needs aliasing.
+      total_gross_area  = `Total Gross Area`
     )
   # --- B.1 — What's in the contamination? ---------------------
   cat("\n=== B.1 — Luc 1 inventory of contamination (non-5class rows) ===\n")
