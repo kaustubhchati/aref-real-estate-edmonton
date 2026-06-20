@@ -9,7 +9,7 @@
 #
 # Inputs:
 #   - output/neighbourhood_aggregates_2026.csv               (from script 07)
-#   - ../shared/data/.../City_of_Edmonton_-_Neighbourhoods_20260616.csv
+#   - resolved via shared_path() to pipeline/shared/data/City_of_Edmonton_-_Neighbourhoods_20260616.csv
 #   - data/processed/assess_2026_no_parking.csv              (non-residential check)
 #   - data/reference/neighbourhood_name_mappings_20260617.csv (curated mappings,
 #     7 rows; date in filename — latest is authoritative, CLAUDE.md §4.4)
@@ -53,6 +53,8 @@
 #   - PLACE LARUE (4400)                          — 0-pop commercial zone
 # ============================================================
 
+source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
+
 # --- Setup --------------------------------------------------
 library(tidyverse)
 library(sf)
@@ -62,7 +64,7 @@ stopifnot(dir.exists("output"))
 
 
 # --- Path config --------------------------------------------
-boundary_path <- "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/pipeline/shared/data/City_of_Edmonton_-_Neighbourhoods_20260616.csv"
+boundary_path <- shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
 aggregates_path <- "output/neighbourhood_aggregates_2026.csv"
 post_parking_path <- "data/processed/assess_2026_no_parking.csv"
 mapping_path <- "data/reference/neighbourhood_name_mappings_20260617.csv"
