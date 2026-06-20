@@ -90,3 +90,6 @@ pipeline/shared/data/
 **/building-permits/output/permits.pmtiles
 **/building-permits/output/permits.pmtiles
 **/building-permits/output/permit_geojson/*.geojson
+
+# Local working doc — audit findings, not a repo artifact
+docs/STRUCTURE_AUDIT.md
