@@ -5,7 +5,7 @@
 // Mirrors building-permits/PermitChoroplethMap.jsx for all map chrome:
 // shared MapView + custom basemap, the same fill/outline/highlight/label layer
 // stack (bcensus-* ids, no collision with assessment's nbhd-* or permit's
-// pnbhd-*), the 300ms-delay hover popup, click-to-pin, cursor and feature-state.
+// pnbhd-*), the 900ms-delay hover popup, click-to-pin, cursor and feature-state.
 //
 // Differences from the permit choropleth: a SINGLE GeoJSON (survey year 2025,
 // no year selector), a two-metric selector, and the two-state model
@@ -142,7 +142,7 @@ export default function BusinessCensusMap() {
     }
   }, [map, metric, stops]);
 
-  // Hover (300ms delay + jitter fix) + click-to-pin interactions on the fill
+  // Hover (200ms delay + jitter fix) + click-to-pin interactions on the fill
   // layer. Installed once per map.
   useEffect(() => {
     if (!map) return undefined;
@@ -164,7 +164,7 @@ export default function BusinessCensusMap() {
     let hoveredId = null;
     let pinnedId = null;
     let hoverTimer = null;      // Tier 2 popup dwell (900ms)
-    let sidebarTimer = null;    // Tier 1 sidebar debounce (450ms)
+    let sidebarTimer = null;    // Tier 1 sidebar debounce (200ms)
     let lastHoveredId = null;
 
     function setHover(id, on) {
@@ -207,7 +207,7 @@ export default function BusinessCensusMap() {
         setHover(hoveredId, true);
         hoverPopup.remove();
         lastHoveredId = f.id;
-        // Tier 1 sidebar panel — debounce 450ms (separate from the 900ms popup).
+        // Tier 1 sidebar panel — debounce 200ms (separate from the 900ms popup).
         clearTimeout(sidebarTimer);
         sidebarTimer = setTimeout(
           () => setHoveredFeatureRef.current(f.properties), 200
@@ -319,8 +319,7 @@ export default function BusinessCensusMap() {
           />
         </section>
 
-        {/* Pattern B — live hover stat panel. Selected metric leads, then the
-            other metric, then year-over-year business change (coloured). */}
+        {/* Pattern B — live hover stat panel. Shows businesses and employees for 2025. */}
         {!hoveredFeature ? (
           <section className="sb-section sb-hover-panel sb-hover-empty">
             <p className="sb-hover-hint">Hover a neighbourhood to see its stats</p>

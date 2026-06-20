@@ -1,11 +1,11 @@
 // =============================================================================
 // PermitChoroplethMap.jsx
 //
-// The Permit Neighbourhoods choropleth route ("/building/permit-neighbourhoods").
+// The Permit Neighbourhoods choropleth route ("/activity/permit-neighbourhoods").
 // Mirrors property-assessment/PropertyAssessmentMap.jsx for all map chrome:
 // shared MapView + custom basemap, the same fill/outline/highlight/label layer
 // stack (pnbhd-* ids, no collision with assessment's nbhd-*), the same polygon
-// states, the 300ms-delay hover popup, click-to-pin, cursor and feature-state.
+// states, the 900ms-delay hover popup, click-to-pin, cursor and feature-state.
 //
 // Differences: Edmonton-only (no city toggle), no search, four permit metrics,
 // per-year committed GeoJSONs (no manifest), interactions wired inline.
@@ -160,7 +160,7 @@ export default function PermitChoroplethMap() {
     }
   }, [map, metric, stops]);
 
-  // Hover (300ms delay + jitter fix) + click-to-pin interactions on the fill
+  // Hover (200ms delay + jitter fix) + click-to-pin interactions on the fill
   // layer. Installed once per map; the handlers read yearRef so they stay current
   // across year changes (and the map remounts on a year change anyway).
   useEffect(() => {
@@ -183,7 +183,7 @@ export default function PermitChoroplethMap() {
     let hoveredId = null;
     let pinnedId = null;
     let hoverTimer = null;      // Tier 2 popup dwell (900ms)
-    let sidebarTimer = null;    // Tier 1 sidebar debounce (450ms)
+    let sidebarTimer = null;    // Tier 1 sidebar debounce (200ms)
     let lastHoveredId = null;
 
     function setHover(id, on) {
@@ -226,7 +226,7 @@ export default function PermitChoroplethMap() {
         setHover(hoveredId, true);
         hoverPopup.remove();
         lastHoveredId = f.id;
-        // Tier 1 sidebar panel — debounce 450ms (separate from the 900ms popup).
+        // Tier 1 sidebar panel — debounce 200ms (separate from the 900ms popup).
         clearTimeout(sidebarTimer);
         sidebarTimer = setTimeout(
           () => setHoveredFeatureRef.current(f.properties), 200

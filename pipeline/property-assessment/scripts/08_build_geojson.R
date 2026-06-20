@@ -5,13 +5,13 @@
 #
 # Boundary source (changed 2026-06-17): City of Edmonton Neighbourhoods CSV
 # (dataset 65fr-66s6), 407 polygons, WKT geometry in the "Geometry Multipolygon"
-# column, WGS84. Lives in pipeline/_shared so every section joins to the same
+# column, WGS84. Lives in pipeline/shared so every section joins to the same
 # canonical geometry. Replaces the Jan-2023 EDM_neighborhood_boundary shapefile
 # (402 polygons). Read via read_csv + st_as_sf(wkt=...); no shapefile sidecars.
 #
 # Inputs:
 #   - output/neighbourhood_aggregates_2026.csv         (from script 07)
-#   - ../_shared/data/.../City_of_Edmonton_-_Neighbourhoods_20260616.csv
+#   - ../shared/data/.../City_of_Edmonton_-_Neighbourhoods_20260616.csv
 #     (407-polygon boundary CSV, WKT/WGS84)
 #   - data/processed/assess_2026_no_parking.csv        (for non-residential
 #     state detection — neighbourhoods entirely eliminated by R1+R3)
@@ -55,14 +55,14 @@ dir.create("output", showWarnings = FALSE, recursive = TRUE)
 # --- Path config --------------------------------------------
 # New 2026 boundary source: City of Edmonton Neighbourhoods CSV (65fr-66s6),
 # 407 polygons, WKT geometry in the "Geometry Multipolygon" column, WGS84.
-# Lives in _shared so every section joins to the same canonical geometry.
+# Lives in shared so every section joins to the same canonical geometry.
 # Replaces the Jan-2023 EDM_neighborhood_boundary shapefile (402 polygons).
 boundary_path <- "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/pipeline/shared/data/City_of_Edmonton_-_Neighbourhoods_20260616.csv"
 file.exists(boundary_path)                       # TRUE or fix the path
 names(read_csv(boundary_path, n_max = 0))        # confirm "Geometry Multipolygon" present
 if (!file.exists(boundary_path)) {
   stop("Boundary CSV not found at: ", boundary_path,
-       "\n  Expected the City Neighbourhoods CSV in pipeline/_shared/data/neighbourhoods/.")
+       "\n  Expected the City Neighbourhoods CSV in pipeline/shared/data/neighbourhoods/.")
 }
 # --- Load aggregates ----------------------------------------
 agg_path <- "output/neighbourhood_aggregates_2026.csv"

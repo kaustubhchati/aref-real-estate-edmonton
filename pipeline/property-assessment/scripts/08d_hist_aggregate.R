@@ -14,7 +14,7 @@
 #   - Output filenames derived from data, not hardcoded.
 #
 # INPUTS:
-#   output/pa_hist_clean_YYYYMMDD.csv   (from script 07_build_hist_clean.R)
+#   output/pa_hist_clean_YYYYMMDD.csv   (from script 07a_build_hist_clean.R)
 #
 # OUTPUTS (one per Assessment Year):
 #   output/hist_aggregates/neighbourhood_aggregates_YYYY.csv

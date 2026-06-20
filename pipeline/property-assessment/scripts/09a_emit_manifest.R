@@ -1,5 +1,5 @@
 # ============================================================
-# 09_emit_manifest.R
+# 09a_emit_manifest.R
 # AREF — Emit manifest.json for frontend year auto-discovery
 # Author: Kaustubh Chati (Research Assistant, UAlberta Economics)
 #
@@ -11,7 +11,7 @@
 # REFRESH-BY-DESIGN:
 #   - Discovers years from filenames — no hardcoded year list
 #   - Re-running after adding a new GeoJSON updates the manifest
-#   - One operator command: source("scripts/09_emit_manifest.R")
+#   - One operator command: source("scripts/09a_emit_manifest.R")
 #
 # INPUTS:
 #   website/public/data/property-assessment/neighbourhoods_YYYY_recovered.geojson

@@ -109,7 +109,7 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
 
   // ---- Handlers (named so .off() can detach them on cleanup) -----------
   let hoverTimer = null;      // Tier 2 popup dwell (900ms)
-  let sidebarTimer = null;    // Tier 1 sidebar panel debounce (450ms) — separate
+  let sidebarTimer = null;    // Tier 1 sidebar panel debounce (200ms) — separate
   let lastHoveredId = null;
 
   function onMouseMove(e) {
@@ -145,7 +145,7 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
       hoverPopup.remove();
       lastHoveredId = f.id;
 
-      // Tier 1 sidebar panel: debounce 450ms on its own timer (independent of
+      // Tier 1 sidebar panel: debounce 200ms on its own timer (independent of
       // the 900ms Tier 2 popup timer below).
       clearTimeout(sidebarTimer);
       sidebarTimer = setTimeout(() => onHover?.(f.properties), 200);

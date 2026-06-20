@@ -4,12 +4,12 @@
 # version-controlled name→ID mapping table, then re-run the 08 spatial join.
 #
 # Boundary source (changed 2026-06-17): City of Edmonton Neighbourhoods CSV
-# (65fr-66s6), 407 polygons, WKT/WGS84, in pipeline/_shared. Replaces the
+# (65fr-66s6), 407 polygons, WKT/WGS84, in pipeline/shared. Replaces the
 # Jan-2023 shapefile. Read via read_csv + st_as_sf(wkt=...).
 #
 # Inputs:
 #   - output/neighbourhood_aggregates_2026.csv               (from script 07)
-#   - ../_shared/data/.../City_of_Edmonton_-_Neighbourhoods_20260616.csv
+#   - ../shared/data/.../City_of_Edmonton_-_Neighbourhoods_20260616.csv
 #   - data/processed/assess_2026_no_parking.csv              (non-residential check)
 #   - data/reference/neighbourhood_name_mappings_20260617.csv (curated mappings,
 #     7 rows; date in filename — latest is authoritative, CLAUDE.md §4.4)
