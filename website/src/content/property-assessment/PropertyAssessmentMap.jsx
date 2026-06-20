@@ -196,8 +196,22 @@ export default function PropertyAssessmentMap() {
   const names = useMemo(() => (gj ? indexNamesForSearch(gj) : []), [gj]);
   const flyAndPinByName = useChoroplethInteractions(map, gj, year, setHoveredFeature);
 
-  // Count-up of the cleaned property count (PHASE1_STATUS §5) shown in sb-sub.
-  const propCount = useCountUp(365406);
+  // Sum n_properties across every polygon that has a finite count. This includes
+  // aggregated + suppressed_low_n polygons and naturally excludes non_residential
+  // / manufactured_home_community / no_data (which carry no count). Recomputes on
+  // year switch (gj changes).
+  const propertyCount = useMemo(() => {
+    if (!gj) return 0;
+    let sum = 0;
+    for (const f of gj.features) {
+      const n = Number(f.properties?.n_properties);
+      if (Number.isFinite(n)) sum += n;
+    }
+    return sum;
+  }, [gj]);
+
+  // Count-up of the cleaned property count, summed live from the loaded GeoJSON.
+  const propCount = useCountUp(propertyCount);
 
   // Reflect the current selection in the browser tab title; restore on unmount.
   useEffect(() => {
