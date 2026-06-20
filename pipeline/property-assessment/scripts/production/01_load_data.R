@@ -11,7 +11,7 @@ library(tidyverse)  # dplyr, ggplot2, readr, etc.
 library(scales)     # axis formatting (dollar(), comma(), log scales)
 library(ggplot2)
 library(ggthemes)
-source("scripts/00_theme.R")
+source(rprojroot::find_root_file("pipeline/property-assessment/scripts/_common/00_theme.R", criterion = rprojroot::has_file(".aref_root")))
 # --- Data sources --------------------------------------------
 # Edmonton Open Data Portal — Property Assessment, current calendar year.
 # Dataset ID q7d6-ambg is permanent; the URL serves the latest snapshot

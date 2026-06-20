@@ -35,7 +35,7 @@ dir.create("output", showWarnings = FALSE, recursive = TRUE)
 library(tidyverse)
 library(readxl)
 library(scales)
-source("scripts/00_theme.R")
+source(rprojroot::find_root_file("pipeline/property-assessment/scripts/_common/00_theme.R", criterion = rprojroot::has_file(".aref_root")))
 
 
 # --- Recover assess_with_flag if not in env -----------------
