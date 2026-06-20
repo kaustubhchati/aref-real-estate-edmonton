@@ -33,9 +33,10 @@
 library(tidyverse)
 library(sf)
 library(scales)
+source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
 
 # Output lands directly into website/public for frontend consumption
-out_dir <- "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/website/public/data/property-assessment"
+out_dir <- website_path("public", "data", "property-assessment")
 dir.create(out_dir,           showWarnings = FALSE, recursive = TRUE)
 dir.create("output",          showWarnings = FALSE, recursive = TRUE)
 
@@ -50,7 +51,7 @@ cat("=============================================================\n\n")
 #    Neighbourhood ID in aggregate CSVs.
 # ============================================================
 
-boundary_path <- "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/pipeline/shared/data/City_of_Edmonton_-_Neighbourhoods_20260616.csv"
+boundary_path <- shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
 
 if (!file.exists(boundary_path)) {
   stop("Boundary file not found: ", boundary_path)
@@ -77,7 +78,7 @@ cat("Boundary polygons after WKT parse: ", nrow(boundary_sf), "\n\n")
 # ============================================================
 
 rescue_candidates <- list.files(
-  path       = "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/pipeline/property-assessment/data/reference",
+  path       = "data/reference",
   pattern    = "^neighbourhood_name_mappings_.*\\.csv$",
   full.names = TRUE
 )
