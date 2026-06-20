@@ -48,6 +48,7 @@
 library(tidyverse)
 library(sf)
 library(scales)
+source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
 
 dir.create("output", showWarnings = FALSE, recursive = TRUE)
 
@@ -57,7 +58,7 @@ dir.create("output", showWarnings = FALSE, recursive = TRUE)
 # 407 polygons, WKT geometry in the "Geometry Multipolygon" column, WGS84.
 # Lives in shared so every section joins to the same canonical geometry.
 # Replaces the Jan-2023 EDM_neighborhood_boundary shapefile (402 polygons).
-boundary_path <- "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/pipeline/shared/data/City_of_Edmonton_-_Neighbourhoods_20260616.csv"
+boundary_path <- shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
 file.exists(boundary_path)                       # TRUE or fix the path
 names(read_csv(boundary_path, n_max = 0))        # confirm "Geometry Multipolygon" present
 if (!file.exists(boundary_path)) {
