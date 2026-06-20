@@ -279,7 +279,11 @@ const PROVENANCE =
   "Source: Edmonton Business Census. Geography changed from StatCan " +
   "Census Tracts; figures not comparable to prior dashboard.";
 
-export function buildBusinessCensusPopupHtml(p, pinned) {
+// `detail` selects the tier:
+//   detail=false → Tier 2 (slim hover): name + district + businesses + employees.
+//   detail=true  → Tier 3 (pinned click): name + district + state badge +
+//                  businesses + employees + 2024 + YoY + provenance.
+export function buildBusinessCensusPopupHtml(p, detail) {
   const name     = p.display_name ?? "—";
   // planning_district is the primary geography label; fall back to civic_ward.
   const district = p.planning_district ?? p.civic_ward ?? null;
@@ -291,31 +295,48 @@ export function buildBusinessCensusPopupHtml(p, pinned) {
     parts.push(`<div class="pop-district">${escapeHtml(district)}</div>`);
   }
 
+  // ---- Tier 2 — slim hover preview ----
+  if (!detail) {
+    if (p.census_state === "data") {
+      parts.push(
+        `<div class="pop-row headline">` +
+          `<span class="pop-k">Businesses (2025)</span>` +
+          `<span class="pop-v">${fmtIntPopup(p.n_businesses_2025)}</span>` +
+        `</div>`,
+        `<div class="pop-row">` +
+          `<span class="pop-k">Employees (2025)</span>` +
+          `<span class="pop-v">${fmtIntPopup(p.n_employees_2025)}</span>` +
+        `</div>`
+      );
+    } else {
+      parts.push(`<div class="pop-reason">No business census data recorded for this neighbourhood.</div>`);
+    }
+    return parts.join("");
+  }
+
+  // ---- Tier 3 — full pinned detail ----
+  const meta = STATE_STYLE[p.census_state] || { label: p.census_state };
+  parts.push(`<div class="pop-state ${p.census_state}">${escapeHtml(meta.label)}</div>`);
+
   if (p.census_state === "data") {
-    // Headline — businesses (2025).
     parts.push(
       `<div class="pop-row headline">` +
         `<span class="pop-k">Businesses (2025)</span>` +
         `<span class="pop-v">${fmtIntPopup(p.n_businesses_2025)}</span>` +
-      `</div>`
-    );
-    // Detail — employees (2025).
-    parts.push(
+      `</div>`,
       `<div class="pop-row">` +
         `<span class="pop-k">Employees (2025)</span>` +
         `<span class="pop-v">${fmtIntPopup(p.n_employees_2025)}</span>` +
       `</div>`
     );
-    // Detail — businesses (2024), only when present.
     if (p.n_businesses_2024 != null) {
       parts.push(
         `<div class="pop-row">` +
-          `<span class="pop-k">Businesses (2024)</span>` +
+          `<span class="pop-k">Businesses 2024</span>` +
           `<span class="pop-v">${fmtIntPopup(p.n_businesses_2024)}</span>` +
         `</div>`
       );
     }
-    // Detail — YoY %, signed + coloured, only when present.
     const yoy = fmtSignedPct(p.yoy_businesses_pct);
     if (yoy != null) {
       parts.push(
@@ -333,13 +354,7 @@ export function buildBusinessCensusPopupHtml(p, pinned) {
     );
   }
 
-  // Provenance note — small muted text at the bottom of every popup.
+  // Provenance note — Tier 3 only.
   parts.push(`<div class="pop-reason">${escapeHtml(PROVENANCE)}</div>`);
-
-  if (pinned) {
-    parts.push(
-      `<div class="pop-pinned-hint">Click map to dismiss</div>`
-    );
-  }
   return parts.join("");
 }
