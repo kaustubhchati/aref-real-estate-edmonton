@@ -19,12 +19,13 @@
 # ============================================================
 
 library(tidyverse)
+source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
 
 # ============================================================
 # 1. Load new boundary file
 # ============================================================
 
-boundary_path <- "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/pipeline/shared/data/City_of_Edmonton_-_Neighbourhoods_20260616.csv"
+boundary_path <- shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
 
 if (!file.exists(boundary_path)) {
   stop(paste(
