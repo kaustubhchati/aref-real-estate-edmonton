@@ -71,14 +71,16 @@ sections, agent pipeline, and infrastructure.
   exploration that previously bloated production 02a.
 - [ ] **building-permits .RData (112MB) on local disk** — already gitignored + never tracked
       (not a git problem). Local-disk note only; delete if reclaiming space.
-- [ ] **`shared/` not built out as a base-geo section** — currently holds only
-      the canonical boundary CSV (correct) + a squatting Business Census script
-      (`01_yeg_business_nbgh_agg.R`) that belongs in a future Economy section,
-      not shared. Road / vegetation / speed-zone base layers — its real purpose
-      (STRUCTURE_UPDATE Day 3/4) — not yet built. On relocating the business
-      script: it hand-rolls `SHARED <- … + file.path()` instead of
-      `shared_path()`; route through the helper when it moves. (Prereq #2 for
-      the Calgary city-layer decision, CLAUDE.md §10 v1.3.)
+- [~] **`shared/` build-out — PARTIAL.** [x] Squatting Business Census script
+      relocated to pipeline/economy/business-census/ (4-commit campaign, byte-verified,
+      history preserved); shared/ now base-geo-only on disk. [ ] Road / vegetation /
+      speed-zone base layers (shared/'s real purpose, STRUCTURE_UPDATE Day 3/4) still
+      not built. (Prereq #2 for the Calgary city-layer decision, CLAUDE.md §10 — now
+      partially met: relocation half done, base-geo-layer half remains.)
+- [ ] **Section output/ tracking inconsistency** — economy/business-census commits its
+      output/ (geojson/csv/log, also the frontend deliverable source), while
+      property-assessment + building-permits gitignore most regenerable output/. Decide a
+      consistent policy. Low priority; surfaced during the Economy relocation.
 - [ ] **`shared/` tracked RStudio junk** — `.RData` + `.Rhistory` committed
       under `pipeline/shared/`. Gitignore + untrack (same as the
       property-assessment `.Rhistory` cleanup item).
@@ -190,10 +192,11 @@ sections, agent pipeline, and infrastructure.
 2. ~~Migrate building-permits to the portability pattern~~ — **DONE** (7-commit
    campaign; see Backend/pipeline above). Both sections now expose a uniform
    `production/` + `eda/`. Calgary city-layer prereq #1 MET.
-3. **Build out `shared/` as a base-geo section** — road / vegetation / speed-zone
-   reference layers; relocate the squatting Business Census script to an Economy
-   section (route it through `shared_path()` on the move). Calgary city-layer
-   prereq #2 (CLAUDE.md §10 v1.3).
+3. **Build out `shared/` as a base-geo section** — ~~relocate the squatting Business
+   Census script to an Economy section~~ **DONE** (now `economy/business-census/`,
+   path-anchored via `shared_path()`); remaining: road / vegetation / speed-zone base
+   layers. Calgary city-layer prereq #2 (CLAUDE.md §10) now **partially met** —
+   relocation half done, base-geo-layer half remains.
 4. **Whirl orchestration layer** — now unblocked: both migrated sections expose a
    uniform `production/` for whirl to glob, and 02a's standalone fix removed the
    last cross-process session dependency. Report-side prerequisite.
