@@ -31,6 +31,34 @@ sections, agent pipeline, and infrastructure.
       exist. Resolve before next pipeline refresh.
 - [ ] **R1 scoreboard notes backfill** — rejected R1'
       variant note still missing from scoreboard CSV.
+- [x] **assess_2026_with_flags.csv producer — RESOLVED.** Confirmed empirically
+      = `01_load_data.R` line 280 (final write). The May-19 on-disk absence was
+      stale state (the write was added to 01 after that run produced
+      no_parking.csv), not a missing pipeline step. Clean sequential run lands
+      both CSVs; row math reconciles (439,780 raw − 45,277 parking = 394,503
+      no_parking). Retires SESSION_HANDOVER §6 gap #1 — the last validation-tier
+      runtime gap.
+- [x] **Script 01 production cleanup — DONE (pushed).** Trimmed ~208 lines of
+      exploratory/diagnostic noise to a 77-line spine (load → coord_counts →
+      parking detect → flag → persist). Dropped unused spdep + redundant
+      ggplot2, removed dev.new(), dynamic plot subtitle; removed the superseded
+      parkade_signature detection path (grep-proven dead before deletion);
+      moved the coord-distribution EDA figure to new `scripts/eda/01b_coord_distribution.R`;
+      added full header contract. Every step byte-verified output-neutral
+      (both CSVs identical to baseline). Stage-C section_path() reroute
+      correctly NOT done — bare-relative own-section paths are the documented
+      house rule (_bootstrap.R), so 01 already conforms to siblings 06/08.
+- [ ] **`shared/` not built out as a base-geo section** — currently holds only
+      the canonical boundary CSV (correct) + a squatting Business Census script
+      (`01_yeg_business_nbgh_agg.R`) that belongs in a future Economy section,
+      not shared. Road / vegetation / speed-zone base layers — its real purpose
+      (STRUCTURE_UPDATE Day 3/4) — not yet built. On relocating the business
+      script: it hand-rolls `SHARED <- … + file.path()` instead of
+      `shared_path()`; route through the helper when it moves. (Prereq #2 for
+      the Calgary city-layer decision, CLAUDE.md §10 v1.3.)
+- [ ] **`shared/` tracked RStudio junk** — `.RData` + `.Rhistory` committed
+      under `pipeline/shared/`. Gitignore + untrack (same as the
+      property-assessment `.Rhistory` cleanup item).
 
 ### Frontend — sections not yet built
 - [ ] **Point layers batch** (Amenities):
@@ -134,15 +162,19 @@ sections, agent pipeline, and infrastructure.
 
 ## 4. Immediate next actions (priority order)
 
-1. Resolve 08b rescue table (CHAPPELLE / HERITAGE
-   VALLEY IDs) — blocks next pipeline refresh.
-2. Point layers batch — R pipeline first, then Pattern A
-   frontend (one CC session per layer).
-3. Permit Neighbourhoods choropleth — Olivia QA sign-off
-   (now built with full assessment parity, deployed to demo).
-4. Add collaborators + branch protection.
-5. Layer 1b (LISA I) — stretch goal before agent work.
-6. Begin Sanity Agent scaffolding.
+1. Resolve 08b rescue table (CHAPPELLE / HERITAGE VALLEY IDs) — blocks next
+   pipeline refresh.
+2. **Migrate building-permits to the portability pattern** — flat section →
+   bootstrap path-anchoring + production/validation/eda/_common split, matching
+   property-assessment. Pattern + verification standard (byte-diff /
+   `git diff -w`) now proven on property-assessment; should be largely
+   mechanical. Prereq #1 for the Calgary city-layer decision (CLAUDE.md §10).
+3. Point layers batch — R pipeline first, then Pattern A frontend (one CC
+   session per layer).
+4. Permit Neighbourhoods choropleth — Olivia QA sign-off (built, deployed to demo).
+5. Add collaborators + branch protection.
+6. Layer 1b (LISA I) — stretch goal before agent work.
+7. Begin Sanity Agent scaffolding.
 
 ---
 
