@@ -49,15 +49,15 @@ library(tidyverse)
 library(sf)
 
 # ── 0. Paths ────────────────────────────────────────────────
+# Repo-root anchoring + helpers (ROOT, shared_path(), …). Own-section files use
+# relative paths (cwd = section root); the boundary is cross-section base geo,
+# so it resolves through shared_path() (CLAUDE.md §3 addressing rules).
+source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
 
-BASE    <- "/Users/kaustubhchati/Desktop/RA/aref_property_assessment"
-SHARED  <- file.path(BASE, "pipeline", "shared")
-
-CENSUS_CSV  <- file.path(SHARED, "data",
-                         "Edmonton_Business_Census_-_Neighbourhood_Aggregation_20260619.csv")
-BOUNDARY_CSV <- file.path(SHARED, "data",
-                          "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
-OUT_DIR     <- file.path(SHARED, "output", "economy")
+CENSUS_CSV   <- file.path("data",
+                          "Edmonton_Business_Census_-_Neighbourhood_Aggregation_20260619.csv")
+BOUNDARY_CSV <- shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
+OUT_DIR      <- "output"
 
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
