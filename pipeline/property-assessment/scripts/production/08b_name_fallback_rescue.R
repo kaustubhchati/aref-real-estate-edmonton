@@ -262,9 +262,11 @@ cat(sprintf("\nWrote %s (%.2f MB, %d polygons)\n",
             nrow(geojson_ready)))
 
 
-# Truly orphan aggregate rows (no rescue available)
+# Truly orphan aggregate rows (no rescue available). The status vocabulary is
+# "unresolved_no_mapping" / "unresolved_target_missing" / "rescued" (see L147-151);
+# match BOTH unresolved states, never "rescued".
 not_rendered_recovered <- audit_log |>
-  filter(status == "unresolved")
+  filter(status %in% c("unresolved_no_mapping", "unresolved_target_missing"))
 not_rendered_path <- "output/neighbourhoods_2026_not_rendered_recovered.csv"
 write_csv(not_rendered_recovered, not_rendered_path)
 cat(sprintf("Wrote %s (%d unresolved rows)\n",
