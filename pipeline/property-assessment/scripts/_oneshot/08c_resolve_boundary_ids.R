@@ -1,21 +1,35 @@
 # ============================================================
-# 08c_resolve_boundary_ids.R
+# 08c_resolve_boundary_ids.R   ⚠ SPENT ONE-SHOT MIGRATION — DO NOT RE-RUN
 # AREF — Resolve IDs 5462 / 5464 against new boundary file
 # Author: Kaustubh Chati (Research Assistant, UAlberta Economics)
 #
-# PURPOSE: The 08b rescue table references IDs 5462 (CHAPPELLE AREA)
-#   and 5464 (HERITAGE VALLEY TOWN CENTRE AREA). The new boundary file
-#   (65fr-66s6, 407 rows, WKT geometry) supersedes the Jan-2023 shapefile.
-#   This script checks whether those IDs exist in the new file, finds
-#   their replacements if not, and prints the decision for KC to action
-#   before running the historical GeoJSON pipeline.
+# STATUS (lives in scripts/_oneshot/, NOT production/):
+#   COMPLETED one-shot, human-gated migration. It already ran and its output —
+#   data/reference/neighbourhood_name_mappings_20260617.csv — is the committed
+#   authoritative §4.7 contract artifact that 08b loads. This script is NOT part
+#   of any automated refresh sequence (whirl, cron, or otherwise).
+#
+#   DO NOT RE-RUN: the ACTION block below regenerates that curated mapping from a
+#   hardcoded case_when (5462→5471, 5464→5472) reading the OLDER ...20260519.csv,
+#   and hard-depends on that stale file (no guard). Re-running would
+#   destructively overwrite a curated artifact from a stale source. If the City's
+#   boundary IDs change AGAIN, copy this as the TEMPLATE for a NEW dated migration
+#   (new old→new pairs, new dated output) — do not re-execute this one.
+#
+# PURPOSE (historical record): the 08b rescue table referenced IDs 5462
+#   (CHAPPELLE AREA) and 5464 (HERITAGE VALLEY TOWN CENTRE AREA). The new
+#   boundary file (65fr-66s6, 407 rows, WKT geometry) supersedes the Jan-2023
+#   shapefile. This script checked whether those IDs exist in the new file, found
+#   their replacements, printed the decision for KC to action, then wrote the
+#   updated 20260617 mapping.
 #
 # INPUTS:
 #   City_of_Edmonton__Neighbourhoods_20260616.csv  — new boundary file
 #   data/reference/neighbourhood_name_mappings_20260519.csv — existing rescue table
 #
-# OUTPUT (console only — no file written):
-#   Clear GO / NO-GO verdict with replacement IDs or drop recommendation
+# OUTPUT (the migration that already happened):
+#   data/reference/neighbourhood_name_mappings_20260617.csv  (committed; authoritative)
+#   + console GO / NO-GO verdict with replacement IDs
 # ============================================================
 
 library(tidyverse)
