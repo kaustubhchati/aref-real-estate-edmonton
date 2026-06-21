@@ -71,6 +71,10 @@ secrets.json
 **/data/raw/General_Building_Permits_*.csv
 **/building-permits/output/permits.geojson
 
+# Economy / business-census — downloaded Socrata snapshot (wh44-4bkz), re-downloaded
+# at refresh. Same class as the other gitignored data snapshots (CLAUDE.md §3).
+**/business-census/data/Edmonton_Business_Census_*.csv
+
 pipeline/property-assessment/output/Screenshot*
 pipeline/property-assessment/output/hist_parking_*.csv
 pipeline/property-assessment/output/parking_*.csv
