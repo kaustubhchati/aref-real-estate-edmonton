@@ -23,13 +23,14 @@ library(scales)
 ref_dir <- "data/reference"
 dir.create(ref_dir, showWarnings = FALSE, recursive = TRUE)
 
-# --- Load the raw snapshot ----------------------------------
+# --- Load JOB_CATEGORY from the raw snapshot ----------------
 # Read the snapshot directly (standalone-safe: no dependency on 02's session).
 # Same newest-snapshot discovery 01 and 03 use — operator places the bulk
-# General Building Permits CSV in data/raw/ before running. This script CHECKS
-# its hardcoded grouping covers the JOB_CATEGORY values in the data (it does
-# not derive the grouping); the diagnostic blocks below also read BUILDING_TYPE
-# and LAT/LONG, so we load the full frame, as 02 does.
+# General Building Permits CSV in data/raw/ before running. We need ONLY the
+# JOB_CATEGORY column: this script CHECKS its hardcoded grouping covers the
+# categories in the data; it does not derive the grouping. (The diagnostic
+# views that needed BUILDING_TYPE / LAT-LONG moved to eda/02b, so the full
+# frame is no longer required here.)
 raw_candidates <- list.files(
   "data/raw", pattern = "^General_Building_Permits_.*\\.csv$",
   full.names = TRUE
@@ -37,7 +38,8 @@ raw_candidates <- list.files(
 if (length(raw_candidates) == 0) stop("No raw permits CSV in data/raw/")
 snapshot_path <- sort(raw_candidates, decreasing = TRUE)[1]
 cat("Using snapshot:", snapshot_path, "\n")
-permits_raw <- read_csv(snapshot_path, show_col_types = FALSE)
+permits_raw <- read_csv(snapshot_path, col_select = "JOB_CATEGORY",
+                        show_col_types = FALSE)
 
 
 # ============================================================
