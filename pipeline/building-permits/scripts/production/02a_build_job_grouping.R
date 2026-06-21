@@ -23,13 +23,21 @@ library(scales)
 ref_dir <- "data/reference"
 dir.create(ref_dir, showWarnings = FALSE, recursive = TRUE)
 
-# --- Recover permits_raw if needed --------------------------
-# if (!exists("permits_raw")) {
-#   permits_raw <- read_csv(
-#     "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/pipeline/building-permits/data/raw/General_Building_Permits_20260529.csv",
-#     show_col_types = FALSE
-#   )
-# }
+# --- Load the raw snapshot ----------------------------------
+# Read the snapshot directly (standalone-safe: no dependency on 02's session).
+# Same newest-snapshot discovery 01 and 03 use — operator places the bulk
+# General Building Permits CSV in data/raw/ before running. This script CHECKS
+# its hardcoded grouping covers the JOB_CATEGORY values in the data (it does
+# not derive the grouping); the diagnostic blocks below also read BUILDING_TYPE
+# and LAT/LONG, so we load the full frame, as 02 does.
+raw_candidates <- list.files(
+  "data/raw", pattern = "^General_Building_Permits_.*\\.csv$",
+  full.names = TRUE
+)
+if (length(raw_candidates) == 0) stop("No raw permits CSV in data/raw/")
+snapshot_path <- sort(raw_candidates, decreasing = TRUE)[1]
+cat("Using snapshot:", snapshot_path, "\n")
+permits_raw <- read_csv(snapshot_path, show_col_types = FALSE)
 
 
 # ============================================================
