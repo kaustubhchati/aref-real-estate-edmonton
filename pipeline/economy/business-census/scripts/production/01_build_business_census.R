@@ -1,13 +1,17 @@
 # ============================================================
-# 01_yeg_business_nbgh_agg.R
+# 01_build_business_census.R   (economy/business-census section)
 #
-# Join the Edmonton Business Census Neighbourhood Aggregation
-# (local CSV, downloaded 2026-06-19) to the 2026 neighbourhood
-# boundary file and produce a GeoJSON choropleth ready for
-# MapLibre rendering.
+# Purpose: join the Edmonton Business Census Neighbourhood Aggregation
+#   (local CSV) to the 2026 neighbourhood boundary and produce a GeoJSON
+#   choropleth (+ flat CSV + build log) for MapLibre rendering.
+#
+# Run context: from the section dir (pipeline/economy/business-census/),
+#   e.g. Rscript scripts/production/01_build_business_census.R
+#   Bootstrap-anchored (sources _bootstrap.R); the boundary is resolved via
+#   shared_path() (cross-section base geo, stays in pipeline/shared/).
 #
 # Source dataset: Edmonton Business Census - Neighbourhood Aggregation
-#   Local: pipeline/shared/data/Edmonton_Business_Census_-_Neighbourhood_Aggregation_20260619.csv
+#   Local: data/Edmonton_Business_Census_-_Neighbourhood_Aggregation_20260619.csv
 #   Portal: https://data.edmonton.ca/resource/wh44-4bkz
 #   Columns: neighbourhood_name, neighbourhood_number, geom (Polygon WKT),
 #             survey_year, number_of_businesses, number_of_employees
@@ -37,10 +41,18 @@
 #   Open Data). Old CT-level business counts do NOT reconcile with
 #   this dataset.
 #
-# Outputs (all under pipeline/shared/output/economy/):
+# Outputs (all under this section's output/):
 #   business_census_2025.geojson   — choropleth source for MapLibre
 #   business_census_2025.csv       — flat CSV for Download page
 #   business_census_build_log.txt  — coverage + sanity summary
+#
+# HANDOFF (manual — no in-script copy step):
+#   output/business_census_2025.geojson must be copied by hand to
+#   website/public/data/economy/business_census_2025.geojson — the live
+#   frontend (website/src/content/economy/BusinessCensusMap.jsx) fetches it
+#   from /data/economy/business_census_2025.geojson, NOT from this pipeline
+#   output. Re-copy after each rebuild, and keep the filename EXACTLY (the
+#   frontend DATA_URL is hardcoded to that name).
 #
 # Author: KC (kaustubhchati@ualberta.ca)
 # ============================================================

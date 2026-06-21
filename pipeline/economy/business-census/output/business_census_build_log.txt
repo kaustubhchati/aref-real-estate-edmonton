@@ -1,4 +1,4 @@
-Build date:           2026-06-19 05:11 MDT
+Build date:           2026-06-21 08:46 MDT
 Source file:          Edmonton_Business_Census_-_Neighbourhood_Aggregation_20260619.csv
 Boundary file:        City_of_Edmonton_-_Neighbourhoods_20260616.csv (407 polygons)
 Production year:      2025
