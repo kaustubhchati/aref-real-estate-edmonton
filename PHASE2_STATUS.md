@@ -48,6 +48,29 @@ sections, agent pipeline, and infrastructure.
       (both CSVs identical to baseline). Stage-C section_path() reroute
       correctly NOT done — bare-relative own-section paths are the documented
       house rule (_bootstrap.R), so 01 already conforms to siblings 06/08.
+- [x] **building-permits migrated to portability pattern — DONE (7-commit campaign).**
+      Bootstrap sourced; 03 boundary via shared_path(); reorg flat → production/+eda/
+      (no validation tier — no oracle); header contracts + 01 name-drift fix; 01
+      absolute path → raw-snapshot discovery. Then production cleanup: 02a
+      standalone-run bug fixed (loads JOB_CATEGORY from raw snapshot, drops 02
+      session dependency — whirl-ready); 02a diagnostics extracted to
+      eda/02b_job_grouping_checks.R and production 02a narrowed to a JOB_CATEGORY-only
+      read (move-before-narrow, both stopifnot gates kept in production). 02 + 03
+      confirmed already lean (their prints are operational run-logging tied to writes,
+      not EDA — correctly NOT split). Byte-verified throughout on deterministic 03 +
+      masked-date on 02a's §4.7 contract output; 02 parse-checked (live-fetch →
+      byte-cmp N/A, the standard for fetch scripts). Prereq #1 for Calgary city-layer
+      now MET; whirl can glob a uniform production/ across both migrated sections.
+- [x] **02a standalone-run bug — RESOLVED (fdee7bc + the 02b split).** Was: referenced
+      permits_raw in-session, would fail under whirl's fresh-process orchestration. Now
+      reads its own input from the raw snapshot via list.files() discovery. Whirl-readiness
+      closed — no cross-process session dependency remains.
+- New eda artifact: `building-permits/scripts/eda/02b_job_grouping_checks.R` — standalone,
+  read-only diagnostics (mapping echo, coverage, row/category/BUILDING_TYPE/coord splits);
+  reloads from disk (raw snapshot + grouping CSV); emits no contract output. The job-grouping
+  exploration that previously bloated production 02a.
+- [ ] **building-permits .RData (112MB) on local disk** — already gitignored + never tracked
+      (not a git problem). Local-disk note only; delete if reclaiming space.
 - [ ] **`shared/` not built out as a base-geo section** — currently holds only
       the canonical boundary CSV (correct) + a squatting Business Census script
       (`01_yeg_business_nbgh_agg.R`) that belongs in a future Economy section,
@@ -164,17 +187,22 @@ sections, agent pipeline, and infrastructure.
 
 1. Resolve 08b rescue table (CHAPPELLE / HERITAGE VALLEY IDs) — blocks next
    pipeline refresh.
-2. **Migrate building-permits to the portability pattern** — flat section →
-   bootstrap path-anchoring + production/validation/eda/_common split, matching
-   property-assessment. Pattern + verification standard (byte-diff /
-   `git diff -w`) now proven on property-assessment; should be largely
-   mechanical. Prereq #1 for the Calgary city-layer decision (CLAUDE.md §10).
-3. Point layers batch — R pipeline first, then Pattern A frontend (one CC
+2. ~~Migrate building-permits to the portability pattern~~ — **DONE** (7-commit
+   campaign; see Backend/pipeline above). Both sections now expose a uniform
+   `production/` + `eda/`. Calgary city-layer prereq #1 MET.
+3. **Build out `shared/` as a base-geo section** — road / vegetation / speed-zone
+   reference layers; relocate the squatting Business Census script to an Economy
+   section (route it through `shared_path()` on the move). Calgary city-layer
+   prereq #2 (CLAUDE.md §10 v1.3).
+4. **Whirl orchestration layer** — now unblocked: both migrated sections expose a
+   uniform `production/` for whirl to glob, and 02a's standalone fix removed the
+   last cross-process session dependency. Report-side prerequisite.
+5. Point layers batch — R pipeline first, then Pattern A frontend (one CC
    session per layer).
-4. Permit Neighbourhoods choropleth — Olivia QA sign-off (built, deployed to demo).
-5. Add collaborators + branch protection.
-6. Layer 1b (LISA I) — stretch goal before agent work.
-7. Begin Sanity Agent scaffolding.
+6. Permit Neighbourhoods choropleth — Olivia QA sign-off (built, deployed to demo).
+7. Add collaborators + branch protection.
+8. Layer 1b (LISA I) — stretch goal before agent work.
+9. Begin Sanity Agent scaffolding.
 
 ---
 
