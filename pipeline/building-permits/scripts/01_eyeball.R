@@ -8,7 +8,16 @@ library(tidyverse)
 library(scales)
 
 # --- Load local dev snapshot --------------------------------
-permits_path <- "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/pipeline/building-permits/data/raw/General_Building_Permits_20260529.csv"
+# Operator places the bulk General Building Permits CSV in data/raw/ before
+# running (manual download — see 02_build_permits.R for the Socrata source).
+# Discover the newest snapshot the same way 03 does, so no path is hardcoded.
+raw_candidates <- list.files(
+  "data/raw", pattern = "^General_Building_Permits_.*\\.csv$",
+  full.names = TRUE
+)
+if (length(raw_candidates) == 0) stop("No raw permits CSV in data/raw/")
+permits_path <- sort(raw_candidates, decreasing = TRUE)[1]
+cat("Using snapshot:", permits_path, "\n")
 
 permits_raw <- read_csv(permits_path, show_col_types = FALSE)
 
