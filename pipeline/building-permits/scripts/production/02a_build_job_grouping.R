@@ -67,91 +67,27 @@ job_category_grouping <- tribble(
     curated_by   = "KC"
   )
 
-cat("--- Mapping table ---\n")
-
-job_category_grouping |>
-  select(job_category, group, rationale) |>
-  print(n = Inf, width = Inf)
-
-
 # ============================================================
-# 2 — Integrity checks on the mapping ITSELF (before applying)
+# 2 — Integrity GATE: the mapping must cover the data's categories
 # ============================================================
-cat("\n--- Mapping integrity ---\n")
-
-# Every category covered exactly once?
+# The diagnostic VIEW of this (per-category prints, cross-tabs, splits) lives
+# in eda/02b_job_grouping_checks.R. Production keeps only the assertion that
+# blocks a bad write.
 data_cats <- permits_raw |> distinct(JOB_CATEGORY) |> pull(JOB_CATEGORY)
 map_cats  <- job_category_grouping$job_category
-
-cat("Categories in data:    ", length(data_cats), "\n")
-cat("Categories in mapping: ", length(map_cats), "\n")
-cat("In data, NOT in mapping (should be none):\n");  print(setdiff(data_cats, map_cats))
-cat("In mapping, NOT in data (should be none):\n");  print(setdiff(map_cats, data_cats))
-
-cat("Any duplicate category rows in mapping (should be 0):",
-    sum(duplicated(job_category_grouping$job_category)), "\n")
 stopifnot(setequal(data_cats, map_cats))
 
 
 # ============================================================
-# 3 — Apply the mapping and verify the representative output
+# 3 — Apply the mapping — GATE: every row must map (no NA job_group)
 # ============================================================
+# Per-group splits / BUILDING_TYPE cross-tabs / mappable-row views moved to
+# eda/02b_job_grouping_checks.R. Production keeps only the no-unmapped gate.
 permits_grouped <- permits_raw |>
   left_join(job_category_grouping |> select(job_category, group),
             by = c("JOB_CATEGORY" = "job_category")) |>
   rename(job_group = group)
-
-cat("\n--- Post-join: any unmapped rows? (must be 0) ---\n")
-cat(sum(is.na(permits_grouped$job_group)), "rows with NA job_group\n")
 stopifnot(sum(is.na(permits_grouped$job_group)) == 0)
-
-
-# --- The split, by ROWS -------------------------------------
-cat("\n--- Row split residential vs commercial ---\n")
-permits_grouped |>
-  count(job_group) |>
-  mutate(pct = percent(n / sum(n), 0.1)) |>
-  print()
-
-
-
-# --- Each category's group + its size (the audit view) ------
-cat("\n--- Every category, its group, and row count ---\n")
-permits_grouped |>
-  count(job_group, JOB_CATEGORY, sort = TRUE) |>
-  group_by(job_group) |>
-  mutate(group_total = sum(n)) |>
-  ungroup() |>
-  arrange(desc(group_total), desc(n)) |>
-  print(n = Inf)
-
-
-# --- Cross-tab vs BUILDING_TYPE: does the split hold up? -----
-# For each group, the top building types. Residential should be dominated by
-# houses; commercial by offices/retail/warehouses. If residential shows
-# offices or commercial shows houses, a mapping row is wrong.
-cat("\n--- Top BUILDING_TYPE within each group (sanity) ---\n")
-for (g in c("residential", "commercial")) {
-  cat("\n###", g, "\n")
-  permits_grouped |>
-    filter(job_group == g) |>
-    count(BUILDING_TYPE, sort = TRUE) |>
-    mutate(pct = percent(n / sum(n), 0.1)) |>
-    slice_head(n = 10) |>
-    print()
-}
-
-
-# --- Split among MAPPABLE rows only (what the map will show) -
-# The no-coord rows don't render, so verify the split also looks sane
-# restricted to rows that will actually be dots.
-cat("\n--- Split among rows WITH coordinates (the rendered universe) ---\n")
-permits_grouped |>
-  mutate(has_coord = !is.na(LATITUDE) & !is.na(LONGITUDE)) |>
-  filter(has_coord) |>
-  count(job_group) |>
-  mutate(pct = percent(n / sum(n), 0.1)) |>
-  print()
 
 
 # ============================================================
