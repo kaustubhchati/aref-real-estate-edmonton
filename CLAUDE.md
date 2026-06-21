@@ -1,12 +1,12 @@
 # CLAUDE.md
 
-> **Version: v1.2 — authoritative. Supersedes all prior versions (v0.1–v1.1).**
+> **Version: v1.3 — authoritative. Supersedes all prior versions (v0.1–v1.2).**
 > This is the single source of project context for every Claude Code session — read it first.
 > If any other note, comment, or older doc frames *the website* as an "agent-driven platform,"
 > that framing is **retired** — see §1.
 > Owner / **builder**: KC (Research Assistant, UAlberta) — direct-push authority to `main` (§7).
 > Verifier: Olivia (post-hoc review, §7). Supervisor: Prof. Haifang Huang.
-> Last updated: 2026-06-19. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
+> Last updated: 2026-06-21. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
 > current open work tracked in **PHASE2_STATUS.md**.
 
 ---
@@ -77,9 +77,11 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
 ├─ REFRESH_NOTES.md              # quarterly refresh log Olivia reviews
 │
 ├─ pipeline/                     # BACKEND — R, runs on the laptop, never deploys
-│   ├─ shared/                   #   used by EVERY section: API fetch helper, neighbourhood
-│   │                            #   shapefile + join, tippecanoe→PMTiles step, theme,
-│   │                            #   validation template
+│   ├─ shared/                   #   CITY-WIDE BASE-GEO SECTION: reference geometry whose
+│   │                            #   OUTPUTS feed many sections — neighbourhood boundary (the
+│   │                            #   canonical ID-join geometry), road network, vegetation,
+│   │                            #   speed zones. A data section (fetch→process→emit), NOT a
+│   │                            #   helper library. Reached via shared_path(). City-bound.
 │   ├─ property-assessment/      #   BUILT — Layer 1a + 2, historical backfill, manifest
 │   │   ├─ scripts/              #     01_load … 09_build
 │   │   ├─ data/                 #     raw/  processed/  validation/  reference/
@@ -114,13 +116,16 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
   deployable app, `docs/` is handover/prof material.
 - **Sections mirror across the repo.** `pipeline/<section>/` ↔ `website/src/content/<section>/`.
 - **Each pipeline section is self-contained** (`scripts/ data/ output/`) and runs its own
-  fetch → clean → aggregate → output. Anything used by *every* section lives in
-  `pipeline/shared/` — never duplicated (the neighbourhood shapefile especially).
+  fetch → clean → aggregate → output. Cross-section base geometry — the neighbourhood
+  boundary especially, plus road / vegetation / speed-zone reference layers — lives in
+  `pipeline/shared/`, emitted once for all sections to consume. `shared/` is a data section
+  (shared outputs), not a helper library; its scope is one city.
 - Backend → frontend handoff is one copy: a section's `output/` → `website/public/data/`.
 - Restricted/confidential inputs live **only** in a section's `data/` (`raw/` or `validation/`)
   and are **gitignored** — never committed, never deployed.
 - **Fit note:** only create folders for sections that exist. Built today: `property-assessment`,
-  `building-permits`, plus the shared boundary helpers in `pipeline/shared/`. Copy the pattern per
+  `building-permits`, plus the `pipeline/shared/` base-geo section (currently the neighbourhood
+  boundary; road/vegetation layers pending). Copy the pattern per
   new section — no empty stubs.
 
 ---
@@ -294,7 +299,7 @@ Result: the **live clone** — shell + one real map — the proof the frame work
 - Hardcode org / university / professor / author names — `siteConfig` only. (§6.)
 - Add a runtime database, server, or API. (§1.)
 - Introduce stacks beyond React + Vite + PMTiles + MapLibre (+ Recharts for charts). (§2.)
-- Duplicate shared pipeline pieces into sections — they live in `pipeline/shared/`. (§3.)
+- Duplicate cross-section base geometry (boundary, road/vegetation layers) into sections — it lives in `pipeline/shared/`. (§3.)
 - Over-engineer, or merge code Olivia can't read. (§6.)
 
 **Both**
@@ -307,7 +312,7 @@ Result: the **live clone** — shell + one real map — the proof the frame work
 | `[OPEN]` | Resolve by | Status |
 |---|---|---|
 | Reconcile the colour-scale source reference (live page cites `PHASE1_STATUS.md §5`; confirm) | Before locking the React map | ✅ **Resolved** — per-year manifest scales + per-metric palettes locked (PHASE1 §12) |
-| Calgary section: mirror Edmonton pipeline or use the RE-prefix filter? | Calgary work start | Open |
+| Calgary: mirror Edmonton pipeline or use the RE-prefix filter? | Calgary work start | ✅ **Resolved (decision; execution blocked on prereqs)** — NOT a duplicate `pipeline/`. Edmonton city-coupling is shallow (dataset IDs, boundary CSV, special-entity list, oracle = config; rules key on column concepts, not Edmonton identifiers). Decision: **city wraps section** (`pipeline/<city>/<section>/`); each city carries its **own** `shared/` base-geo section (cities share no base layers, so no cross-city shared geo); rule-bearing sections parameterize by a per-city config (IDs / boundary / special entities / oracle-present); **outputs carry `yeg_`/`yyc_` prefixes** so both cities coexist in `data/processed/` + website handoff; the validation tier already self-skips via `conf_path()` when a city has no oracle (no new code). **Blocked on, in order:** (1) building-permits migration finished; (2) `shared/` built out (road/vegetation layers in; the squatting Business Census script relocated to an Economy section); (3) Calgary schema inspected (column-concept map + numeric-ID boundary join confirmed). Do NOT write the city layer into §3 or the tree until it exists on disk (§0 rule 1). |
 | Identify canonical 2026 boundary shapefile (UAlberta Library data services) | Parallel track | ✅ **Resolved** — City of Edmonton Neighbourhoods CSV (`65fr-66s6`, 407 rows, WKT/WGS84) adopted as the boundary source; 08/08b read `read_csv` + `st_as_sf` |
 | R3b: optional catch for ~104 "building and land" manufactured-home FNs | Before R4, probably unnecessary | ↗ Carried to Phase 2 (low priority) |
 | Scoreboard schema columns (`dataset`, `city`, `layer`, …) for multi-section scoring | Before second section's rules | Open |
@@ -334,6 +339,13 @@ When in doubt, load §2 (locked architecture) and §9 (negative rules) — the l
 Revise when: a locked decision changes (§2), a new section is wired (§3), a new rule is validated
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
+- **v1.3 (2026-06-21)** — `shared/` scope corrected: it is a **city-wide base-geo data
+  section** (boundary + road/vegetation/speed-zone reference layers, shared *outputs*), not a
+  helper library — §3 tree comment, §3 enforce-rule, §3 Fit note, and the §9 "duplicate shared
+  pieces" negative rule all reworded to match. §10 Calgary item **resolved**: city-wraps-section
+  + per-city config + `yeg_`/`yyc_` output prefixes + oracle self-skip; execution blocked on
+  building-permits migration, shared/ build-out, and Calgary schema inspection. No code or
+  architecture changed on disk — doc-alignment only.
 - **v1.2 (2026-06-19)** — Workflow change: KC is the **builder** with **direct-push authority to
   `main`** — may commit and push without prior preview/review by others (owner's standing
   decision). §7 rewritten: Olivia's review moves from blocking gate to **post-hoc**; the
