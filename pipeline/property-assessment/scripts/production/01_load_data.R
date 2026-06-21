@@ -40,6 +40,21 @@ url_assess_current <- "https://data.edmonton.ca/api/views/q7d6-ambg/rows.csv?acc
 # Expect ~400k rows. First run takes 10-30 seconds depending on connection.
 assess_raw <- read_csv(url_assess_current, show_col_types = FALSE)
 
+# Refresh guard: the cleaning here and the downstream rule chain (06/07/08)
+# assume specific column names. If the City renames a column in q7d6-ambg, fail
+# loudly now rather than crashing mid-clean with an opaque error (mirrors the
+# guard in 02_build_permits.R). Columns listed are the ones this script uses
+# (Lat/Long/Assessed Value) plus the keys downstream consumes from its output.
+required_cols <- c("Account Number", "Neighbourhood ID", "Neighbourhood",
+                   "Assessed Value", "Assessment Class 1",
+                   "Latitude", "Longitude")
+missing_cols <- setdiff(required_cols, names(assess_raw))
+if (length(missing_cols) > 0) {
+  stop("q7d6-ambg schema changed — missing expected columns: ",
+       paste(missing_cols, collapse = ", "),
+       "\n  Inspect the new file and update 01_load_data.R before shipping.")
+}
+
 
 # --- Coordinate counts (canonical) --------------------------
 # One row per distinct (lat, lon) with how many titles share it.
