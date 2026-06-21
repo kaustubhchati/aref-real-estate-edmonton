@@ -1,7 +1,20 @@
 # ============================================================
-# building-permits/scripts/01_inspect_data.R  (eyeball only — writes nothing)
-# General Building Permits, Edmonton Open Data (24uj-dj8v)
-# Dev snapshot: General_Building_Permits_20260529.csv
+# building-permits/scripts/eda/01_eyeball.R
+# Purpose: eyeball-only inspection of the General Building Permits
+#   snapshot — shape, columns, value ranges, category counts.
+#   Exploratory tier; writes NOTHING (no production artifact).
+#
+# Inputs:
+#   - data/raw/General_Building_Permits_<date>.csv — newest snapshot,
+#     discovered automatically. Operator places the bulk General Building
+#     Permits CSV in data/raw/ before running (manual download; Socrata
+#     dataset 24uj-dj8v — see 02_build_permits.R for the source URL).
+#
+# Outputs:
+#   - none (console inspection only)
+#
+# Run context: from the section dir (pipeline/building-permits/),
+#   e.g. Rscript scripts/eda/01_eyeball.R
 # ============================================================
 
 library(tidyverse)

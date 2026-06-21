@@ -1,18 +1,26 @@
 # ============================================================
 # 03_build_permit_aggregates.R
-# Per-neighbourhood permit aggregates, all years (2009–2026).
+# Purpose: per-neighbourhood permit aggregates, all years (2009–2026),
+#   as one CSV + one GeoJSON choropleth frame per year.
 #
 # Inputs:
-#   data/raw/General_Building_Permits_<date>.csv  (existing snapshot)
+#   - data/raw/General_Building_Permits_<date>.csv — newest snapshot,
+#     discovered automatically. Operator places the bulk General Building
+#     Permits CSV in data/raw/ before running (manual download; no re-fetch).
+#   - shared boundary CSV (65fr-66s6), resolved via shared_path() — see below.
 #
 # Outputs:
-#   output/permit_aggregates/permit_aggregates_<year>.csv  (one per year)
-#   output/permit_geojson/permit_neighbourhoods_<year>.geojson (one per year)
-#   output/permit_coverage_summary.csv  (audit log)
+#   - output/permit_aggregates/permit_aggregates_<year>.csv  (one per year)
+#   - output/permit_geojson/permit_neighbourhoods_<year>.geojson (one per year)
+#   - output/permit_coverage_summary.csv  (audit log)
+#
+# Run context: from the section dir (pipeline/building-permits/),
+#   e.g. Rscript scripts/production/03_build_permit_aggregates.R
 #
 # Join key: NEIGHBOURHOOD_NUMBER (integer) in permits
 #           ↔ Neighbourhood Number in boundary CSV (65fr-66s6)
-# Boundary: pipeline/shared/data/City_of_Edmonton_-_Neighbourhoods_20260616.csv
+# Boundary: shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
+#           (pipeline/shared/data/…; sourced via _bootstrap.R)
 #
 # Suppression gate: n_permits < 10 → suppressed_low_n
 # (lower than assessment's N<100 — permits are sparser)

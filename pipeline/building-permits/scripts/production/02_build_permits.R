@@ -1,20 +1,30 @@
 # ============================================================
 # 02_build_permits.R   (Stage A — source -> raw -> clean -> frontend-ready)
 #
-# ONE refresh-focused script. Run it once per refresh; it pulls the current
-# General Building Permits snapshot, cleans + groups it, and writes the two
-# artifacts the frontend consumes. No year literals, no hand-editing between
-# years — that is the refresh-by-design contract (CLAUDE.md refresh notes).
+# Purpose: ONE refresh-focused script. Pulls the current General Building
+#   Permits snapshot, cleans + groups it, and writes the artifacts the
+#   frontend consumes. No year literals, no hand-editing between years —
+#   the refresh-by-design contract (CLAUDE.md refresh notes).
 #
-# Run from the building-permits RProj (working dir = pipeline/building-permits/).
+# Inputs:
+#   - Edmonton Open Data, Socrata dataset 24uj-dj8v — streamed via
+#     download.file() to data/raw/ (dated name). This is the legitimate
+#     refresh fetch; 02 does NOT need a pre-placed snapshot (unlike 01/03).
+#   - latest data/reference/job_category_grouping_<date>.csv (from 02a)
+#
+# Outputs:
+#   - output/permits.geojson             (mappable points — Stage B -> PMTiles)
+#   - output/permits_coverage.csv        (per-year mapped / no-coord / no-value)
+#   - output/permits_category_counts.csv (per-(year, category) counts)
+#
+# Run context: from the section dir (pipeline/building-permits/),
+#   e.g. Rscript scripts/production/02_build_permits.R
 #
 # Pipeline:
 #   1. Download Socrata bulk CSV (dataset 24uj-dj8v) -> data/raw/ (dated name)
 #   2. Parse CONSTRUCTION_VALUE to numeric; flag coords + value
 #   3. Join the curated residential/commercial grouping (latest in reference/)
-#   4. Emit output/permits.geojson (mappable points — Stage B -> PMTiles)
-#      Emit output/permits_coverage.csv (per-year mapped / no-coord / no-value)
-#      Emit output/permits_category_counts.csv (per-(year, category) counts)
+#   4. Emit the three output artifacts listed above
 #
 # Stage B (separate, run by hand after this script): tippecanoe turns the
 # GeoJSON into PMTiles. Run from pipeline/building-permits/:

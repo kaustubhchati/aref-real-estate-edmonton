@@ -1,15 +1,21 @@
 # ============================================================
-# building-permits/scripts/02a_build_job_grouping.R
-# Builds + applies the residential/commercial grouping for JOB_CATEGORY.
+# building-permits/scripts/production/02a_build_job_grouping.R
+# Purpose: build + persist the curated residential/commercial grouping
+#   for the 12 JOB_CATEGORY values — a §4.7 curated mapping with provenance.
+#   "job_group" takes "residential" or "commercial"; rationale/source explain
+#   each assignment (evidence from the 01 eyeball checks).
 #
-# Output: a reference CSV in data/reference/ with the contract:
-#   - filename: job_category_grouping_<YYYYMMDD>.csv
-#   - columns: job_category, group, rationale, source, date_curated, curated_by
-# The grouping is a curated mapping from the 12 JOB_CATEGORY values to a new
-# "job_group" column with values "residential" or "commercial". The rationale column
-# explains the reasoning behind each assignment, with evidence from the 01b checks. The source
-# column documents where the curator got the information (e.g. which 01b check). The date_curated
-# and curated_by columns are for provenance.    
+# Inputs:
+#   - the 12 JOB_CATEGORY values, curated in-script as a tribble (no file
+#     read — the grouping is curator knowledge, not derived from the snapshot)
+#
+# Outputs:
+#   - data/reference/job_category_grouping_<YYYYMMDD>.csv
+#     columns: job_category, group, rationale, source, date_curated, curated_by
+#
+# Run context: from the section dir (pipeline/building-permits/),
+#   e.g. Rscript scripts/production/02a_build_job_grouping.R
+# ============================================================
 
 library(tidyverse)
 library(scales)
