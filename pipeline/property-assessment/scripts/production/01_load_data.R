@@ -6,10 +6,8 @@
 
 # --- Packages ------------------------------------------------
 library(sf)         # spatial geometry (sf objects, projections, joins)
-library(spdep)      # spatial autocorrelation, weights matrices, Moran's I / LISA
 library(tidyverse)  # dplyr, ggplot2, readr, etc.
 library(scales)     # axis formatting (dollar(), comma(), log scales)
-library(ggplot2)
 library(ggthemes)
 source(rprojroot::find_root_file("pipeline/property-assessment/scripts/_common/00_theme.R", criterion = rprojroot::has_file(".aref_root")))
 # --- Data sources --------------------------------------------
@@ -51,8 +49,6 @@ coord_counts |>
 # --- Visualize the rows-per-coordinate distribution ---------
 # Each point is a unique (lat, lon). x = how many properties share it.
 # y on log scale because the distribution is heavy-tailed.
-dev.new()
-
 p_coord_dist <- coord_counts |>
   count(n_at_coord, name = "n_coords") |>
   ggplot(aes(x = n_at_coord, y = n_coords)) +
@@ -72,7 +68,8 @@ p_coord_dist <- coord_counts |>
   ) +
   labs(
     title    = "Most coordinates have one row; condo towers cluster up to 1,290",
-    subtitle = "Edmonton property assessment 2026, 439,769 rows",
+    subtitle = paste0("Edmonton property assessment 2026, ",
+                      scales::comma(nrow(assess_raw)), " rows"),
     caption  = "Source: City of Edmonton Open Data Portal.",
     x        = "No. of Titles (Rows) within one coordinate(location)",
     y        = "Number of distinct coordinates(locations) with same title count"
