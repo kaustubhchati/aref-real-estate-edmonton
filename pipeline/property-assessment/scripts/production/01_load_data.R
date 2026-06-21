@@ -1,8 +1,27 @@
 # ============================================================
 # 01_load_data.R
-# Pull Edmonton property assessment data from the open data portal,
-# flag schedule-priced parking (coord, value) pairs, and persist the
-# parking-cleaned frame (+ the flagged frame) for downstream scripts.
+# Pull Edmonton property assessment data, flag schedule-priced
+# parking (coord, value) pairs, and persist the parking-cleaned
+# frame for the downstream rule chain. FIRST script in the section.
+#
+# Pipeline:
+#   1. Stream the current-year assessment snapshot from the portal
+#   2. Count titles per (lat, lon) coordinate
+#   3. Flag (coord, value) pairs that look like schedule-priced
+#      parking: value <= $80k, repeats >= 10x at a coord with >= 20 rows
+#   4. Write the parking-removed frame + the flagged frame
+#
+# Inputs:
+#   - Edmonton Open Data Portal, dataset q7d6-ambg (live URL, ~440k rows)
+#
+# Outputs:
+#   - data/processed/assess_2026_no_parking.csv   (parking removed)
+#   - data/processed/assess_2026_with_flags.csv   (all rows + is_parking)
+#
+# Acceptance (asserted in-script):
+#   - nrow(no_parking) == nrow(raw) - (# rows flagged is_parking)
+#   - with_flags carries every raw row (left_join on a deduped key)
+#
 # Exploratory inspection lives in scripts/eda/01b_coord_distribution.R.
 # ============================================================
 
