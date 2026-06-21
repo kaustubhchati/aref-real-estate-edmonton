@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> **Version: v1.3 — authoritative. Supersedes all prior versions (v0.1–v1.2).**
+> **Version: v1.4 — authoritative. Supersedes all prior versions (v0.1–v1.3).**
 > This is the single source of project context for every Claude Code session — read it first.
 > If any other note, comment, or older doc frames *the website* as an "agent-driven platform,"
 > that framing is **retired** — see §1.
@@ -82,11 +82,17 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
 │   │                            #   canonical ID-join geometry), road network, vegetation,
 │   │                            #   speed zones. A data section (fetch→process→emit), NOT a
 │   │                            #   helper library. Reached via shared_path(). City-bound.
+│   │                            #   Base-geo-ONLY on disk now (boundary + Mature
+│   │                            #   Neighbourhoods); no orphaned scripts (Business Census
+│   │                            #   relocated to economy/).
 │   ├─ property-assessment/      #   BUILT — Layer 1a + 2, historical backfill, manifest
 │   │   ├─ scripts/              #     01_load … 09_build
 │   │   ├─ data/                 #     raw/  processed/  validation/  reference/
 │   │   └─ output/               #     this section's products: GeoJSON / PMTiles / CSVs
 │   ├─ building-permits/         #   BUILT — point PMTiles (R2) + neighbourhood aggregates
+│   ├─ economy/                  #   ECONOMY section — neighbourhood-level economic data
+│   │   └─ business-census/      #     BUILT — Business Census choropleth (relocated from
+│   │                            #     shared/); scripts/production/ data/ output/
 │   ├─ crime/                    #   (added when built)
 │   └─ …
 │
@@ -124,9 +130,10 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
 - Restricted/confidential inputs live **only** in a section's `data/` (`raw/` or `validation/`)
   and are **gitignored** — never committed, never deployed.
 - **Fit note:** only create folders for sections that exist. Built today: `property-assessment`,
-  `building-permits`, plus the `pipeline/shared/` base-geo section (currently the neighbourhood
-  boundary; road/vegetation layers pending). Copy the pattern per
-  new section — no empty stubs.
+  `building-permits`, `economy/business-census`, plus the `pipeline/shared/` base-geo section
+  (now boundary + Mature Neighbourhoods only — the Business Census script that previously
+  squatted here has been relocated to `economy/`; road/vegetation layers pending). Copy the
+  pattern per new section — no empty stubs.
 
 ---
 
@@ -339,6 +346,13 @@ When in doubt, load §2 (locked architecture) and §9 (negative rules) — the l
 Revise when: a locked decision changes (§2), a new section is wired (§3), a new rule is validated
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
+- **v1.4 (2026-06-21)** — New section wired: `pipeline/economy/business-census/`
+  (Business Census choropleth) relocated out of `pipeline/shared/` — git-mv with
+  history preserved, path-anchored (bootstrap + shared_path boundary), byte-verified.
+  shared/ is now a clean base-geo-only section on disk (boundary + Mature
+  Neighbourhoods), matching the v1.3 scope correction. Frontend untouched (decoupled
+  via committed website/public copy; same output filename). §3 tree + Fit note updated.
+  Resolves part of the Calgary prereq #2 (shared/ build-out: squatting script relocated).
 - **v1.3 (2026-06-21)** — `shared/` scope corrected: it is a **city-wide base-geo data
   section** (boundary + road/vegetation/speed-zone reference layers, shared *outputs*), not a
   helper library — §3 tree comment, §3 enforce-rule, §3 Fit note, and the §9 "duplicate shared
