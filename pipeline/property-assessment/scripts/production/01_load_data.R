@@ -107,42 +107,6 @@ coord_counts |>
 
 
 
-# --- Parkade signature (rebuilt cleanly) --------------------
-# For each high-n coordinate, compute the top-3-value coverage.
-# Done in two steps: first compute the values per coordinate as a
-# scalar summary (no list columns), then deduplicate defensively.
-
-parkade_signature <- assess_raw |>
-  filter(!is.na(Latitude), !is.na(Longitude)) |>
-  inner_join(coord_counts |> filter(n_at_coord >= 20),
-             by = c("Latitude", "Longitude")) |>
-  group_by(Latitude, Longitude, n_at_coord) |>
-  summarise(
-    top3_pct = {
-      tbl <- sort(table(`Assessed Value`), decreasing = TRUE)
-      sum(tbl[1:min(3, length(tbl))]) / n_at_coord[1]
-    },
-    top1_value = as.numeric(names(sort(table(`Assessed Value`),
-                                       decreasing = TRUE))[1]),
-    top2_value = as.numeric(names(sort(table(`Assessed Value`),
-                                       decreasing = TRUE))[2]),
-    top3_value = as.numeric(names(sort(table(`Assessed Value`),
-                                       decreasing = TRUE))[3]),
-    .groups = "drop"
-  ) |>
-  distinct(Latitude, Longitude, .keep_all = TRUE)
-
-stopifnot(nrow(parkade_signature) == n_distinct(parkade_signature$Latitude,
-                                                parkade_signature$Longitude))
-
-
-# --- Filter to confirmed parkades ---------------------------
-parkade_coords <- parkade_signature |>
-  filter(
-    top3_pct >= 0.80,            # values are schedule-like (uniform)
-    top1_value <= 80000          # AND the values are parking-sized, not unit-sized
-  )
-
 # --- Neighbourhood lookup -----------------------------------
 coord_neighbourhood <- assess_raw |>
   filter(!is.na(Latitude), !is.na(Longitude)) |>
@@ -151,18 +115,6 @@ coord_neighbourhood <- assess_raw |>
   slice(1) |>
   ungroup() |>
   rename(neighbourhood = Neighbourhood)
-
-
-# --- Diagnostic ---------------------------------------------
-parkade_coords |>
-  arrange(desc(n_at_coord)) |>
-  slice_head(n = 20) |>
-  left_join(coord_neighbourhood, by = c("Latitude", "Longitude")) |>
-  mutate(top_values = paste(scales::dollar(top1_value),
-                            scales::dollar(top2_value),
-                            scales::dollar(top3_value),
-                            sep = ", ")) |>
-  select(neighbourhood, n_at_coord, top3_pct, top_values)
 
 
 
