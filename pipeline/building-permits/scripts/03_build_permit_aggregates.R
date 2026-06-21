@@ -22,6 +22,10 @@ library(tidyverse)
 library(sf)
 library(scales)
 
+# Repo-root anchoring + path helpers (ROOT, shared_path(), …). Lets this script
+# address the shared boundary by RELATIONSHIP, not a fragile ../../ hop.
+source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
+
 dir.create("output/permit_aggregates", showWarnings = FALSE, recursive = TRUE)
 dir.create("output/permit_geojson",    showWarnings = FALSE, recursive = TRUE)
 
@@ -69,9 +73,7 @@ cat("Years present:", paste(sort(unique(permits$year)), collapse = ", "), "\n\n"
 # 3. Load boundary file
 # ============================================================
 
-boundary_path <- "../../pipeline/shared/data/City_of_Edmonton_-_Neighbourhoods_20260616.csv"
-# Adjust path if running from a different working directory:
-# boundary_path <- "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/pipeline/shared/data/City_of_Edmonton_-_Neighbourhoods_20260616.csv"
+boundary_path <- shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
 
 boundary_raw <- read_csv(boundary_path, show_col_types = FALSE)
 
