@@ -34,13 +34,18 @@ import {
 } from "./permitChoroplethStyle.js";
 import { fmtNumber } from "../../utils/format.js";
 
-// Years with a committed GeoJSON (public/data/building-permits/permit-neighbourhoods/).
-// Newest-first so the <select> opens on recent years; 2026 is the default.
-const YEARS = [
-  2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018,
-  2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009,
-];
-const DEFAULT_YEAR = 2026;
+// The year list + default come from the published BP manifest (one source of
+// truth, refreshed by the pipeline), NOT a hardcoded array. Flat, section-scoped
+// shape { years, defaultYear } per the manifest-shape rule (CLAUDE.md §2). Loaded
+// once on mount; errors surface to the gate (no hardcoded fallback — it would
+// drift stale). (BP's flat shape, not PA's nested cities.<city>.assessment.)
+async function loadPermitManifest() {
+  const res = await fetch("/data/building-permits/manifest.json");
+  if (!res.ok) {
+    throw new Error(`Could not load the permit year catalogue (HTTP ${res.status})`);
+  }
+  return res.json();
+}
 
 const SOURCE_ID = "pnbhd";
 const FILL_LAYER_ID = "pnbhd-fill";
@@ -79,7 +84,12 @@ function flyToFeature(map, feat) {
 }
 
 export default function PermitChoroplethMap() {
-  const [year, setYear] = useState(DEFAULT_YEAR);
+  // Year list + default come from the manifest (loaded on mount), never hardcoded.
+  // year is null until the manifest resolves; the render is gated on it below.
+  const [manifest, setManifest] = useState(null);
+  const [manifestError, setManifestError] = useState(null);
+  const [years, setYears] = useState([]);
+  const [year, setYear] = useState(null);
   const [metric, setMetric] = useState(PERMIT_CHOROPLETH_METRICS[0].key);
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
@@ -88,7 +98,24 @@ export default function PermitChoroplethMap() {
   // cursor is over it, null otherwise. Set from the map interaction handler.
   const [hoveredFeature, setHoveredFeature] = useState(null);
 
-  const url = dataUrl(year);
+  // Load the manifest once on mount: populate the year list (sorted newest-first;
+  // the manifest lists ascending) and seed the default selection. Seeds year in
+  // the same update as the manifest so there's no loaded-but-no-year frame.
+  useEffect(() => {
+    let cancelled = false;
+    loadPermitManifest()
+      .then((m) => {
+        if (cancelled) return;
+        setManifest(m);
+        setYears([...m.years].sort((a, b) => b - a));
+        setYear(m.defaultYear);
+      })
+      .catch((err) => { if (!cancelled) setManifestError(err.message); });
+    return () => { cancelled = true; };
+  }, []);
+
+  // null until a year is chosen (manifest still loading) — gates the fetch below.
+  const url = year != null ? dataUrl(year) : null;
   const selectedMetric =
     PERMIT_CHOROPLETH_METRICS.find((m) => m.key === metric) ??
     PERMIT_CHOROPLETH_METRICS[0];
@@ -117,6 +144,7 @@ export default function PermitChoroplethMap() {
 
   // Reflect the current selection in the browser tab title; restore on unmount.
   useEffect(() => {
+    if (year == null) return undefined;   // manifest still loading
     document.title = `Permit Neighbourhoods · Edmonton ${year}`;
     return () => { document.title = "Open Data Centre"; };
   }, [year]);
@@ -126,6 +154,7 @@ export default function PermitChoroplethMap() {
   // change. setMap(null) is safe mid-flight — MapView is keyed by url, so it
   // unmounts cleanly and map.remove() destroys the old instance.
   useEffect(() => {
+    if (!url) return undefined;   // no year selected yet (manifest loading)
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMap(null);
     setGj(null);
@@ -302,6 +331,31 @@ export default function PermitChoroplethMap() {
     };
   }, [map]);
 
+  // Gate on the manifest like PropertyAssessmentMap — no hardcoded fallback. A
+  // failed manifest load is an explicit error state, not a silent stale list.
+  // (Placed after all hooks so the short-circuits never change hook order.)
+  if (manifestError) {
+    return (
+      <article className="content-map">
+        <div className="canvas-wrap">
+          <EmptyState
+            title="Could not load the year catalogue."
+            body={manifestError}
+          />
+        </div>
+      </article>
+    );
+  }
+  if (!manifest) {
+    return (
+      <article className="content-map">
+        <div className="canvas-wrap">
+          <p className="map-loading">Loading…</p>
+        </div>
+      </article>
+    );
+  }
+
   return (
     <article className="content-map">
       <aside className="sb" aria-label="Map sidebar">
@@ -325,7 +379,7 @@ export default function PermitChoroplethMap() {
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
             >
-              {YEARS.map((y) => (
+              {years.map((y) => (
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
