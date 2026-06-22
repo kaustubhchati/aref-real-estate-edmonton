@@ -96,6 +96,16 @@ pipeline/shared/data/
 **/building-permits/output/permits.pmtiles
 **/building-permits/output/permit_geojson/*.geojson
 
+# Building-permits output/ regenerables (mirror PA's output/ convention above):
+# per-year aggregates, coverage summary, manifest, and the served-copy-source
+# CSVs (the published copies live in website/public/data/building-permits/).
+# All regenerable via 02/03/04.
+pipeline/building-permits/output/permit_aggregates/permit_aggregates_*.csv
+pipeline/building-permits/output/permit_coverage_summary.csv
+pipeline/building-permits/output/manifest.json
+pipeline/building-permits/output/permits_coverage.csv
+pipeline/building-permits/output/permits_category_counts.csv
+
 # Local working doc — audit findings, not a repo artifact
 docs/STRUCTURE_AUDIT.md
 
