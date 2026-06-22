@@ -4,17 +4,20 @@
 # Author: Kaustubh Chati (Research Assistant, UAlberta Economics)
 #
 # STATUS (lives in scripts/_oneshot/, NOT production/):
-#   COMPLETED one-shot, human-gated migration. It already ran and its output —
-#   data/reference/neighbourhood_name_mappings_20260617.csv — is the committed
-#   authoritative §4.7 contract artifact that 08b loads. This script is NOT part
-#   of any automated refresh sequence (whirl, cron, or otherwise).
+#   SUPERSEDED + SPENT. Reconciliation now lives in ONE place:
+#   scripts/_oneshot/reconcile_neighbourhood_changes.R, which authors the single
+#   data/reference/neighbourhood_crosswalk_<YYYYMMDD>.csv the routine chain
+#   consumes. The renumbers this script resolved (5462→5471, 5464→5472) are
+#   carried into that crosswalk as `renumber` rows. The mapping CSVs this script
+#   wrote (neighbourhood_name_mappings_*.csv) were RETIRED 2026-06-22 and no
+#   longer exist — 08b/08e read the crosswalk, not a mapping table. This file is
+#   kept only as the historical record of that migration.
 #
-#   DO NOT RE-RUN: the ACTION block below regenerates that curated mapping from a
-#   hardcoded case_when (5462→5471, 5464→5472) reading the OLDER ...20260519.csv,
-#   and hard-depends on that stale file (no guard). Re-running would
-#   destructively overwrite a curated artifact from a stale source. If the City's
-#   boundary IDs change AGAIN, copy this as the TEMPLATE for a NEW dated migration
-#   (new old→new pairs, new dated output) — do not re-execute this one.
+#   DO NOT RE-RUN: the ACTION block below reads the now-deleted ...20260519.csv
+#   (so it would error), and even if present would overwrite a curated artifact
+#   from a stale source. If the City's boundary IDs change AGAIN, add the new
+#   old→new pair to reconcile_neighbourhood_changes.R as a `renumber` row and
+#   re-run THAT one-shot — do not resurrect this script.
 #
 # PURPOSE (historical record): the 08b rescue table referenced IDs 5462
 #   (CHAPPELLE AREA) and 5464 (HERITAGE VALLEY TOWN CENTRE AREA). The new

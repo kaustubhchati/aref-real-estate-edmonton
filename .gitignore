@@ -121,3 +121,8 @@ pipeline/property-assessment/output/neighbourhoods_*_recovered.geojson
 pipeline/property-assessment/output/manifest.json
 pipeline/property-assessment/output/neighbourhood_aggregates_*.csv
 pipeline/property-assessment/output/pa_hist_filter_scorecard.csv
+# Historical per-year aggregates + build logs (08d/08e outputs) — same
+# regenerable policy. The pattern above does NOT recurse into this subdir, so it
+# was tracked by oversight; list the dir + log explicitly.
+pipeline/property-assessment/output/hist_aggregates/
+pipeline/property-assessment/output/hist_geojson_build_log.csv
