@@ -93,9 +93,9 @@ runs/*
 !runs/summary.html
 ```
 
-## 9. Dependency management [TARGET]
+## 9. Dependency management [ADOPTED 2026-06-21]
 
-A single `renv.lock` at the repo root covers the whole repo (orchestrator + all sections). Sections do not have separate lockfiles — they share one package set, and one root environment lets the orchestrator and section scripts run under the same library.
+A single `renv.lock` at the repo root covers the whole repo (orchestrator + all sections). Sections do not have separate lockfiles — they share one package set, and one root environment lets the orchestrator and section scripts run under the same library. `.Rprofile` auto-activates renv (`source("renv/activate.R")`), so every `Rscript` invocation from the repo runs under the private library `renv/library/` (gitignored by renv; never committed). The lockfile is an **implicit** snapshot — it records only code-referenced packages and their recursive closure (the evaluated-and-dropped `whirl` is excluded; the runner's `callr`/`jsonlite`/`yaml` and the pipeline's `sf`/`rprojroot`/`tidyverse` are captured). Refresh it with `renv::snapshot(type = "implicit")` after adding a package; restore a clone with `renv::restore()`.
 
 ## 10. Refresh-by-design (locked principle)
 

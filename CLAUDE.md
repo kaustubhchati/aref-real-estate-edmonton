@@ -351,7 +351,7 @@ Result: the **live clone** — shell + one real map — the proof the frame work
 | Identify canonical 2026 boundary shapefile (UAlberta Library data services) | Parallel track | ✅ **Resolved** — City of Edmonton Neighbourhoods CSV (`65fr-66s6`, 407 rows, WKT/WGS84) adopted as the boundary source; 08/08b read `read_csv` + `st_as_sf` |
 | R3b: optional catch for ~104 "building and land" manufactured-home FNs | Before R4, probably unnecessary | ↗ Carried to Phase 2 (low priority) |
 | Scoreboard schema columns (`dataset`, `city`, `layer`, …) for multi-section scoring | Before second section's rules | Open |
-| `renv.lock` referenced in workflow but absent on disk (no renv/ either) | Before relying on clone-and-run reproducibility | Open — decide: adopt renv (snapshot current library incl. callr/jsonlite/yaml, commit lockfile) OR drop the renv claim from docs. Pipeline currently runs from the user library; the runner's deps (callr, jsonlite, yaml) are not captured anywhere. |
+| `renv.lock` referenced in workflow but absent on disk (no renv/ either) | Before relying on clone-and-run reproducibility | ✅ **Resolved (2026-06-21)** — renv adopted via `renv::init` + **implicit** snapshot (117 pkgs, code-referenced closure). Dropped `whirl` removed first and excluded from the lockfile; runner deps (`callr`/`jsonlite`/`yaml`) + pipeline deps (`sf`/`rprojroot`/`tidyverse`) captured. `.Rprofile` auto-activates the private library; PA runner resolves under it (dry-run exit 0). `docs/STRUCTURE.md §9` flipped `[TARGET]`→`[ADOPTED]`. Note: pre-existing `units`/`Rcpp` version skew in the source library (runtime-harmless — live runs work) makes a forced re-`snapshot` validate-fail; the init lockfile is the snapshot of record. |
 
 ---
 
