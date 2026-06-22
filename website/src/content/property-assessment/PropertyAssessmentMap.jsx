@@ -390,6 +390,27 @@ export default function PropertyAssessmentMap() {
             Layer 1a-cleaned residential properties.
           </p>
           <p>Data last updated: {manifest?.last_updated ?? "—"}</p>
+          {/* Identity-reconciliation note: the pipeline absorbs old neighbourhood
+              identities into their current one and shows the current name in every
+              year, so a user reading a neighbourhood's history under a new name (or
+              a suppressed 2024 value) has a plain-language explanation + the
+              regulatory source. Persistent footnote — reuses .sb-ref styling. */}
+          <p>
+            Some neighbourhoods have been renamed or renumbered by the City of
+            Edmonton. Their full history is shown under the current name. For
+            example, Oliver was renamed Wîhkwêntôwin, effective 1 January 2025;
+            values before this date are shown under Wîhkwêntôwin. Figures around
+            the 2024 transition may be limited or suppressed where data is below
+            reporting thresholds.{" "}
+            <a
+              href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "var(--accent)" }}
+            >
+              City of Edmonton Naming Committee
+            </a>.
+          </p>
         </div>
         </div>{/* /sb-inner */}
       </aside>
