@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "generated": "2026-06-18",
-  "last_updated": "2026-06-18",
+  "generated": "2026-06-21",
+  "last_updated": "2026-06-21",
   "cities": {
     "Edmonton": {
       "assessment": {
@@ -140,7 +140,7 @@
             "min": 103500,
             "q25": 352375,
             "median": 425125,
-            "q75": 496562,
+            "q75": 496750,
             "max": 1226000,
             "n_polygons": 280
           }
