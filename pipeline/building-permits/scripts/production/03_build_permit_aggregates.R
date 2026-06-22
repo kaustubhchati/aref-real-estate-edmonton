@@ -1,7 +1,19 @@
 # ============================================================
 # 03_build_permit_aggregates.R
-# Purpose: per-neighbourhood permit aggregates, all years (2009–2026),
-#   as one CSV + one GeoJSON choropleth frame per year.
+# Purpose: per-neighbourhood RESIDENTIAL dwelling-unit permit aggregates, all
+#   years (2009–2026), as one CSV + one GeoJSON choropleth frame per year.
+#
+# Scope: residential permits only, selected by an explicit BUILDING_TYPE string
+#   whitelist (residential_types, defined in the aggregation section; matched on
+#   the FULL string — the 522 code collides between "Mixed Use (522)" and
+#   "Office Complex (522)"). This is NOT 02a's job-category grouping — different
+#   column, different purpose; do not reuse it. Dwelling units are reported as
+#   two GROSS series, never a single net:
+#     units_added_gross = sum of positive UNITS_ADDED
+#     units_demolished  = abs(sum of negative UNITS_ADDED on "(99) Demolition"
+#                         permits) — work-type-qualified; non-demolition negative
+#                         rows are excluded by design. Settled in the residential
+#                         dwelling-units scope EDA (scripts/eda/).
 #
 # Inputs:
 #   - data/raw/General_Building_Permits_<date>.csv — newest snapshot,
@@ -115,14 +127,28 @@ cat("Boundary polygons:", nrow(boundary_sf), "\n\n")
 # 4. Aggregate per year
 # ============================================================
 
+# Residential scope: explicit BUILDING_TYPE whitelist (full strings, including
+# variant spellings). Matched on the full string — never the bare code (the 522
+# code collides: "Mixed Use (522)" vs "Office Complex (522)"). NOT 02a's
+# job-category grouping (different column, different purpose).
+residential_types <- c(
+  "Single Detached House (110)", "Single House (110)", "Single Detached Condo (115)",
+  "Backyard House (110)", "Apartments (310)", "Apartment (310)", "Apartment Condos (315)",
+  "Row House (330)", "Row Houses (330)", "Row House Condo (335)", "Row House Condos (335)",
+  "Semi-Detached House (210)", "Semi Detached House (210)", "Semi Detached House",
+  "Semi-Detached Condo (215)", "Duplex (210)", "Mobile Home (130)", "Mixed Use (522)"
+)
+
 years <- sort(unique(permits$year))
 build_log <- tibble()
 
 for (yr in years) {
   cat(sprintf("--- Year %d ---\n", yr))
 
-  yr_permits <- permits |> filter(year == yr)
-  cat(sprintf("  Permits: %s\n", format(nrow(yr_permits), big.mark = ",")))
+  # Residential-only: restrict to the dwelling-bearing BUILDING_TYPE whitelist
+  # BEFORE aggregating, so every metric below is residential-scoped.
+  yr_permits <- permits |> filter(year == yr, building_type %in% residential_types)
+  cat(sprintf("  Residential permits: %s\n", format(nrow(yr_permits), big.mark = ",")))
 
   # Aggregate per neighbourhood
   agg <- yr_permits |>
@@ -131,7 +157,9 @@ for (yr in years) {
       n_permits                  = n(),
       total_construction_value   = sum(construction_value, na.rm = TRUE),
       median_construction_value  = median(construction_value, na.rm = TRUE),
-      units_added_total          = sum(units_added, na.rm = TRUE),
+      units_added_gross          = sum(units_added[units_added > 0], na.rm = TRUE),
+      units_demolished           = abs(sum(units_added[units_added < 0 &
+                                     work_type == "(99) Demolition"], na.rm = TRUE)),
       .groups = "drop"
     ) |>
     rename(`Neighbourhood ID` = neighbourhood_number)
@@ -168,7 +196,8 @@ for (yr in years) {
       n_permits                  = n_permits,
       total_construction_value   = total_construction_value,
       median_construction_value  = median_construction_value,
-      units_added_total          = units_added_total
+      units_added_gross          = units_added_gross,
+      units_demolished           = units_demolished
     ) |>
     st_set_precision(1e6) |>
     st_make_valid()
