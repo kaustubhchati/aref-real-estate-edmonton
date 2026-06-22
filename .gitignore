@@ -100,3 +100,13 @@ docs/STRUCTURE_AUDIT.md
 
 # Orchestration run logs — runtime output, regenerated each run
 runs/
+
+# PA regenerable output/ artifacts after the 08e/09a redirect: per-year geojsons
+# + manifest now land in output/ (the runner publishes them to website/public);
+# the aggregates/scorecard CSVs are build intermediates (the SERVED copies live
+# in website/public/downloads/ + website/public/data/). All regenerable from the
+# runner, so ignored — same policy as the other output/ artifacts above.
+pipeline/property-assessment/output/neighbourhoods_*_recovered.geojson
+pipeline/property-assessment/output/manifest.json
+pipeline/property-assessment/output/neighbourhood_aggregates_*.csv
+pipeline/property-assessment/output/pa_hist_filter_scorecard.csv
