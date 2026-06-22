@@ -80,7 +80,7 @@ pipeline/property-assessment/output/hist_parking_*.csv
 pipeline/property-assessment/output/parking_*.csv
 pipeline/property-assessment/output/name_mapping_audit_log_*.csv
 pipeline/property-assessment/output/neighbourhoods_2026_new_boundaries.geojson
-pipeline/property-assessment/output/neighbourhoods_2026_recovered_new_boundaries.geojson
+pipeline/property-assessment/output/neighbourhoods_2026_recovered.geojson
 pipeline/property-assessment/output/pa_hist_clean_*.csv
 pipeline/property-assessment/data/reference/neighbourhood_name_merges_*.csv
 
@@ -97,3 +97,6 @@ pipeline/shared/data/
 
 # Local working doc — audit findings, not a repo artifact
 docs/STRUCTURE_AUDIT.md
+
+# Orchestration run logs — runtime output, regenerated each run
+runs/

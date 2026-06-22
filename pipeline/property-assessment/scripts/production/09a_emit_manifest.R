@@ -3,8 +3,8 @@
 # AREF — Emit manifest.json for frontend year auto-discovery
 # Author: Kaustubh Chati (Research Assistant, UAlberta Economics)
 #
-# PURPOSE: Scan website/public/data/property-assessment/ for all
-#   committed GeoJSON files and emit manifest.json. The frontend
+# PURPOSE: Scan output/ for the freshly-built per-year GeoJSON files and
+#   emit manifest.json describing them. The frontend
 #   reads manifest.json at runtime to populate the year selector —
 #   no year literals anywhere in frontend code.
 #
@@ -14,11 +14,11 @@
 #   - One operator command: source("scripts/09a_emit_manifest.R")
 #
 # INPUTS:
-#   website/public/data/property-assessment/neighbourhoods_YYYY_recovered.geojson
-#   (all years present on disk)
+#   output/neighbourhoods_YYYY_recovered.geojson
+#   (all years freshly built by 08e/08b this run)
 #
 # OUTPUT:
-#   website/public/manifest.json
+#   output/manifest.json   (the runner publishes it to website/public/manifest.json)
 #
 # MANIFEST CONTRACT (v1.0):
 #   {
@@ -67,8 +67,13 @@ source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file
 # Run directly in console — no need to edit the script file
 # Override the two path variables then source
 
-public_dir    <- website_path("public", "data", "property-assessment")
-manifest_path <- website_path("public", "manifest.json")
+# Scan the freshly-built GeoJSONs in output/ (NOT public) so the manifest
+# describes what THIS run produced — the runner publishes output/ -> public
+# afterward. Reading public here would describe the PREVIOUS run (stale).
+# The manifest is likewise written to output/ and published by the runner's
+# handoff, keeping the runner the sole writer of website/public.
+public_dir    <- "output"
+manifest_path <- "output/manifest.json"
 
 
 

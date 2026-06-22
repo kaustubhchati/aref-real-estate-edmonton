@@ -7,8 +7,9 @@
 #   aggregates against the new City of Edmonton boundary file
 #   (65fr-66s6, 407 rows, WKT geometry, WGS84). Outputs one
 #   GeoJSON per year, named neighbourhoods_YYYY_recovered.geojson,
-#   dropped into website/public/data/property-assessment/ ready
-#   for the frontend year selector.
+#   written to output/ (uniform name shared with the current-year file).
+#   Publishing to website/public/ is the runner's handoff job, not this
+#   script's — the runner is the sole publisher.
 #
 # REFRESH-BY-DESIGN:
 #   - Iterates over all CSVs found in output/hist_aggregates/
@@ -26,7 +27,7 @@
 #   data/reference/neighbourhood_name_mappings_<date>.csv   (rescue table)
 #
 # OUTPUTS:
-#   website/public/data/property-assessment/neighbourhoods_YYYY_recovered.geojson
+#   output/neighbourhoods_YYYY_recovered.geojson   (runner publishes to public)
 #   output/hist_geojson_build_log.csv  — year-by-year polygon state counts
 # ============================================================
 
@@ -35,10 +36,13 @@ library(sf)
 library(scales)
 source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
 
-# Output lands directly into website/public for frontend consumption
-out_dir <- website_path("public", "data", "property-assessment")
+# Historical GeoJSONs land in output/ (the section's build dir, same place 08b
+# writes the current-year file). Publishing output/ -> website/public is the
+# runner's handoff job now, NOT this script's — keeps the runner the sole
+# publisher. Filename pattern (neighbourhoods_<YYYY>_recovered.geojson) is
+# unchanged, so all years share one uniform output location + name.
+out_dir <- "output"
 dir.create(out_dir,           showWarnings = FALSE, recursive = TRUE)
-dir.create("output",          showWarnings = FALSE, recursive = TRUE)
 
 cat("=============================================================\n")
 cat("AREF — Historical GeoJSON Build\n")

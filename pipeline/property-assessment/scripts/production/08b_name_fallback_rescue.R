@@ -15,8 +15,9 @@
 #     7 rows; date in filename — latest is authoritative, CLAUDE.md §4.4)
 #
 # Outputs:
-#   - output/neighbourhoods_2026_recovered_new_boundaries.geojson  (the choropleth
-#     source the FRONTEND consumes — rescued build, supersedes 08's pre-rescue file)
+#   - output/neighbourhoods_2026_recovered.geojson  (the choropleth source the
+#     FRONTEND consumes — rescued build, supersedes 08's pre-rescue file; uniform
+#     neighbourhoods_<YYYY>_recovered.geojson name shared with the historical years)
 #   - output/neighbourhoods_2026_not_rendered_recovered.csv         (unresolved rows)
 #   - output/name_mapping_audit_log_<date>.csv                      (audit trail)
 #
@@ -251,7 +252,7 @@ geojson_ready <- joined |>
   st_set_precision(1e6) |>
   st_make_valid()
 
-geojson_path <- "output/neighbourhoods_2026_recovered_new_boundaries.geojson"
+geojson_path <- "output/neighbourhoods_2026_recovered.geojson"
 if (file.exists(geojson_path)) file.remove(geojson_path)
 st_write(geojson_ready, geojson_path, driver = "GeoJSON", quiet = TRUE)
 
