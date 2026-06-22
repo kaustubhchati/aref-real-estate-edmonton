@@ -72,85 +72,37 @@ library(tidyverse)
 library(sf)
 library(scales)
 
+# Repo-root anchoring + the shared Socrata fetch helper (export-endpoint
+# discipline + the proven atomic/timeout/floors reliability layer).
+source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
+source(shared_path("fetch_helpers.R"))
+
 dir.create("data/raw", showWarnings = FALSE, recursive = TRUE)
 dir.create("output",   showWarnings = FALSE, recursive = TRUE)
 
 
 # ============================================================
-# 1 — Source -> raw
+# 1 — Source -> raw  (via the shared Socrata fetch helper)
 # ============================================================
-# Socrata bulk endpoint serves the full dataset (all years). Dataset id
-# 24uj-dj8v is permanent; the URL always returns the City's latest snapshot.
-# No year filter exists on the bulk download — we get every year and that's
-# what we want (ship all, per the locked decision).
-dataset_id  <- "24uj-dj8v"
-source_url  <- sprintf(
-  "https://data.edmonton.ca/api/views/%s/rows.csv?accessType=DOWNLOAD",
-  dataset_id
+# All Socrata bulk fetches go through fetch_socrata_snapshot(): export endpoint
+# only (never the 1000-row-capped /resource/ API), atomic temp-then-rename, and
+# size/row/column floors checked on the temp before promotion. Dataset 24uj-dj8v
+# serves the full all-years bulk download. filename_stem keeps the existing
+# on-disk name (General_Building_Permits_<YYYYMMDD>.csv) that 03 globs.
+# Observed baseline (General_Building_Permits_20260529.csv): 241,131 rows, ~107 MB;
+# floors set to ~half — a backup truncation guard behind the atomic write.
+raw_path <- fetch_socrata_snapshot(
+  dataset_id    = "24uj-dj8v",
+  dest_dir      = file.path("data", "raw"),
+  min_rows      = 120000L,
+  min_size_mb   = 50,
+  required_cols = c("Row ID", "YEAR", "JOB_CATEGORY", "JOB_DESCRIPTION",
+                    "BUILDING_TYPE", "WORK_TYPE", "CONSTRUCTION_VALUE",
+                    "ADDRESS", "LATITUDE", "LONGITUDE"),
+  filename_stem = "General_Building_Permits"
 )
 
-# Dated raw filename preserves refresh history (and data/raw is gitignored).
-raw_path <- file.path("data", "raw",
-                      sprintf("General_Building_Permits_%s.csv",
-                              format(Sys.Date(), "%Y%m%d")))
-
-# Verification thresholds + expected schema, defined up front because they run on
-# the downloaded TEMP file before it is promoted to the dated name (atomic write).
-# Observed baseline, General_Building_Permits_20260529.csv (full all-years pull):
-# 241,131 rows, ~107 MB. Floors are ~HALF that. With atomic temp-then-rename now
-# the PRIMARY guarantee (a present dated file means a complete, verified download),
-# these floors are a BACKUP sanity check, not the primary truncation guard.
-MIN_ROWS  <- 120000L        # ~half of observed 241,131
-MIN_BYTES <- 50 * 1024^2    # ~half of observed ~107 MB
-required_cols <- c("Row ID", "YEAR", "JOB_CATEGORY", "JOB_DESCRIPTION",
-                   "BUILDING_TYPE", "WORK_TYPE", "CONSTRUCTION_VALUE",
-                   "ADDRESS", "LATITUDE", "LONGITUDE")
-
-if (!file.exists(raw_path)) {
-  # 20-minute timeout: covers ~1.5 GB at the observed ~1.6 MB/s (107 MB took ~68s
-  # on 2026-06-21) — the project's working size ceiling, with margin. The default
-  # 60s cut off the 68s/107 MB pull and left a truncated partial. method="libcurl"
-  # gives predictable timeout semantics for large bodies.
-  options(timeout = 1200)
-
-  # Atomic temp-then-rename: download to a .part file, verify it FULLY, and only
-  # then rename to the dated name. A present dated file therefore ALWAYS means a
-  # complete, verified download — never a partial a later run would silently reuse.
-  cat("Downloading", dataset_id, "->", raw_path, "\n")
-  cat("(full dataset, ~107 MB; timeout 1200s, method libcurl)\n")
-  temp_path <- paste0(raw_path, ".part")
-  fail <- function(msg) { unlink(temp_path); stop(msg, call. = FALSE) }
-
-  dl_status <- download.file(source_url, destfile = temp_path,
-                             mode = "wb", method = "libcurl", quiet = FALSE)
-  if (dl_status != 0L)
-    fail(paste0("download.file returned non-zero status (", dl_status, ") for ",
-                dataset_id, " — fetch failed; partial discarded."))
-  if (file.size(temp_path) < MIN_BYTES)
-    fail(paste0("download is ", round(file.size(temp_path) / 1024^2, 1), " MB (< ",
-                MIN_BYTES %/% 1024^2, " MB floor) — truncated download; partial discarded."))
-
-  permits_raw <- read_csv(temp_path, show_col_types = FALSE)
-  if (nrow(permits_raw) < MIN_ROWS)
-    fail(paste0("download has ", format(nrow(permits_raw), big.mark = ","), " rows (< ",
-                format(MIN_ROWS, big.mark = ","),
-                " floor) — truncated download or schema drift; partial discarded."))
-  missing_cols <- setdiff(required_cols, names(permits_raw))
-  if (length(missing_cols) > 0)
-    fail(paste0("Source schema changed — missing expected columns: ",
-                paste(missing_cols, collapse = ", "),
-                ". Partial discarded; inspect the new file and update 02 before shipping."))
-
-  file.rename(temp_path, raw_path)   # promote: dated file now means complete + verified
-  cat(sprintf("Fetched + verified: %s rows, %s columns -> %s\n",
-              comma(nrow(permits_raw)), ncol(permits_raw), basename(raw_path)))
-} else {
-  # Atomic write guarantees a present dated file is complete + verified, so reuse
-  # is sound without re-checking.
-  cat("Raw snapshot for today already exists (complete via atomic write), reusing:\n  ",
-      raw_path, "\n")
-  permits_raw <- read_csv(raw_path, show_col_types = FALSE)
-}
+permits_raw <- read_csv(raw_path, show_col_types = FALSE)
 cat(sprintf("Loaded %s rows, %s columns\n",
             comma(nrow(permits_raw)), ncol(permits_raw)))
 
