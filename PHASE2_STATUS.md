@@ -153,6 +153,18 @@ sections, agent pipeline, and infrastructure.
 - [ ] Transfer repo ownership to Prof or UAlberta org.
 - [ ] Branch protection on main once Olivia is reviewing.
 - [ ] Confirm LICENSE holder with Prof.
+- [ ] **`yeg_` output prefix** (CLAUDE.md §10 Calgary prereq) — apply at the
+      multi-section handoff rollout (building-permits + economy), NOT before.
+      Needs its own frontend-inclusive blast-radius grep (frontend loads
+      GeoJSONs by name). Setting it once across all sections at rollout is
+      cheaper than per-section now.
+- [ ] **Refresh-run JSONL schema reconciliation** — `run_section.R` emits
+      run records to `runs/refresh_runs.jsonl` (run_id, section, script,
+      status, message, started_at, duration_secs, + handoff_copy records).
+      Reconcile this shape against `schemas/refresh_report.v1.json` so the
+      Refresh Report agent consumes it without a translation layer. Also decide
+      stdout-capture depth (currently message:"" on success — capture per-script
+      operational prints?).
 
 ---
 
@@ -182,6 +194,11 @@ sections, agent pipeline, and infrastructure.
   never on name (name drift is the documented failure).
 - Refresh-by-design: no year literals anywhere in
   frontend; manifest.json drives year auto-discovery.
+- Orchestration: thin callr runner, sole-publisher model, proven live on PA.
+  Pipeline scripts → output/ only; runner publishes output/ → public/ per the
+  manifest. cwd-per-section (YAML, not .Rproj); dependency order (08d-before-07).
+- PA GeoJSON output naming normalized: uniform `neighbourhoods_<YYYY>_recovered.geojson`
+  for all years (current + historical), all in output/. Handoff is an identity copy.
 
 ---
 
@@ -197,9 +214,14 @@ sections, agent pipeline, and infrastructure.
    path-anchored via `shared_path()`); remaining: road / vegetation / speed-zone base
    layers. Calgary city-layer prereq #2 (CLAUDE.md §10) now **partially met** —
    relocation half done, base-geo-layer half remains.
-4. **Whirl orchestration layer** — now unblocked: both migrated sections expose a
-   uniform `production/` for whirl to glob, and 02a's standalone fix removed the
-   last cross-process session dependency. Report-side prerequisite.
+4. **Orchestration layer — DONE, proven live on PA.** Built a thin `callr`-based
+   runner (`run_section.R` + `_whirl.yaml`), NOT whirl (evaluated and dropped —
+   see CLAUDE.md v1.5). One fresh process per script; cwd-per-section from YAML;
+   dependency order (08d-before-07). The runner is the sole publisher to
+   `website/public/` — pipeline scripts write only to `output/`. Live PA run:
+   9 scripts + 15-year handoff, all ok; yoy populated (277/345); current-year
+   staleness closed; manifest now built from output/ (fixed a stale-2026 scale
+   bug). Next: replicate the runner pattern to building-permits + economy.
 5. Point layers batch — R pipeline first, then Pattern A frontend (one CC
    session per layer).
 6. Permit Neighbourhoods choropleth — Olivia QA sign-off (built, deployed to demo).

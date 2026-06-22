@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> **Version: v1.4 — authoritative. Supersedes all prior versions (v0.1–v1.3).**
+> **Version: v1.5 — authoritative. Supersedes all prior versions (v0.1–v1.4).**
 > This is the single source of project context for every Claude Code session — read it first.
 > If any other note, comment, or older doc frames *the website* as an "agent-driven platform,"
 > that framing is **retired** — see §1.
@@ -60,6 +60,22 @@ random forest is discarded).
 - **GitHub = source of truth;** the host gets built artifacts only.
 - **Displayed identity is placeholdered** in `siteConfig.js` (§6) — no real
   university / centre / professor / author strings baked into pages yet.
+- **Orchestration = a thin in-repo runner (`run_section.R`), cwd-per-section,
+  one fresh process per script.** The runner reads section config from
+  `_whirl.yaml` (cwd + dependency-ordered script list), cds into each section's
+  declared cwd, and runs each script in a fresh R process via `callr` so a
+  script's correctness depends only on its disk inputs, never on session state.
+  The authoritative cwd is the YAML's declared section path, NEVER `.Rproj`
+  (an editor marker). Within a section, script order is the dependency order
+  declared in the YAML, not numeric filename order (e.g. PA runs 08d before 07
+  so 07's yoy backref populates). Verified live across all 9 PA scripts.
+- **The runner is the SOLE publisher to `website/public/`.** Pipeline scripts
+  write ONLY to their section's `output/`. After all of a section's scripts
+  succeed, the runner reads the freshly-emitted `manifest.json` and copies every
+  manifest year's artifact from `output/` to `website/public/` (identity copy),
+  logging each to `runs/refresh_runs.jsonl`. No pipeline script may write to
+  public — that coupling is what produced silent current-year staleness, now
+  removed.
 
 ---
 
@@ -300,6 +316,18 @@ Result: the **live clone** — shell + one real map — the proof the frame work
 - Edit `data/reference/` or contract files in place. (§4.4 — version/date-stamp a new file.)
 - Invoke the previous RA's pipeline. (Reference only; reuse only the documented inheritances.)
 - Auto-resolve cross-product names with fuzzy matching. (§4.7 — surface to the human queue.)
+- Write to `website/public/` from a pipeline script. (§2 — scripts write to
+  `output/`; the runner is the sole publisher. A script writing public is the
+  staleness bug that motivated the publish layer.)
+- Key the runner's cwd off `.Rproj`. (§2 — `.Rproj` is an editor marker; the
+  YAML's declared section path is authoritative.)
+- Reorder a section's runner steps to match numeric filenames. (§2 — the YAML
+  carries dependency order; PA's 08d precedes 07 by design.)
+- Add an explicit `layer`/`name` to an `st_write` solely to force a byte-match
+  on a GeoJSON rename. (Renaming a GDAL GeoJSON changes its embedded layer-name
+  line by construction; the correct verification standard is data-identical
+  MODULO that line, not literal byte-identity. Do not edit write logic to chase
+  a literal match.)
 
 **Website**
 - Rewrite the R pipeline. (§2.)
@@ -323,6 +351,7 @@ Result: the **live clone** — shell + one real map — the proof the frame work
 | Identify canonical 2026 boundary shapefile (UAlberta Library data services) | Parallel track | ✅ **Resolved** — City of Edmonton Neighbourhoods CSV (`65fr-66s6`, 407 rows, WKT/WGS84) adopted as the boundary source; 08/08b read `read_csv` + `st_as_sf` |
 | R3b: optional catch for ~104 "building and land" manufactured-home FNs | Before R4, probably unnecessary | ↗ Carried to Phase 2 (low priority) |
 | Scoreboard schema columns (`dataset`, `city`, `layer`, …) for multi-section scoring | Before second section's rules | Open |
+| `renv.lock` referenced in workflow but absent on disk (no renv/ either) | Before relying on clone-and-run reproducibility | Open — decide: adopt renv (snapshot current library incl. callr/jsonlite/yaml, commit lockfile) OR drop the renv claim from docs. Pipeline currently runs from the user library; the runner's deps (callr, jsonlite, yaml) are not captured anywhere. |
 
 ---
 
@@ -346,6 +375,21 @@ When in doubt, load §2 (locked architecture) and §9 (negative rules) — the l
 Revise when: a locked decision changes (§2), a new section is wired (§3), a new rule is validated
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
+- **v1.5 (2026-06-21)** — Orchestration layer built and proven live on PA.
+  whirl was evaluated and DROPPED (config-driven with its own schema,
+  renv-coupled, parallel-by-default, HTML-only logging that mismatched the
+  agent's JSONL need); replaced by a thin `callr`-based runner (`run_section.R`
+  + `_whirl.yaml`). New invariants (§2): cwd-per-section authoritative from YAML
+  not `.Rproj`; dependency order not numeric (PA 08d-before-07); one fresh
+  process per script; the runner is the SOLE publisher to `website/public/`,
+  pipeline scripts write only to `output/`. Campaign: 08b output renamed to the
+  uniform `neighbourhoods_<YYYY>_recovered.geojson` (dropping the transitional
+  `_new_boundaries` suffix; fixes a manual-copy name/content mismatch); 08e
+  redirected public→output/ (14 years byte-identical); 09a re-sourced to read
+  output/ not stale public (fixed a manifest-staleness circularity — the live
+  2026 colour scale was being computed from a stale file). All edits
+  destination/source/name-only, byte-verified on contents. Three §9 negative
+  rules added incl. the GDAL-rename verification standard. No data logic changed.
 - **v1.4 (2026-06-21)** — New section wired: `pipeline/economy/business-census/`
   (Business Census choropleth) relocated out of `pipeline/shared/` — git-mv with
   history preserved, path-anchored (bootstrap + shared_path boundary), byte-verified.
