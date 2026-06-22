@@ -49,6 +49,20 @@ if (length(raw_candidates) == 0) stop("No raw permits CSV in data/raw/")
 raw_path <- sort(raw_candidates, decreasing = TRUE)[1]
 cat("Using snapshot:", raw_path, "\n")
 
+# Freshness assertion (the chain's correctness depends on this). Under the
+# runner, 02 fetches TODAY's snapshot before 03 runs, so the newest file here
+# must be today's. If 02's fetch silently failed — or 03 is run standalone
+# against a stale data/raw — this stops loud rather than aggregating yesterday's
+# permits into today's published choropleth.
+snapshot_date <- regmatches(basename(raw_path),
+                            regexpr("[0-9]{8}", basename(raw_path)))
+if (length(snapshot_date) == 0 || snapshot_date != format(Sys.Date(), "%Y%m%d")) {
+  stop("newest snapshot is '", basename(raw_path), "' (date ",
+       if (length(snapshot_date)) snapshot_date else "none", "), not today's (",
+       format(Sys.Date(), "%Y%m%d"), ") — did 02 fetch this run? ",
+       "Refusing to aggregate a stale snapshot.")
+}
+
 permits_raw <- read_csv(raw_path, show_col_types = FALSE)
 cat("Raw rows:", format(nrow(permits_raw), big.mark = ","), "\n")
 cat("Columns:", paste(names(permits_raw), collapse = ", "), "\n\n")

@@ -94,29 +94,65 @@ raw_path <- file.path("data", "raw",
                       sprintf("General_Building_Permits_%s.csv",
                               format(Sys.Date(), "%Y%m%d")))
 
-if (!file.exists(raw_path)) {
-  cat("Downloading", dataset_id, "->", raw_path, "\n")
-  cat("(full dataset, ~60 MB, expect 30-90s)\n")
-  download.file(source_url, destfile = raw_path, mode = "wb", quiet = FALSE)
-} else {
-  cat("Raw snapshot for today already exists, reusing:\n  ", raw_path, "\n")
-}
-
-permits_raw <- read_csv(raw_path, show_col_types = FALSE)
-cat(sprintf("Loaded %s rows, %s columns\n",
-            comma(nrow(permits_raw)), ncol(permits_raw)))
-
-# Refresh guard: the cleaning below assumes specific column names. If the City
-# renames a column, fail loudly here rather than producing a silently-wrong map.
+# Verification thresholds + expected schema, defined up front because they run on
+# the downloaded TEMP file before it is promoted to the dated name (atomic write).
+# Observed baseline, General_Building_Permits_20260529.csv (full all-years pull):
+# 241,131 rows, ~107 MB. Floors are ~HALF that. With atomic temp-then-rename now
+# the PRIMARY guarantee (a present dated file means a complete, verified download),
+# these floors are a BACKUP sanity check, not the primary truncation guard.
+MIN_ROWS  <- 120000L        # ~half of observed 241,131
+MIN_BYTES <- 50 * 1024^2    # ~half of observed ~107 MB
 required_cols <- c("Row ID", "YEAR", "JOB_CATEGORY", "JOB_DESCRIPTION",
                    "BUILDING_TYPE", "WORK_TYPE", "CONSTRUCTION_VALUE",
                    "ADDRESS", "LATITUDE", "LONGITUDE")
-missing_cols <- setdiff(required_cols, names(permits_raw))
-if (length(missing_cols) > 0) {
-  stop("Source schema changed — missing expected columns: ",
-       paste(missing_cols, collapse = ", "),
-       "\n  Inspect the new file and update 02_build_permits.R before shipping.")
+
+if (!file.exists(raw_path)) {
+  # 20-minute timeout: covers ~1.5 GB at the observed ~1.6 MB/s (107 MB took ~68s
+  # on 2026-06-21) — the project's working size ceiling, with margin. The default
+  # 60s cut off the 68s/107 MB pull and left a truncated partial. method="libcurl"
+  # gives predictable timeout semantics for large bodies.
+  options(timeout = 1200)
+
+  # Atomic temp-then-rename: download to a .part file, verify it FULLY, and only
+  # then rename to the dated name. A present dated file therefore ALWAYS means a
+  # complete, verified download — never a partial a later run would silently reuse.
+  cat("Downloading", dataset_id, "->", raw_path, "\n")
+  cat("(full dataset, ~107 MB; timeout 1200s, method libcurl)\n")
+  temp_path <- paste0(raw_path, ".part")
+  fail <- function(msg) { unlink(temp_path); stop(msg, call. = FALSE) }
+
+  dl_status <- download.file(source_url, destfile = temp_path,
+                             mode = "wb", method = "libcurl", quiet = FALSE)
+  if (dl_status != 0L)
+    fail(paste0("download.file returned non-zero status (", dl_status, ") for ",
+                dataset_id, " — fetch failed; partial discarded."))
+  if (file.size(temp_path) < MIN_BYTES)
+    fail(paste0("download is ", round(file.size(temp_path) / 1024^2, 1), " MB (< ",
+                MIN_BYTES %/% 1024^2, " MB floor) — truncated download; partial discarded."))
+
+  permits_raw <- read_csv(temp_path, show_col_types = FALSE)
+  if (nrow(permits_raw) < MIN_ROWS)
+    fail(paste0("download has ", format(nrow(permits_raw), big.mark = ","), " rows (< ",
+                format(MIN_ROWS, big.mark = ","),
+                " floor) — truncated download or schema drift; partial discarded."))
+  missing_cols <- setdiff(required_cols, names(permits_raw))
+  if (length(missing_cols) > 0)
+    fail(paste0("Source schema changed — missing expected columns: ",
+                paste(missing_cols, collapse = ", "),
+                ". Partial discarded; inspect the new file and update 02 before shipping."))
+
+  file.rename(temp_path, raw_path)   # promote: dated file now means complete + verified
+  cat(sprintf("Fetched + verified: %s rows, %s columns -> %s\n",
+              comma(nrow(permits_raw)), ncol(permits_raw), basename(raw_path)))
+} else {
+  # Atomic write guarantees a present dated file is complete + verified, so reuse
+  # is sound without re-checking.
+  cat("Raw snapshot for today already exists (complete via atomic write), reusing:\n  ",
+      raw_path, "\n")
+  permits_raw <- read_csv(raw_path, show_col_types = FALSE)
 }
+cat(sprintf("Loaded %s rows, %s columns\n",
+            comma(nrow(permits_raw)), ncol(permits_raw)))
 
 
 # ============================================================
