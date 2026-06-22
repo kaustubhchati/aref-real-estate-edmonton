@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> **Version: v1.5 — authoritative. Supersedes all prior versions (v0.1–v1.4).**
+> **Version: v1.6 — authoritative. Supersedes all prior versions (v0.1–v1.5).**
 > This is the single source of project context for every Claude Code session — read it first.
 > If any other note, comment, or older doc frames *the website* as an "agent-driven platform,"
 > that framing is **retired** — see §1.
@@ -71,11 +71,24 @@ random forest is discarded).
   so 07's yoy backref populates). Verified live across all 9 PA scripts.
 - **The runner is the SOLE publisher to `website/public/`.** Pipeline scripts
   write ONLY to their section's `output/`. After all of a section's scripts
-  succeed, the runner reads the freshly-emitted `manifest.json` and copies every
-  manifest year's artifact from `output/` to `website/public/` (identity copy),
-  logging each to `runs/refresh_runs.jsonl`. No pipeline script may write to
-  public — that coupling is what produced silent current-year staleness, now
-  removed.
+  succeed, the runner publishes by copying the files that PHYSICALLY EXIST in
+  `output/` (Way A: a `glob` copy supporting a directory remap, plus `files`
+  fixed-file copies for CSVs and the section's manifest) to `website/public/`
+  (identity copy), logging each to `runs/refresh_runs.jsonl`. It does not parse a
+  manifest to decide what to copy. (PA's original manifest-year-driven path is
+  retained behind a guard.) No pipeline script may write to public — that
+  coupling is what produced silent current-year staleness, now removed.
+- **Manifest shape follows source structure; each section emits its own.** Every
+  section writes its own `manifest.json` to its own per-section public path (no
+  global merged manifest, matching the Way-A handoff which copies each section's
+  manifest as a fixed file). Single-source sections emit a flat
+  `{years, defaultYear}` manifest (e.g. building-permits). Multi-source sections
+  emit a richer manifest (e.g. property-assessment: a nested cities/section
+  structure with per-year colour scales, spanning current and historical raw
+  sources in one year range). The frontend reads each section's manifest in its
+  own shape. This is a generative rule, not a per-section exception: a future
+  section's manifest shape is determined by whether it has one raw source or
+  several.
 
 ---
 
@@ -179,6 +192,16 @@ These bind every pipeline script. (Carried from the validated phase-1 methodolog
   a name/ID, reconcile through explicit, sourced, dated mapping tables under `data/reference/` —
   never fuzzy matching or silent auto-correction. Non-destructive (`_recovered` artifacts).
   Established example: `neighbourhood_name_mappings_20260519.csv` (8 mappings).
+- **4.8 Socrata fetches go through the shared helper.** All bulk fetches call
+  `pipeline/shared/fetch_helpers.R::fetch_socrata_snapshot()`. Download-to-disk model: each fetch
+  writes a dated raw snapshot to the section's `data/raw/` (provenance record), then reads it.
+  Export endpoint only (`rows.csv?accessType=DOWNLOAD`); the `/resource/` query endpoint is never
+  used because it silently caps at 1000 rows. Reliability is built in: a curl stall-detect handle
+  (abort below 100 B/s for 60s) plus a 1200s absolute backstop, atomic temp-then-promote (a failed
+  download never persists under the dated name), and size/row/required-column floors verified on
+  the temp before promotion. Callers pass per-dataset floors and a `filename_stem` so each section
+  keeps its own on-disk snapshot name. Do not hand-roll fetches; do not stream URLs straight to
+  memory.
 
 ---
 
@@ -347,7 +370,7 @@ Result: the **live clone** — shell + one real map — the proof the frame work
 | `[OPEN]` | Resolve by | Status |
 |---|---|---|
 | Reconcile the colour-scale source reference (live page cites `PHASE1_STATUS.md §5`; confirm) | Before locking the React map | ✅ **Resolved** — per-year manifest scales + per-metric palettes locked (PHASE1 §12) |
-| Calgary: mirror Edmonton pipeline or use the RE-prefix filter? | Calgary work start | ✅ **Resolved (decision; execution blocked on prereqs)** — NOT a duplicate `pipeline/`. Edmonton city-coupling is shallow (dataset IDs, boundary CSV, special-entity list, oracle = config; rules key on column concepts, not Edmonton identifiers). Decision: **city wraps section** (`pipeline/<city>/<section>/`); each city carries its **own** `shared/` base-geo section (cities share no base layers, so no cross-city shared geo); rule-bearing sections parameterize by a per-city config (IDs / boundary / special entities / oracle-present); **outputs carry `yeg_`/`yyc_` prefixes** so both cities coexist in `data/processed/` + website handoff; the validation tier already self-skips via `conf_path()` when a city has no oracle (no new code). **Blocked on, in order:** (1) building-permits migration finished; (2) `shared/` built out (road/vegetation layers in; the squatting Business Census script relocated to an Economy section); (3) Calgary schema inspected (column-concept map + numeric-ID boundary join confirmed). Do NOT write the city layer into §3 or the tree until it exists on disk (§0 rule 1). |
+| Calgary: mirror Edmonton pipeline or use the RE-prefix filter? | Calgary work start | ✅ **Resolved (decision; execution blocked on prereqs)** — NOT a duplicate `pipeline/`. Edmonton city-coupling is shallow (dataset IDs, boundary CSV, special-entity list, oracle = config; rules key on column concepts, not Edmonton identifiers). Decision: **city wraps section** (`pipeline/<city>/<section>/`); each city carries its **own** `shared/` base-geo section (cities share no base layers, so no cross-city shared geo); rule-bearing sections parameterize by a per-city config (IDs / boundary / special entities / oracle-present); **outputs carry `yeg_`/`yyc_` prefixes** so both cities coexist in `data/processed/` + website handoff — but the prefixes are **DEFERRED to the Calgary-introduction campaign**: until a second city exists there is no namespace collision to disambiguate, so outputs and frontend paths stay unprefixed; the prefixes land across all sections at once when the second city is wired, not ahead of it. The validation tier already self-skips via `conf_path()` when a city has no oracle (no new code). **Blocked on, in order:** (1) building-permits migration finished; (2) `shared/` built out (road/vegetation layers in; the squatting Business Census script relocated to an Economy section); (3) Calgary schema inspected (column-concept map + numeric-ID boundary join confirmed). Do NOT write the city layer into §3 or the tree until it exists on disk (§0 rule 1). |
 | Identify canonical 2026 boundary shapefile (UAlberta Library data services) | Parallel track | ✅ **Resolved** — City of Edmonton Neighbourhoods CSV (`65fr-66s6`, 407 rows, WKT/WGS84) adopted as the boundary source; 08/08b read `read_csv` + `st_as_sf` |
 | R3b: optional catch for ~104 "building and land" manufactured-home FNs | Before R4, probably unnecessary | ↗ Carried to Phase 2 (low priority) |
 | Scoreboard schema columns (`dataset`, `city`, `layer`, …) for multi-section scoring | Before second section's rules | Open |
@@ -375,6 +398,18 @@ When in doubt, load §2 (locked architecture) and §9 (negative rules) — the l
 Revise when: a locked decision changes (§2), a new section is wired (§3), a new rule is validated
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
+- **v1.6 (2026-06-21)** — Three decisions from the fetch-SOP + frontend-prep work
+  recorded. §4.8: all Socrata bulk fetches go through the shared
+  `fetch_socrata_snapshot()` (download-to-disk, export endpoint only, reliability
+  built in: curl stall+timeout handle, atomic temp-then-promote, size/row/column
+  floors); both PA's 01 and BP's 02 retrofitted. §10 Calgary row: `yeg_`/`yyc_`
+  prefixes **deferred** to the Calgary-introduction campaign (unprefixed until a
+  second city exists). §2: manifest shape follows source structure (flat
+  `{years, defaultYear}` for single-source like building-permits, richer nested
+  shape for multi-source like property-assessment), each section emits its own at
+  its own per-section path, no global merge. Also aligned §2's sole-publisher
+  bullet to the committed Way-A handoff (glob + fixed-file copy; does not parse
+  the manifest; PA's legacy manifest-year path retained behind a guard). Doc-only.
 - **v1.5 (2026-06-21)** — Orchestration layer built and proven live on PA.
   whirl was evaluated and DROPPED (config-driven with its own schema,
   renv-coupled, parallel-by-default, HTML-only logging that mismatched the
