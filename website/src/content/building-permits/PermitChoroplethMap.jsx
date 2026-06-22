@@ -1,18 +1,22 @@
 // =============================================================================
 // PermitChoroplethMap.jsx
 //
-// The Permit Neighbourhoods choropleth route ("/activity/permit-neighbourhoods").
-// Mirrors property-assessment/PropertyAssessmentMap.jsx for all map chrome:
-// shared MapView + custom basemap, the same fill/outline/highlight/label layer
-// stack (pnbhd-* ids, no collision with assessment's nbhd-*), the same polygon
-// states, the 900ms-delay hover popup, click-to-pin, cursor and feature-state.
+// The Dwelling Units choropleth route ("/activity/dwelling-units"). Mirrors
+// property-assessment/PropertyAssessmentMap.jsx for all map chrome (shared
+// MapView + custom basemap, the same fill/outline/highlight/label layer stack —
+// pnbhd-* ids, unchanged internal names), the five polygon states, the 900ms
+// hover popup, click-to-pin, cursor and feature-state.
 //
-// Differences: Edmonton-only (no city toggle), no search, four permit metrics,
-// per-year committed GeoJSONs (no manifest), interactions wired inline.
+// Metric UI: three top-level metrics, each with a 2-option sub-switch that
+// resolves to one GeoJSON field (see DWELLING_METRICS in the style file). The
+// component stores {metricKey, subKey}; resolveSub() yields the active field,
+// label, formatter, and ramp. Toggling re-colours the map via setPaintProperty
+// (part 1 = correctness + structure; the crossfade/PA-switcher polish is part 2).
 //
 // Data: /data/building-permits/permit-neighbourhoods/permit_neighbourhoods_<year>.geojson
 //   fields: display_name, district, Neighbourhood ID, polygon_state, n_permits,
-//   total_construction_value, median_construction_value, units_added_total
+//   total_construction_value, median_construction_value, units_added_gross,
+//   units_demolished, yoy_pct_permits
 // =============================================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -20,17 +24,21 @@ import maplibregl from "maplibre-gl";
 
 import MapView from "../../components/MapView.jsx";
 import Legend from "../../components/Legend.jsx";
+import OptionToggle from "../../components/OptionToggle.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
 import {
   BASEMAP_STYLE,
   MAP_VIEW,
-  PERMIT_CHOROPLETH_METRICS,
-  permitMetricStops,
-  permitChoroplethFillColor,
-  permitChoroplethLayers,
-  buildPermitChoroplethPopupHtml,
+  DWELLING_METRICS,
+  DEFAULT_METRIC,
+  DEFAULT_SUB,
+  resolveSub,
+  metricStops,
+  choroplethFillColor,
+  choroplethLayers,
+  buildPopupHtml,
 } from "./permitChoroplethStyle.js";
 import { fmtNumber } from "../../utils/format.js";
 
@@ -38,11 +46,11 @@ import { fmtNumber } from "../../utils/format.js";
 // truth, refreshed by the pipeline), NOT a hardcoded array. Flat, section-scoped
 // shape { years, defaultYear } per the manifest-shape rule (CLAUDE.md §2). Loaded
 // once on mount; errors surface to the gate (no hardcoded fallback — it would
-// drift stale). (BP's flat shape, not PA's nested cities.<city>.assessment.)
+// drift stale).
 async function loadPermitManifest() {
   const res = await fetch("/data/building-permits/manifest.json");
   if (!res.ok) {
-    throw new Error(`Could not load the permit year catalogue (HTTP ${res.status})`);
+    throw new Error(`Could not load the year catalogue (HTTP ${res.status})`);
   }
   return res.json();
 }
@@ -85,22 +93,43 @@ function flyToFeature(map, feat) {
 
 export default function PermitChoroplethMap() {
   // Year list + default come from the manifest (loaded on mount), never hardcoded.
-  // year is null until the manifest resolves; the render is gated on it below.
   const [manifest, setManifest] = useState(null);
   const [manifestError, setManifestError] = useState(null);
   const [years, setYears] = useState([]);
   const [year, setYear] = useState(null);
-  const [metric, setMetric] = useState(PERMIT_CHOROPLETH_METRICS[0].key);
+
+  // Metric system: primary metric + its sub-state. Default = Dwellings / Added.
+  const [metricKey, setMetricKey] = useState(DEFAULT_METRIC);
+  const [subKey, setSubKey] = useState(DEFAULT_SUB);
+
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
   const [fetchError, setFetchError] = useState(null);
   // Live hover stat panel (Pattern B): the neighbourhood's properties while the
-  // cursor is over it, null otherwise. Set from the map interaction handler.
+  // cursor is over it, null otherwise.
   const [hoveredFeature, setHoveredFeature] = useState(null);
 
-  // Load the manifest once on mount: populate the year list (sorted newest-first;
-  // the manifest lists ascending) and seed the default selection. Seeds year in
-  // the same update as the manifest so there's no loaded-but-no-year frame.
+  // Resolve the active metric definition + sub-state (the field key everything
+  // paints/labels from). metricDef drives the sub-switch's options.
+  const metricDef =
+    DWELLING_METRICS.find((m) => m.key === metricKey) ?? DWELLING_METRICS[0];
+  const activeSub = resolveSub(metricKey, subKey);
+
+  // Primary metric change resets the sub to that metric's first option (so the
+  // sub-switch never shows a sub that doesn't belong to the active metric).
+  function chooseMetric(label) {
+    const m = DWELLING_METRICS.find((d) => d.label === label);
+    if (!m) return;
+    setMetricKey(m.key);
+    setSubKey(m.subs[0].key);
+  }
+  function chooseSub(label) {
+    const s = metricDef.subs.find((x) => x.label === label);
+    if (s) setSubKey(s.key);
+  }
+
+  // Load the manifest once on mount: populate the year list (newest-first) and
+  // seed the default selection in the same update (no loaded-but-no-year frame).
   useEffect(() => {
     let cancelled = false;
     loadPermitManifest()
@@ -116,45 +145,36 @@ export default function PermitChoroplethMap() {
 
   // null until a year is chosen (manifest still loading) — gates the fetch below.
   const url = year != null ? dataUrl(year) : null;
-  const selectedMetric =
-    PERMIT_CHOROPLETH_METRICS.find((m) => m.key === metric) ??
-    PERMIT_CHOROPLETH_METRICS[0];
 
-  // Ramp stops computed from the loaded polygons' quantiles for the chosen
-  // metric (falls back to PERMIT_STOPS until gj resolves). Memoised so the Legend
-  // and repaint effect share a stable identity.
+  // Ramp stops for the active field (sequential or diverging per activeSub.ramp).
+  // Memoised so the Legend and repaint effect share a stable identity.
   const stops = useMemo(
-    () => permitMetricStops(gj, metric),
-    [gj, metric]
+    () => metricStops(gj, activeSub),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [gj, metricKey, subKey]
   );
 
-  // The map popup handlers (installed once per map) read the year from a ref so
-  // they always see the current selection without being re-registered.
+  // Popup handlers (installed once per map) read year + the active sub from refs
+  // so they always see the current selection without being re-registered.
   const yearRef = useRef(year);
   useEffect(() => { yearRef.current = year; }, [year]);
-
-  // The interaction handler is installed once (deps:[map]); refs let it read the
-  // latest setter / metric / gj without re-registering on every render.
   const setHoveredFeatureRef = useRef(setHoveredFeature);
   useEffect(() => { setHoveredFeatureRef.current = setHoveredFeature; }, [setHoveredFeature]);
-  const metricRef = useRef(metric);
-  useEffect(() => { metricRef.current = metric; }, [metric]);
+  const subRef = useRef(activeSub);
+  useEffect(() => { subRef.current = activeSub; });
   const gjRef = useRef(gj);
   useEffect(() => { gjRef.current = gj; }, [gj]);
 
   // Reflect the current selection in the browser tab title; restore on unmount.
   useEffect(() => {
     if (year == null) return undefined;   // manifest still loading
-    document.title = `Permit Neighbourhoods · Edmonton ${year}`;
+    document.title = `Dwelling Units · Edmonton ${year}`;
     return () => { document.title = "Open Data Centre"; };
   }, [year]);
 
-  // Fetch the year's GeoJSON (MapView loads the same URL into the source; the
-  // fetched object is kept for any future search/geometry use). Resets on year
-  // change. setMap(null) is safe mid-flight — MapView is keyed by url, so it
-  // unmounts cleanly and map.remove() destroys the old instance.
+  // Fetch the year's GeoJSON. Resets on year change.
   useEffect(() => {
-    if (!url) return undefined;   // no year selected yet (manifest loading)
+    if (!url) return undefined;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMap(null);
     setGj(null);
@@ -171,32 +191,30 @@ export default function PermitChoroplethMap() {
     return () => { cancelled = true; };
   }, [url]);
 
-  // Repaint the fill when the metric (or its stops) changes, WITHOUT remounting.
+  // Repaint the fill when the metric / sub / stops change, WITHOUT remounting.
   useEffect(() => {
     if (!map) return;
     try {
-      // The map can be mid-teardown (year switch unmounts MapView); getLayer on
-      // a removed map throws — ignore it, the next mount repaints via onLoad.
       if (map.getLayer(FILL_LAYER_ID)) {
         map.setPaintProperty(
           FILL_LAYER_ID,
           "fill-color",
-          permitChoroplethFillColor(metric, stops)
+          choroplethFillColor(activeSub, stops)
         );
       }
     } catch {
-      /* map removed; no-op */
+      /* map removed mid-teardown; next mount repaints via onLoad */
     }
-  }, [map, metric, stops]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, metricKey, subKey, stops]);
 
-  // Hover (200ms delay + jitter fix) + click-to-pin interactions on the fill
-  // layer. Installed once per map; the handlers read yearRef so they stay current
-  // across year changes (and the map remounts on a year change anyway).
+  // Hover (900ms popup dwell + 200ms sidebar) + click-to-pin interactions.
+  // Installed once per map; handlers read refs so they stay current.
   useEffect(() => {
     if (!map) return undefined;
 
     const hoverPopup = new maplibregl.Popup({
-      className: "popup-hover",        // Tier 2 — slim styling (see index.css)
+      className: "popup-hover",
       closeButton: false, closeOnClick: false,
       offset: 8, maxWidth: "220px",
     });
@@ -205,14 +223,12 @@ export default function PermitChoroplethMap() {
       offset: 8, maxWidth: "320px",
     });
 
-    // Fly-to is double-click only; disable the default double-click zoom so it
-    // doesn't fight our handler (must be done before the default fires).
     map.doubleClickZoom.disable();
 
     let hoveredId = null;
     let pinnedId = null;
-    let hoverTimer = null;      // Tier 2 popup dwell (900ms)
-    let sidebarTimer = null;    // Tier 1 sidebar debounce (200ms)
+    let hoverTimer = null;
+    let sidebarTimer = null;
     let lastHoveredId = null;
 
     function setHover(id, on) {
@@ -238,16 +254,13 @@ export default function PermitChoroplethMap() {
       map.getCanvas().style.cursor = "pointer";
       const f = e.features[0];
 
-      // Suppress hover popup when it would just duplicate the pinned popup.
       if (pinnedId !== null) {
         hoverPopup.remove();
         clearTimeout(hoverTimer);
         return;
       }
-      // Reposition every frame so the open popup tracks the cursor without jitter.
       if (hoverPopup.isOpen()) hoverPopup.setLngLat(e.lngLat);
 
-      // Feature changed — reset hover state + restart the dwell timer.
       if (f.id !== lastHoveredId) {
         clearTimeout(hoverTimer);
         if (hoveredId !== null && hoveredId !== f.id) setHover(hoveredId, false);
@@ -255,18 +268,16 @@ export default function PermitChoroplethMap() {
         setHover(hoveredId, true);
         hoverPopup.remove();
         lastHoveredId = f.id;
-        // Tier 1 sidebar panel — debounce 200ms (separate from the 900ms popup).
         clearTimeout(sidebarTimer);
         sidebarTimer = setTimeout(
           () => setHoveredFeatureRef.current(f.properties), 200
         );
-        // Tier 2 popup — show after 900ms dwell, with the selected metric.
         hoverTimer = setTimeout(() => {
           if (hoveredId === f.id) {
             hoverPopup
               .setLngLat(e.lngLat)
-              .setHTML(buildPermitChoroplethPopupHtml(
-                f.properties, false, yearRef.current, metricRef.current))
+              .setHTML(buildPopupHtml(
+                f.properties, false, yearRef.current, subRef.current))
               .addTo(map);
           }
         }, 900);
@@ -276,11 +287,9 @@ export default function PermitChoroplethMap() {
     function onLeave() {
       clearTimeout(sidebarTimer);
       clearHover();
-      // Tier 1: clear the sidebar panel when the cursor leaves the fill.
       setHoveredFeatureRef.current(null);
     }
 
-    // Tier 3 — single click opens the full pinned popup. Does NOT fly.
     function onFillClick(e) {
       if (!e.features?.length) return;
       const f = e.features[0];
@@ -290,15 +299,14 @@ export default function PermitChoroplethMap() {
       setPinned(pinnedId, true);
       pinnedPopup
         .setLngLat(e.lngLat)
-        .setHTML(buildPermitChoroplethPopupHtml(
-          f.properties, true, yearRef.current, metricRef.current))
+        .setHTML(buildPopupHtml(
+          f.properties, true, yearRef.current, subRef.current))
         .addTo(map);
       pinnedPopup.once("close", () => {
         if (pinnedId !== null) { setPinned(pinnedId, false); pinnedId = null; }
       });
     }
 
-    // Fly-to — double click only. Does not open or close any popup.
     function onDblClick(e) {
       e.preventDefault();
       if (!e.features?.length) return;
@@ -307,7 +315,6 @@ export default function PermitChoroplethMap() {
     }
 
     function onMapClick(e) {
-      // Click on empty basemap (not a polygon) clears the pin.
       const hits = map.queryRenderedFeatures(e.point, { layers: [FILL_LAYER_ID] });
       if (!hits.length) clearPinned();
     }
@@ -331,9 +338,8 @@ export default function PermitChoroplethMap() {
     };
   }, [map]);
 
-  // Gate on the manifest like PropertyAssessmentMap — no hardcoded fallback. A
-  // failed manifest load is an explicit error state, not a silent stale list.
-  // (Placed after all hooks so the short-circuits never change hook order.)
+  // Gate on the manifest — no hardcoded fallback. (After all hooks so the
+  // short-circuits never change hook order.)
   if (manifestError) {
     return (
       <article className="content-map">
@@ -359,13 +365,12 @@ export default function PermitChoroplethMap() {
   return (
     <article className="content-map">
       <aside className="sb" aria-label="Map sidebar">
-        {/* Fixed-width holder so content never reflows as .sb animates its width — see .sb-inner in index.css. */}
         <div className="sb-inner">
         <div className="sb-header">
           <p className="eyebrow">Building Activity</p>
           <h1 className="sb-title">Edmonton — {year}</h1>
           <p className="sb-sub">
-            Building permit aggregates by neighbourhood, {year}.
+            Residential dwelling units by neighbourhood, {year}.
             Hover for detail; click to pin.
           </p>
         </div>
@@ -384,31 +389,31 @@ export default function PermitChoroplethMap() {
               ))}
             </select>
           </div>
-          <div className="sb-select-field">
-            <span className="sb-select-label">Metric</span>
-            <select
-              className="sb-select"
-              aria-label="Metric"
-              value={metric}
-              onChange={(e) => setMetric(e.target.value)}
-            >
-              {PERMIT_CHOROPLETH_METRICS.map((m) => (
-                <option key={m.key} value={m.key}>{m.label}</option>
-              ))}
-            </select>
-          </div>
+
+          {/* Primary metric (3) + the active metric's sub-switch (2). */}
+          <OptionToggle
+            label="Metric"
+            options={DWELLING_METRICS.map((m) => m.label)}
+            value={metricDef.label}
+            onChange={chooseMetric}
+          />
+          <OptionToggle
+            label={metricDef.label}
+            options={metricDef.subs.map((s) => s.label)}
+            value={activeSub.label}
+            onChange={chooseSub}
+          />
         </section>
 
         <section className="sb-section">
           <Legend
-            title={selectedMetric.label}
+            title={activeSub.legendLabel}
             stops={stops}
-            format={selectedMetric.fmt}
+            format={activeSub.fmt}
           />
         </section>
 
-        {/* Pattern B — live hover stat panel. Updates as the cursor moves over a
-            neighbourhood; the selected metric leads, then the other metrics. */}
+        {/* Pattern B — live hover stat panel. */}
         {!hoveredFeature ? (
           <section className="sb-section sb-hover-panel sb-hover-empty">
             <p className="sb-hover-hint">Hover a neighbourhood to see its stats</p>
@@ -418,11 +423,11 @@ export default function PermitChoroplethMap() {
             <p className="sb-hover-name">{hoveredFeature.display_name}</p>
             <div className="sb-hover-rows">
               <div className="sb-hover-row">
-                <span className="sb-hover-k">{selectedMetric.label}</span>
-                <span className="sb-hover-v">{selectedMetric.fmt(hoveredFeature[metric])}</span>
+                <span className="sb-hover-k">{activeSub.legendLabel}</span>
+                <span className="sb-hover-v">{activeSub.fmt(hoveredFeature[activeSub.field])}</span>
               </div>
               <div className="sb-hover-row">
-                <span className="sb-hover-k">N permits</span>
+                <span className="sb-hover-k">Residential permits</span>
                 <span className="sb-hover-v">{fmtNumber(hoveredFeature.n_permits)}</span>
               </div>
             </div>
@@ -437,7 +442,7 @@ export default function PermitChoroplethMap() {
         <div className="sb-ref">
           <p>
             Source: City of Edmonton Open Data (24uj-dj8v).
-            Building permit aggregates by neighbourhood, {year}.
+            Residential dwelling units by neighbourhood, {year}.
           </p>
         </div>
         </div>{/* /sb-inner */}
@@ -447,13 +452,9 @@ export default function PermitChoroplethMap() {
         {fetchError ? (
           <EmptyState
             title="Could not load data"
-            body={`The ${year} permit aggregates failed to load. Try refreshing or selecting a different year.`}
+            body={`The ${year} dwelling-unit aggregates failed to load. Try refreshing or selecting a different year.`}
           />
         ) : (
-          // key={url} remounts MapView on a year change: MapLibre destroys the
-          // old map in cleanup, the new instance fires onLoad, and the repaint +
-          // interaction effects reattach. The boundary keeps a WebGL/MapLibre
-          // failure from blanking the page.
           <>
             {!gj && <MapSkeleton />}
             <MapErrorBoundary key={url}>
@@ -464,7 +465,7 @@ export default function PermitChoroplethMap() {
                 view={MAP_VIEW}
                 sourceId="pnbhd"
                 promoteId="Neighbourhood ID"
-                layers={permitChoroplethLayers(stops, metric)}
+                layers={choroplethLayers(stops, activeSub)}
                 images={[]}
                 onLoad={setMap}
               />

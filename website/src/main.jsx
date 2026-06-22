@@ -49,9 +49,8 @@ createRoot(document.getElementById("root")).render(
           <Route path="/properties/properties"                  element={<Placeholder title="Properties"                 kind="map" />} />
           <Route path="/properties/property-assessment"         element={<PropertyAssessmentMap />} />
           <Route path="/properties/zoning"                      element={<Placeholder title="Zoning"                     kind="map" />} />
-          <Route path="/activity/dwelling-units"                element={<Placeholder title="Dwelling Units"             kind="map" />} />
+          <Route path="/activity/dwelling-units"                element={<PermitChoroplethMap />} />
           <Route path="/activity/construction-improvement"      element={<BuildingPermitsMap />} />
-          <Route path="/activity/permit-neighbourhoods"         element={<PermitChoroplethMap />} />
           <Route path="/activity/land-transfers"                element={<Placeholder title="Land Transfers"             kind="map" />} />
           <Route path="/amenities/public-school"                element={<Placeholder title="Public School"              kind="map" />} />
           <Route path="/amenities/public-transportation"        element={<Placeholder title="Public Transportation"      kind="map" />} />

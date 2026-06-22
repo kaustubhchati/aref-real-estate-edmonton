@@ -1,17 +1,23 @@
 // =========================================================
 // permitChoroplethStyle.js
 //
-// Visual contract for the Permit Neighbourhoods choropleth.
-// Mirrors property-assessment/choroplethStyle.js exactly for
-// all map chrome (basemap, layers, states, outlines, hover).
-// Permit-specific: metrics, colour ramps, popup rows.
+// Visual contract for the Dwelling Units choropleth (formerly "Permit
+// Neighbourhoods"). Mirrors property-assessment/choroplethStyle.js for all map
+// chrome (basemap, layers, states, outlines, hover). Dwelling-Units-specific:
+// the 3-metric + sub-switch system, colour ramps, popup rows.
 //
-// GeoJSON fields (from 03_build_permit_aggregates.R): display_name,
-// district, Neighbourhood ID, polygon_state, n_permits,
-// total_construction_value, median_construction_value, units_added_total.
+// GeoJSON fields (from 03_build_permit_aggregates.R): display_name, district,
+// Neighbourhood ID, polygon_state, n_permits, total_construction_value,
+// median_construction_value, units_added_gross, units_demolished,
+// yoy_pct_permits.
+//
+// Metric system: three top-level metrics, each with a 2-option sub-switch that
+// RESOLVES to one GeoJSON field key (see DWELLING_METRICS). Every metric value
+// is read generically via ["get", field], so adding/retargeting a sub-state is
+// a table edit here — the component never hard-codes a field key.
 // =========================================================
 
-import { fmtCurrency } from "../../utils/format.js";
+import { fmtCurrency, fmtPct } from "../../utils/format.js";
 
 export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 
@@ -25,8 +31,8 @@ export const MAP_VIEW = {
 // ---- Polygon states — identical to assessment -------------------------
 // suppressed_low_n: n_permits < 10 (pipeline gate).
 // no_data: polygon has no permit aggregate row at all.
-// (non_residential and manufactured_home_community not applicable
-//  to permit data — every neighbourhood CAN have permits.)
+// (non_residential and manufactured_home_community not applicable to permit
+//  data — every neighbourhood CAN have permits.)
 export const STATE_STYLE = {
   aggregated: {
     label:        "Aggregated (N ≥ 10 permits)",
@@ -54,25 +60,58 @@ export const STATE_STYLE = {
   },
 };
 
-// ---- Metrics ----------------------------------------------------------
 const fmtInt = (v) =>
   v == null || !Number.isFinite(+v) ? "—"
   : Math.round(+v).toLocaleString();
 
-export const PERMIT_CHOROPLETH_METRICS = [
-  { key: "n_permits",                  label: "Permit count",              fmt: fmtInt      },
-  { key: "total_construction_value",   label: "Total construction value",  fmt: fmtCurrency },
-  { key: "median_construction_value",  label: "Median construction value", fmt: fmtCurrency },
-  { key: "units_added_total",          label: "Units added",               fmt: fmtInt      },
+// ---- The 3-metric + sub-switch system ---------------------------------
+// Each metric carries a 2-option sub-switch; each sub RESOLVES to one GeoJSON
+// field, plus its legend label, value formatter, and ramp type. The component
+// stores {metricKey, subKey} and calls resolveSub() to get the active field.
+export const DWELLING_METRICS = [
+  {
+    key: "permit_count", label: "Permit Count",
+    subs: [
+      { key: "total", label: "Total", field: "n_permits",
+        legendLabel: "Residential permits", fmt: fmtInt, ramp: "sequential" },
+      { key: "yoy", label: "% YoY", field: "yoy_pct_permits",
+        legendLabel: "Permit count, YoY % change", fmt: fmtPct, ramp: "diverging" },
+    ],
+  },
+  {
+    key: "construction_value", label: "Construction Value",
+    subs: [
+      { key: "total", label: "Total", field: "total_construction_value",
+        legendLabel: "Residential construction value", fmt: fmtCurrency, ramp: "sequential" },
+      { key: "median", label: "Median", field: "median_construction_value",
+        legendLabel: "Median residential construction value", fmt: fmtCurrency, ramp: "sequential" },
+    ],
+  },
+  {
+    key: "dwellings", label: "Dwellings",
+    subs: [
+      { key: "added", label: "Added", field: "units_added_gross",
+        legendLabel: "Dwelling units added", fmt: fmtInt, ramp: "sequential" },
+      { key: "demolished", label: "Demolished", field: "units_demolished",
+        legendLabel: "Dwelling units demolished", fmt: fmtInt, ramp: "sequential" },
+    ],
+  },
 ];
 
-// ---- Colour ramp — cream → Ferrari red (shared $-value family) --------
-// Standardised to match property-assessment's RAMP_VALUE so count/value
-// choropleths read the same across the site: warm cream → peach → orange →
-// red-orange → Ferrari red. All four permit metrics use this one ramp; the
-// three array names are kept (RAMP_COUNT/RAMP_VALUE/RAMP_UNITS) so the
-// METRIC_RAMP wiring below is unchanged, but they now hold identical stops.
-const RAMP_COUNT = [
+// Default open state: Dwellings / Added (the housing-growth headline).
+export const DEFAULT_METRIC = "dwellings";
+export const DEFAULT_SUB = "added";
+
+// Resolve {metricKey, subKey} -> the active sub (falls back to first sub/metric).
+export function resolveSub(metricKey, subKey) {
+  const m = DWELLING_METRICS.find((d) => d.key === metricKey) ?? DWELLING_METRICS[0];
+  const s = m.subs.find((x) => x.key === subKey) ?? m.subs[0];
+  return { ...s, metricKey: m.key, metricLabel: m.label };
+}
+
+// ---- Colour ramps -----------------------------------------------------
+// Sequential: cream → Ferrari red (shared $-value family, matches assessment).
+const RAMP_SEQ = [
   { key: "min",    c: "#f5f0e8", label: "min"    },
   { key: "q25",    c: "#f5c4a0", label: "Q25"    },
   { key: "median", c: "#f07840", label: "median" },
@@ -80,31 +119,15 @@ const RAMP_COUNT = [
   { key: "max",    c: "#cc0000", label: "max"    },
 ];
 
-// Construction value (total + median): same cream → Ferrari red ramp.
-const RAMP_VALUE = [
-  { key: "min",    c: "#f5f0e8", label: "min"    },
-  { key: "q25",    c: "#f5c4a0", label: "Q25"    },
-  { key: "median", c: "#f07840", label: "median" },
-  { key: "q75",    c: "#e03818", label: "Q75"    },
-  { key: "max",    c: "#cc0000", label: "max"    },
+// Diverging: RdBu, used only for %YoY. Red = decline (negative), white = 0
+// (neutral), blue = growth (positive). Centred at 0 so 0% reads neutral.
+const RAMP_DIVERGING = [
+  "#ca0020", // most negative (decline)
+  "#f4a582",
+  "#f7f7f7", // 0 — neutral
+  "#92c5de",
+  "#0571b0", // most positive (growth)
 ];
-
-// Units added: same cream → Ferrari red ramp.
-const RAMP_UNITS = [
-  { key: "min",    c: "#f5f0e8", label: "min"    },
-  { key: "q25",    c: "#f5c4a0", label: "Q25"    },
-  { key: "median", c: "#f07840", label: "median" },
-  { key: "q75",    c: "#e03818", label: "Q75"    },
-  { key: "max",    c: "#cc0000", label: "max"    },
-];
-
-const METRIC_RAMP = {
-  n_permits:                 RAMP_COUNT,
-  total_construction_value:  RAMP_VALUE,
-  median_construction_value: RAMP_VALUE,
-  units_added_total:         RAMP_UNITS,
-};
-const RAMP_DEFAULT = RAMP_COUNT;
 
 // ---- Quantile helper (mirrors assessment) -----------------------------
 function quantile(sorted, p) {
@@ -114,57 +137,79 @@ function quantile(sorted, p) {
     : sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
 }
 
-// ---- buildStops (mirrors assessment) ---------------------------------
-function buildStops(scale, ramp = RAMP_DEFAULT) {
-  const stops = ramp.map((r) => ({
-    v: scale?.[r.key], c: r.c, label: r.label,
-  }));
-  const finite    = stops.every((s) => Number.isFinite(s.v));
-  const ascending = stops.every(
-    (s, i) => i === 0 || s.v > stops[i - 1].v
-  );
-  return finite && ascending ? stops : null;
-}
+// Sequential fallback stops (permit count) when gj hasn't resolved yet.
+export const SEQ_FALLBACK = (() => {
+  const scale = { min: 1, q25: 20, median: 45, q75: 90, max: 300 };
+  return RAMP_SEQ.map((r) => ({ v: scale[r.key], c: r.c, label: r.label }));
+})();
 
-// Fallback stops for permit count
-export const PERMIT_STOPS = buildStops(
-  { min: 1, q25: 20, median: 45, q75: 90, max: 300 },
-  RAMP_COUNT
-);
-
-// Compute ramp stops from loaded GeoJSON quantiles
-export function permitMetricStops(gj, metricKey) {
-  const ramp = METRIC_RAMP[metricKey] ?? RAMP_DEFAULT;
+// ---- Stops ------------------------------------------------------------
+// Sequential: ramp stops from the aggregated polygons' positive-value quantiles.
+function sequentialStops(gj, field) {
   const vals = [];
   for (const f of gj?.features ?? []) {
     const p = f.properties;
     if (p?.polygon_state !== "aggregated") continue;
-    const v = Number(p[metricKey]);
+    const v = Number(p[field]);
     if (Number.isFinite(v) && v > 0) vals.push(v);
   }
-  if (vals.length < 2) return PERMIT_STOPS;
+  if (vals.length < 2) return SEQ_FALLBACK;
   vals.sort((a, b) => a - b);
   const ps  = [0, 0.25, 0.5, 0.75, 1];
-  const raw = ramp.map((r, i) => ({
+  const raw = RAMP_SEQ.map((r, i) => ({
     v: quantile(vals, ps[i]), c: r.c, label: r.label,
   }));
   const stops = [];
   for (const s of raw) {
-    if (stops.length === 0 || s.v > stops[stops.length - 1].v)
-      stops.push(s);
+    if (stops.length === 0 || s.v > stops[stops.length - 1].v) stops.push(s);
   }
-  return stops.length >= 2 ? stops : PERMIT_STOPS;
+  return stops.length >= 2 ? stops : SEQ_FALLBACK;
 }
 
-// ---- Fill colour expression (mirrors assessment exactly) --------------
-function buildFillColourExpression(metricKey, stops) {
-  const value = ["number", ["get", metricKey], 0];
+// Diverging: symmetric domain [-M, 0, +M] centred at 0, so a 0% neighbourhood
+// reads neutral (white). M = 95th percentile of |value| over aggregated, finite
+// values (robust to the small-base extremes like a 1→80 jump). Labels use ascii
+// "-"/"+" so the Legend's value/label dedup matches.
+function divergingStops(gj, field) {
+  const vals = [];
+  for (const f of gj?.features ?? []) {
+    const p = f.properties;
+    if (p?.polygon_state !== "aggregated") continue;
+    const v = p[field];
+    if (typeof v === "number" && Number.isFinite(v)) vals.push(Math.abs(v));
+  }
+  let M = 50;
+  if (vals.length >= 2) { vals.sort((a, b) => a - b); M = quantile(vals, 0.95); }
+  if (!(M > 0)) M = 50;
+  M = Math.max(1, Math.round(M));
+  const h = Math.round(M / 2);
+  return [
+    { v: -M, c: RAMP_DIVERGING[0], label: `-${M}%` },
+    { v: -h, c: RAMP_DIVERGING[1], label: `-${h}%` },
+    { v: 0,  c: RAMP_DIVERGING[2], label: "0%" },
+    { v: h,  c: RAMP_DIVERGING[3], label: `+${h}%` },
+    { v: M,  c: RAMP_DIVERGING[4], label: `+${M}%` },
+  ];
+}
+
+export function metricStops(gj, sub) {
+  return sub.ramp === "diverging"
+    ? divergingStops(gj, sub.field)
+    : sequentialStops(gj, sub.field);
+}
+
+// ---- Fill colour expression -------------------------------------------
+// Sentinel distinguishes a true NA (null / absent property) from a real value
+// in the diverging path. yoy is in [-100, ~+8000], so -1e9 can never collide.
+const NA_SENTINEL = -1e9;
+
+function sequentialFill(field, stops) {
+  const value = ["number", ["get", field], 0];
   const interp = ["interpolate", ["linear"], value];
   for (const s of stops) interp.push(s.v, s.c);
-
   return [
     "case",
-    ["==", ["get", "polygon_state"], "aggregated"],     interp,
+    ["==", ["get", "polygon_state"], "aggregated"], interp,
     ["==", ["get", "polygon_state"], "suppressed_low_n"],
       STATE_STYLE.suppressed_low_n.fillColor,
     ["==", ["get", "polygon_state"], "no_data"],
@@ -173,20 +218,43 @@ function buildFillColourExpression(metricKey, stops) {
   ];
 }
 
-export function permitChoroplethFillColor(metricKey, stops) {
-  return buildFillColourExpression(metricKey, stops);
+// Diverging fill with explicit NA handling: an aggregated polygon whose value is
+// NA (null) renders as no-data grey — NOT as 0 and NOT as the bottom of the
+// scale — so an NA neighbourhood is visually distinct from a real -100.
+function divergingFill(field, stops) {
+  const v = ["coalesce", ["get", field], NA_SENTINEL];
+  const interp = ["interpolate", ["linear"], v];
+  for (const s of stops) interp.push(s.v, s.c);
+  return [
+    "case",
+    ["==", ["get", "polygon_state"], "aggregated"],
+      ["case",
+        ["==", v, NA_SENTINEL], STATE_STYLE.no_data.fillColor, // NA -> no-data grey
+        interp],
+    ["==", ["get", "polygon_state"], "suppressed_low_n"],
+      STATE_STYLE.suppressed_low_n.fillColor,
+    ["==", ["get", "polygon_state"], "no_data"],
+      STATE_STYLE.no_data.fillColor,
+    "#cccccc",
+  ];
 }
 
-// ---- Layer stack — IDENTICAL to assessment layer IDs/logic -----------
+export function choroplethFillColor(sub, stops) {
+  return sub.ramp === "diverging"
+    ? divergingFill(sub.field, stops)
+    : sequentialFill(sub.field, stops);
+}
+
+// ---- Layer stack — pnbhd-* ids (unchanged; internal) ------------------
 // Source-agnostic (source filled in by MapView via `source` prop).
-export function permitChoroplethLayers(stops, metricKey = "n_permits") {
+export function choroplethLayers(stops, sub) {
   return [
     // 1. Fill — aggregated: ramp colour; non-aggregated: glass
     {
       id: "pnbhd-fill",
       type: "fill",
       paint: {
-        "fill-color": buildFillColourExpression(metricKey, stops),
+        "fill-color": choroplethFillColor(sub, stops),
         "fill-opacity": [
           "case",
           ["==", ["get", "polygon_state"], "aggregated"],
@@ -287,26 +355,26 @@ function escapeHtml(s) {
   ));
 }
 
-export const PERMIT_CHOROPLETH_POPUP_ROWS = [
-  ["n_permits",                 "Permit count",              fmtInt,      true  ],
-  ["total_construction_value",  "Total construction value",  fmtCurrency, false ],
-  ["median_construction_value", "Median construction value", fmtCurrency, false ],
-  ["units_added_total",         "Units added",               fmtInt,      false ],
+// Every resolvable field, for the Tier-3 pinned popup. [field, label, fmt].
+export const POPUP_ROWS = [
+  ["n_permits",                 "Residential permits",                  fmtInt],
+  ["yoy_pct_permits",           "Permit count, YoY % change",           fmtPct],
+  ["units_added_gross",         "Dwelling units added",                 fmtInt],
+  ["units_demolished",          "Dwelling units demolished",            fmtInt],
+  ["total_construction_value",  "Residential construction value",       fmtCurrency],
+  ["median_construction_value", "Median residential construction value",fmtCurrency],
 ];
 
-// `detail` selects the tier; `metric` is the currently-selected metric key,
-// used only by Tier 2 to pick the headline row.
-//   detail=false → Tier 2 (slim hover): name + district + selected-metric
-//                  headline + permit count.
+// `detail` selects the tier; `sub` is the active sub-state (resolved field).
+//   detail=false → Tier 2 (slim hover): name + district + active-metric headline
+//                  + permit count.
 //   detail=true  → Tier 3 (pinned click): name + district + year + state badge
 //                  + every row + dismiss hint.
-export function buildPermitChoroplethPopupHtml(p, detail, year, metric) {
+export function buildPopupHtml(p, detail, year, sub) {
   const state = p.polygon_state;
   const name  = p.display_name ?? "—";
 
-  const parts = [
-    `<div class="pop-name">${escapeHtml(name)}</div>`,
-  ];
+  const parts = [`<div class="pop-name">${escapeHtml(name)}</div>`];
   if (p.district) {
     parts.push(`<div class="pop-district">${escapeHtml(p.district)} district</div>`);
   }
@@ -314,20 +382,17 @@ export function buildPermitChoroplethPopupHtml(p, detail, year, metric) {
   // ---- Tier 2 — slim hover preview ----
   if (!detail) {
     if (state === "aggregated") {
-      const sel = PERMIT_CHOROPLETH_POPUP_ROWS.find(([key]) => key === metric)
-        ?? PERMIT_CHOROPLETH_POPUP_ROWS[0];
-      const [sk, sl, sfmt] = sel;
       parts.push(
         `<div class="pop-row headline">` +
-          `<span class="pop-k">${sl}</span>` +
-          `<span class="pop-v">${sfmt(p[sk])}</span>` +
+          `<span class="pop-k">${escapeHtml(sub.legendLabel)}</span>` +
+          `<span class="pop-v">${sub.fmt(p[sub.field])}</span>` +
         `</div>`
       );
       // Always show permit count, unless it is already the headline.
-      if (sk !== "n_permits") {
+      if (sub.field !== "n_permits") {
         parts.push(
           `<div class="pop-row">` +
-            `<span class="pop-k">Permit count</span>` +
+            `<span class="pop-k">Residential permits</span>` +
             `<span class="pop-v">${fmtInt(p.n_permits)}</span>` +
           `</div>`
         );
@@ -340,15 +405,15 @@ export function buildPermitChoroplethPopupHtml(p, detail, year, metric) {
 
   // ---- Tier 3 — full pinned detail ----
   if (year != null) {
-    parts.push(`<div class="pop-year">${escapeHtml(String(year))} Permits</div>`);
+    parts.push(`<div class="pop-year">${escapeHtml(String(year))} Dwelling Units</div>`);
   }
   if (state === "aggregated") {
     parts.push(
       `<div class="pop-state aggregated">${escapeHtml(STATE_STYLE.aggregated.label)}</div>`
     );
-    for (const [key, label, fmt, headline] of PERMIT_CHOROPLETH_POPUP_ROWS) {
+    for (const [key, label, fmt] of POPUP_ROWS) {
       parts.push(
-        `<div class="pop-row${headline ? " headline" : ""}">` +
+        `<div class="pop-row${key === sub.field ? " headline" : ""}">` +
           `<span class="pop-k">${label}</span>` +
           `<span class="pop-v">${fmt(p[key])}</span>` +
         `</div>`
@@ -359,7 +424,7 @@ export function buildPermitChoroplethPopupHtml(p, detail, year, metric) {
       `<div class="pop-state suppressed_low_n">` +
         `${escapeHtml(STATE_STYLE.suppressed_low_n.label)}</div>`,
       `<div class="pop-row">` +
-        `<span class="pop-k">Permit count</span>` +
+        `<span class="pop-k">Residential permits</span>` +
         `<span class="pop-v">${fmtInt(p.n_permits)}</span>` +
       `</div>`,
       `<div class="pop-reason">Fewer than 10 permits — ` +
@@ -369,7 +434,7 @@ export function buildPermitChoroplethPopupHtml(p, detail, year, metric) {
     parts.push(
       `<div class="pop-state no_data">` +
         `${escapeHtml(STATE_STYLE.no_data.label)}</div>`,
-      `<div class="pop-reason">No building permits recorded ` +
+      `<div class="pop-reason">No residential permits recorded ` +
         `for this neighbourhood in ${year ?? "this year"}.</div>`
     );
   }
