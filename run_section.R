@@ -166,59 +166,101 @@ cat(sprintf("\nAll %d scripts completed ok.\n", length(scripts)))
 
 # --- Handoff phase: publish output/ -> website/public ------------------------
 # Only reached on FULL script success (fail-fast above). The runner is the SOLE
-# writer of website/public: for every year the freshly-emitted manifest lists,
-# identity-copy that GeoJSON from output/ to public, then publish the manifest.
-# No year literals — years come from the manifest. Each copy is its own JSONL
-# record (action="handoff_copy").
+# writer of website/public. Two GENERIC, config-driven copy mechanisms a section
+# may declare (Way A — copy files that PHYSICALLY EXIST; never parse a manifest's
+# structure to decide what to copy):
+#   glob:  [{src_dir, dest_dir, pattern}]  copy every match in src_dir -> dest_dir
+#          (same filename; src_dir != dest_dir gives a directory remap).
+#   files: [{from, to}]                    copy specific files (CSVs, the manifest).
+# A LEGACY manifest-year-driven path (PA's original shape) is kept verbatim and
+# runs only when the block declares `geojson_pattern`, so PA stays byte-identical.
+# Each copy logs a JSONL record (action="handoff_copy").
 hf <- sec$handoff
 if (!is.null(hf)) {
   cat("\n=== HANDOFF: publish output/ -> website/public ===\n")
-
-  manifest_src <- file.path(cwd_abs, hf$manifest)
-  if (!file.exists(manifest_src)) {
-    stop("handoff: manifest not found at ", manifest_src,
-         " — 09a must emit it before the handoff.")
-  }
-  man <- jsonlite::read_json(manifest_src)
-
-  # Years from EVERY city in the manifest (no year/city literals).
-  years <- integer(0)
-  for (city in names(man$cities)) {
-    ya <- man$cities[[city]]$assessment$years
-    if (!is.null(ya)) years <- c(years, unlist(ya))
-  }
-  years <- sort(unique(years))
-
-  dest_dir <- file.path(REPO_ROOT, hf$dest_dir)
-  dir.create(dest_dir, showWarnings = FALSE, recursive = TRUE)
-
   hf_failed <- FALSE
-  for (yr in years) {
-    fname <- gsub("\\{year\\}", as.character(yr), hf$geojson_pattern)
-    from  <- file.path(cwd_abs, hf$geojson_src_dir, fname)
-    to    <- file.path(dest_dir, fname)
-    ok    <- file.exists(from) && file.copy(from, to, overwrite = TRUE)
-    st    <- if (ok) "ok" else "error"
+
+  # Generic copy: ensure dest dir, copy, log the record. Returns TRUE on success.
+  copy_one <- function(from, to) {
+    dir.create(dirname(to), showWarnings = FALSE, recursive = TRUE)
+    ok <- file.exists(from) && file.copy(from, to, overwrite = TRUE)
+    append_record(list(run_id = run_id, section = section,
+                       action = "handoff_copy", from = from, to = to,
+                       status = if (ok) "ok" else "error"))
+    cat(sprintf("  [%s] %s -> %s\n", if (ok) "ok" else "error",
+                basename(from), dirname(to)))
+    ok
+  }
+
+  # --- Way A: glob (directory copy, optional remap) ---------------------------
+  if (!is.null(hf$glob)) {
+    for (g in hf$glob) {
+      src_abs <- file.path(cwd_abs, g$src_dir)
+      matches <- list.files(src_abs, pattern = utils::glob2rx(g$pattern),
+                            full.names = FALSE)
+      for (f in matches) {
+        if (!copy_one(file.path(src_abs, f),
+                      file.path(REPO_ROOT, g$dest_dir, f))) hf_failed <- TRUE
+      }
+    }
+  }
+
+  # --- Way A: files (specific from -> to: CSVs, the manifest file) -----------
+  if (!is.null(hf$files)) {
+    for (cp in hf$files) {
+      if (!copy_one(file.path(cwd_abs, cp$from),
+                    file.path(REPO_ROOT, cp$to))) hf_failed <- TRUE
+    }
+  }
+
+  # --- LEGACY manifest-year path (PA) — unchanged; runs only with geojson_pattern
+  if (!is.null(hf$geojson_pattern)) {
+    manifest_src <- file.path(cwd_abs, hf$manifest)
+    if (!file.exists(manifest_src)) {
+      stop("handoff: manifest not found at ", manifest_src,
+           " — 09a must emit it before the handoff.")
+    }
+    man <- jsonlite::read_json(manifest_src)
+
+    # Years from EVERY city in the manifest (no year/city literals).
+    years <- integer(0)
+    for (city in names(man$cities)) {
+      ya <- man$cities[[city]]$assessment$years
+      if (!is.null(ya)) years <- c(years, unlist(ya))
+    }
+    years <- sort(unique(years))
+
+    dest_dir <- file.path(REPO_ROOT, hf$dest_dir)
+    dir.create(dest_dir, showWarnings = FALSE, recursive = TRUE)
+
+    for (yr in years) {
+      fname <- gsub("\\{year\\}", as.character(yr), hf$geojson_pattern)
+      from  <- file.path(cwd_abs, hf$geojson_src_dir, fname)
+      to    <- file.path(dest_dir, fname)
+      ok    <- file.exists(from) && file.copy(from, to, overwrite = TRUE)
+      st    <- if (ok) "ok" else "error"
+      if (!ok) hf_failed <- TRUE
+      append_record(list(run_id = run_id, section = section,
+                         action = "handoff_copy", from = from, to = to, status = st))
+      cat(sprintf("  [%s] %s -> public\n", st, fname))
+    }
+
+    # Publish the manifest itself.
+    man_to <- file.path(REPO_ROOT, hf$manifest_dest)
+    ok <- file.copy(manifest_src, man_to, overwrite = TRUE)
+    st <- if (ok) "ok" else "error"
     if (!ok) hf_failed <- TRUE
     append_record(list(run_id = run_id, section = section,
-                       action = "handoff_copy", from = from, to = to, status = st))
-    cat(sprintf("  [%s] %s -> public\n", st, fname))
+                       action = "handoff_copy", from = manifest_src, to = man_to, status = st))
+    cat(sprintf("  [%s] manifest.json -> public\n", st))
+    cat(sprintf("Handoff published %d year(s) + manifest to public.\n", length(years)))
   }
-
-  # Publish the manifest itself.
-  man_to <- file.path(REPO_ROOT, hf$manifest_dest)
-  ok <- file.copy(manifest_src, man_to, overwrite = TRUE)
-  st <- if (ok) "ok" else "error"
-  if (!ok) hf_failed <- TRUE
-  append_record(list(run_id = run_id, section = section,
-                     action = "handoff_copy", from = manifest_src, to = man_to, status = st))
-  cat(sprintf("  [%s] manifest.json -> public\n", st))
 
   if (hf_failed) {
     cat("\nHANDOFF FAILED — a copy did not complete (see records above).\n")
     quit(status = 1L)
   }
-  cat(sprintf("Handoff published %d year(s) + manifest to public.\n", length(years)))
+  cat("Handoff complete.\n")
 }
 
 cat(sprintf("\nDone. Log: %s\n", log_path))

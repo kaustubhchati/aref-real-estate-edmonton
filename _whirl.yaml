@@ -46,3 +46,37 @@ sections:
       geojson_pattern: neighbourhoods_{year}_recovered.geojson      # {year} <- manifest years
       dest_dir:        website/public/data/property-assessment      # repo-root-relative
       manifest_dest:   website/public/manifest.json                 # repo-root-relative
+
+  building-permits:
+    cwd: pipeline/building-permits
+
+    # Dependency order: 02 fetches today's snapshot + builds the point geojson +
+    # coverage/category CSVs (using the COMMITTED job_category_grouping; 02 self-
+    # guards category drift via its n_unmapped stop). 03 reads that fresh snapshot
+    # + boundary -> per-year aggregates + choropleth geojsons. 04 emits the manifest.
+    scripts:
+      - scripts/production/02_build_permits.R
+      - scripts/production/03_build_permit_aggregates.R
+      - scripts/production/04_emit_manifest.R
+    # 02a_build_job_grouping.R is NOT in the routine chain — it is an out-of-band
+    # re-curation tool, run only when 02's n_unmapped guard trips (the City adds a
+    # JOB_CATEGORY the committed grouping doesn't cover). Re-run it against a present
+    # snapshot, commit the new dated grouping, then run this chain. (Same spirit as
+    # 08c sitting in property-assessment/scripts/_oneshot/.)
+
+    # --- Handoff (Way A: glob + fixed-file copy; never parses the manifest) -----
+    # The runner copies what PHYSICALLY EXISTS in output/, not what a manifest
+    # lists. The BP manifest is copied as a fixed file (it feeds the frontend's
+    # year discovery) — not read here. Published to a SECTION-scoped manifest path
+    # (PA owns the global /manifest.json).
+    handoff:
+      glob:
+        # Directory remap: output/permit_geojson/ -> public's permit-neighbourhoods/
+        # (filenames identical). Copies the full per-year set 03 produced.
+        - src_dir:  output/permit_geojson
+          dest_dir: website/public/data/building-permits/permit-neighbourhoods
+          pattern:  "permit_neighbourhoods_*.geojson"
+      files:
+        - { from: output/permits_coverage.csv,        to: website/public/data/building-permits/permits_coverage.csv }
+        - { from: output/permits_category_counts.csv, to: website/public/data/building-permits/permits_category_counts.csv }
+        - { from: output/manifest.json,               to: website/public/data/building-permits/manifest.json }
