@@ -28,7 +28,8 @@ sections:
       # A future reader must NOT "correct" this back to numeric order.
       - scripts/production/08d_hist_aggregate.R
       - scripts/production/07_layer2_aggregates.R
-      - scripts/production/08_build_geojson.R
+      # 08_build_geojson.R removed 2026-06-22: it built a pre-rescue geojson the
+      # frontend never consumed. 08b is the sole current-year builder now.
       - scripts/production/08b_name_fallback_rescue.R
       - scripts/production/08e_hist_build_geojson.R
       - scripts/production/09a_emit_manifest.R
@@ -46,6 +47,12 @@ sections:
       geojson_pattern: neighbourhoods_{year}_recovered.geojson      # {year} <- manifest years
       dest_dir:        website/public/data/property-assessment      # repo-root-relative
       manifest_dest:   website/public/manifest.json                 # repo-root-relative
+      # Frontend-served CSVs published from the one produced source (was manual,
+      # which let public drift on refresh). Report Card reads /data/...; the
+      # Download page reads /downloads/... — both copies come from here now.
+      files:
+        - { from: output/neighbourhood_aggregates_2026.csv, to: website/public/data/neighbourhood_aggregates_2026.csv }
+        - { from: output/neighbourhood_aggregates_2026.csv, to: website/public/downloads/neighbourhood_aggregates_2026.csv }
 
   building-permits:
     cwd: pipeline/building-permits
@@ -80,3 +87,7 @@ sections:
         - { from: output/permits_coverage.csv,        to: website/public/data/building-permits/permits_coverage.csv }
         - { from: output/permits_category_counts.csv, to: website/public/data/building-permits/permits_category_counts.csv }
         - { from: output/manifest.json,               to: website/public/data/building-permits/manifest.json }
+        # Download-page copies (siteConfig serves these from /downloads/); was
+        # manual placement, now published from the one produced source.
+        - { from: output/permits_coverage.csv,        to: website/public/downloads/permits_coverage.csv }
+        - { from: output/permits_category_counts.csv, to: website/public/downloads/permits_category_counts.csv }

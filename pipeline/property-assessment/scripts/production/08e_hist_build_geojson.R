@@ -17,14 +17,16 @@
 #   - New year: drop aggregate CSV, script picks it up
 #
 # PREREQUISITE:
-#   - 08c_resolve_boundary_ids.R must have been run and
-#     its decisions actioned in the rescue table
-#   - 08d_hist_aggregate.R must have run successfully
+#   - 08d_hist_aggregate.R must have run successfully. 08d now resolves names/ids
+#     to canonical (crosswalk + boundary) and writes a Neighbourhood ID column,
+#     so this script joins by id only — no rescue table, no case-fold name match.
 #
 # INPUTS:
-#   output/hist_aggregates/neighbourhood_aggregates_YYYY.csv (all years)
-#   data/raw/City_of_Edmonton__Neighbourhoods_20260616.csv   (new boundary)
-#   data/reference/neighbourhood_name_mappings_<date>.csv   (rescue table)
+#   output/hist_aggregates/neighbourhood_aggregates_YYYY.csv (all years, with
+#     canonical Neighbourhood ID from 08d)
+#   shared_path() City_of_Edmonton_-_Neighbourhoods_20260616.csv (boundary)
+#   data/reference/neighbourhood_crosswalk_<YYYYMMDD>.csv (newest; only the
+#     container_exclude ids are read here, to drop umbrella polygons)
 #
 # OUTPUTS:
 #   output/neighbourhoods_YYYY_recovered.geojson   (runner publishes to public)
@@ -35,6 +37,7 @@ library(tidyverse)
 library(sf)
 library(scales)
 source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
+source(shared_path("reconcile_helpers.R"))
 
 # Historical GeoJSONs land in output/ (the section's build dir, same place 08b
 # writes the current-year file). Publishing output/ -> website/public is the
@@ -69,35 +72,18 @@ boundary_sf <- boundary_raw |>
   filter(!is.na(`Geometry Multipolygon`)) |>
   st_as_sf(wkt = "Geometry Multipolygon", crs = 4326) |>
   mutate(
-    `Neighbourhood ID` = as.character(`Neighbourhood Number`),
+    `Neighbourhood ID` = as.character(as.integer(`Neighbourhood Number`)),
     display_name       = `Neighbourhood Name`
   ) |>
   select(`Neighbourhood ID`, display_name,
          `Neighbourhood Name`, `Civic Ward`, `Planning District`)
 
-cat("Boundary polygons after WKT parse: ", nrow(boundary_sf), "\n\n")
+# Drop annexation-container umbrella rows (crosswalk relation==container_exclude,
+# ids 8885-8888) so they never render as polygons.
+exclude_ids <- crosswalk_exclude_ids()
+boundary_sf <- boundary_sf |> filter(!`Neighbourhood ID` %in% exclude_ids)
 
-# ============================================================
-# 2. Load rescue table (most recent by filename date suffix)
-# ============================================================
-
-rescue_candidates <- list.files(
-  path       = "data/reference",
-  pattern    = "^neighbourhood_name_mappings_.*\\.csv$",
-  full.names = TRUE
-)
-
-if (length(rescue_candidates) == 0) {
-  warning("No rescue table found in data/reference/. NA-id rows will not be rescued.")
-  mapping <- tibble(
-    shapefile_id    = character(),
-    assessment_name = character()
-  )
-} else {
-  rescue_path <- sort(rescue_candidates, decreasing = TRUE)[1]
-  cat("Rescue table: ", rescue_path, "\n\n")
-  mapping <- read_csv(rescue_path, show_col_types = FALSE)
-}
+cat("Boundary polygons after WKT parse + container-exclude: ", nrow(boundary_sf), "\n\n")
 
 # ============================================================
 # 3. Auto-discover aggregate CSVs
@@ -141,38 +127,19 @@ for (agg_path in sort(agg_candidates)) {
   yr <- as.integer(str_extract(basename(agg_path), "[0-9]{4}"))
   cat(sprintf("--- Year %d ---\n", yr))
   
-  # Load aggregates
+  # Load aggregates. 08d resolved names/ids to canonical and wrote a
+  # Neighbourhood ID column, so we join straight on id — no rescue table, no
+  # case-fold name match (that old path silently dropped every variant name).
   aggregates <- read_csv(agg_path, show_col_types = FALSE)
-  
-  # Apply rescue table to NA-id rows before join
-  if ("Neighbourhood ID" %in% names(aggregates)) {
-    na_rows <- aggregates |> filter(is.na(`Neighbourhood ID`) |
-                                      `Neighbourhood ID` == "NA")
-  } else {
-    # Historical aggregates grouped on Neighbourhood name — need ID lookup
-    na_rows <- tibble()
-  }
-  
-  # If aggregates have Neighbourhood name but no ID, join boundary to get ID
-  # (historical file doesn't carry Neighbourhood ID directly)
-  # If aggregates have Neighbourhood name but no ID, join boundary to get ID.
-  # WHY case normalisation: assessment data uses ALL CAPS neighbourhood names;
-  # boundary file uses Title Case. Direct string match would miss every row.
-  # Normalise both to upper, join, then drop the helper column.
   if (!"Neighbourhood ID" %in% names(aggregates)) {
-    boundary_lookup <- boundary_sf |>
-      st_drop_geometry() |>
-      select(`Neighbourhood ID`, `Neighbourhood Name`) |>
-      mutate(join_name = str_to_upper(`Neighbourhood Name`))
-    
-    aggregates <- aggregates |>
-      mutate(join_name = str_to_upper(Neighbourhood)) |>
-      left_join(boundary_lookup, by = "join_name") |>
-      select(-join_name, -`Neighbourhood Name`)
+    stop("Aggregate ", basename(agg_path), " has no Neighbourhood ID column — ",
+         "08d (which now writes canonical ids) must run before 08e.")
   }
-  
-  # Non-residential detection: neighbourhoods present in boundary but
-  # absent from aggregates after cleaning
+  aggregates <- aggregates |>
+    mutate(`Neighbourhood ID` = as.character(`Neighbourhood ID`))
+
+  # Non-residential detection: boundary ids with no (non-NA) aggregate id —
+  # i.e. polygons that exist but whose residential rows were all cleaned away.
   non_residential_ids <- setdiff(
     boundary_sf$`Neighbourhood ID`,
     aggregates$`Neighbourhood ID`[!is.na(aggregates$`Neighbourhood ID`)]

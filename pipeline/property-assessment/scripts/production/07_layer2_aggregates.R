@@ -12,8 +12,8 @@
 # Inputs:
 #   - data/processed/assess_2026_clean.csv  (from script 06; already has
 #     lot_size, year_built, legal_description joined from Property Information)
-#   - data/reference/neighbourhood_name_merges_<YYYYMMDD>.csv  (OPTIONAL,
-#     latest globbed) — pre-aggregation name/ID normalisation, see below.
+#   - data/reference/neighbourhood_crosswalk_<YYYYMMDD>.csv (newest; the merge
+#     rows drive pre-aggregation pooling — see below)
 #
 # Output:
 #   - output/neighbourhood_aggregates_2026.csv
@@ -21,17 +21,17 @@
 #     avall_public, median_assessvalue, sd_assessedvalue, median_yearbuilt,
 #     pct_with_unit, avg_assessvalue_without_unit, avg_lotsize, suppressed
 #
-# Name-merge step (added 2026-06-17):
+# Name-merge step (crosswalk-driven since 2026-06-22):
 #   The City's 2026 boundary file (65fr-66s6) merges some neighbourhoods that
 #   the assessment data still lists under two names AND two IDs — e.g.
 #   HERITAGE VALLEY TOWN CENTRE (native id 5472, 15 props) and HERITAGE VALLEY
 #   TOWN CENTRE AREA (NA-id, 577 props) are one polygon (5472) in the new file.
 #   Left un-merged these form two group_by groups and collide on one polygon
-#   downstream (caught by 08/08b's dup-ID guard). The merge contract normalises
-#   variant name + id to a canonical target BEFORE aggregation, so medians/SDs
-#   are recomputed from the combined rows — never averaged from two summaries.
-#   Resolved by point-in-polygon (619/620 properties fall in 5472). Contract is
-#   versioned/dated/sourced per CLAUDE.md §4.4/§4.7.
+#   downstream (caught by 08b's dup-ID guard). The crosswalk's relation=="merge"
+#   rows normalise variant name + id to the canonical target BEFORE aggregation,
+#   so medians/SDs are recomputed from the pooled rows — never averaged from two
+#   summaries. Crosswalk is versioned/dated/sourced per CLAUDE.md §4.4/§4.7 and is
+#   the single reconciliation contract (authored by the reconcile one-shot).
 #
 # Sanity gate (port of Stata3 lines 120–128):
 #   Aggregates suppressed where n_properties < 100. The prev RA's second gate
@@ -42,6 +42,8 @@
 # --- Setup --------------------------------------------------
 library(tidyverse)
 library(scales)
+source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
+source(shared_path("reconcile_helpers.R"))
 
 dir.create("output", showWarnings = FALSE, recursive = TRUE)
 
@@ -82,33 +84,15 @@ cat(sprintf("Loaded clean frame: %s rows\n", comma(nrow(assess_clean))))
 
 # --- Merge split assessment-side names before aggregating ----
 # The City's 2026 boundary merges neighbourhoods the assessment data lists under
-# two names AND two IDs (HERITAGE VALLEY TOWN CENTRE, native id 5472, 15 props;
-# HERITAGE VALLEY TOWN CENTRE AREA, NA-id, 577 — same place, one City polygon).
+# two names AND two ids (HERITAGE VALLEY TOWN CENTRE, native id 5472, ~15 props;
+# HERITAGE VALLEY TOWN CENTRE AREA, NA-id, ~577 — same place, one City polygon).
 # Un-merged they form two group_by groups and collide on one polygon downstream.
-# Normalise BOTH name and id to the canonical target before aggregating, so
-# medians/SDs are recomputed from the combined rows (not averaged from summaries).
-# Contract: data/reference/neighbourhood_name_merges_<YYYYMMDD>.csv
-name_merge_files <- sort(list.files(
-  "data/reference",
-  pattern = "^neighbourhood_name_merges_\\d{8}\\.csv$",
-  full.names = TRUE
-))
-if (length(name_merge_files) > 0) {
-  name_merges <- read_csv(tail(name_merge_files, 1), show_col_types = FALSE) |>
-    mutate(canonical_id = as.character(canonical_id))
-  cat(sprintf("Applying %d name merge(s) from %s\n",
-              nrow(name_merges), basename(tail(name_merge_files, 1))))
-  assess_clean <- assess_clean |>
-    left_join(name_merges |> select(variant_name, canonical_name, canonical_id),
-              by = c("Neighbourhood" = "variant_name")) |>
-    mutate(
-      `Neighbourhood ID` = coalesce(canonical_id, `Neighbourhood ID`),
-      Neighbourhood      = coalesce(canonical_name, Neighbourhood)
-    ) |>
-    select(-canonical_name, -canonical_id)
-} else {
-  cat("No name-merge file found; aggregating names as-is.\n")
-}
+# Only the crosswalk's relation=="merge" rows run here, BEFORE aggregation, so
+# medians/SDs are recomputed from the pooled rows (never averaged from summaries).
+# The 1:1 renames/renumbers/typos/aliases/suffix-drift resolve post-aggregation
+# in 08b — they do not change which rows aggregate together, so they need not run
+# here. Source of truth: data/reference/neighbourhood_crosswalk_<YYYYMMDD>.csv.
+assess_clean <- apply_crosswalk(assess_clean, relations = "merge")
 
 # --- Derive unit_present (port of Stata3 lines 31–42) -------
 # stritrim → strtrim → strlower → normalize "X :" spacing → strpos "unit:"
@@ -216,21 +200,34 @@ cat(sprintf("Rows: %s neighbourhoods (incl. %s NA-id developing areas)\n",
 
 # --- Year-over-year change: 2026 vs 2025 --------------------
 # Match the historical pipeline's yoy_pct_change (08d) so the 2026 production
-# aggregate carries the same column. Read the prior year's (gated) medians from
-# the historical aggregates and join on Neighbourhood name. yoy is NA wherever
-# either year is suppressed/missing or the neighbourhood is new in 2026. The
-# 2025 medians are themselves gated (N<100 → NA), so yoy only exists where both
-# years cleared the N<100 gate — consistent with 08d.
+# aggregate carries the same column. yoy is keyed on canonical_id, NOT name, so a
+# rename (e.g. OLIVER -> WÎHKWÊNTÔWIN) no longer nulls the change across the
+# rename year. The 2025 historical aggregate already carries canonical ids (08d
+# resolves them). The 2026 aggregate's NA-id variants (e.g. CHAPPELLE AREA) are
+# not resolved until 08b, so we resolve a TEMP canonical key here purely for the
+# join — the row's own id stays untouched and 08b sets it canonically. yoy still
+# only exists where both years cleared the N<100 gate (2025 medians are gated).
 prev_path <- "output/hist_aggregates/neighbourhood_aggregates_2025.csv"
 if (file.exists(prev_path)) {
   prev_2025 <- read_csv(prev_path, show_col_types = FALSE) |>
-    select(Neighbourhood, median_2025 = median_assessvalue)
+    transmute(.canon_id = as.character(`Neighbourhood ID`),
+              median_2025 = median_assessvalue) |>
+    filter(!is.na(.canon_id))
+
+  # Temp canonical key for the 2026 side (does not mutate the output ids).
+  canon_id_2026 <- nbhd_agg_gated |>
+    select(`Neighbourhood ID`, Neighbourhood) |>
+    apply_crosswalk() |>
+    pull(`Neighbourhood ID`)
+  stopifnot(length(canon_id_2026) == nrow(nbhd_agg_gated))
+
   nbhd_agg_gated <- nbhd_agg_gated |>
-    left_join(prev_2025, by = "Neighbourhood") |>
+    mutate(.canon_id = canon_id_2026) |>
+    left_join(prev_2025, by = ".canon_id") |>
     mutate(yoy_pct_change = (median_assessvalue - median_2025) / median_2025 * 100) |>
-    select(-median_2025)
+    select(-.canon_id, -median_2025)
   write_csv(nbhd_agg_gated, out_path)
-  cat(sprintf("Added yoy_pct_change (2026 vs 2025); %s neighbourhoods have a value. Re-wrote %s\n",
+  cat(sprintf("Added yoy_pct_change (2026 vs 2025, keyed on canonical_id); %s neighbourhoods have a value. Re-wrote %s\n",
               comma(sum(!is.na(nbhd_agg_gated$yoy_pct_change))), out_path))
 } else {
   warning("2025 historical aggregate not found at ", prev_path,

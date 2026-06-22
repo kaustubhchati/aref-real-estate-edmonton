@@ -1,9 +1,0 @@
-shapefile_name,shapefile_id,assessment_name,reason,source,date_curated,curated_by
-ANTHONY HENDAY SOUTH EAST,6665,ANTHONY HENDAY SOUTHEAST,compound_name_spacing,Carried from 20260519; ID present in 2026 City boundary file,2026-06-16,KC
-CHAPPELLE,5471,CHAPPELLE AREA,renumbered_2026,City 2026 boundary file: CHAPPELLE 5462->5471 (1:1 rename),2026-06-16,KC
-HERITAGE VALLEY TOWN CENTRE,5472,HERITAGE VALLEY TOWN CENTRE AREA,renumbered_2026,City 2026 boundary file; point-in-polygon 619/620 properties in 5472 vs 0 in umbrella 5456,2026-06-16,KC
-LEWIS FARMS INDUSTRIAL,4485,LEWIS FARMS INDUSTRIAL,exact_match,Carried from 20260519; ID present in 2026 City boundary file,2026-06-16,KC
-RAPPERSWILL,3370,RAPPERSWIL,assessment_side_typo,Carried from 20260519; ID present in 2026 City boundary file,2026-06-16,KC
-RIVER VALLEY WINDERMERE,5405,RIVER VALLEY WINDEMERE,assessment_side_typo,Carried from 20260519; ID present in 2026 City boundary file,2026-06-16,KC
-SOUTHEAST INDUSTRIAL,6690,SOUTHEAST (ANNEXED) INDUSTRIAL,annexation_suffix,Carried from 20260519; ID present in 2026 City boundary file,2026-06-16,KC
-WESTBROOK ESTATES,5540,WESTBROOK ESTATE,assessment_side_typo,Carried from 20260519; ID present in 2026 City boundary file,2026-06-16,KC

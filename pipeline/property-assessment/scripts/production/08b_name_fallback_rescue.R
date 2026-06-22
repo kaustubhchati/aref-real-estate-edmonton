@@ -1,60 +1,51 @@
 # ============================================================
 # 08b_name_fallback_rescue.R
-# Rescue NA-id aggregate rows by matching them to polygons via a hand-curated,
-# version-controlled name→ID mapping table, then re-run the 08 spatial join.
+# Build the current-year (2026) neighbourhood choropleth GeoJSON: resolve each
+# aggregate row's id/name to the canonical City value via the crosswalk, drop
+# annexation-container umbrella rows, then spatial-join to the boundary polygons
+# and classify render states. This is the SOLE current-year builder (the former
+# pre-rescue 08_build_geojson.R was removed 2026-06-22 — it did a redundant join
+# whose output the frontend never consumed).
 #
-# Boundary source (changed 2026-06-17): City of Edmonton Neighbourhoods CSV
-# (65fr-66s6), 407 polygons, WKT/WGS84, in pipeline/shared. Replaces the
-# Jan-2023 shapefile. Read via read_csv + st_as_sf(wkt=...).
+# Boundary source: City of Edmonton Neighbourhoods CSV (65fr-66s6), 407 polygons,
+# WKT/WGS84, in pipeline/shared. Read via read_csv + st_as_sf(wkt=...).
 #
 # Inputs:
 #   - output/neighbourhood_aggregates_2026.csv               (from script 07)
-#   - resolved via shared_path() to pipeline/shared/data/City_of_Edmonton_-_Neighbourhoods_20260616.csv
+#   - shared_path() pipeline/shared/data/City_of_Edmonton_-_Neighbourhoods_20260616.csv
 #   - data/processed/assess_2026_no_parking.csv              (non-residential check)
-#   - data/reference/neighbourhood_name_mappings_20260617.csv (curated mappings,
-#     7 rows; date in filename — latest is authoritative, CLAUDE.md §4.4)
+#   - data/reference/neighbourhood_crosswalk_<YYYYMMDD>.csv  (newest; the single
+#     reconciliation contract, authored by the reconcile one-shot, CLAUDE.md §4.4)
 #
 # Outputs:
 #   - output/neighbourhoods_2026_recovered.geojson  (the choropleth source the
-#     FRONTEND consumes — rescued build, supersedes 08's pre-rescue file; uniform
-#     neighbourhoods_<YYYY>_recovered.geojson name shared with the historical years)
-#   - output/neighbourhoods_2026_not_rendered_recovered.csv         (unresolved rows)
-#   - output/name_mapping_audit_log_<date>.csv                      (audit trail)
+#     FRONTEND consumes; uniform neighbourhoods_<YYYY>_recovered.geojson name
+#     shared with the historical years)
+#   - output/neighbourhoods_2026_not_rendered_recovered.csv  (unresolved NA-id rows)
+#   - output/name_mapping_audit_log_<date>.csv               (audit trail, pruned to 2)
 #
 # What this does:
-#   1. Load the curated mapping table (7 mappings as of 2026-06-17).
-#   2. For each NA-id aggregate row, resolve a Neighbourhood ID via assessment_name.
-#   3. Substitute the resolved ID; re-run the 08 spatial-join + state logic.
-#   4. Write a rescued GeoJSON (parallel to 08's pre-rescue output) + audit log.
+#   1. Load the 2026 aggregates + the boundary polygons.
+#   2. Drop container_exclude umbrella rows (8885-8888) from both.
+#   3. Resolve variant id/name -> canonical via apply_crosswalk (NEW-ID-WINS):
+#      rename, renumber, typo, suffix_drift, alias, merge. Unmatched rows stay
+#      as-is and surface in the audit log.
+#   4. Spatial-join + classify render states; write the GeoJSON + audit log.
 #
-# Two validation guards (both added 2026-06-17 after real failures in development):
-#   - TARGET-EXISTS: a mapping is only "rescued" if its resolved_id actually
-#     exists in the boundary file. A mapped-but-missing target → status
-#     "unresolved_target_missing", not a false success. (Caught Chappelle/Heritage
-#     Valley/Lewis Farms IDs that the 2026 file renumbered.)
-#   - DUPLICATE-ID: hard-stop if any polygon carries two aggregate rows after the
-#     join (one-feature-per-polygon required by the frontend promoteId).
-#
-# 2026 boundary reconciliation (resolved this refresh, evidence in the audit log
-# and the mapping CSV `source` column):
-#   - CHAPPELLE        5462 → 5471  (1:1 renumber)
-#   - LEWIS FARMS INDUSTRIAL → 4261 (reclassified to Business Employment;
-#                                    point-in-polygon 100/103)
-#   - HERITAGE VALLEY TOWN CENTRE   merged 15+577 → 592 at id 5472 in script 07
-#     (no longer rescued here — native id after the 07 name-merge)
-#
-# Mapping is explicit, never fuzzy (CLAUDE.md §4.7). New NA-id rows in a future
-# refresh that aren't in the table stay unresolved and surface for human review.
-# This script is the operational prototype of the Phase-2 Sanity Agent's
-# cross-product reconciliation capability.
+# DUPLICATE-ID guard: hard-stop if any polygon carries two aggregate rows after
+#   the join (one-feature-per-polygon is required by the frontend promoteId).
 #
 # Polygons that stay no_data BY DESIGN (legitimately zero-residential per City):
 #   - EDMONTON RESEARCH & DEVELOPMENT PARK (6190) — industrial/research zone
-#   - LEWIS FARMS (4260)                          — parent, properties sit in 4261
+#   - LEWIS FARMS (4260) / LEWIS FARMS BUSINESS EMPLOYMENT (4261) — non-residential
+#     (the legacy "Lewis Farms Industrial" rescue was dropped per KC 2026-06-22)
 #   - PLACE LARUE (4400)                          — 0-pop commercial zone
+#   (Oliver/id-1150 is NOT here: 1150 is absent from the current boundary; the
+#    rename to WÎHKWÊNTÔWIN/1151 is a crosswalk row, new-id-wins.)
 # ============================================================
 
 source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
+source(shared_path("reconcile_helpers.R"))
 
 # --- Setup --------------------------------------------------
 library(tidyverse)
@@ -68,37 +59,14 @@ stopifnot(dir.exists("output"))
 boundary_path <- shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
 aggregates_path <- "output/neighbourhood_aggregates_2026.csv"
 post_parking_path <- "data/processed/assess_2026_no_parking.csv"
-mapping_path <- "data/reference/neighbourhood_name_mappings_20260617.csv"
 
 # Hard fail with actionable errors if any input is missing
-for (p in c(boundary_path, aggregates_path, post_parking_path, mapping_path)) {
+for (p in c(boundary_path, aggregates_path, post_parking_path)) {
   if (!file.exists(p)) stop("Missing input: ", p)
 }
 
 
-# --- Load mapping table (the curated artifact) --------------
-mapping <- read_csv(
-  mapping_path,
-  col_types = cols(
-    shapefile_name  = col_character(),
-    shapefile_id    = col_character(),
-    assessment_name = col_character(),
-    reason          = col_character(),
-    source          = col_character(),
-    date_curated    = col_date(),
-    curated_by      = col_character()
-  )
-)
-
-cat(sprintf("Loaded %d name mappings (curated %s by %s)\n\n",
-            nrow(mapping),
-            unique(mapping$date_curated),
-            paste(unique(mapping$curated_by), collapse = ", ")))
-cat("--- Mapping table contents ---\n")
-mapping |> select(shapefile_name, shapefile_id, assessment_name, reason) |> print(n = Inf)
-
-
-# --- Load aggregates and identify NA-id rows ----------------
+# --- Load aggregates ----------------------------------------
 aggregates <- read_csv(
   aggregates_path,
   col_types = cols(
@@ -118,61 +86,61 @@ aggregates <- read_csv(
 )
 cat(sprintf("\nLoaded %s aggregate rows\n", comma(nrow(aggregates))))
 
-# Two flavours of NA: literal "NA" string and real NA
-na_id_rows <- aggregates |>
-  filter(is.na(`Neighbourhood ID`) | `Neighbourhood ID` == "NA")
-cat(sprintf("NA-id aggregate rows to attempt rescue: %d\n", nrow(na_id_rows)))
 
+# --- Load boundary polygons ---------------------------------
 nbhd_polygons <- read_csv(boundary_path, show_col_types = FALSE) |>
   st_as_sf(wkt = "Geometry Multipolygon", crs = 4326) |>
   st_set_geometry("geometry") |>
   mutate(`Neighbourhood ID` = as.character(as.integer(`Neighbourhood Number`)))
-# --- Apply the mapping --------------------------------------
-# Left-join NA-id rows against mapping by assessment_name.
-# If a match: rewrite Neighbourhood ID with the resolved shapefile_id.
-# If no match: leave NA so the polygon stays no_data (audit log will surface).
-rescued <- na_id_rows |>
-  left_join(
-    mapping |> select(assessment_name, resolved_id = shapefile_id, reason),
-    by = c("Neighbourhood" = "assessment_name")
-  )
-
-# Build audit log
-audit_log <- rescued |>
-  transmute(
-    assessment_name = Neighbourhood,
-    n_properties_in_aggregate = n_properties,
-    resolved_to_shapefile_id = resolved_id,
-    mapping_reason = reason,
-    target_exists = resolved_id %in% nbhd_polygons$`Neighbourhood ID`,
-    status = case_when(
-      is.na(resolved_id)                                      ~ "unresolved_no_mapping",
-      !(resolved_id %in% nbhd_polygons$`Neighbourhood ID`)    ~ "unresolved_target_missing",
-      TRUE                                                    ~ "rescued"
-    )
-  )
-
-n_rescued    <- sum(audit_log$status == "rescued")
-n_unresolved <- sum(audit_log$status != "rescued")
-
-cat(sprintf("\n--- Rescue results ---\n"))
-cat(sprintf("Successfully rescued:  %d\n", n_rescued))
-cat(sprintf("Unresolved (no map):   %d\n", n_unresolved))
 
 
-# --- Rebuild aggregates with rescued IDs --------------------
-aggregates_rescued <- aggregates |>
-  left_join(
-    rescued |> select(Neighbourhood, resolved_id),
-    by = "Neighbourhood"
-  ) |>
-  mutate(
-    `Neighbourhood ID` = coalesce(resolved_id, `Neighbourhood ID`)
-  ) |>
-  select(-resolved_id)
+# --- Drop annexation-container umbrella rows ----------------
+# crosswalk relation=="container_exclude" (ids 8885-8888): aggregation polygons
+# that are NOT real neighbourhoods. Drop them from BOTH the boundary and any
+# aggregate rows attributed to them, BEFORE the join, so they never render.
+exclude_ids <- crosswalk_exclude_ids()
+n_poly_before <- nrow(nbhd_polygons)
+nbhd_polygons <- nbhd_polygons |> filter(!`Neighbourhood ID` %in% exclude_ids)
+aggregates    <- aggregates    |> filter(!`Neighbourhood ID` %in% exclude_ids)
+cat(sprintf("Container-excluded %d umbrella polygon(s): %s\n",
+            n_poly_before - nrow(nbhd_polygons),
+            if (length(exclude_ids)) paste(exclude_ids, collapse = ", ") else "(none)"))
 
-# Sanity: same row count, just IDs filled in
+
+# --- Resolve variant id/name -> canonical via the crosswalk -
+# Replaces the old hand-curated rescue table. apply_crosswalk rewrites old-id and
+# variant-name rows (rename, renumber, typo, suffix_drift, alias, merge) to the
+# canonical City id+name; NEW-ID-WINS. Rows with no crosswalk row are left
+# untouched (e.g. genuinely new NA-id developing areas) and surface in the audit
+# log as unresolved. Same row count — only id/name change.
+aggregates_rescued <- apply_crosswalk(aggregates)
 stopifnot(nrow(aggregates_rescued) == nrow(aggregates))
+
+
+# --- Audit log: what the crosswalk changed ------------------
+# Compare pre/post element-wise (apply_crosswalk preserves row order + count).
+id_before   <- coalesce(aggregates$`Neighbourhood ID`, "NA")
+id_after    <- coalesce(aggregates_rescued$`Neighbourhood ID`, "NA")
+name_before <- aggregates$Neighbourhood
+name_after  <- aggregates_rescued$Neighbourhood
+audit_log <- tibble(
+  assessment_name = name_before,
+  resolved_name   = name_after,
+  resolved_id     = id_after,
+  n_properties_in_aggregate = aggregates$n_properties,
+  status = case_when(
+    id_before != id_after | name_before != name_after ~ "resolved",
+    id_after == "NA"                                   ~ "unresolved_no_mapping",
+    TRUE                                               ~ "unchanged"
+  )
+)
+n_rescued    <- sum(audit_log$status == "resolved")
+n_unresolved <- sum(audit_log$status == "unresolved_no_mapping")
+
+cat(sprintf("\n--- Crosswalk resolution ---\n"))
+cat(sprintf("Resolved:            %d\n", n_rescued))
+cat(sprintf("Unresolved (NA-id):  %d\n", n_unresolved))
+cat(sprintf("Unchanged:           %d\n", sum(audit_log$status == "unchanged")))
 
 
 # --- Re-run spatial join (same logic as script 08) ----------
@@ -217,8 +185,9 @@ if (length(dup_ids) > 0) {
   stop("Duplicate Neighbourhood IDs after join: ", paste(unique(dup_ids), collapse = ", "))
 }
 # --- Identify truly orphan polygons -------------------------
-# These are no_data polygons even after rescue. By design, includes:
-#   OLIVER 1150, WINDERMERE AREA 5575, EDM R&D PARK 6190, PLACE LARUE 4400
+# These are no_data polygons even after crosswalk resolution. By design, includes
+# legitimately zero-residential areas: EDM R&D PARK 6190, LEWIS FARMS 4260/4261,
+# PLACE LARUE 4400. (Oliver/1150 is not here — see header.)
 remaining_no_data <- joined |>
   st_drop_geometry() |>
   filter(polygon_state == "no_data") |>
@@ -263,30 +232,36 @@ cat(sprintf("\nWrote %s (%.2f MB, %d polygons)\n",
             nrow(geojson_ready)))
 
 
-# Truly orphan aggregate rows (no rescue available). The status vocabulary is
-# "unresolved_no_mapping" / "unresolved_target_missing" / "rescued" (see L147-151);
-# match BOTH unresolved states, never "rescued".
+# Truly orphan aggregate rows (no crosswalk row resolves them). Status vocabulary
+# is "resolved" / "unresolved_no_mapping" / "unchanged"; only the unresolved
+# NA-id rows are orphans worth surfacing for human review.
 not_rendered_recovered <- audit_log |>
-  filter(status %in% c("unresolved_no_mapping", "unresolved_target_missing"))
+  filter(status == "unresolved_no_mapping")
 not_rendered_path <- "output/neighbourhoods_2026_not_rendered_recovered.csv"
 write_csv(not_rendered_recovered, not_rendered_path)
 cat(sprintf("Wrote %s (%d unresolved rows)\n",
             not_rendered_path, nrow(not_rendered_recovered)))
 
 
-# Audit log
+# Audit log (dated). Keep only resolved/unresolved rows — "unchanged" is the
+# ~390 untouched neighbourhoods, not interesting for an audit trail.
 audit_path <- sprintf("output/name_mapping_audit_log_%s.csv",
                       format(Sys.Date(), "%Y%m%d"))
-write_csv(audit_log, audit_path)
-cat(sprintf("Wrote %s (%d audit rows)\n", audit_path, nrow(audit_log)))
+audit_log |> filter(status != "unchanged") |> write_csv(audit_path)
+cat(sprintf("Wrote %s (%d resolved/unresolved rows)\n",
+            audit_path, sum(audit_log$status != "unchanged")))
+
+# Prune dated audit logs to the newest 2 (output hygiene; see _bootstrap.R).
+pruned <- prune_dated_files("output", "^name_mapping_audit_log_\\d{8}\\.csv$", keep = 2L)
+if (length(pruned)) cat(sprintf("Pruned %d old audit log(s).\n", length(pruned)))
 
 
 # --- Final run summary --------------------------------------
 cat("\n--- Run summary ---\n")
-cat(sprintf("Mappings curated:       %d (in mapping CSV)\n", nrow(mapping)))
-cat(sprintf("NA-id rows attempted:   %d\n", nrow(na_id_rows)))
-cat(sprintf("Successfully rescued:   %d\n", n_rescued))
-cat(sprintf("Unresolved:             %d\n", n_unresolved))
+cat(sprintf("Crosswalk rows applied: %d\n", nrow(load_crosswalk())))
+cat(sprintf("Container-excluded:     %d\n", length(exclude_ids)))
+cat(sprintf("Resolved to canonical:  %d\n", n_rescued))
+cat(sprintf("Unresolved (NA-id):     %d\n", n_unresolved))
 cat(sprintf("Total polygons:         %d\n", nrow(joined)))
 cat(sprintf("  aggregated:           %d\n",
             sum(joined$polygon_state == "aggregated")))

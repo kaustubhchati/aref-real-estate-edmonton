@@ -88,27 +88,26 @@
 #     no survivor; they are excluded, not absorbed).
 #
 # ------------------------------------------------------------
-# OPEN ITEM — NOT in the crosswalk, needs a KC decision
+# RESOLVED — "Lewis Farms Industrial" DROPPED entirely (KC, 2026-06-22)
 # ------------------------------------------------------------
-#   "Lewis Farms Industrial": the legacy rescue table mapped it to id
-#   4485, which is ABSENT from the current boundary (status was
-#   `unresolved_target_missing`, i.e. it already resolves to nothing
-#   today). The 08b header asserts the true target is 4261
-#   "Lewis Farms Business Employment" (a new id, effective 2026-01-15,
-#   NON-RESIDENTIAL). That single legacy row is simultaneously a
-#   renumber (4485->4261), a rename (Industrial->Business Employment),
-#   and a reclassification to a non-residential class that the cleaning
-#   rules would drop anyway. It resists a clean single `relation`, so
-#   per the build directive it is NOT assigned here. Omitting it
-#   preserves today's behaviour (it stays unresolved). Resolve with KC
-#   before any consumer relies on it.
+#   The legacy rescue table mapped "Lewis Farms Industrial" to id 4485,
+#   which is ABSENT from the current boundary (status was
+#   `unresolved_target_missing`, i.e. it already resolved to nothing).
+#   The 08b header asserts the true target is 4261 "Lewis Farms Business
+#   Employment" (a new id, effective 2026-01-15, NON-RESIDENTIAL). That
+#   single legacy row was simultaneously a renumber (4485->4261), a
+#   rename (Industrial->Business Employment), and a reclassification to a
+#   non-residential class the cleaning rules drop anyway. KC's decision:
+#   DROP it entirely. It gets NO crosswalk row. Its boundary polygons
+#   (4260 Lewis Farms, 4261 Lewis Farms Business Employment) remain
+#   no_data by the normal non-residential path; this is correct.
 #
 # MIGRATION TRACE (proves: migrate, do not invent) — every row in the
 #   three legacy mapping CSVs + the merge CSV maps to a crosswalk row:
 #     mappings_*  ANTHONY HENDAY        -> row 9  (alias)
 #     mappings_*  CHAPPELLE / AREA      -> rows 2 (renumber) + 3 (suffix_drift)
 #     mappings_*  HERITAGE VALLEY TC    -> rows 4 (renumber) + 5 (merge)
-#     mappings_*  LEWIS FARMS INDUSTRIAL-> OPEN ITEM (unclassified, omitted)
+#     mappings_*  LEWIS FARMS INDUSTRIAL-> DROPPED per KC 2026-06-22 (no row)
 #     mappings_*  RAPPERSWIL            -> row 6  (typo)
 #     mappings_*  RIVER VALLEY WINDEMERE-> row 7  (typo)
 #     mappings_*  SOUTHEAST (ANNEXED) IND-> row 10 (alias)
@@ -229,5 +228,5 @@ cat("\n--- Full crosswalk ---\n")
 crosswalk |>
   select(canonical_id, canonical_name, variant_id, variant_name, relation) |>
   print(n = Inf)
-cat("\nOPEN ITEM (omitted, needs KC decision): LEWIS FARMS INDUSTRIAL ->",
-    "legacy id 4485 absent; 08b claims 4261 (Business Employment, non-residential).\n")
+cat("\nNote: LEWIS FARMS INDUSTRIAL was DROPPED entirely (KC, 2026-06-22) -",
+    "no crosswalk row; its boundary polygons stay no_data via the normal path.\n")

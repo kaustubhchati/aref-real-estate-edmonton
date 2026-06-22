@@ -44,6 +44,7 @@
 
 library(tidyverse)
 library(scales)
+source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
 
 dir.create("output", showWarnings = FALSE, recursive = TRUE)
 
@@ -340,6 +341,10 @@ write_csv(pa_clean, clean_path)
 cat("Wrote: ", clean_path, "—",
     format(nrow(pa_clean), big.mark = ","), "rows,",
     ncol(pa_clean), "columns\n")
+
+# Prune dated clean files to the newest 2 (each is ~500 MB; see _bootstrap.R).
+pruned <- prune_dated_files("output", "^pa_hist_clean_\\d{8}\\.csv$", keep = 2L)
+if (length(pruned)) cat("Pruned", length(pruned), "old pa_hist_clean file(s).\n")
 
 # Filter scorecard — one row per rule, for Olivia QA review
 scorecard <- tibble(

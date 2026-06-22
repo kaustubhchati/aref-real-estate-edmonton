@@ -7,6 +7,10 @@
 #   historical cleaned CSV for every Assessment Year present.
 #   Outputs one aggregate CSV per year, schema-identical to
 #   output/neighbourhood_aggregates_2026.csv from script 07.
+#   Names/ids are resolved to canonical (crosswalk + boundary) BEFORE
+#   aggregating (see step 3b), so each row carries the canonical
+#   Neighbourhood ID and yoy is keyed on it, not on a name that a
+#   rename would break.
 #
 # REFRESH-BY-DESIGN:
 #   - Auto-discovers cleaned CSV from output/ by glob pattern.
@@ -28,6 +32,8 @@
 
 library(tidyverse)
 library(scales)
+source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
+source(shared_path("reconcile_helpers.R"))
 
 dir.create("output/hist_aggregates", showWarnings = FALSE, recursive = TRUE)
 
@@ -91,6 +97,40 @@ cat("      pct_with_unit will be 0 in all historical aggregates.\n")
 cat("      See script header for rationale.\n\n")
 
 # ============================================================
+# 3b. Resolve names/ids to canonical BEFORE aggregating
+#    WHY pre-aggregation: a merge must pool ROWS (medians recomputed from the
+#    combined rows, never averaged from two summaries), and a rename/typo must
+#    keep a neighbourhood in ONE group across years. Resolving here means every
+#    year's aggregate is keyed by the canonical id the boundary + frontend use,
+#    so 08e joins by id (no case-fold name match) and yoy is continuous across a
+#    rename (OLIVER -> WÎHKWÊNTÔWIN). The historical file is name-only, so the
+#    crosswalk resolves by variant_name; canonical-named rows get their id from
+#    the boundary name lookup. Source: the single neighbourhood crosswalk.
+# ============================================================
+
+boundary_path <- shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
+boundary_lookup <- read_csv(boundary_path, show_col_types = FALSE) |>
+  transmute(boundary_id = as.character(as.integer(`Neighbourhood Number`)),
+            join_name   = str_to_upper(`Neighbourhood Name`))
+
+pa_clean <- pa_clean |>
+  mutate(`Neighbourhood ID` = NA_character_) |>
+  apply_crosswalk() |>                                  # variant name -> canonical id+name
+  # Fill ids for canonical-named rows the crosswalk did not touch, via boundary name.
+  mutate(join_name = str_to_upper(Neighbourhood)) |>
+  left_join(boundary_lookup, by = "join_name") |>
+  mutate(`Neighbourhood ID` = coalesce(`Neighbourhood ID`, boundary_id)) |>
+  select(-join_name, -boundary_id)
+
+# Drop annexation-container umbrella rows (8885-8888) so they never aggregate.
+exclude_ids <- crosswalk_exclude_ids()
+n_before_excl <- nrow(pa_clean)
+pa_clean <- pa_clean |> filter(!`Neighbourhood ID` %in% exclude_ids)
+cat(sprintf("Resolved to canonical ids; dropped %s container rows (%s).\n\n",
+            format(n_before_excl - nrow(pa_clean), big.mark = ","),
+            if (length(exclude_ids)) paste(exclude_ids, collapse = ", ") else "none"))
+
+# ============================================================
 # 4. Aggregate per year — iterate over all years in data
 # ============================================================
 
@@ -113,8 +153,10 @@ for (yr in years_present) {
   cat(sprintf("  Rows: %s\n", format(nrow(yr_data), big.mark = ",")))
   
   # --- Aggregate (Stata3 formula, script 07 port) -----------
+  # Group by canonical (id, name): same id always carries the same canonical
+  # name post-resolution, so this pools merged/renamed rows into one correct row.
   nbhd_agg <- yr_data |>
-    group_by(`Neighbourhood`, .drop = FALSE) |>
+    group_by(`Neighbourhood ID`, `Neighbourhood`, .drop = FALSE) |>
     summarise(
       n_properties                 = n(),
       avall_public                 = mean(`Assessed Value`,            na.rm = TRUE),
@@ -175,11 +217,16 @@ all_agg <- map_dfr(years_present, function(yr) {
            show_col_types = FALSE) |>
     mutate(year = yr)
 }) |>
-  arrange(Neighbourhood, year) |>
-  group_by(Neighbourhood) |>
+  # Key yoy on canonical_id, NOT name, so a rename does not break the series.
+  # NA-id rows (unmatched) fall back to their name as the key so they don't all
+  # collapse into one bogus "NA" group across years.
+  mutate(.yoy_key = coalesce(as.character(`Neighbourhood ID`), Neighbourhood)) |>
+  arrange(.yoy_key, year) |>
+  group_by(.yoy_key) |>
   mutate(yoy_pct_change = (median_assessvalue - lag(median_assessvalue))
          / lag(median_assessvalue) * 100) |>
-  ungroup()
+  ungroup() |>
+  select(-.yoy_key)
 
 for (yr in years_present) {
   yr_data <- all_agg |> filter(year == yr) |> select(-year)

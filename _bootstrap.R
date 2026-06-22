@@ -42,3 +42,17 @@ website_path <- function(...) file.path(ROOT, "website", ...)
 # ~/.Renviron to point at the file. Returns "" if unset/absent, so validation
 # scripts can skip gracefully on any machine without the oracle (e.g. a clean clone).
 conf_path <- function() Sys.getenv("AREF_CONF_PATH", unset = "")
+
+# prune_dated_files(): keep the newest `keep` files matching `pattern` in `dir`,
+# delete the rest. WHY: scripts that date-stamp their output (pa_hist_clean_<date>,
+# audit logs) otherwise accumulate one copy per refresh-day with no upper bound
+# (some are ~500 MB). Newest-by-filename-sort assumes the YYYYMMDD suffix
+# convention. Returns the paths it removed (character(0) if none).
+prune_dated_files <- function(dir, pattern, keep = 2L) {
+  files <- sort(list.files(dir, pattern = pattern, full.names = TRUE),
+                decreasing = TRUE)
+  if (length(files) <= keep) return(character(0))
+  old <- files[(keep + 1L):length(files)]
+  file.remove(old)
+  old
+}
