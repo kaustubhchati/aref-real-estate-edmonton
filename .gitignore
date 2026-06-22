@@ -126,3 +126,8 @@ pipeline/property-assessment/output/pa_hist_filter_scorecard.csv
 # was tracked by oversight; list the dir + log explicitly.
 pipeline/property-assessment/output/hist_aggregates/
 pipeline/property-assessment/output/hist_geojson_build_log.csv
+# 08b's per-run unresolved-rows CSV — regenerable diagnostic, same policy.
+pipeline/property-assessment/output/neighbourhoods_2026_not_rendered_recovered.csv
+
+# Microsoft Office lock/temp files (created while a .doc/.docx is open).
+~$*
