@@ -14,6 +14,10 @@
 #                         permits) — work-type-qualified; non-demolition negative
 #                         rows are excluded by design. Settled in the residential
 #                         dwelling-units scope EDA (scripts/eda/).
+#   yoy_pct_permits   = YoY % change in residential permit count per neighbourhood
+#                         (§4, from the complete all-years count grid; NA/-100 on
+#                         edges, never Inf/NaN). Backend-only because each GeoJSON
+#                         is a single year.
 #
 # Inputs:
 #   - data/raw/General_Building_Permits_<date>.csv — newest snapshot,
@@ -294,6 +298,40 @@ cat("=============================================================\n\n")
 years <- sort(unique(permits_res$year))
 build_log <- tibble()
 
+# ------------------------------------------------------------
+# Cross-year YoY % change in RESIDENTIAL permit count, per neighbourhood.
+# Each per-year GeoJSON is independent and the browser has no prior year, so YoY
+# must be a backend column. Computed from the COMPLETE all-years count grid up
+# front — NOT back-read from the per-year GeoJSONs (mirrors the PA rule: a
+# cross-year quantity is derived from a complete in-memory frame, never from
+# already-written outputs).
+#
+# count() yields only present (n>=1) neighbourhood-years; the grid is completed
+# with 0 for absent cells, which is what makes the edge cases well-defined.
+# Edge rules (never Inf/NaN):
+#   prev is NA  (first year in range / no prior-year row)     -> NA
+#   prev == 0   (no prior-year residential permits)            -> NA  (jump from 0)
+#   current == 0 with prev > 0  (a real drop to zero)          -> -100
+#   else  100 * (n - prev) / prev,  rounded to 1 dp
+# Keyed by Neighbourhood ID + year; joined into each year's boundary frame below
+# (purely additive — n_permits, polygon_state and every other field unchanged).
+yoy_tbl <- permits_res |>
+  count(neighbourhood_number, year, name = "n_permits") |>
+  complete(neighbourhood_number, year = years, fill = list(n_permits = 0)) |>
+  group_by(neighbourhood_number) |>
+  arrange(year, .by_group = TRUE) |>
+  mutate(
+    prev = lag(n_permits),
+    yoy_pct_permits = case_when(
+      is.na(prev)    ~ NA_real_,
+      prev == 0      ~ NA_real_,
+      n_permits == 0 ~ -100,
+      TRUE           ~ round(100 * (n_permits - prev) / prev, 1)
+    )
+  ) |>
+  ungroup() |>
+  transmute(`Neighbourhood ID` = neighbourhood_number, year, yoy_pct_permits)
+
 for (yr in years) {
   cat(sprintf("--- Year %d ---\n", yr))
 
@@ -335,7 +373,12 @@ for (yr in years) {
         suppressed                ~ "suppressed_low_n",
         TRUE                      ~ "aggregated"
       )
-    )
+    ) |>
+    # Attach this year's YoY % (additive; n_permits / polygon_state untouched).
+    # A neighbourhood that dropped to zero this year is no_data here but still
+    # carries yoy_pct_permits = -100 for the frontend's %YoY view.
+    left_join(yoy_tbl |> filter(year == yr) |> select(-year),
+              by = "Neighbourhood ID")
 
   # Transmute to display columns only
   geojson_ready <- joined |>
@@ -348,7 +391,8 @@ for (yr in years) {
       total_construction_value   = total_construction_value,
       median_construction_value  = median_construction_value,
       units_added_gross          = units_added_gross,
-      units_demolished           = units_demolished
+      units_demolished           = units_demolished,
+      yoy_pct_permits            = yoy_pct_permits
     ) |>
     st_set_precision(1e6) |>
     st_make_valid()
