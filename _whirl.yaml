@@ -1,0 +1,48 @@
+# _whirl.yaml — section run configuration for the AREF pipeline.
+# -----------------------------------------------------------------------------
+# Authoritative source of (1) each section's working directory and (2) the
+# dependency-ordered script sequence within it. The runner (run_section.R)
+# reads this; cwd is declared HERE and is NEVER derived from .Rproj presence.
+# Repo root (and thus this file) is located via the .aref_root sentinel.
+# -----------------------------------------------------------------------------
+
+sections:
+  property-assessment:
+    # Authoritative working directory for this section, repo-root-relative.
+    # Every script's bare-relative data/ and output/ path resolves against this.
+    # Declared explicitly — do NOT infer it from an .Rproj file.
+    cwd: pipeline/property-assessment
+
+    # Scripts in DEPENDENCY order — NOT numeric filename order.
+    # Each path is relative to `cwd` above.
+    scripts:
+      - scripts/production/01_load_data.R
+      - scripts/production/06_apply_layer1a_rules.R
+      - scripts/production/07a_build_hist_clean.R
+      # --- 08d MUST run BEFORE 07 (dependency, not numeric, order) ---
+      # 07 reads 08d's prior-year output
+      #   output/hist_aggregates/neighbourhood_aggregates_2025.csv
+      # to compute the yoy_pct_change column. In numeric order (07 before 08d)
+      # that file does not yet exist on a clean run, so 07's file.exists guard
+      # falls through to a warning and SILENTLY nulls yoy_pct_change.
+      # A future reader must NOT "correct" this back to numeric order.
+      - scripts/production/08d_hist_aggregate.R
+      - scripts/production/07_layer2_aggregates.R
+      - scripts/production/08_build_geojson.R
+      - scripts/production/08b_name_fallback_rescue.R
+      - scripts/production/08e_hist_build_geojson.R
+      - scripts/production/09a_emit_manifest.R
+
+    # --- Handoff: publish output/ -> website/public after ALL scripts succeed ---
+    # The runner is now the SOLE writer of website/public. 08e/08b write the
+    # per-year GeoJSONs to output/ (uniform neighbourhoods_<YYYY>_recovered.geojson
+    # name); 09a writes output/manifest.json. This block declares the publish:
+    # for every year the manifest lists, identity-copy that GeoJSON to public,
+    # then publish the manifest. Manifest-driven — no year literals. {year} is the
+    # placeholder the runner fills from the manifest.
+    handoff:
+      manifest:        output/manifest.json                         # cwd-relative; the year source (09a)
+      geojson_src_dir: output                                       # cwd-relative; where 08e/08b wrote
+      geojson_pattern: neighbourhoods_{year}_recovered.geojson      # {year} <- manifest years
+      dest_dir:        website/public/data/property-assessment      # repo-root-relative
+      manifest_dest:   website/public/manifest.json                 # repo-root-relative
