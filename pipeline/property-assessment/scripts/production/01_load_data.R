@@ -28,32 +28,32 @@
 # --- Packages ------------------------------------------------
 library(sf)         # spatial geometry (sf objects, projections, joins)
 library(tidyverse)  # dplyr, readr, etc.
-# --- Data sources --------------------------------------------
-# Edmonton Open Data Portal — Property Assessment, current calendar year.
-# Dataset ID q7d6-ambg is permanent; the URL serves the latest snapshot
-# the City has published (refreshed roughly weekly during assessment season).
-url_assess_current <- "https://data.edmonton.ca/api/views/q7d6-ambg/rows.csv?accessType=DOWNLOAD"
+
+# Repo-root anchoring + the shared Socrata fetch helper (export-endpoint
+# discipline + the proven atomic/timeout/floors reliability layer).
+source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
+source(shared_path("fetch_helpers.R"))
 
 
 # --- Load ----------------------------------------------------
-# read_csv() streams the file directly from the URL into memory.
-# Expect ~400k rows. First run takes 10-30 seconds depending on connection.
-assess_raw <- read_csv(url_assess_current, show_col_types = FALSE)
-
-# Refresh guard: the cleaning here and the downstream rule chain (06/07/08)
-# assume specific column names. If the City renames a column in q7d6-ambg, fail
-# loudly now rather than crashing mid-clean with an opaque error (mirrors the
-# guard in 02_build_permits.R). Columns listed are the ones this script uses
-# (Lat/Long/Assessed Value) plus the keys downstream consumes from its output.
-required_cols <- c("Account Number", "Neighbourhood ID", "Neighbourhood",
-                   "Assessed Value", "Assessment Class 1",
-                   "Latitude", "Longitude")
-missing_cols <- setdiff(required_cols, names(assess_raw))
-if (length(missing_cols) > 0) {
-  stop("q7d6-ambg schema changed — missing expected columns: ",
-       paste(missing_cols, collapse = ", "),
-       "\n  Inspect the new file and update 01_load_data.R before shipping.")
-}
+# Fetch the current-year assessment snapshot (q7d6-ambg) via the shared helper:
+# export endpoint only, atomic temp-then-rename to a dated raw file, and
+# size/row/column floors verified before promotion. The required_cols guard
+# (Lat/Long/Assessed Value plus the keys downstream 06/07/08 consume) runs
+# INSIDE the helper, so a renamed/truncated source fails loud here rather than
+# crashing mid-clean. Floors ~half of observed (~440k rows / ~85 MB). The dated
+# raw snapshot is accepted provenance (gitignored, like 02's).
+raw_path <- fetch_socrata_snapshot(
+  dataset_id    = "q7d6-ambg",
+  dest_dir      = file.path("data", "raw"),
+  min_rows      = 220000L,
+  min_size_mb   = 40,
+  required_cols = c("Account Number", "Neighbourhood ID", "Neighbourhood",
+                    "Assessed Value", "Assessment Class 1",
+                    "Latitude", "Longitude"),
+  filename_stem = "Property_Assessment_Current"
+)
+assess_raw <- read_csv(raw_path, show_col_types = FALSE)
 
 
 # --- Coordinate counts (canonical) --------------------------
