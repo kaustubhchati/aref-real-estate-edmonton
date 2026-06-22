@@ -25,6 +25,16 @@
 #   - output/permit_aggregates/permit_aggregates_<year>.csv  (one per year)
 #   - output/permit_geojson/permit_neighbourhoods_<year>.geojson (one per year)
 #   - output/permit_coverage_summary.csv  (audit log)
+#   - output/dwelling_units_dropped_spanners_<snapshotdate>.csv  (audit: every
+#     residential unit dropped as unplaceable — multi-neighbourhood spanners,
+#     nameless rows, and oracle "drop" numbers; the rescue audit trail)
+#
+# Neighbourhood rescue (§3b, before aggregation): the shared rescue oracle
+#   (shared_path("data","neighbourhood_rescue_oracle.csv"), READ-only) remaps
+#   stranded numbers (rename/renumber/merge), drops oracle "drop" numbers, and
+#   recovers NA-number rows whose comma-joined NEIGHBOURHOOD name collapses to a
+#   single neighbourhood (oracle old/new name pairs unified). Genuine spanners
+#   and nameless rows are dropped + logged — no assign-to-first, no duplication.
 #
 # Run context: from the section dir (pipeline/building-permits/),
 #   e.g. Rscript scripts/production/03_build_permit_aggregates.R
@@ -97,9 +107,11 @@ permits <- permits_raw |>
                               as.numeric(str_remove_all(construction_value, "[$,]"))),
     units_added           = suppressWarnings(as.integer(units_added))
   ) |>
-  filter(!is.na(year), !is.na(neighbourhood_number))
+  # Keep NA-number rows here — §3b recovers those whose NEIGHBOURHOOD name
+  # resolves to a single neighbourhood. Only the year floor is non-negotiable.
+  filter(!is.na(year))
 
-cat("Clean rows (has year + neighbourhood_number):",
+cat("Clean rows (has year):",
     format(nrow(permits), big.mark = ","), "\n")
 cat("Years present:", paste(sort(unique(permits$year)), collapse = ", "), "\n\n")
 
@@ -123,10 +135,6 @@ boundary_sf <- boundary_raw |>
 
 cat("Boundary polygons:", nrow(boundary_sf), "\n\n")
 
-# ============================================================
-# 4. Aggregate per year
-# ============================================================
-
 # Residential scope: explicit BUILDING_TYPE whitelist (full strings, including
 # variant spellings). Matched on the full string — never the bare code (the 522
 # code collides: "Mixed Use (522)" vs "Office Complex (522)"). NOT 02a's
@@ -139,15 +147,158 @@ residential_types <- c(
   "Semi-Detached Condo (215)", "Duplex (210)", "Mobile Home (130)", "Mixed Use (522)"
 )
 
-years <- sort(unique(permits$year))
+# ============================================================
+# 3b. Neighbourhood rescue (oracle number-remap + NA-name recovery)
+# ============================================================
+# Recover units the polygon join would otherwise silently lose, BEFORE
+# aggregation, so published totals reflect the full residential universe minus
+# only genuinely unplaceable permits (every one logged). The shared rescue
+# oracle is READ-only and is the authority for BOTH number-remap and old/new
+# NAME-pair collapsing. No assign-to-first, no duplication — that is the ruling.
+
+norm <- function(x) toupper(trimws(x))
+
+# --- Oracle lookups (edmonton only) ---
+oracle <- read_csv(shared_path("data", "neighbourhood_rescue_oracle.csv"),
+                   show_col_types = FALSE) |>
+  filter(city == "edmonton")
+
+# Number remap: rename/renumber/merge old_number -> new_number (real targets).
+remap_rows <- oracle |>
+  filter(resolution %in% c("rename", "renumber", "merge"), !is.na(new_number)) |>
+  mutate(old_number = as.integer(old_number), new_number = as.integer(new_number))
+remap_vec <- setNames(remap_rows$new_number, as.character(remap_rows$old_number))
+
+# Drop numbers: oracle says no live polygon (e.g. 4485 Lewis Farms).
+drop_numbers <- oracle |> filter(resolution == "drop") |>
+  pull(old_number) |> as.integer()
+
+# name_canon: normalized oracle name (old OR new) -> canonical new_number, so a
+# comma-joined old/new pair (OLIVER, WÎHKWÊNTÔWIN) collapses to one identity.
+name_canon <- c(
+  setNames(remap_rows$new_number, norm(remap_rows$old_name)),
+  setNames(remap_rows$new_number, norm(remap_rows$new_name))
+)
+name_canon <- name_canon[!is.na(names(name_canon)) & names(name_canon) != ""]
+
+# Boundary name<->number (current names/numbers) + the set of valid numbers.
+bname_tbl <- boundary_raw |>
+  transmute(nm = norm(`Neighbourhood Name`), num = as.integer(`Neighbourhood Number`)) |>
+  filter(!is.na(nm), !is.na(num)) |>
+  distinct(nm, .keep_all = TRUE)
+bname_vec        <- setNames(bname_tbl$num, bname_tbl$nm)
+boundary_numbers <- sort(unique(as.integer(boundary_raw$`Neighbourhood Number`)))
+
+# Locked gross-metric helpers, applied to an arbitrary row subset.
+u_added <- function(d) sum(d$units_added[d$units_added > 0], na.rm = TRUE)
+u_demo  <- function(d) abs(sum(d$units_added[d$units_added < 0 &
+                          d$work_type == "(99) Demolition"], na.rm = TRUE))
+
+# Residential universe (all neighbourhood-number states; year already filtered).
+res <- permits |> filter(building_type %in% residential_types)
+
+# --- STEP 2: stranded-number remap (rows that HAVE a number) ---
+res <- res |>
+  mutate(
+    orig_number  = neighbourhood_number,
+    remapped_to  = unname(remap_vec[as.character(neighbourhood_number)]),
+    num_remapped = !is.na(orig_number) & !is.na(remapped_to),
+    neighbourhood_number = if_else(num_remapped, remapped_to, orig_number)
+  )
+
+with_num    <- res |> filter(!is.na(orig_number))
+num_dropped <- with_num |> filter(neighbourhood_number %in% drop_numbers)
+with_num    <- with_num |> filter(!(neighbourhood_number %in% drop_numbers))
+
+# --- STEP 3: NA-number name recovery (rows with NA number) ---
+# Resolve one NEIGHBOURHOOD string to a single neighbourhood_number or a
+# drop-reason. Canonical key per comma-part = oracle new_number (if the part is
+# an oracle name) else the normalized name; distinct keys decide the outcome.
+resolve_na_name <- function(nm) {
+  if (is.na(nm) || trimws(nm) == "") return(c(num = NA, reason = "nameless"))
+  parts <- norm(str_split(nm, ",")[[1]])
+  parts <- parts[parts != ""]
+  keys  <- unique(vapply(parts, function(p)
+    if (p %in% names(name_canon)) as.character(name_canon[[p]]) else p,
+    character(1)))
+  if (length(keys) != 1) return(c(num = NA, reason = "spanner"))
+  k <- keys[1]
+  if (grepl("^[0-9]+$", k)) {
+    num <- as.integer(k)
+  } else if (k %in% names(bname_vec)) {
+    num <- as.integer(bname_vec[[k]])
+  } else {
+    return(c(num = NA, reason = "single_no_boundary_match"))
+  }
+  if (!(num %in% boundary_numbers))
+    return(c(num = NA, reason = "single_target_not_in_boundary"))
+  c(num = num, reason = "recovered")
+}
+
+na_rows <- res |> filter(is.na(orig_number))
+if (nrow(na_rows) > 0) {
+  resolved <- lapply(na_rows$neighbourhood, resolve_na_name)
+  na_rows$assigned_number <- suppressWarnings(as.integer(vapply(resolved, `[[`, character(1), "num")))
+  na_rows$drop_reason     <- vapply(resolved, `[[`, character(1), "reason")
+} else {
+  na_rows$assigned_number <- integer(0)
+  na_rows$drop_reason     <- character(0)
+}
+
+na_recovered <- na_rows |> filter(drop_reason == "recovered") |>
+  mutate(neighbourhood_number = assigned_number)
+na_dropped   <- na_rows |> filter(drop_reason != "recovered")
+
+# --- Final residential set for aggregation (every row now has a valid number) ---
+permits_res <- bind_rows(
+  with_num     |> select(-orig_number, -remapped_to),
+  na_recovered |> select(-orig_number, -remapped_to, -assigned_number, -drop_reason)
+)
+
+# --- Dropped-rows audit log (every dropped unit, row-level) ---
+dropped_log <- bind_rows(
+  num_dropped |> transmute(reason = "oracle_drop", year, orig_number,
+                           neighbourhood, building_type, work_type, units_added),
+  na_dropped  |> transmute(reason = drop_reason, year, orig_number,
+                           neighbourhood, building_type, work_type, units_added)
+)
+dropped_path <- sprintf("output/dwelling_units_dropped_spanners_%s.csv", snapshot_date)
+write_csv(dropped_log, dropped_path)
+
+# --- Rescue report (numbers, not narrative) ---
+cat("=============================================================\n")
+cat("Neighbourhood rescue:\n")
+cat(sprintf("  residential universe:    added=%d demo=%d (rows %s)\n",
+            u_added(res), u_demo(res), format(nrow(res), big.mark = ",")))
+cat(sprintf("  recovered_from_stranded: added=%d demo=%d\n",
+            u_added(filter(permits_res, num_remapped)),
+            u_demo(filter(permits_res, num_remapped))))
+cat(sprintf("  recovered_from_NA:       added=%d demo=%d (rows %d)\n",
+            u_added(na_recovered), u_demo(na_recovered), nrow(na_recovered)))
+cat(sprintf("  dropped TOTAL:           added=%d demo=%d (rows %d) -> %s\n",
+            u_added(dropped_log), u_demo(dropped_log), nrow(dropped_log), dropped_path))
+dropped_log |>
+  group_by(reason) |>
+  summarise(rows  = n(),
+            added = sum(units_added[units_added > 0], na.rm = TRUE),
+            demo  = abs(sum(units_added[units_added < 0 &
+                        work_type == "(99) Demolition"], na.rm = TRUE)),
+            .groups = "drop") |>
+  arrange(desc(added)) |> print()
+cat("=============================================================\n\n")
+
+# ============================================================
+# 4. Aggregate per year
+# ============================================================
+
+years <- sort(unique(permits_res$year))
 build_log <- tibble()
 
 for (yr in years) {
   cat(sprintf("--- Year %d ---\n", yr))
 
-  # Residential-only: restrict to the dwelling-bearing BUILDING_TYPE whitelist
-  # BEFORE aggregating, so every metric below is residential-scoped.
-  yr_permits <- permits |> filter(year == yr, building_type %in% residential_types)
+  # permits_res is already residential + rescued (valid neighbourhood_number).
+  yr_permits <- permits_res |> filter(year == yr)
   cat(sprintf("  Residential permits: %s\n", format(nrow(yr_permits), big.mark = ",")))
 
   # Aggregate per neighbourhood
