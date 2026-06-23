@@ -10,7 +10,9 @@
 > lock (OrRd with a soft-yellow lifted low end) — recorded alongside the commit that aligned
 > Property Assessment's assessed-value `$` metrics to that low end. Then extended principle 7
 > with the YoY diverging redesign (blue decline / warm-bone neutral `#f0e8da` / OrRd-red
-> growth) and the canonical OrRd high `#cc0000` (Ferrari `#7a0000`/`#8a1208` retired).
+> growth) and the canonical OrRd high `#cc0000` (Ferrari `#7a0000`/`#8a1208` retired). Then
+> made the YoY shading **scale** data-driven (symmetric ±95th-pct-of-|yoy| extent, `yoyStops`)
+> so it adapts per year like the sequential quantile metrics instead of a fixed ±15%.
 >
 > **What this is:** the single methodology reference for the `website/` frontend. Read it
 > before adding a section or refactoring shared code. It does not replace `CLAUDE.md`
@@ -160,8 +162,12 @@ suggestions** — follow them in every new section and every refactor.
    DIVERGING** — blue decline → warm-bone neutral (`RAMP_YOY_NEUTRAL` `#f0e8da`, low-chroma so
    0% separates from the `#f7f1df` basemap without going whiter) → OrRd-red growth, with the
    positive arm reusing the sequential ramp's upper warm stops (`#fbe3a0` / `#ef9a4a` /
-   `#cc0000`) so YoY growth reads the same red as the sequential high (`choroplethStyle.js`
-   `YOY_STOPS`). **Median year-built = its own warm reversed ramp**; **lot size = its own
+   `#cc0000`) so YoY growth reads the same red as the sequential high. Its **scale is
+   data-driven like the sequential quantile metrics** — not a fixed ±15%: a symmetric domain
+   ±M where M = the 95th-percentile of |yoy| over aggregated polygons, so the shading adapts
+   to each year's spread while 0% stays neutral (`choroplethStyle.js` `yoyStops`, `YOY_STOPS`
+   the ±15% fallback; DU's `yoy_pct_permits` already does this via `divergingStops`).
+   **Median year-built = its own warm reversed ramp**; **lot size = its own
    amber-sienna ramp** (`RAMP_AREA`, area not `$`, deliberately distinct hue). For the
    sequential ramps, only the low end was ever the problem — median-and-up is not touched
    there.

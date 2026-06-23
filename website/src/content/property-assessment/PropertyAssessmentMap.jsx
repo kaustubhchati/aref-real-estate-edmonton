@@ -36,7 +36,7 @@ import {
   BASEMAP_STYLE,
   MAP_VIEW,
   METRICS,
-  YOY_STOPS,
+  yoyStops,
   stopsFromScale,
   metricStops,
   choroplethFillColor,
@@ -129,14 +129,15 @@ export default function PropertyAssessmentMap() {
   const noPriorYear = isYoy && year != null && year === earliestYear;
 
   // Colour ramp for the current metric:
-  //   yoy_pct_change     → the fixed diverging YOY_STOPS (same scale every year)
+  //   yoy_pct_change     → data-driven diverging scale (yoyStops: symmetric ±M,
+  //                        M = 95th-pct of |yoy| — adapts per year, 0 = neutral)
   //   median_assessvalue → its locked per-year manifest scale
   //   everything else    → quantiles computed from the loaded polygons
-  // gj is null until the fetch resolves — metricStops falls back to the locked
-  // STOPS until then. Memoised so its identity is stable between renders (the
-  // repaint effect and the Legend both depend on it).
+  // gj is null until the fetch resolves — yoyStops/metricStops fall back to the
+  // locked stops until then. Memoised so its identity is stable between renders
+  // (the repaint effect and the Legend both depend on it).
   const stops = useMemo(() => {
-    if (metric === "yoy_pct_change") return YOY_STOPS;
+    if (metric === "yoy_pct_change") return yoyStops(gj);
     return metric === "median_assessvalue"
       ? stopsFromScale(getColourScale(manifest, city, year), metric)
       : metricStops(gj, metric);

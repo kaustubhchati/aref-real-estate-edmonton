@@ -188,10 +188,15 @@ function quantile(sorted, p) {
 }
 
 // ---- Year-over-year DIVERGING scale ----------------------------------------
-// Fixed blue → warm-bone → red diverging ramp for yoy_pct_change (a signed %,
-// unlike the sequential $ metrics). NOT per-year and NOT data-derived: a stable
-// scale centred on 0% so a colour means the same change in every year. Values are
-// already on the 0-100 % scale (e.g. -5 = down 5%), matching fmtPct.
+// Blue → warm-bone → red diverging ramp for yoy_pct_change (a signed %, unlike
+// the sequential $ metrics). DATA-DRIVEN extent (see yoyStops): the domain is ±M
+// where M = the 95th-percentile of |yoy| across aggregated polygons — the same
+// robust-quantile idea the sequential metrics use (metricStops), and the same one
+// DU's diverging permit %YoY already uses (divergingStops). So the scale ADAPTS to
+// each year's actual spread instead of a fixed ±15%, while a couple of extreme
+// swings don't blow it out. SYMMETRIC about 0, so equal colour intensity = equal
+// MAGNITUDE of change regardless of sign, and 0% always reads the warm-bone
+// neutral. Values are on the 0-100 % scale (e.g. -5 = down 5%), matching fmtPct.
 //   blue  = decline   (deep → mid blue, negative arm)
 //   0%    = warm-bone neutral — low-chroma, separates from the #f7f1df basemap
 //           WITHOUT going whiter (if it still blends, go greyer/darker per the
@@ -199,23 +204,55 @@ function quantile(sorted, p) {
 //   warm  = growth, REUSING the sequential ramp's upper warm stops so YoY growth
 //           reads the SAME OrRd red (#cc0000) as the median/mean sequential high.
 //           No brown, no Ferrari #7a0000/#8a1208 — #cc0000 is the canonical high.
-// The consts below are the live-nudge handles (per task: expose the neutral +
-// positive-arm stops by name).
+// Live-nudge handles below: the neutral, the arm colours, and YOY_EXTENT_PCTILE.
 const RAMP_YOY_NEUTRAL = "#f0e8da";  // warm-bone diverging midpoint (0%)
 const YOY_POS_GOLD   = RAMP_FLOOR;   // #fbe3a0 — the standard lifted-low gold (= RAMP_SEQ +5 warm)
 const YOY_POS_ORANGE = "#ef9a4a";    // orange growth mid
 const YOY_POS_RED    = "#cc0000";    // canonical OrRd high (matches RAMP_ASSESSED / RAMP_SEQ)
 const YOY_NEG_DEEP   = "#2c5985";    // deep blue, decline endpoint
 const YOY_NEG_MID    = "#7fa8c9";    // mid blue
-const YOY_STOPS = [
-  { v: -15, c: YOY_NEG_DEEP,     label: "-15%" },
-  { v:  -5, c: YOY_NEG_MID,      label: "-5%"  },
-  { v:   0, c: RAMP_YOY_NEUTRAL, label: "0%"   },
-  { v:   5, c: YOY_POS_GOLD,     label: "+5%"  },
-  { v:  10, c: YOY_POS_ORANGE,   label: "+10%" },
-  { v:  15, c: YOY_POS_RED,      label: "+15%" },
-];
-export { YOY_STOPS };
+// Place the 6 colours at fixed fractions of the extent M: {-1, -1/3, 0, +1/3,
+// +2/3, +1} × M. Only the domain scales with the data — 0 stays the warm-bone
+// neutral and the colour order is fixed. Labels are the formatted % values; the
+// Legend dedups them against its own fmtPct(v), so each tick reads as one % line.
+function buildYoyStops(M) {
+  const third = M / 3;
+  return [
+    { v: -M,        c: YOY_NEG_DEEP,     label: fmtPct(-M) },
+    { v: -third,    c: YOY_NEG_MID,      label: fmtPct(-third) },
+    { v: 0,         c: RAMP_YOY_NEUTRAL, label: fmtPct(0) },
+    { v: third,     c: YOY_POS_GOLD,     label: fmtPct(third) },
+    { v: 2 * third, c: YOY_POS_ORANGE,   label: fmtPct(2 * third) },
+    { v: M,         c: YOY_POS_RED,      label: fmtPct(M) },
+  ];
+}
+
+// Fixed ±15% fallback — used before gj loads, or when a year is too thin to
+// derive an extent. Same colours, default domain.
+export const YOY_STOPS = buildYoyStops(15);
+
+// Fraction of |yoy| used as the diverging extent (95th pct = a robust max; matches
+// the sequential-quantile spirit and DU's divergingStops). Tunable handle.
+const YOY_EXTENT_PCTILE = 0.95;
+
+// Data-driven diverging stops: a SYMMETRIC domain ±M where M = the 95th-percentile
+// of |yoy_pct_change| over aggregated polygons (rounded, ≥1). Nulls (neighbourhoods
+// new since the prior year) are excluded via the typeof-number guard so they don't
+// count as 0% and flatten the scale. Falls back to the ±15% YOY_STOPS when gj is
+// absent or too thin to derive an extent.
+export function yoyStops(gj) {
+  const mags = [];
+  for (const f of gj?.features ?? []) {
+    const p = f.properties;
+    if (p?.polygon_state !== "aggregated") continue;
+    const v = p?.yoy_pct_change;
+    if (typeof v === "number" && Number.isFinite(v)) mags.push(Math.abs(v));
+  }
+  if (mags.length < 2) return YOY_STOPS;
+  mags.sort((a, b) => a - b);
+  const M = Math.max(1, Math.round(quantile(mags, YOY_EXTENT_PCTILE)));
+  return buildYoyStops(M);
+}
 
 // ---- Choropleth metrics ----------------------------------------------------
 // The columns the user can colour the map by. key = GeoJSON property,
