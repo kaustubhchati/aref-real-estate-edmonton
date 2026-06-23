@@ -1026,10 +1026,10 @@ p  { margin: 0 0 0.75rem; }
 
 /* ============================ MOTION PASS ================================== */
 /* Site-wide smoothness: appear/disappear fades, popup + hover lifts, and the
-   section / year-swap fade-in. All driven by --dur-*/--ease (single source).
-   Named properties only — never `transition: all`. Map paint TWEENS live in the
-   section style files via motion.js paintTransition(). The mandatory
-   prefers-reduced-motion guard is at the very bottom. */
+   section / year-swap fade-in. All driven by the --dur and --ease tokens
+   (single source). Named properties only — no blanket transitions. Map paint
+   TWEENS live in the section style files via motion.js paintTransition(). The
+   mandatory prefers-reduced-motion guard is at the very bottom. */
 
 @keyframes motion-fade    { from { opacity: 0; } to { opacity: 1; } }
 @keyframes motion-fade-up { from { opacity: 0; transform: translateY(5px); }
