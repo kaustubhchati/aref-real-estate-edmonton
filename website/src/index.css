@@ -84,6 +84,18 @@
   --gel-inset:      inset 0 2px 3px rgba(0,0,0,0.10), inset 0 1px 0 rgba(0,0,0,0.05); /* concave recessed well */
   --gel-border:     1px solid rgba(0,0,0,0.14);
 
+  /* ---- Sidebar panel lift (SIDEBAR_PANEL_LIFT) --------------------------
+     Make the left control panel read as a lifted chrome surface OVER the map,
+     not bleed into the warm basemap land (#f7f1df). Same warm family — a
+     half-step cooler/greyer base + a defining warm edge + a soft shadow onto
+     the map. To turn the lift OFF (A/B against the old flush look), set:
+       --sidebar-bg: rgba(250,250,248,0.95);
+       --sidebar-edge: rgba(0,0,0,0.12);
+       --sidebar-shadow: none; */
+  --sidebar-bg:     #f1ede4;                          /* SIDEBAR_BG — ½-step cooler than land */
+  --sidebar-edge:   #c9bda3;                          /* SIDEBAR_EDGE_COLOR — warm hairline */
+  --sidebar-shadow: 4px 0 14px rgba(74,60,33,0.12);   /* SIDEBAR_SHADOW — soft, falls onto map */
+
   font: 16px/1.5 var(--font-sans);
   color: var(--text);
   background: var(--bg);
@@ -316,8 +328,11 @@ p  { margin: 0 0 0.75rem; }
   bottom: 0;
   width: 300px;
   z-index: 10;
-  background: rgba(250, 250, 248, 0.95);
-  border-right: 0.5px solid rgba(0, 0, 0, 0.12);
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-edge);
+  /* Panel lift: soft warm shadow falling onto the map + a faint top gel
+     highlight so the panel itself reads as a glossy chrome surface. */
+  box-shadow: var(--sidebar-shadow), inset 0 1px 0 rgba(255,255,255,0.6);
   overflow-y: auto;
   /* Reserve the vertical scrollbar's space whether or not it's showing, so the
      content width never jumps when it appears/disappears. */
