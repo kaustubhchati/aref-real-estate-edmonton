@@ -13,22 +13,28 @@
 #   terminates the whole R process. Lifting the body into a function that
 #   returns instead lets a loop run PA, then BP, then aggregate.
 #
-# Returned contract (list):
-#   section     the section name (echoed back)
-#   status      "ok" | "error"
-#   failed_at   the script that errored on a live run, else NA
-#   phase       "dry_run" | "scripts" | "handoff" — phase the outcome came from
-#   n_warnings  total warnings collected across all scripts (0L on a dry-run)
+# refresh_id (C2): NULL for the single-section caller (run_section.R) -> records
+#   carry schema_version = 1L and NO refresh_id field (the frozen v1 shape). When
+#   the cross-section driver (refresh.R) passes a refresh_id, records carry
+#   schema_version = 2L + that refresh_id. That is the ONLY v1-vs-v2 difference.
 #
-# Everything inside is moved VERBATIM from run_section.R (the live-run setup,
-# per-script callr loop, and handoff phase). The ONLY changes are: the three
-# quit() calls became return(<contract>); the hardcoded 08d/07 order check
-# became a data-driven read of sec$order_invariants; and two accounting locals
-# (failed_at, total_warnings) were added to populate the contract.
+# Returned contract (list):
+#   section        the section name (echoed back)
+#   status         "ok" | "ok_empty_output" | "error"
+#   failed_at      the script that errored on a live run, else NA
+#   phase          "dry_run" | "scripts" | "handoff" — phase the outcome came from
+#   n_warnings     total warnings collected across all scripts (0L on a dry-run)
+#   empty_outputs  cwd-relative declared outputs found missing/empty (else empty)
+#
+# ok_empty_output (C2): if a script's declared expected_outputs are missing or
+#   zero-byte, its status becomes ok_empty_output and the chain CONTINUES (it is a
+#   loud flag, like a warning — not a failure). The handoff then REFUSES to publish
+#   any zero-byte source (logs handoff_skip_empty), so "surface-and-continue" never
+#   silently becomes "surface-and-publish-empty".
 # -----------------------------------------------------------------------------
 
 run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
-                            log_path, run_id, repo_root) {
+                            log_path, run_id, repo_root, refresh_id = NULL) {
 
   REPO_ROOT <- repo_root   # the moved handoff paths are written against REPO_ROOT
 
@@ -68,13 +74,23 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
                 all_ok, ord_ok))
     return(list(section   = section,
                 status    = if (all_ok && ord_ok) "ok" else "error",
-                failed_at = NA, phase = "dry_run", n_warnings = 0L))
+                failed_at = NA, phase = "dry_run", n_warnings = 0L,
+                empty_outputs = character(0)))
   }
 
   # --- Live run: fresh process per script, JSONL run log, fail-fast ----------
   dir.create(dirname(log_path), showWarnings = FALSE, recursive = TRUE)
 
+  # Schema/refresh stamping is centralized here so every record is consistent and
+  # the call sites stay clean (they build records WITHOUT schema_version):
+  #   refresh_id NULL -> schema_version = 1L only         (v1, single-section)
+  #   refresh_id set  -> schema_version = 2L + refresh_id  (v2, cross-section)
+  # The v1 byte shape is unchanged: schema_version is prepended in the same place
+  # and key order as before.
+  schema_ver <- if (is.null(refresh_id)) 1L else 2L
   append_record <- function(rec) {
+    rec  <- if (is.null(refresh_id)) c(list(schema_version = schema_ver), rec)
+            else      c(list(schema_version = schema_ver, refresh_id = refresh_id), rec)
     line <- jsonlite::toJSON(rec, auto_unbox = TRUE, null = "null")
     cat(line, "\n", file = log_path, sep = "", append = TRUE)
   }
@@ -82,9 +98,12 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
   cat(sprintf("=== LIVE RUN: section '%s' (run_id=%s) ===\n", section, run_id))
   cat(sprintf("    cwd: %s\n    log: %s\n\n", cwd_abs, log_path))
 
-  failed         <- FALSE
-  failed_at      <- NA_character_      # contract: which script errored
-  total_warnings <- 0L                 # contract: warnings across all scripts
+  failed                <- FALSE
+  failed_at             <- NA_character_   # contract: which script errored
+  total_warnings        <- 0L              # contract: warnings across all scripts
+  any_empty             <- FALSE           # contract: any expected output empty?
+  section_empty_outputs <- character(0)    # cwd-relative empty paths (report)
+  section_empty_set     <- character(0)    # normalized-absolute (handoff guard)
   for (i in seq_along(scripts)) {
     script_rel <- scripts[i]
     script_abs <- file.path(cwd_abs, script_rel)
@@ -175,6 +194,30 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
     error_line <- out$error_line; error_call <- out$error_call
     stderr_tail <- out$stderr_tail
     total_warnings <- total_warnings + length(warns)   # ADDED: contract accounting
+
+    # Expected-outputs guard (C2): after a NON-error script, assert each declared
+    # output exists AND is non-empty. Any missing/empty -> ok_empty_output (the
+    # chain still CONTINUES, per the surface-and-continue ruling); the handoff
+    # below refuses to publish the empty file. Absent declaration -> no check.
+    empties_here <- character(0)
+    if (status != "error") {
+      decl <- sec$expected_outputs[[script_rel]]
+      if (!is.null(decl)) {
+        for (p in unlist(decl)) {
+          ap <- file.path(cwd_abs, p)
+          if (!file.exists(ap) || file.size(ap) == 0) empties_here <- c(empties_here, p)
+        }
+        if (length(empties_here)) {
+          status                <- "ok_empty_output"
+          any_empty             <- TRUE
+          section_empty_outputs <- c(section_empty_outputs, empties_here)
+          section_empty_set     <- c(section_empty_set,
+                                     normalizePath(file.path(cwd_abs, empties_here),
+                                                   mustWork = FALSE))
+        }
+      }
+    }
+
     duration_secs <- round(as.numeric(difftime(Sys.time(), t0, units = "secs")), 2)
 
     # finally-equivalent: build + persist the record no matter what, so it
@@ -182,7 +225,6 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
     # warnings is I()-wrapped so it ALWAYS serializes as a JSON array (a length-1
     # vector would otherwise auto_unbox to a bare string).
     rec <- list(
-      schema_version = 1L,
       run_id        = run_id,
       section       = section,
       script        = script_rel,
@@ -207,6 +249,9 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
       failed    <- TRUE
       failed_at <- script_rel                          # ADDED: contract accounting
       break
+    } else if (status == "ok_empty_output") {
+      cat(sprintf("ok! EMPTY OUTPUT [%s] (%.1fs)  -- flagged, chain continues, NOT published\n",
+                  paste(empties_here, collapse = ", "), duration_secs))
     } else if (status == "ok_with_warnings") {
       cat(sprintf("ok* (%d warning%s) (%.1fs)\n",
                   length(warns), if (length(warns) == 1L) "" else "s", duration_secs))
@@ -218,7 +263,8 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
   if (failed) {
     return(list(section = section, status = "error",
                 failed_at = failed_at, phase = "scripts",
-                n_warnings = total_warnings))
+                n_warnings = total_warnings,
+                empty_outputs = section_empty_outputs))
   }
   cat(sprintf("\nAll %d scripts completed ok.\n", length(scripts)))
 
@@ -241,11 +287,34 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
     cat("\n=== HANDOFF: publish output/ -> website/public ===\n")
     hf_failed <- FALSE
 
-    # Generic copy: ensure dest dir, copy, log the record. Returns TRUE on success.
+    # Generic copy with the PUBLISH-BOUNDARY zero-byte guard (C2). A source that
+    # is zero-byte (or a declared output the expected-outputs guard already
+    # flagged) is NOT published: it logs handoff_skip_empty and returns TRUE so
+    # the handoff continues (surface-and-continue; the prior good published file
+    # stays in place, untouched). A MISSING source that was NOT flagged is still a
+    # hard error, exactly as before. Records are built WITHOUT schema_version
+    # (append_record stamps it).
     copy_one <- function(from, to) {
+      exists  <- file.exists(from)
+      zero    <- exists && file.size(from) == 0
+      flagged <- normalizePath(from, mustWork = FALSE) %in% section_empty_set
+      if (zero || (flagged && !exists)) {
+        append_record(list(run_id = run_id, section = section,
+                           action = "handoff_skip_empty", from = from, to = to,
+                           status = "skipped_empty"))
+        cat(sprintf("  [skip-empty] %s  (zero-byte; NOT published)\n", basename(from)))
+        return(TRUE)
+      }
+      if (!exists) {
+        append_record(list(run_id = run_id, section = section,
+                           action = "handoff_copy", from = from, to = to,
+                           status = "error"))
+        cat(sprintf("  [error] %s  (source missing)\n", basename(from)))
+        return(FALSE)
+      }
       dir.create(dirname(to), showWarnings = FALSE, recursive = TRUE)
-      ok <- file.exists(from) && file.copy(from, to, overwrite = TRUE)
-      append_record(list(schema_version = 1L, run_id = run_id, section = section,
+      ok <- file.copy(from, to, overwrite = TRUE)
+      append_record(list(run_id = run_id, section = section,
                          action = "handoff_copy", from = from, to = to,
                          status = if (ok) "ok" else "error"))
       cat(sprintf("  [%s] %s -> %s\n", if (ok) "ok" else "error",
@@ -294,26 +363,19 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
       dest_dir <- file.path(REPO_ROOT, hf$dest_dir)
       dir.create(dest_dir, showWarnings = FALSE, recursive = TRUE)
 
+      # Per-year geojson copies route through copy_one so the zero-byte publish
+      # guard applies here too — this is the exact path that produced the original
+      # empty-file incident. copy_one logs handoff_copy / handoff_skip_empty.
       for (yr in years) {
         fname <- gsub("\\{year\\}", as.character(yr), hf$geojson_pattern)
         from  <- file.path(cwd_abs, hf$geojson_src_dir, fname)
         to    <- file.path(dest_dir, fname)
-        ok    <- file.exists(from) && file.copy(from, to, overwrite = TRUE)
-        st    <- if (ok) "ok" else "error"
-        if (!ok) hf_failed <- TRUE
-        append_record(list(schema_version = 1L, run_id = run_id, section = section,
-                           action = "handoff_copy", from = from, to = to, status = st))
-        cat(sprintf("  [%s] %s -> public\n", st, fname))
+        if (!copy_one(from, to)) hf_failed <- TRUE
       }
 
-      # Publish the manifest itself.
+      # Publish the manifest itself (also through copy_one's guard).
       man_to <- file.path(REPO_ROOT, hf$manifest_dest)
-      ok <- file.copy(manifest_src, man_to, overwrite = TRUE)
-      st <- if (ok) "ok" else "error"
-      if (!ok) hf_failed <- TRUE
-      append_record(list(schema_version = 1L, run_id = run_id, section = section,
-                         action = "handoff_copy", from = manifest_src, to = man_to, status = st))
-      cat(sprintf("  [%s] manifest.json -> public\n", st))
+      if (!copy_one(manifest_src, man_to)) hf_failed <- TRUE
       cat(sprintf("Handoff published %d year(s) + manifest to public.\n", length(years)))
     }
 
@@ -321,12 +383,15 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
       cat("\nHANDOFF FAILED — a copy did not complete (see records above).\n")
       return(list(section = section, status = "error",
                   failed_at = NA, phase = "handoff",
-                  n_warnings = total_warnings))
+                  n_warnings = total_warnings,
+                  empty_outputs = section_empty_outputs))
     }
     cat("Handoff complete.\n")
   }
 
   cat(sprintf("\nDone. Log: %s\n", log_path))
-  return(list(section = section, status = "ok",
-              failed_at = NA, phase = phase, n_warnings = total_warnings))
+  return(list(section = section,
+              status = if (any_empty) "ok_empty_output" else "ok",
+              failed_at = NA, phase = phase, n_warnings = total_warnings,
+              empty_outputs = section_empty_outputs))
 }

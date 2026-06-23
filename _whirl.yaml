@@ -43,6 +43,23 @@ sections:
       - before: scripts/production/08d_hist_aggregate.R
         after:  scripts/production/07_layer2_aggregates.R
 
+    # Expected outputs (data-driven; checked by the expected-outputs guard in
+    # _run_engine.R). Map each producing script to the cwd-relative outputs it
+    # must leave NON-EMPTY. A missing/zero-byte declared output flags that script
+    # ok_empty_output (the chain continues) and the handoff refuses to publish it.
+    # The handoff's own zero-byte check backstops EVERY published file regardless;
+    # this map is the earlier, script-level signal for the key products. (08e
+    # builds 2012-2025; the two endpoints below are a representative guard — the
+    # handoff size check covers the in-between years.)
+    expected_outputs:
+      scripts/production/07_layer2_aggregates.R:
+        - output/neighbourhood_aggregates_2026.csv
+      scripts/production/08b_name_fallback_rescue.R:
+        - output/neighbourhoods_2026_recovered.geojson
+      scripts/production/08e_hist_build_geojson.R:
+        - output/neighbourhoods_2012_recovered.geojson
+        - output/neighbourhoods_2025_recovered.geojson
+
     # --- Handoff: publish output/ -> website/public after ALL scripts succeed ---
     # The runner is now the SOLE writer of website/public. 08e/08b write the
     # per-year GeoJSONs to output/ (uniform neighbourhoods_<YYYY>_recovered.geojson
