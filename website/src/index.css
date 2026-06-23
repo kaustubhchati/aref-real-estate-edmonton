@@ -69,6 +69,21 @@
   --radius-md: 6px;
   --radius-lg: 10px;
 
+  /* ---- Apple "gel" chrome — ONE source of truth -------------------------
+     The skeuomorphic recipe behind every glossy control: sidebar switches,
+     dropdowns, map popups, zoom control, legend frame, search well, info/scale.
+     Tune here and all gel chrome follows (no second recipe anywhere).
+       convex  = var(--gel-grad) + var(--gel-bevel) + var(--gel-lift)
+       concave = var(--gel-fill) + var(--gel-inset) */
+  --gel-fill:       #f1eee8;                                            /* base under the gradient */
+  --gel-grad:       linear-gradient(180deg, #f8f6f2 0%, #edeae4 100%);  /* convex gloss split */
+  --gel-grad-gloss: linear-gradient(180deg, #ffffff 0%, #f1ede5 100%);  /* glossier — popup/hover */
+  --gel-bevel:      0 1px 0 rgba(255,255,255,0.9) inset, 0 -1px 0 rgba(0,0,0,0.06) inset; /* hairline inner bevel */
+  --gel-lift:       0 1px 2px rgba(0,0,0,0.10);                         /* subtle outer drop shadow */
+  --gel-lift-float: 0 6px 18px rgba(0,0,0,0.16), 0 2px 5px rgba(0,0,0,0.08); /* floated callout (popup) */
+  --gel-inset:      inset 0 2px 3px rgba(0,0,0,0.10), inset 0 1px 0 rgba(0,0,0,0.05); /* concave recessed well */
+  --gel-border:     1px solid rgba(0,0,0,0.14);
+
   font: 16px/1.5 var(--font-sans);
   color: var(--text);
   background: var(--bg);
@@ -464,15 +479,13 @@ p  { margin: 0 0 0.75rem; }
   background:transparent; border:0; border-radius:var(--radius-sm);
   cursor:pointer; transition:background 120ms,color 120ms; }
 .opt-toggle-btn:hover:not(.active) { background:var(--bg); color:var(--text); }
-.opt-toggle-btn.active { background:var(--bg); color:var(--accent-dark);
-  font-weight:600; box-shadow:var(--shadow-sm); }
+.opt-toggle-btn.active { background:var(--gel-grad); color:var(--accent-dark);
+  font-weight:600; box-shadow:var(--gel-bevel), var(--gel-lift); }
 
 /* Pattern A — gel treatment for a wrapped OptionToggle (the city switch):
-   darker track + a raised, glossy active pill. */
+   darker track only. The raised glossy active pill now comes from the shared
+   gel tokens on .opt-toggle-btn.active above — ONE recipe, no duplicate here. */
 .opt-toggle-gel .opt-toggle-buttons { background:#dedad4; }
-.opt-toggle-gel .opt-toggle-btn.active {
-  box-shadow:0 1px 0 rgba(255,255,255,0.9) inset, 0 -1px 0 rgba(0,0,0,0.06) inset, 0 1px 2px rgba(0,0,0,0.10);
-}
 
 /* ---- Dwelling Units legend crossfade ------------------------------------ */
 /* Keyed remount on metric/sub switch re-runs this fade, synced to the 500ms
@@ -504,12 +517,12 @@ p  { margin: 0 0 0.75rem; }
 .sb-select {
   width:100%; padding:7px 28px 7px 10px; font-size:0.82rem;
   font-family:inherit; color:var(--text);
-  background-color:#f1eee8;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"), linear-gradient(180deg, #f8f6f2 0%, #edeae4 100%);
+  background-color:var(--gel-fill);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"), var(--gel-grad);
   background-repeat:no-repeat, no-repeat;
   background-position:right 10px center, left top;
-  box-shadow:0 1px 0 rgba(255,255,255,0.9) inset, 0 -1px 0 rgba(0,0,0,0.06) inset, 0 1px 2px rgba(0,0,0,0.10);
-  border:1px solid rgba(0,0,0,0.14); border-radius:var(--radius-md);
+  box-shadow:var(--gel-bevel), var(--gel-lift);
+  border:var(--gel-border); border-radius:var(--radius-md);
   appearance:none; cursor:pointer; }
 .sb-select:focus { outline:none; border-color:var(--accent);
   box-shadow:0 0 0 3px var(--green-100); }
@@ -613,12 +626,14 @@ p  { margin: 0 0 0.75rem; }
   font-weight: 600;
   margin: 0 0 8px;
 }
+/* Concave gel — a recessed well (the one inset/input variant of the recipe). */
 .search-input { width:100%; padding:7px 10px; font-size:0.82rem;
-  font-family:inherit; background:var(--bg-soft);
-  border:1px solid var(--border); border-radius:var(--radius-md);
+  font-family:inherit; color:var(--text); background:var(--gel-fill);
+  border:var(--gel-border); border-radius:var(--radius-md);
+  box-shadow:var(--gel-inset);
   transition:border-color 150ms,box-shadow 150ms; }
 .search-input:focus { outline:none; border-color:var(--accent);
-  background:var(--bg); box-shadow:0 0 0 3px var(--green-100); }
+  box-shadow:var(--gel-inset), 0 0 0 3px var(--green-100); }
 .search-hint {
   font-size: 10.5px;
   color: var(--text-muted);
@@ -628,10 +643,15 @@ p  { margin: 0 0 0.75rem; }
 /* ---- Legend (rendered inside .sb-section, no panel border) --------------- */
 
 .legend {
-  /* No background/border — the sidebar already provides the surface; the
-     legend is just one of several stacked sections. */
+  /* Subtle convex gel FRAME on the panel (the data swatches/gradient inside keep
+     their own colours — see .legend-sw, which is intentionally NOT glossed). */
   font-size: 11.5px;
   color: var(--text);
+  background: var(--gel-grad);
+  border: var(--gel-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--gel-bevel), var(--gel-lift);
+  padding: 10px;
 }
 
 .legend-title {
@@ -696,8 +716,12 @@ p  { margin: 0 0 0.75rem; }
 .maplibregl-popup { z-index: 20; }
 .maplibregl-popup-content { padding:0.75rem 0.875rem;
   font-size:0.8rem; border-radius:var(--radius-lg);
-  min-width:220px; max-width:270px; box-shadow:var(--shadow-lg);
-  border:1px solid var(--border-soft); font-family:var(--font-sans); }
+  min-width:220px; max-width:270px;
+  /* Aqua gel callout: glossy white→cream, floated, faint top sheen. The pointer
+     triangle (.maplibregl-popup-tip) stays default white and blends with the top. */
+  background:var(--gel-grad-gloss);
+  box-shadow:var(--gel-lift-float), var(--gel-bevel);
+  border:var(--gel-border); font-family:var(--font-sans); }
 
 /* Tier 2 hover popup — slimmer than the Tier 3 pinned popup. */
 .maplibregl-popup.popup-hover .maplibregl-popup-content {
@@ -813,16 +837,18 @@ p  { margin: 0 0 0.75rem; }
 /* Zoom controls */
 .maplibregl-ctrl-group {
   border-radius: var(--radius-md) !important;
-  box-shadow: var(--shadow-md) !important;
-  border: 1px solid var(--border-soft) !important;
+  box-shadow: var(--gel-lift) !important;
+  border: var(--gel-border) !important;
   overflow: hidden;
 }
 .maplibregl-ctrl-group button {
   width: 30px !important;
   height: 30px !important;
+  background: var(--gel-grad) !important;
+  box-shadow: var(--gel-bevel);
 }
 .maplibregl-ctrl-group button:hover {
-  background-color: var(--bg-soft) !important;
+  background: var(--gel-grad-gloss) !important;
 }
 
 /* Attribution — compact and unobtrusive */
@@ -834,14 +860,21 @@ p  { margin: 0 0 0.75rem; }
   padding: 2px 6px !important;
 }
 .maplibregl-ctrl-attrib a { color: var(--text-muted) !important; }
+/* Compact attribution "i" button — minor gel for consistency (keep its default
+   "i" icon background-image; only add the bevel + lift). */
+.maplibregl-ctrl-attrib-button {
+  box-shadow: var(--gel-bevel), var(--gel-lift);
+  border-radius: 50% !important;
+}
 
-/* Scale bar */
+/* Scale bar — minor convex consistency (subtle lift; stays legible). */
 .maplibregl-ctrl-scale {
   background: rgba(255,255,255,0.72) !important;
   backdrop-filter: blur(4px);
   border-color: var(--slate-500) !important;
   font-size: 10px !important;
   border-radius: 0 0 var(--radius-sm) var(--radius-sm) !important;
+  box-shadow: var(--gel-lift);
 }
 
 /* ---- Report Card --------------------------------------------------------- */
