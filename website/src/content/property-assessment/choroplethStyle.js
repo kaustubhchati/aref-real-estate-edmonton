@@ -14,7 +14,7 @@
 // =============================================================================
 
 import { fmtCurrency, fmtNumber, fmtPct, fmtYear, fmtArea } from "../../utils/format.js";
-import { polyOutline, rampFloor, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
+import { polyOutline, rampFloor, RAMP_FLOOR, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
 import { paintTransition, DUR_BASE } from "../../components/motion.js";
 
 // ---- Map view defaults (Edmonton, matches 09_build_choropleth.html) --------
@@ -187,20 +187,33 @@ function quantile(sorted, p) {
   return lo === hi ? sorted[lo] : sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
 }
 
-// ---- Year-over-year diverging scale ----------------------------------------
-// Fixed blue→white→red diverging ramp (ColorBrewer RdBu reversed) for
-// yoy_pct_change (a signed %, unlike the sequential $ metrics). NOT per-year and
-// NOT data-derived: a stable scale centred on 0% so a colour means the same
-// change in every year. Values are already on the 0-100 % scale (e.g. -5 = down
-// 5%), matching fmtPct. blue = decline, warm = growth — accentuated arms (navy
-// decline, solid orange growth, strong red at the top) so the diverging signal
-// reads clearly against the basemap.
+// ---- Year-over-year DIVERGING scale ----------------------------------------
+// Fixed blue → warm-bone → red diverging ramp for yoy_pct_change (a signed %,
+// unlike the sequential $ metrics). NOT per-year and NOT data-derived: a stable
+// scale centred on 0% so a colour means the same change in every year. Values are
+// already on the 0-100 % scale (e.g. -5 = down 5%), matching fmtPct.
+//   blue  = decline   (deep → mid blue, negative arm)
+//   0%    = warm-bone neutral — low-chroma, separates from the #f7f1df basemap
+//           WITHOUT going whiter (if it still blends, go greyer/darker per the
+//           FRONTEND_METHODOLOGY §2 STOP note — never whiter).
+//   warm  = growth, REUSING the sequential ramp's upper warm stops so YoY growth
+//           reads the SAME OrRd red (#cc0000) as the median/mean sequential high.
+//           No brown, no Ferrari #7a0000/#8a1208 — #cc0000 is the canonical high.
+// The consts below are the live-nudge handles (per task: expose the neutral +
+// positive-arm stops by name).
+const RAMP_YOY_NEUTRAL = "#f0e8da";  // warm-bone diverging midpoint (0%)
+const YOY_POS_GOLD   = RAMP_FLOOR;   // #fbe3a0 — the standard lifted-low gold (= RAMP_SEQ +5 warm)
+const YOY_POS_ORANGE = "#ef9a4a";    // orange growth mid
+const YOY_POS_RED    = "#cc0000";    // canonical OrRd high (matches RAMP_ASSESSED / RAMP_SEQ)
+const YOY_NEG_DEEP   = "#2c5985";    // deep blue, decline endpoint
+const YOY_NEG_MID    = "#7fa8c9";    // mid blue
 const YOY_STOPS = [
-  { v: -15, c: "#1040a0", label: "-15%" },
-  { v:  -5, c: "#4393c3", label: "-5%"  },
-  { v:   0, c: "#f5f5f5", label: "0%"   },
-  { v:   5, c: "#f4782a", label: "+5%"  },
-  { v:  15, c: "#b83020", label: "+15%" },
+  { v: -15, c: YOY_NEG_DEEP,     label: "-15%" },
+  { v:  -5, c: YOY_NEG_MID,      label: "-5%"  },
+  { v:   0, c: RAMP_YOY_NEUTRAL, label: "0%"   },
+  { v:   5, c: YOY_POS_GOLD,     label: "+5%"  },
+  { v:  10, c: YOY_POS_ORANGE,   label: "+10%" },
+  { v:  15, c: YOY_POS_RED,      label: "+15%" },
 ];
 export { YOY_STOPS };
 

@@ -8,7 +8,9 @@
 >
 > **Updated 2026-06-23 (same day):** added §2 principle 7 — the standard choropleth ramp
 > lock (OrRd with a soft-yellow lifted low end) — recorded alongside the commit that aligned
-> Property Assessment's assessed-value `$` metrics to that low end.
+> Property Assessment's assessed-value `$` metrics to that low end. Then extended principle 7
+> with the YoY diverging redesign (blue decline / warm-bone neutral `#f0e8da` / OrRd-red
+> growth) and the canonical OrRd high `#cc0000` (Ferrari `#7a0000`/`#8a1208` retired).
 >
 > **What this is:** the single methodology reference for the `website/` frontend. Read it
 > before adding a section or refactoring shared code. It does not replace `CLAUDE.md`
@@ -152,11 +154,17 @@ suggestions** — follow them in every new section and every refactor.
    (`businessCensusStyle.js` `RAMP_ORRD`) already matches it; Property Assessment's
    assessed-value `$` metrics (`median_assessvalue`, `avall_public`) were aligned to the same
    low end (`choroplethStyle.js` `RAMP_ASSESSED:55`, via `rampFloor`). The low-stop lift
-   fixes cream-on-cream blending against the `#f7f1df` basemap. **Exceptions (locked
-   separately): YoY = diverging RdBu** (needs a neutral centre); **median year-built = its
-   own warm reversed ramp**; **lot size = its own amber-sienna ramp** (`RAMP_AREA`, area not
-   `$`, deliberately distinct hue). Only the low end was ever the problem — median-and-up is
-   not touched on these ramps.
+   fixes cream-on-cream blending against the `#f7f1df` basemap. **The canonical OrRd high is
+   `#cc0000`** — the older Ferrari deep-reds `#7a0000` / `#8a1208` are retired (they were
+   never live in code; do not reintroduce them). **Exceptions (locked separately): YoY stays
+   DIVERGING** — blue decline → warm-bone neutral (`RAMP_YOY_NEUTRAL` `#f0e8da`, low-chroma so
+   0% separates from the `#f7f1df` basemap without going whiter) → OrRd-red growth, with the
+   positive arm reusing the sequential ramp's upper warm stops (`#fbe3a0` / `#ef9a4a` /
+   `#cc0000`) so YoY growth reads the same red as the sequential high (`choroplethStyle.js`
+   `YOY_STOPS`). **Median year-built = its own warm reversed ramp**; **lot size = its own
+   amber-sienna ramp** (`RAMP_AREA`, area not `$`, deliberately distinct hue). For the
+   sequential ramps, only the low end was ever the problem — median-and-up is not touched
+   there.
 
 ---
 
