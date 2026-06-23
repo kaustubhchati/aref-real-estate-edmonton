@@ -18,6 +18,8 @@
 // NOT `polygon_state` — the expressions below read `census_state`.
 // =========================================================
 
+import { polyOutline, rampFloor, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
+
 export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 
 export const MAP_VIEW = {
@@ -37,7 +39,7 @@ export const STATE_STYLE = {
     label:        "Business census data",
     fillColor:    null,
     pattern:      null,
-    outlineColor: "#ffffff",
+    outlineColor: polyOutline("#ffffff"),
     outlineWidth: 0.4,
     outlineDash:  null,
   },
@@ -74,7 +76,7 @@ export const METRICS = [
 // numeric stop value. Empty label → Legend renders only the formatted
 // number. `key` still drives the buildStops scale lookup.
 const RAMP_ORRD = [
-  { key: "min",    c: "#f5f0e8", label: "" },
+  { key: "min",    c: rampFloor("#f5f0e8"), label: "" },
   { key: "q25",    c: "#f5c4a0", label: "" },
   { key: "median", c: "#f07840", label: "" },
   { key: "q75",    c: "#e03818", label: "" },
@@ -190,10 +192,7 @@ export function bcensusLayers(stops, metricKey = "n_businesses_2025") {
       filter: ["==", ["get", "census_state"], "data"],
       paint: {
         "line-color": STATE_STYLE.data.outlineColor,
-        "line-width": [
-          "interpolate", ["linear"], ["zoom"],
-          7, 0.2, 10, 0.4, 13, 0.8,
-        ],
+        "line-width": POLY_OUTLINE_WIDTH,
       },
     },
     // 3. Dotted outline — no_data (same treatment as permit no_data)

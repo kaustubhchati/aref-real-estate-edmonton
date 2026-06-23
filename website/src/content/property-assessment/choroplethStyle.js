@@ -14,6 +14,7 @@
 // =============================================================================
 
 import { fmtCurrency, fmtNumber, fmtPct, fmtYear, fmtArea } from "../../utils/format.js";
+import { polyOutline, rampFloor, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
 
 // ---- Map view defaults (Edmonton, matches 09_build_choropleth.html) --------
 // (Data URL no longer lives here — single source of truth is dataSources.js,
@@ -43,7 +44,7 @@ export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 // high end. This ramp keeps a single warm hue family climbing
 // in saturation so "high value" reads as vivid red, not brown.
 const RAMP_VALUE = [
-  { key: "min",    c: "#f5f0e8", label: "min"    },
+  { key: "min",    c: rampFloor("#f5f0e8"), label: "min"    },
   { key: "q25",    c: "#f5c4a0", label: "Q25"    },
   { key: "median", c: "#f07840", label: "median" },
   { key: "q75",    c: "#e03818", label: "Q75"    },
@@ -198,7 +199,7 @@ export const STATE_STYLE = {
     label:        "Aggregated (N ≥ 100)",
     fillColor:    null,            // painted from the ramp, not a flat colour
     pattern:      null,
-    outlineColor: "#ffffff",
+    outlineColor: polyOutline("#ffffff"),
     outlineWidth: 0.4,
     outlineDash:  null,
   },
@@ -493,17 +494,9 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
         ],
         // Thin at city-wide zoom, fuller as you zoom into a neighbourhood, so
         // outlines don't visually crowd the choropleth when zoomed out.
-        "line-width": [
-          "interpolate", ["linear"], ["zoom"],
-          8,  ["match", ["get", "polygon_state"],
-                "non_residential", 0.3,
-                "manufactured_home_community", 0.4,
-                0.2],
-          13, ["match", ["get", "polygon_state"],
-                "non_residential", 1.0,
-                "manufactured_home_community", 1.2,
-                0.8],
-        ],
+        // Shared ~0.5px→1px discriminating stroke (choroplethTheme); replaces
+        // the old near-invisible 0.2px aggregated outline that blanked on cream.
+        "line-width": POLY_OUTLINE_WIDTH,
       },
     },
     // 4. Dashed outline for suppressed_low_n.

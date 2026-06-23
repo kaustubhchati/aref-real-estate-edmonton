@@ -18,6 +18,7 @@
 // =========================================================
 
 import { fmtCurrency, fmtPct } from "../../utils/format.js";
+import { polyOutline, rampFloor, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
 
 export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 
@@ -38,7 +39,7 @@ export const STATE_STYLE = {
     label:        "Aggregated (N ≥ 10 permits)",
     fillColor:    null,
     pattern:      null,
-    outlineColor: "#ffffff",
+    outlineColor: polyOutline("#ffffff"),
     outlineWidth: 0.4,
     outlineDash:  null,
   },
@@ -112,7 +113,7 @@ export function resolveSub(metricKey, subKey) {
 // ---- Colour ramps -----------------------------------------------------
 // Sequential: cream → Ferrari red (shared $-value family, matches assessment).
 const RAMP_SEQ = [
-  { key: "min",    c: "#f5f0e8", label: "min"    },
+  { key: "min",    c: rampFloor("#f5f0e8"), label: "min"    },
   { key: "q25",    c: "#f5c4a0", label: "Q25"    },
   { key: "median", c: "#f07840", label: "median" },
   { key: "q75",    c: "#e03818", label: "Q75"    },
@@ -302,10 +303,7 @@ export function choroplethLayers(stops, sub) {
       filter: ["==", ["get", "polygon_state"], "aggregated"],
       paint: {
         "line-color": STATE_STYLE.aggregated.outlineColor,
-        "line-width": [
-          "interpolate", ["linear"], ["zoom"],
-          7, 0.2, 10, 0.4, 13, 0.8,
-        ],
+        "line-width": POLY_OUTLINE_WIDTH,
       },
     },
     // 3. Dashed outline — suppressed_low_n
