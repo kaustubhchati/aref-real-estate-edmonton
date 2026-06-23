@@ -245,29 +245,53 @@ export function choroplethFillColor(sub, stops) {
     : sequentialFill(sub.field, stops);
 }
 
-// ---- Layer stack — pnbhd-* ids (unchanged; internal) ------------------
-// Source-agnostic (source filled in by MapView via `source` prop).
+// Per-feature fill opacity (aggregated bright, non-aggregated glass; hover/pin
+// bump). Exported because the two-layer crossfade (PermitChoroplethMap) toggles
+// a fill layer between this expression (visible) and 0 (hidden).
+export const FILL_OPACITY_EXPR = [
+  "case",
+  ["==", ["get", "polygon_state"], "aggregated"],
+    [
+      "case",
+      ["boolean", ["feature-state", "hover"],   false], 0.88,
+      ["boolean", ["feature-state", "pinned"],  false], 0.88,
+      0.74,
+    ],
+  ["boolean", ["feature-state", "hover"],  false], 0.15,
+  ["boolean", ["feature-state", "pinned"], false], 0.15,
+  0.04,
+];
+
+// Two stacked fill layers (a/b) for the dissolve. The IDs the component drives.
+export const FILL_LAYER_IDS = ["pnbhd-fill-a", "pnbhd-fill-b"];
+
+// ---- Layer stack — pnbhd-* ids (unchanged source; a/b fills added) -----
+// Source-agnostic (source filled in by MapView via `source` prop). The two fill
+// layers are identical except their fill-color expression and starting opacity:
+// "a" starts visible (FILL_OPACITY_EXPR), "b" starts hidden (0). On a metric
+// switch the component paints the new colour onto the hidden layer and
+// crossfades opacity (see PermitChoroplethMap). 150ms transition = snappy hover;
+// the component bumps it to 500ms only for the duration of a switch.
 export function choroplethLayers(stops, sub) {
+  const fillColor = choroplethFillColor(sub, stops);
   return [
-    // 1. Fill — aggregated: ramp colour; non-aggregated: glass
+    // 1a. Fill A — starts visible
     {
-      id: "pnbhd-fill",
+      id: "pnbhd-fill-a",
       type: "fill",
       paint: {
-        "fill-color": choroplethFillColor(sub, stops),
-        "fill-opacity": [
-          "case",
-          ["==", ["get", "polygon_state"], "aggregated"],
-            [
-              "case",
-              ["boolean", ["feature-state", "hover"],   false], 0.88,
-              ["boolean", ["feature-state", "pinned"],  false], 0.88,
-              0.74,
-            ],
-          ["boolean", ["feature-state", "hover"],  false], 0.15,
-          ["boolean", ["feature-state", "pinned"], false], 0.15,
-          0.04,
-        ],
+        "fill-color": fillColor,
+        "fill-opacity": FILL_OPACITY_EXPR,
+        "fill-opacity-transition": { duration: 150, delay: 0 },
+      },
+    },
+    // 1b. Fill B — starts hidden (same colour; recoloured on first switch)
+    {
+      id: "pnbhd-fill-b",
+      type: "fill",
+      paint: {
+        "fill-color": fillColor,
+        "fill-opacity": 0,
         "fill-opacity-transition": { duration: 150, delay: 0 },
       },
     },

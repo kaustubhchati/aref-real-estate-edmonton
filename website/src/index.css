@@ -474,6 +474,12 @@ p  { margin: 0 0 0.75rem; }
   box-shadow:0 1px 0 rgba(255,255,255,0.9) inset, 0 -1px 0 rgba(0,0,0,0.06) inset, 0 1px 2px rgba(0,0,0,0.10);
 }
 
+/* ---- Dwelling Units legend crossfade ------------------------------------ */
+/* Keyed remount on metric/sub switch re-runs this fade, synced to the 500ms
+   fill crossfade so the sequential↔diverging legend swap dissolves, not snaps. */
+@keyframes du-legend-fade { from { opacity: 0; } to { opacity: 1; } }
+.du-legend-fade { animation: du-legend-fade 500ms ease-out; }
+
 /* ---- Sidebar dropdowns (Year, Metric — too many options for a toggle) ---- */
 .sb-select-field { margin: 0 0 8px; }
 .sb-select-field:last-child { margin-bottom: 0; }

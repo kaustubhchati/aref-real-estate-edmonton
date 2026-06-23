@@ -3,15 +3,21 @@
 //
 // The Dwelling Units choropleth route ("/activity/dwelling-units"). Mirrors
 // property-assessment/PropertyAssessmentMap.jsx for all map chrome (shared
-// MapView + custom basemap, the same fill/outline/highlight/label layer stack —
-// pnbhd-* ids, unchanged internal names), the five polygon states, the 900ms
-// hover popup, click-to-pin, cursor and feature-state.
+// MapView + custom basemap, the outline/highlight/label layer stack — pnbhd-*
+// ids), the polygon states, the 900ms hover popup, click-to-pin, cursor and
+// feature-state.
 //
-// Metric UI: three top-level metrics, each with a 2-option sub-switch that
-// resolves to one GeoJSON field (see DWELLING_METRICS in the style file). The
-// component stores {metricKey, subKey}; resolveSub() yields the active field,
-// label, formatter, and ramp. Toggling re-colours the map via setPaintProperty
-// (part 1 = correctness + structure; the crossfade/PA-switcher polish is part 2).
+// Metric UI (part 1): three top-level metrics, each with a 2-option sub-switch
+// that resolves to one GeoJSON field (DWELLING_METRICS in the style file).
+//
+// Part 2 polish:
+//  • The metric + sub controls use PA's city-switcher gel styling (.opt-toggle-gel).
+//  • Switching metric/sub is a TWO-LAYER OPACITY CROSSFADE, not a snap. Two fill
+//    layers (pnbhd-fill-a / -b) sit over the same source; on a switch the new
+//    colour is painted onto the HIDDEN layer, then opacity crossfades (hidden→1,
+//    active→0) over 500ms via MapLibre's GPU fill-opacity-transition — no source
+//    reload (all six fields already live on every feature), no JS rAF loop.
+//  • The legend fades in sync (~500ms). No headline count-up in this component.
 //
 // Data: /data/building-permits/permit-neighbourhoods/permit_neighbourhoods_<year>.geojson
 //   fields: display_name, district, Neighbourhood ID, polygon_state, n_permits,
@@ -39,14 +45,16 @@ import {
   choroplethFillColor,
   choroplethLayers,
   buildPopupHtml,
+  FILL_OPACITY_EXPR,
+  FILL_LAYER_IDS,
 } from "./permitChoroplethStyle.js";
 import { fmtNumber } from "../../utils/format.js";
 
-// The year list + default come from the published BP manifest (one source of
-// truth, refreshed by the pipeline), NOT a hardcoded array. Flat, section-scoped
-// shape { years, defaultYear } per the manifest-shape rule (CLAUDE.md §2). Loaded
-// once on mount; errors surface to the gate (no hardcoded fallback — it would
-// drift stale).
+// Crossfade timing. 500ms ease-out for the dissolve (MapLibre's built-in
+// transition easing); hover stays snappy at 150ms outside a switch.
+const FADE_MS = 500;
+const HOVER_MS = 150;
+
 async function loadPermitManifest() {
   const res = await fetch("/data/building-permits/manifest.json");
   if (!res.ok) {
@@ -56,7 +64,6 @@ async function loadPermitManifest() {
 }
 
 const SOURCE_ID = "pnbhd";
-const FILL_LAYER_ID = "pnbhd-fill";
 
 // One file per year at a stable path; year is the only thing that varies.
 function dataUrl(year) {
@@ -70,7 +77,6 @@ function findFeatureById(gj, id) {
   }
   return null;
 }
-// [[minLng,minLat],[maxLng,maxLat]] for fitBounds — walks nested coord arrays.
 function bboxOfGeom(geom) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   function walk(c) {
@@ -92,7 +98,6 @@ function flyToFeature(map, feat) {
 }
 
 export default function PermitChoroplethMap() {
-  // Year list + default come from the manifest (loaded on mount), never hardcoded.
   const [manifest, setManifest] = useState(null);
   const [manifestError, setManifestError] = useState(null);
   const [years, setYears] = useState([]);
@@ -105,18 +110,21 @@ export default function PermitChoroplethMap() {
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
   const [fetchError, setFetchError] = useState(null);
-  // Live hover stat panel (Pattern B): the neighbourhood's properties while the
-  // cursor is over it, null otherwise.
   const [hoveredFeature, setHoveredFeature] = useState(null);
 
-  // Resolve the active metric definition + sub-state (the field key everything
-  // paints/labels from). metricDef drives the sub-switch's options.
+  // Which fill layer is currently visible ("a" or "b"). Reset to "a" on every
+  // map (re)mount, since choroplethLayers always builds "a" visible / "b" hidden.
+  const [activeFill, setActiveFill] = useState("a");
+  const activeFillRef = useRef("a");
+  const fadeTimerRef = useRef(null);
+  // Tracks the last-painted selection so the paint effect can tell a metric/sub
+  // SWITCH (crossfade) from a stops-only refinement (gj settling — repaint live).
+  const prevSelRef = useRef(`${DEFAULT_METRIC}|${DEFAULT_SUB}`);
+
   const metricDef =
     DWELLING_METRICS.find((m) => m.key === metricKey) ?? DWELLING_METRICS[0];
   const activeSub = resolveSub(metricKey, subKey);
 
-  // Primary metric change resets the sub to that metric's first option (so the
-  // sub-switch never shows a sub that doesn't belong to the active metric).
   function chooseMetric(label) {
     const m = DWELLING_METRICS.find((d) => d.label === label);
     if (!m) return;
@@ -128,8 +136,6 @@ export default function PermitChoroplethMap() {
     if (s) setSubKey(s.key);
   }
 
-  // Load the manifest once on mount: populate the year list (newest-first) and
-  // seed the default selection in the same update (no loaded-but-no-year frame).
   useEffect(() => {
     let cancelled = false;
     loadPermitManifest()
@@ -143,19 +149,16 @@ export default function PermitChoroplethMap() {
     return () => { cancelled = true; };
   }, []);
 
-  // null until a year is chosen (manifest still loading) — gates the fetch below.
   const url = year != null ? dataUrl(year) : null;
 
   // Ramp stops for the active field (sequential or diverging per activeSub.ramp).
-  // Memoised so the Legend and repaint effect share a stable identity.
   const stops = useMemo(
     () => metricStops(gj, activeSub),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [gj, metricKey, subKey]
   );
 
-  // Popup handlers (installed once per map) read year + the active sub from refs
-  // so they always see the current selection without being re-registered.
+  // Refs so the once-installed map handlers read the live selection.
   const yearRef = useRef(year);
   useEffect(() => { yearRef.current = year; }, [year]);
   const setHoveredFeatureRef = useRef(setHoveredFeature);
@@ -165,14 +168,13 @@ export default function PermitChoroplethMap() {
   const gjRef = useRef(gj);
   useEffect(() => { gjRef.current = gj; }, [gj]);
 
-  // Reflect the current selection in the browser tab title; restore on unmount.
   useEffect(() => {
-    if (year == null) return undefined;   // manifest still loading
+    if (year == null) return undefined;
     document.title = `Dwelling Units · Edmonton ${year}`;
     return () => { document.title = "Open Data Centre"; };
   }, [year]);
 
-  // Fetch the year's GeoJSON. Resets on year change.
+  // Fetch the year's GeoJSON. Resets on year change (MapView remounts on url).
   useEffect(() => {
     if (!url) return undefined;
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -191,25 +193,73 @@ export default function PermitChoroplethMap() {
     return () => { cancelled = true; };
   }, [url]);
 
-  // Repaint the fill when the metric / sub / stops change, WITHOUT remounting.
+  // Reset which fill layer is active whenever a fresh map mounts (year change):
+  // choroplethLayers always builds "a" visible / "b" hidden.
+  function handleMapLoad(m) {
+    activeFillRef.current = "a";
+    setActiveFill("a");
+    prevSelRef.current = `${metricKey}|${subKey}`;
+    setMap(m);
+  }
+
+  // Single paint effect. Two cases, told apart by whether the selection changed:
+  //  • SWITCH (metric/sub changed): paint the new colour on the HIDDEN layer,
+  //    then crossfade opacity over 500ms (hidden→visible, active→0), swap active.
+  //    Pure paint — never setData/re-fetch (all fields already on every feature).
+  //  • REFINE (same selection, stops settled after gj load): repaint the active
+  //    layer in place (no fade).
   useEffect(() => {
     if (!map) return;
-    try {
-      if (map.getLayer(FILL_LAYER_ID)) {
-        map.setPaintProperty(
-          FILL_LAYER_ID,
-          "fill-color",
-          choroplethFillColor(activeSub, stops)
-        );
-      }
-    } catch {
-      /* map removed mid-teardown; next mount repaints via onLoad */
+    const sel = `${metricKey}|${subKey}`;
+    const isSwitch = sel !== prevSelRef.current;
+    prevSelRef.current = sel;
+
+    const cur = activeFillRef.current;
+    const activeId = `pnbhd-fill-${cur}`;
+    const newColor = choroplethFillColor(activeSub, stops);
+
+    if (!isSwitch) {
+      try {
+        if (map.getLayer(activeId)) {
+          map.setPaintProperty(activeId, "fill-color", newColor);
+        }
+      } catch { /* map mid-teardown */ }
+      return;
     }
+
+    const hidden = cur === "a" ? "b" : "a";
+    const hiddenId = `pnbhd-fill-${hidden}`;
+    try {
+      if (!map.getLayer(hiddenId) || !map.getLayer(activeId)) return;
+      // 1. New colour on the hidden layer (still at opacity 0).
+      map.setPaintProperty(hiddenId, "fill-color", newColor);
+      // 2. Crossfade both layers over 500ms (GPU transition; no JS animation).
+      map.setPaintProperty(hiddenId, "fill-opacity-transition", { duration: FADE_MS, delay: 0 });
+      map.setPaintProperty(activeId, "fill-opacity-transition", { duration: FADE_MS, delay: 0 });
+      map.setPaintProperty(hiddenId, "fill-opacity", FILL_OPACITY_EXPR); // 0 → visible
+      map.setPaintProperty(activeId, "fill-opacity", 0);                 // visible → 0
+      // 3. Swap which layer is active.
+      activeFillRef.current = hidden;
+      setActiveFill(hidden);
+      // 4. After the fade, restore snappy hover transition on the now-active layer.
+      clearTimeout(fadeTimerRef.current);
+      fadeTimerRef.current = setTimeout(() => {
+        try {
+          if (map.getLayer(hiddenId)) {
+            map.setPaintProperty(hiddenId, "fill-opacity-transition", { duration: HOVER_MS, delay: 0 });
+          }
+        } catch { /* map gone */ }
+      }, FADE_MS + 20);
+    } catch { /* map mid-teardown; next mount repaints via choroplethLayers */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, metricKey, subKey, stops]);
 
-  // Hover (900ms popup dwell + 200ms sidebar) + click-to-pin interactions.
-  // Installed once per map; handlers read refs so they stay current.
+  // Clear any pending fade-reset timer on unmount.
+  useEffect(() => () => clearTimeout(fadeTimerRef.current), []);
+
+  // Hover + click-to-pin, installed once per map. Bound to BOTH fill layers so
+  // events fire whichever is on top mid-crossfade; the popup reads subRef (the
+  // ACTIVE sub) so its content is never the fading-out layer's metric.
   useEffect(() => {
     if (!map) return undefined;
 
@@ -315,21 +365,26 @@ export default function PermitChoroplethMap() {
     }
 
     function onMapClick(e) {
-      const hits = map.queryRenderedFeatures(e.point, { layers: [FILL_LAYER_ID] });
+      const hits = map.queryRenderedFeatures(e.point, { layers: FILL_LAYER_IDS });
       if (!hits.length) clearPinned();
     }
 
-    map.on("mousemove", FILL_LAYER_ID, onMove);
-    map.on("mouseleave", FILL_LAYER_ID, onLeave);
-    map.on("click", FILL_LAYER_ID, onFillClick);
-    map.on("dblclick", FILL_LAYER_ID, onDblClick);
+    // Bind the per-layer handlers to BOTH fill layers (a + b).
+    for (const id of FILL_LAYER_IDS) {
+      map.on("mousemove", id, onMove);
+      map.on("mouseleave", id, onLeave);
+      map.on("click", id, onFillClick);
+      map.on("dblclick", id, onDblClick);
+    }
     map.on("click", onMapClick);
 
     return () => {
-      map.off("mousemove", FILL_LAYER_ID, onMove);
-      map.off("mouseleave", FILL_LAYER_ID, onLeave);
-      map.off("click", FILL_LAYER_ID, onFillClick);
-      map.off("dblclick", FILL_LAYER_ID, onDblClick);
+      for (const id of FILL_LAYER_IDS) {
+        map.off("mousemove", id, onMove);
+        map.off("mouseleave", id, onLeave);
+        map.off("click", id, onFillClick);
+        map.off("dblclick", id, onDblClick);
+      }
       map.off("click", onMapClick);
       clearTimeout(hoverTimer);
       clearTimeout(sidebarTimer);
@@ -338,8 +393,6 @@ export default function PermitChoroplethMap() {
     };
   }, [map]);
 
-  // Gate on the manifest — no hardcoded fallback. (After all hooks so the
-  // short-circuits never change hook order.)
   if (manifestError) {
     return (
       <article className="content-map">
@@ -390,30 +443,40 @@ export default function PermitChoroplethMap() {
             </select>
           </div>
 
-          {/* Primary metric (3) + the active metric's sub-switch (2). */}
-          <OptionToggle
-            label="Metric"
-            options={DWELLING_METRICS.map((m) => m.label)}
-            value={metricDef.label}
-            onChange={chooseMetric}
-          />
-          <OptionToggle
-            label={metricDef.label}
-            options={metricDef.subs.map((s) => s.label)}
-            value={activeSub.label}
-            onChange={chooseSub}
-          />
+          {/* Primary metric (3) + the active metric's sub-switch (2), both in
+              PA's city-switcher gel style (.opt-toggle-gel). */}
+          <div className="opt-toggle-gel">
+            <OptionToggle
+              label="Metric"
+              options={DWELLING_METRICS.map((m) => m.label)}
+              value={metricDef.label}
+              onChange={chooseMetric}
+            />
+          </div>
+          <div className="opt-toggle-gel">
+            <OptionToggle
+              label={metricDef.label}
+              options={metricDef.subs.map((s) => s.label)}
+              value={activeSub.label}
+              onChange={chooseSub}
+            />
+          </div>
         </section>
 
+        {/* Legend fades on each metric/sub switch (keyed remount + CSS fade),
+            in step with the 500ms fill crossfade; sequential↔diverging swap
+            dissolves rather than snaps. */}
         <section className="sb-section">
-          <Legend
-            title={activeSub.legendLabel}
-            stops={stops}
-            format={activeSub.fmt}
-          />
+          <div className="du-legend-fade" key={`${metricKey}-${subKey}`}>
+            <Legend
+              title={activeSub.legendLabel}
+              stops={stops}
+              format={activeSub.fmt}
+            />
+          </div>
         </section>
 
-        {/* Pattern B — live hover stat panel. */}
+        {/* Pattern B — live hover stat panel (reflects the active metric). */}
         {!hoveredFeature ? (
           <section className="sb-section sb-hover-panel sb-hover-empty">
             <p className="sb-hover-hint">Hover a neighbourhood to see its stats</p>
@@ -467,7 +530,7 @@ export default function PermitChoroplethMap() {
                 promoteId="Neighbourhood ID"
                 layers={choroplethLayers(stops, activeSub)}
                 images={[]}
-                onLoad={setMap}
+                onLoad={handleMapLoad}
               />
             </MapErrorBoundary>
           </>
