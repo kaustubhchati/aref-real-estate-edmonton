@@ -420,7 +420,7 @@ export default function PermitChoroplethMap() {
       <aside className="sb" aria-label="Map sidebar">
         <div className="sb-inner">
         <div className="sb-header">
-          <p className="eyebrow">Building Activity</p>
+          <p className="eyebrow">Dwelling Units</p>
           <h1 className="sb-title">Edmonton — {year}</h1>
           <p className="sb-sub">
             Residential dwelling units by neighbourhood, {year}.
