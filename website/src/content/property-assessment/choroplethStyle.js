@@ -14,7 +14,7 @@
 // =============================================================================
 
 import { fmtCurrency, fmtNumber, fmtPct, fmtYear, fmtArea } from "../../utils/format.js";
-import { polyOutline, rampFloor, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
+import { polyOutline, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
 import { paintTransition, DUR_BASE } from "../../components/motion.js";
 
 // ---- Map view defaults (Edmonton, matches 09_build_choropleth.html) --------
@@ -38,18 +38,22 @@ export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 //   c     = fill colour at that stop
 //   label = role in the IQR (shown in the legend)
 
-// ── Cream → Ferrari red (custom warm sequential)
-// Warm cream → peach → orange → red-orange → Ferrari red.
-// For $ value metrics. Replaces the old Lajolla gold→wine-red
-// ramp, whose burgundy/dark-brown max read as muddy at the
-// high end. This ramp keeps a single warm hue family climbing
-// in saturation so "high value" reads as vivid red, not brown.
-const RAMP_VALUE = [
-  { key: "min",    c: rampFloor("#f5f0e8"), label: "min"    },
-  { key: "q25",    c: "#f5c4a0", label: "Q25"    },
-  { key: "median", c: "#f07840", label: "median" },
-  { key: "q75",    c: "#e03818", label: "Q75"    },
-  { key: "max",    c: "#cc0000", label: "max"    },
+// ── Warm yellow → deep red (YlOrBr family — $ value metrics)
+// RAMP_ASSESSED_VALUE: a colour-family SIBLING of the Median year-built ramp
+// (same warm yellow→red world) so the two sequential metrics read as one family.
+// Low end is a WARM YELLOW-CREAM (#fde9c8), NOT near-white — cheap neighbourhoods
+// now read as DATA on the cream basemap instead of blanking. This is why the old
+// RAMP_FLOOR peach patch (which OrRd's near-white low end needed) is retired here.
+// Direction is assessed-value's OWN: cheap = warm yellow (light), expensive =
+// deep red (dark) — NOT year-built's newest=light semantics, only its family.
+// The 5-stop quantile system samples 5 of the family's 6 colours (drops the
+// #bf3a1e between Q75 and max); tune the array to taste.
+const RAMP_ASSESSED_VALUE = [
+  { key: "min",    c: "#fde9c8", label: "min"    },
+  { key: "q25",    c: "#f6c479", label: "Q25"    },
+  { key: "median", c: "#ef9a4a", label: "median" },
+  { key: "q75",    c: "#e06a33", label: "Q75"    },
+  { key: "max",    c: "#8a1208", label: "max"    },
 ];
 
 // ── Amber-sienna (custom, YlOrBr family shifted)
@@ -83,15 +87,15 @@ const RAMP_YEAR = [
 // WHY a lookup table: metricStops() and stopsFromScale() both
 // need to know which ramp to use. Single source of truth here.
 const METRIC_RAMP = {
-  median_assessvalue: RAMP_VALUE,
-  avall_public:       RAMP_VALUE,
+  median_assessvalue: RAMP_ASSESSED_VALUE,
+  avall_public:       RAMP_ASSESSED_VALUE,
   avg_lotsize:        RAMP_AREA,
   median_yearbuilt:   RAMP_YEAR,
   // yoy_pct_change uses YOY_STOPS (diverging) — not this table.
 };
 
 // Default ramp for fallback (used when metric key is unknown).
-const RAMP_DEFAULT = RAMP_VALUE;
+const RAMP_DEFAULT = RAMP_ASSESSED_VALUE;
 
 // Turn a {min,q25,median,q75,max} scale into the [{ v, c, label }] stops the
 // map and legend consume. Returns null if any value is missing, non-finite, or
@@ -112,7 +116,7 @@ function buildStops(scale, ramp = RAMP_DEFAULT) {
 // no usable scale in the manifest. Valid by construction, so always non-null.
 export const STOPS = buildStops({
   min: 103500, q25: 352625, median: 425125, q75: 496188, max: 1226000,
-}, RAMP_VALUE);
+}, RAMP_ASSESSED_VALUE);
 
 // Per-year stops from a manifest colourScaleByYear[year] entry, falling back to
 // the locked STOPS when that year's scale is missing or unusable.
