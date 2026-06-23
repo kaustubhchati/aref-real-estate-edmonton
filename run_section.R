@@ -116,48 +116,115 @@ for (i in seq_along(scripts)) {
   started_at <- format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z")
   t0 <- Sys.time()
   status <- "ok"; message <- ""
+  warns <- character(0)
+  error_line <- NULL; error_call <- NULL; stderr_tail <- NULL
 
   cat(sprintf("[%d/%d] %s ... ", i, length(scripts), script_rel))
 
   # Fresh process. wd = section cwd so the script's bare-relative paths resolve.
+  # The payload (a) sets keep.source = TRUE so srcrefs survive into the error
+  # stack, and (b) installs a calling handler that COLLECTS each warning message
+  # then muffles it, returning the collected vector. Muffling only suppresses the
+  # warning's PRINTING; it never changes a value the script computes, so outputs
+  # stay byte-identical (proven by the byte-neutrality gate). error = "stack"
+  # preserves the child call stack on the error object for best-effort detail.
   # tryCatch turns a child failure into a record, not a thrown exception.
   out <- tryCatch(
     {
       r <- callr::r(
-        func   = function(s) source(s, echo = FALSE),
+        func   = function(s) {
+          options(keep.source = TRUE)
+          warns <- character(0)
+          withCallingHandlers(
+            source(s, echo = FALSE),
+            warning = function(w) {
+              warns[[length(warns) + 1L]] <<- conditionMessage(w)
+              invokeRestart("muffleWarning")
+            }
+          )
+          list(warnings = warns)
+        },
         args   = list(s = script_abs),
         wd     = cwd_abs,
+        error  = "stack",
         stdout = "|", stderr = "|", spinner = FALSE
       )
-      list(status = "ok", message = "")
+      w <- as.character(r$warnings)
+      list(status      = if (length(w)) "ok_with_warnings" else "ok",
+           message     = "", warnings = w,
+           error_line  = NULL, error_call = NULL, stderr_tail = NULL)
     },
-    error = function(e) list(status = "error", message = conditionMessage(e))
+    error = function(e) {
+      # Best-effort failure detail from callr's PRESERVED stack (error="stack").
+      # Each extraction is independently guarded: an unrecoverable field becomes
+      # NULL, never a wrong value. We read the structured dump.frames call labels
+      # names(e$stack) — R's own "<file>#<line>: <call>" annotations — NOT raw
+      # stderr text. The deepest (last) frame is where the error originated.
+      lbl <- tryCatch(utils::tail(names(e$stack), 1L), error = function(.) NULL)
+      el <- tryCatch({
+        m <- regmatches(lbl, regexec("#(\\d+): ", lbl))[[1]]
+        if (length(m) == 2L) as.integer(m[2]) else NULL
+      }, error = function(.) NULL)
+      ec <- tryCatch({
+        if (is.null(lbl) || !nzchar(lbl)) NULL
+        else sub("^[^#]*#\\d+: ", "", lbl)   # drop the file#line: prefix if present
+      }, error = function(.) NULL)
+      # stderr_tail: the subprocess's diagnostic output tail. This callr version
+      # carries no $stderr field — the captured output lands in $stdout — so read
+      # $stderr first, then fall back to $stdout; last 20 lines, re-joined.
+      st <- tryCatch({
+        txt <- e$stderr
+        if (is.null(txt) || all(!nzchar(txt))) txt <- e$stdout
+        if (is.null(txt) || all(!nzchar(txt))) NULL
+        else {
+          ln <- strsplit(paste(txt, collapse = "\n"), "\n", fixed = TRUE)[[1]]
+          paste(utils::tail(ln, 20L), collapse = "\n")
+        }
+      }, error = function(.) NULL)
+      list(status      = "error", message = conditionMessage(e),
+           warnings    = character(0),  # a thrown child discards its return value
+           error_line  = el, error_call = ec, stderr_tail = st)
+    }
   )
-  status <- out$status; message <- out$message
+  status <- out$status; message <- out$message; warns <- out$warnings
+  error_line <- out$error_line; error_call <- out$error_call
+  stderr_tail <- out$stderr_tail
   duration_secs <- round(as.numeric(difftime(Sys.time(), t0, units = "secs")), 2)
 
   # finally-equivalent: build + persist the record no matter what, so it
-  # survives an interrupt between scripts.
+  # survives an interrupt between scripts. schema_version pins the JSONL shape;
+  # warnings is I()-wrapped so it ALWAYS serializes as a JSON array (a length-1
+  # vector would otherwise auto_unbox to a bare string).
   rec <- list(
+    schema_version = 1L,
     run_id        = run_id,
     section       = section,
     script        = script_rel,
     status        = status,
     message       = message,
+    warnings      = I(warns),
+    error_line    = error_line,
+    error_call    = error_call,
+    stderr_tail   = stderr_tail,
     started_at    = started_at,
     duration_secs = duration_secs
   )
   tryCatch(append_record(rec), finally = NULL)
 
-  if (status == "ok") {
-    cat(sprintf("ok (%.1fs)\n", duration_secs))
-  } else {
+  # Three-state: error fails the chain fast; ok and ok_with_warnings both
+  # continue, the latter printed distinctly so warnings are visible on the run.
+  if (status == "error") {
     cat("ERROR\n")
     cat(sprintf("\nFAIL-FAST: '%s' errored after %.1fs:\n  %s\n",
                 script_rel, duration_secs, message))
     cat("Chain is dependency-ordered — downstream scripts NOT run.\n")
     failed <- TRUE
     break
+  } else if (status == "ok_with_warnings") {
+    cat(sprintf("ok* (%d warning%s) (%.1fs)\n",
+                length(warns), if (length(warns) == 1L) "" else "s", duration_secs))
+  } else {
+    cat(sprintf("ok (%.1fs)\n", duration_secs))
   }
 }
 
@@ -184,7 +251,7 @@ if (!is.null(hf)) {
   copy_one <- function(from, to) {
     dir.create(dirname(to), showWarnings = FALSE, recursive = TRUE)
     ok <- file.exists(from) && file.copy(from, to, overwrite = TRUE)
-    append_record(list(run_id = run_id, section = section,
+    append_record(list(schema_version = 1L, run_id = run_id, section = section,
                        action = "handoff_copy", from = from, to = to,
                        status = if (ok) "ok" else "error"))
     cat(sprintf("  [%s] %s -> %s\n", if (ok) "ok" else "error",
@@ -240,7 +307,7 @@ if (!is.null(hf)) {
       ok    <- file.exists(from) && file.copy(from, to, overwrite = TRUE)
       st    <- if (ok) "ok" else "error"
       if (!ok) hf_failed <- TRUE
-      append_record(list(run_id = run_id, section = section,
+      append_record(list(schema_version = 1L, run_id = run_id, section = section,
                          action = "handoff_copy", from = from, to = to, status = st))
       cat(sprintf("  [%s] %s -> public\n", st, fname))
     }
@@ -250,7 +317,7 @@ if (!is.null(hf)) {
     ok <- file.copy(manifest_src, man_to, overwrite = TRUE)
     st <- if (ok) "ok" else "error"
     if (!ok) hf_failed <- TRUE
-    append_record(list(run_id = run_id, section = section,
+    append_record(list(schema_version = 1L, run_id = run_id, section = section,
                        action = "handoff_copy", from = manifest_src, to = man_to, status = st))
     cat(sprintf("  [%s] manifest.json -> public\n", st))
     cat(sprintf("Handoff published %d year(s) + manifest to public.\n", length(years)))
