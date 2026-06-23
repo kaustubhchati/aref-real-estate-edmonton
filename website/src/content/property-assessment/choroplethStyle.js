@@ -38,22 +38,21 @@ export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 //   c     = fill colour at that stop
 //   label = role in the IQR (shown in the legend)
 
-// ── Warm yellow → deep red (YlOrBr family — $ value metrics)
-// RAMP_ASSESSED_VALUE: a colour-family SIBLING of the Median year-built ramp
-// (same warm yellow→red world) so the two sequential metrics read as one family.
-// Low end is a WARM YELLOW-CREAM (#fde9c8), NOT near-white — cheap neighbourhoods
-// now read as DATA on the cream basemap instead of blanking. This is why the old
-// RAMP_FLOOR peach patch (which OrRd's near-white low end needed) is retired here.
-// Direction is assessed-value's OWN: cheap = warm yellow (light), expensive =
-// deep red (dark) — NOT year-built's newest=light semantics, only its family.
-// The 5-stop quantile system samples 5 of the family's 6 colours (drops the
-// #bf3a1e between Q75 and max); tune the array to taste.
+// ── Assessed-value $ ramp: amber LOW band + frozen Ferrari from median up.
+// CORRECTION to the prior over-warm change (which muddied the whole ramp). Only
+// the two lowest stops are warm amber, so cheap neighbourhoods read as DATA on
+// the cream basemap (not near-white) — this is why the RAMP_FLOOR peach patch is
+// retired here. median→max are the Ferrari OrRd arc (orange → scarlet → deep red
+// #7a0000), RESTORED from the muddy interim and unchanged from the median up.
+// Direction unchanged: cheap = amber (light), expensive = deep Ferrari red.
+// RAMP_ASSESSED_LOW is the tunable low band; Q25 amber → median orange is smooth.
+const RAMP_ASSESSED_LOW = ["#ffd86a", "#f5a838"]; // [min warm gold, Q25 amber]
 const RAMP_ASSESSED_VALUE = [
-  { key: "min",    c: "#fde9c8", label: "min"    },
-  { key: "q25",    c: "#f6c479", label: "Q25"    },
-  { key: "median", c: "#ef9a4a", label: "median" },
-  { key: "q75",    c: "#e06a33", label: "Q75"    },
-  { key: "max",    c: "#8a1208", label: "max"    },
+  { key: "min",    c: RAMP_ASSESSED_LOW[0], label: "min"    },
+  { key: "q25",    c: RAMP_ASSESSED_LOW[1], label: "Q25"    },
+  { key: "median", c: "#f07840", label: "median" }, // frozen — Ferrari orange
+  { key: "q75",    c: "#e03818", label: "Q75"    }, // frozen — Ferrari scarlet
+  { key: "max",    c: "#7a0000", label: "max"    }, // frozen — deep Ferrari red
 ];
 
 // ── Amber-sienna (custom, YlOrBr family shifted)
