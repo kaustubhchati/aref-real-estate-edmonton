@@ -26,6 +26,15 @@ export default class MapErrorBoundary extends Component {
     return { error };
   }
 
+  // Per-selection reset WITHOUT a remount: when resetKey changes (e.g. the year
+  // swap's url), clear a caught error so the children re-render. This replaces
+  // the old `key={url}` remount, which the in-place year-swap path removed.
+  componentDidUpdate(prevProps) {
+    if (this.state.error && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ error: null });
+    }
+  }
+
   render() {
     if (this.state.error) {
       return (

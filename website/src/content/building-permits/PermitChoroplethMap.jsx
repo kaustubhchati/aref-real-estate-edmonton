@@ -111,6 +111,9 @@ export default function PermitChoroplethMap() {
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
   const [fetchError, setFetchError] = useState(null);
+  // True while an in-place year swap's new data is genuinely slow (MapView
+  // reports it via onLoading) — drives the skeleton-threshold fallback.
+  const [swapLoading, setSwapLoading] = useState(false);
   const [hoveredFeature, setHoveredFeature] = useState(null);
 
   // Which fill layer is currently visible ("a" or "b"). Reset to "a" on every
@@ -175,12 +178,12 @@ export default function PermitChoroplethMap() {
     return () => { document.title = "Open Data Centre"; };
   }, [year]);
 
-  // Fetch the year's GeoJSON. Resets on year change (MapView remounts on url).
+  // Fetch the year's GeoJSON. A year swap keeps map + the old gj so MapView
+  // dips-and-swaps the source in place (one WebGL context); gj updates when the
+  // new file resolves. (No setMap/setGj reset — that forced the old remount.)
   useEffect(() => {
     if (!url) return undefined;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMap(null);
-    setGj(null);
     setFetchError(null);
 
     let cancelled = false;
@@ -520,8 +523,10 @@ export default function PermitChoroplethMap() {
           />
         ) : (
           <>
-            {!gj && <MapSkeleton />}
-            <MapErrorBoundary key={url}>
+            {(!gj || swapLoading) && <MapSkeleton />}
+            {/* resetKey (not key) so a YEAR swap clears a caught error WITHOUT
+                remounting MapView — the map persists and dips-and-swaps in place. */}
+            <MapErrorBoundary resetKey={url}>
               <MapView
                 className="canvas"
                 basemapStyle={BASEMAP_STYLE}
@@ -532,6 +537,7 @@ export default function PermitChoroplethMap() {
                 layers={choroplethLayers(stops, activeSub)}
                 images={[]}
                 onLoad={handleMapLoad}
+                onLoading={setSwapLoading}
               />
             </MapErrorBoundary>
           </>

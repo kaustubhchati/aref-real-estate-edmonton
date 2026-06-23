@@ -17,6 +17,13 @@ export const DUR_FAST = 150; // hover lifts, popups
 export const DUR_BASE = 250; // metric/paint tweens, appear/disappear
 export const DUR_SLOW = 400; // source/metric crossfades
 
+// Year-swap dip-and-swap (Option A): the canvas dips to this opacity FLOOR
+// during an in-place source swap — not 0, so the basemap never fully vanishes.
+// Tune the dip depth here. SKELETON_THRESHOLD: only show the loading skeleton if
+// the new file takes longer than this to settle (fast swaps never flash it).
+export const DIP_FLOOR = 0.4;
+export const SKELETON_THRESHOLD = 250;
+
 // prefers-reduced-motion is mandatory: when the OS asks for reduced motion we
 // curtail to instant. Read once at module load (matches the CSS @media guard).
 const REDUCE =
@@ -29,4 +36,14 @@ const REDUCE =
 //   paint: { "fill-color-transition": paintTransition(DUR_BASE) }
 export function paintTransition(ms = DUR_BASE) {
   return { duration: MOTION_PASS && !REDUCE ? ms : 0, delay: 0 };
+}
+
+// Live reduced-motion check (re-read at call time, so toggling the OS setting
+// takes effect without a reload). Used by the year-swap dip in MapView.
+export function reduceMotion() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches === true
+  );
 }

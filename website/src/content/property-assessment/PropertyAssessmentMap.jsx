@@ -91,6 +91,9 @@ export default function PropertyAssessmentMap() {
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
   const [fetchError, setFetchError] = useState(null);
+  // True while an in-place year swap's new data is genuinely slow (MapView
+  // reports it via onLoading) — drives the skeleton-threshold fallback.
+  const [swapLoading, setSwapLoading] = useState(false);
   // Pattern B — hovered neighbourhood properties for the sidebar stat panel.
   const [hoveredFeature, setHoveredFeature] = useState(null);
 
@@ -153,15 +156,17 @@ export default function PropertyAssessmentMap() {
   // unmounts cleanly and map.remove() inside its useEffect cleanup destroys
   // the old MapLibre instance.
   useEffect(() => {
-    // Reset-on-url-change is intentional: clear the stale map + data the instant
-    // the selection (url) changes, before the new fetch resolves, so the prior
-    // city/year never flashes under the new one. The rule flags synchronous
-    // setState in an effect but it is safe and deliberate here.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMap(null);
-    setGj(null);
     setFetchError(null);
-    if (!url) return undefined;
+    // A null url = no data for this selection (e.g. a Calgary year): clear so the
+    // empty state shows and the persistent map tears down. A valid→valid change
+    // (a YEAR swap) keeps map + the old gj so MapView dips-and-swaps the source
+    // in place (one WebGL context); gj updates when the new file resolves.
+    if (!url) {
+      setMap(null);
+      setGj(null);
+      return undefined;
+    }
 
     let cancelled = false;
     fetch(url)
@@ -432,15 +437,17 @@ export default function PropertyAssessmentMap() {
             body={`YoY change is not available for the earliest year in the dataset (${year}).`}
           />
         ) : url ? (
-          // key={url} on the boundary: a new data URL (switching cities or
-          // years) remounts both the boundary — clearing any caught error so a
-          // stale failure doesn't persist across selections — and MapView
-          // inside it. MapLibre destroys the old map in its cleanup; the new
-          // instance fires onLoad and useChoroplethInteractions reattaches.
-          // The boundary keeps a WebGL/MapLibre failure from blanking the page.
+          // Year/city swaps no longer remount: MapView persists and dips-and-
+          // swaps the source in place (one WebGL context). The boundary's
+          // resetKey={url} clears any caught error on a new selection without a
+          // remount, and still keeps a WebGL/MapLibre failure from blanking the
+          // page. MapView only mounts/unmounts on the url-null boundary (a city
+          // with no data), where the fetch effect tears down map + gj.
           <>
-            {url && !gj && <MapSkeleton />}
-            <MapErrorBoundary key={url}>
+            {url && (!gj || swapLoading) && <MapSkeleton />}
+            {/* resetKey (not key) so a YEAR swap clears a caught error WITHOUT
+                remounting MapView — the map persists and dips-and-swaps in place. */}
+            <MapErrorBoundary resetKey={url}>
               <MapView
                 className="canvas"
                 basemapStyle={BASEMAP_STYLE}
@@ -451,6 +458,7 @@ export default function PropertyAssessmentMap() {
                 layers={choroplethLayers(stops, metric)}
                 images={choroplethImages()}
                 onLoad={setMap}
+                onLoading={setSwapLoading}
               />
             </MapErrorBoundary>
           </>
