@@ -34,6 +34,15 @@ sections:
       - scripts/production/08e_hist_build_geojson.R
       - scripts/production/09a_emit_manifest.R
 
+    # Order invariants (data-driven; consumed by the dry-run check in
+    # _run_engine.R). Each {before, after} pair must appear in that order in the
+    # scripts list above — this encodes the 08d-before-07 dependency documented
+    # there. Sections without this key carry no ordering constraint (and so no
+    # longer mis-fail the dry run, as they did under the old hardcoded check).
+    order_invariants:
+      - before: scripts/production/08d_hist_aggregate.R
+        after:  scripts/production/07_layer2_aggregates.R
+
     # --- Handoff: publish output/ -> website/public after ALL scripts succeed ---
     # The runner is now the SOLE writer of website/public. 08e/08b write the
     # per-year GeoJSONs to output/ (uniform neighbourhoods_<YYYY>_recovered.geojson
