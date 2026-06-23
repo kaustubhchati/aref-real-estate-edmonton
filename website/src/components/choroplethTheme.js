@@ -22,8 +22,11 @@ export const FIX_LOWVAL_BLANKING = true;
 
 // Muted grey-brown — reads against both cream land and the warm ramp.
 export const POLY_OUTLINE_COLOR = "#b8ae96";
-// Pale peach low-stop — warm, but distinct from the land's yellow-cream.
-export const RAMP_FLOOR = "#fde4d3";
+// Soft warm yellow low-stop — gentle (not lemon), clearly distinct from the
+// cream basemap (#f7f1df) so the lowest OrRd band reads as DATA, not basemap.
+// Shared min for the OrRd sequential ramps that call rampFloor(): Dwelling Units
+// (RAMP_SEQ) + Business Census (RAMP_ORRD). Tunable — nudge here after eyeball.
+export const RAMP_FLOOR = "#fbe3a0";
 
 // Gate the outline colour (fallback = the pre-fix white the layers used).
 export const polyOutline = (fallback) =>
