@@ -29,6 +29,7 @@
 import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { applyAppleClassic } from "./basemapTheme.js";
 
 export default function MapView({
   basemapStyle,
@@ -76,6 +77,11 @@ export default function MapView({
     });
 
     map.on("load", () => {
+      // Apple-Classic basemap restyle (colour + POI-hide only). Runs FIRST, so
+      // only basemap layers exist — the data source/layers added below are
+      // never touched. Behind APPLY_APPLE_CLASSIC in basemapTheme.js.
+      applyAppleClassic(map);
+
       // Register pattern images first; the fill-pattern layers depend on them.
       for (const img of images) {
         try {

@@ -19,6 +19,7 @@ import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { applyAppleClassic } from "../../components/basemapTheme.js";
 
 import {
   BASEMAP_STYLE,
@@ -184,6 +185,11 @@ export default function PermitMapView({ className = "", onLoad, onPick }) {
     map.doubleClickZoom.disable();
 
     map.on("load", () => {
+      // Apple-Classic basemap restyle (colour + POI-hide only). Runs FIRST, so
+      // the permit point source/layer added below is never touched. Behind
+      // APPLY_APPLE_CLASSIC in basemapTheme.js.
+      applyAppleClassic(map);
+
       map.addSource(SOURCE_ID, {
         type: "vector",
         url: PERMITS_URL,
