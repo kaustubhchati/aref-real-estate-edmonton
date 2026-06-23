@@ -105,9 +105,17 @@ pipeline/building-permits/output/permit_coverage_summary.csv
 pipeline/building-permits/output/manifest.json
 pipeline/building-permits/output/permits_coverage.csv
 pipeline/building-permits/output/permits_category_counts.csv
+# Dwelling-units dropped-spanner diagnostic CSVs (per-run, dated) — regenerable
+# build diagnostics, same policy as the aggregates above.
+pipeline/building-permits/output/dwelling_units_*.csv
 
 # Local working doc — audit findings, not a repo artifact
 docs/STRUCTURE_AUDIT.md
+# Audit / review working docs — findings, not repo artifacts (same class as
+# docs/STRUCTURE_AUDIT.md above): the docs/audit/ directory + the dated frontend
+# audit report at the repo root.
+docs/audit/
+FRONTEND_AUDIT_*.md
 
 # Orchestration run logs — runtime output, regenerated each run
 runs/
