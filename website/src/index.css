@@ -573,6 +573,35 @@ p  { margin: 0 0 0.75rem; }
   cursor: pointer;
 }
 
+/* ---- Section error boundary fallback (whole-section throw) --------------- */
+/* Fills the routed content area; Header/Nav/Footer stay (boundary is around the
+   <Outlet/> only), so the nav remains usable as the way out. */
+.section-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 50vh;
+  padding: 32px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.section-error h2 { margin: 0; color: var(--text); font-size: 1.1rem; }
+.section-error p { margin: 0; max-width: 42ch; line-height: 1.5; }
+.section-error small { color: var(--text-subtle); }
+.section-error button {
+  margin-top: 4px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-2, var(--bg-soft));
+  cursor: pointer;
+}
+
+/* Legend's graceful "no scale for this selection" note (null/empty stops). */
+.legend-empty { margin: 0; font-size: 0.72rem; color: var(--text-subtle); }
+
 /* ---- Search (rendered inside .sb-section) -------------------------------- */
 .search { display: block; }
 .search-label {

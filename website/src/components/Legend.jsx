@@ -23,6 +23,20 @@ export default function Legend({
   greyTitle = null,
   greyStates = null,
 }) {
+  // Defensive: a section that hands us null / undefined / empty / non-array
+  // stops (e.g. a metric+year combination a section couldn't build a scale for)
+  // must NOT crash the page on the [...stops] spread below. Render the title
+  // with a graceful note instead of throwing. (Belt-and-suspenders with the
+  // section error boundary; this keeps the sidebar usable rather than caught.)
+  if (!Array.isArray(stops) || stops.length === 0) {
+    return (
+      <aside className="legend">
+        <h2 className="legend-title">{title}</h2>
+        <p className="legend-empty">No colour scale for this selection.</p>
+      </aside>
+    );
+  }
+
   return (
     <aside className="legend">
       <h2 className="legend-title">{title}</h2>

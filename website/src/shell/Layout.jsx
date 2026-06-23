@@ -9,18 +9,25 @@
 // a sibling layout rather than adding props here.
 // =============================================================================
 
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import Header from "./Header.jsx";
 import Nav from "./Nav.jsx";
 import Footer from "./Footer.jsx";
+import SectionErrorBoundary from "../components/SectionErrorBoundary.jsx";
 
 export default function Layout() {
+  // Key the boundary by route so a section that errored recovers when the user
+  // navigates elsewhere (new key → fresh mount). Header/Nav/Footer sit OUTSIDE
+  // the boundary, so a section throw can never blank the chrome/nav.
+  const location = useLocation();
   return (
     <div className="shell">
       <Header />
       <Nav />
       <main className="shell-main">
-        <Outlet />
+        <SectionErrorBoundary key={location.pathname}>
+          <Outlet />
+        </SectionErrorBoundary>
       </main>
       <Footer />
     </div>
