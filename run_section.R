@@ -160,14 +160,24 @@ for (i in seq_along(scripts)) {
       # NULL, never a wrong value. We read the structured dump.frames call labels
       # names(e$stack) — R's own "<file>#<line>: <call>" annotations — NOT raw
       # stderr text. The deepest (last) frame is where the error originated.
+      # VERSION COUPLING: this parse depends on callr's error class rlib_error_3_0
+      # exposing names(e$stack) in that "<file>#<line>: <call>" label format. If a
+      # callr upgrade changes the class or the label shape, error_line/error_call
+      # degrade to NULL — this parser is the first suspect.
       lbl <- tryCatch(utils::tail(names(e$stack), 1L), error = function(.) NULL)
       el <- tryCatch({
         m <- regmatches(lbl, regexec("#(\\d+): ", lbl))[[1]]
         if (length(m) == 2L) as.integer(m[2]) else NULL
       }, error = function(.) NULL)
       ec <- tryCatch({
+        # Only return a call when the "#<line>: " prefix ACTUALLY matched; sub()
+        # would otherwise return lbl unchanged, leaking a raw stack label as if it
+        # were a recovered call. No prefix -> NULL, which pairs with el above (both
+        # key on the same "#<digits>: " presence, so error_call is NULL whenever
+        # error_line is NULL).
         if (is.null(lbl) || !nzchar(lbl)) NULL
-        else sub("^[^#]*#\\d+: ", "", lbl)   # drop the file#line: prefix if present
+        else if (grepl("#\\d+: ", lbl)) sub("^[^#]*#\\d+: ", "", lbl)
+        else NULL
       }, error = function(.) NULL)
       # stderr_tail: the subprocess's diagnostic output tail. This callr version
       # carries no $stderr field — the captured output lands in $stdout — so read
