@@ -19,6 +19,7 @@
 // =========================================================
 
 import { polyOutline, rampFloor, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
+import { paintTransition, DUR_BASE } from "../../components/motion.js";
 
 export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 
@@ -169,6 +170,8 @@ export function bcensusLayers(stops, metricKey = "n_businesses_2025") {
       type: "fill",
       paint: {
         "fill-color": buildFillColourExpression(metricKey, stops),
+        // Tween the colour on a metric change instead of snapping.
+        "fill-color-transition": paintTransition(DUR_BASE),
         "fill-opacity": [
           "case",
           ["==", ["get", "census_state"], "data"],

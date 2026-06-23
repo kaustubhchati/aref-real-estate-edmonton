@@ -15,6 +15,7 @@
 
 import { fmtCurrency, fmtNumber, fmtPct, fmtYear, fmtArea } from "../../utils/format.js";
 import { polyOutline, rampFloor, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
+import { paintTransition, DUR_BASE } from "../../components/motion.js";
 
 // ---- Map view defaults (Edmonton, matches 09_build_choropleth.html) --------
 // (Data URL no longer lives here — single source of truth is dataSources.js,
@@ -435,6 +436,8 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
       type: "fill",
       paint: {
         "fill-color": buildFillColourExpression(metricKey, stops),
+        // Tween the colour on a metric/scale change instead of snapping.
+        "fill-color-transition": paintTransition(DUR_BASE),
         "fill-opacity": [
           "case",
           ["==", ["get", "polygon_state"], "aggregated"],

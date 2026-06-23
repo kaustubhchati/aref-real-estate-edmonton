@@ -49,11 +49,12 @@ import {
   FILL_LAYER_IDS,
 } from "./permitChoroplethStyle.js";
 import { fmtNumber } from "../../utils/format.js";
+import { DUR_SLOW, DUR_FAST } from "../../components/motion.js";
 
 // Crossfade timing. 500ms ease-out for the dissolve (MapLibre's built-in
 // transition easing); hover stays snappy at 150ms outside a switch.
-const FADE_MS = 500;
-const HOVER_MS = 150;
+const FADE_MS = DUR_SLOW;
+const HOVER_MS = DUR_FAST;
 
 async function loadPermitManifest() {
   const res = await fetch("/data/building-permits/manifest.json");

@@ -96,6 +96,17 @@
   --sidebar-edge:   #c9bda3;                          /* SIDEBAR_EDGE_COLOR — warm hairline */
   --sidebar-shadow: 4px 0 14px rgba(74,60,33,0.12);   /* SIDEBAR_SHADOW — soft, falls onto map */
 
+  /* ---- Motion tokens (MOTION_PASS) — single source of truth ------------
+     Mirror of src/components/motion.js (which the map paint-transitions read).
+     Everything animated uses these — no ad-hoc durations. To disable the CSS
+     half of the motion pass, set the three durations to 0ms (and MOTION_PASS
+     = false in motion.js for the map). prefers-reduced-motion curtails all of
+     it automatically (guard at the bottom of this file). */
+  --ease:     cubic-bezier(.4, 0, .2, 1);
+  --dur-fast: 150ms;   /* hover lifts, popups */
+  --dur-base: 250ms;   /* appear/disappear, paint tweens */
+  --dur-slow: 400ms;   /* crossfades */
+
   font: 16px/1.5 var(--font-sans);
   color: var(--text);
   background: var(--bg);
@@ -506,7 +517,7 @@ p  { margin: 0 0 0.75rem; }
 /* Keyed remount on metric/sub switch re-runs this fade, synced to the 500ms
    fill crossfade so the sequential↔diverging legend swap dissolves, not snaps. */
 @keyframes du-legend-fade { from { opacity: 0; } to { opacity: 1; } }
-.du-legend-fade { animation: du-legend-fade 500ms ease-out; }
+.du-legend-fade { animation: du-legend-fade var(--dur-slow) var(--ease); }
 
 /* ---- Sidebar dropdowns (Year, Metric — too many options for a toggle) ---- */
 .sb-select-field { margin: 0 0 8px; }
@@ -1011,4 +1022,39 @@ p  { margin: 0 0 0.75rem; }
 .sb-select:not([data-default="true"]) {
   border-left: 2.5px solid var(--accent);
   padding-left: 8px;
+}
+
+/* ============================ MOTION PASS ================================== */
+/* Site-wide smoothness: appear/disappear fades, popup + hover lifts, and the
+   section / year-swap fade-in. All driven by --dur-*/--ease (single source).
+   Named properties only — never `transition: all`. Map paint TWEENS live in the
+   section style files via motion.js paintTransition(). The mandatory
+   prefers-reduced-motion guard is at the very bottom. */
+
+@keyframes motion-fade    { from { opacity: 0; } to { opacity: 1; } }
+@keyframes motion-fade-up { from { opacity: 0; transform: translateY(5px); }
+                            to   { opacity: 1; transform: none; } }
+
+/* Section / nav change — routed map content eases in on mount (not a hard cut). */
+.content-map { animation: motion-fade var(--dur-base) var(--ease); }
+
+/* Year / source swap — the remounted MapView canvas fades in (MapSkeleton covers
+   the load gap, then the new map eases in instead of snapping). */
+.canvas { animation: motion-fade var(--dur-base) var(--ease); }
+
+/* Sidebar hover stat panel — fade + small lift when it appears. */
+.sb-hover-panel { animation: motion-fade-up var(--dur-base) var(--ease); }
+
+/* Map popups — quick fade + small lift in. */
+.maplibregl-popup-content { animation: motion-fade-up var(--dur-fast) var(--ease); }
+
+/* prefers-reduced-motion: REQUIRED. Curtail every CSS animation/transition to
+   near-instant (the map paint side is gated in motion.js paintTransition()). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
