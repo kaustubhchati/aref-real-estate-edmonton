@@ -45,6 +45,32 @@ open http://localhost:8000/pipeline/property-assessment/scripts/09_build_choropl
 
 This standalone HTML is the reference the React build (`website/`) ports from.
 
+## Refreshing pipeline data (regenerate + publish)
+
+A section is regenerated **and** published to the site with ONE command. The runner
+(`run_section.R`) runs the section's scripts in dependency order (fresh process each),
+then publishes `output/ → website/public/` using that section's `handoff` block in
+`_whirl.yaml`. The runner is the **sole** publisher of `website/public/` (CLAUDE.md §2).
+
+```sh
+# Regenerate + publish one section (example: Dwelling Units / building permits)
+Rscript run_section.R building-permits
+
+# Prove the wiring first (resolve cwd + scripts, no side effects):
+Rscript run_section.R building-permits --dry-run
+```
+
+For building-permits this runs `02_build_permits` (fetches today's snapshot) →
+`03_build_permit_aggregates` → `04_emit_manifest`, then copies the per-year
+neighbourhood GeoJSONs + `manifest.json` + the download CSVs into `website/public/`.
+
+**Do NOT run a single script as a refresh.** A standalone run (e.g.
+`Rscript scripts/production/03_build_permit_aggregates.R`) writes only to that section's
+`output/` — it does **not** publish. Publishing lives only in the runner's handoff phase
+(reached only after the whole section succeeds), so a standalone run leaves
+`website/public/` stale (the silent staleness that has bitten the live map before).
+Always refresh through `run_section.R <section>`.
+
 ## Deploying the site
 
 The site is a static build hosted on Cloudflare Pages (free tier), connected to this
