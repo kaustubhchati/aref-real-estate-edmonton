@@ -87,6 +87,8 @@ pipeline/property-assessment/data/reference/neighbourhood_name_merges_*.csv
 # Property Assessment raw snapshots (current + historical) — refetch via the loader.
 **/data/raw/Property_Assessment_Data_*.csv
 **/data/raw/Property_Assessment_Current_*.csv
+# Property Information raw snapshots (dkk9-cj3x) — fetched by 06, like 01's above.
+**/data/raw/Property_Information_Current_*.csv
 
 # Shared-section data (City neighbourhood boundary + mature-neighbourhood
 # reference downloads) — large, re-downloaded at refresh. Shared CODE under
