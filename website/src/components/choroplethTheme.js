@@ -24,8 +24,9 @@ export const FIX_LOWVAL_BLANKING = true;
 export const POLY_OUTLINE_COLOR = "#b8ae96";
 // Soft warm yellow low-stop — gentle (not lemon), clearly distinct from the
 // cream basemap (#f7f1df) so the lowest OrRd band reads as DATA, not basemap.
-// Shared min for the OrRd sequential ramps that call rampFloor(): Dwelling Units
-// (RAMP_SEQ) + Business Census (RAMP_ORRD). Tunable — nudge here after eyeball.
+// Shared min for the sequential ramps that call rampFloor(): Dwelling Units
+// (RAMP_SEQ), Business Census (RAMP_ORRD), + Property Assessment (RAMP_ASSESSED's
+// $-value floor). Tunable — nudge here after eyeball.
 export const RAMP_FLOOR = "#fbe3a0";
 
 // Gate the outline colour (fallback = the pre-fix white the layers used).

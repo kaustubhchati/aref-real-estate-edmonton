@@ -2,7 +2,7 @@
 # 01b_coord_distribution.R  (EDA — NOT part of the production load)
 # ------------------------------------------------------------
 # Reads the SAME raw Edmonton property-assessment snapshot that
-# 01_load_data.R pulls, and emits the rows-per-coordinate
+# 01_fetch_current.R pulls, and emits the rows-per-coordinate
 # distribution figure. This is exploratory output only:
 #   writes  output/figures/01_coord_count_distribution.png
 #   touches NO data/processed/ artifact and feeds no downstream script.
@@ -15,7 +15,7 @@ library(scales)     # axis formatting (comma(), log scales)
 library(ggthemes)
 source(rprojroot::find_root_file("pipeline/property-assessment/scripts/_common/00_theme.R", criterion = rprojroot::has_file(".aref_root")))
 
-# --- Load (same snapshot as 01_load_data.R) ------------------
+# --- Load (same snapshot as 01_fetch_current.R) ------------------
 url_assess_current <- "https://data.edmonton.ca/api/views/q7d6-ambg/rows.csv?accessType=DOWNLOAD"
 assess_raw <- read_csv(url_assess_current, show_col_types = FALSE)
 

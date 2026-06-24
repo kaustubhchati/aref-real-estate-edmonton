@@ -1,5 +1,5 @@
 # ============================================================
-# 07_layer2_aggregates.R
+# 05_aggregate_current.R
 # Layer 2 — compute per-neighbourhood aggregates from the
 # Layer 1a-cleaned 2026 frame.
 #
@@ -10,7 +10,7 @@
 # logic downstream is identical — only the upstream filter differs.
 #
 # Inputs:
-#   - data/processed/assess_2026_clean.csv  (from script 06; already has
+#   - data/processed/assess_2026_clean.csv  (from script 02; already has
 #     lot_size, year_built, legal_description joined from Property Information)
 #   - data/reference/neighbourhood_crosswalk_<YYYYMMDD>.csv (newest; the merge
 #     rows drive pre-aggregation pooling — see below)
@@ -27,7 +27,7 @@
 #   HERITAGE VALLEY TOWN CENTRE (native id 5472, 15 props) and HERITAGE VALLEY
 #   TOWN CENTRE AREA (NA-id, 577 props) are one polygon (5472) in the new file.
 #   Left un-merged these form two group_by groups and collide on one polygon
-#   downstream (caught by 08b's dup-ID guard). The crosswalk's relation=="merge"
+#   downstream (caught by 06_geojson_current's dup-ID guard). The crosswalk's relation=="merge"
 #   rows normalise variant name + id to the canonical target BEFORE aggregation,
 #   so medians/SDs are recomputed from the pooled rows — never averaged from two
 #   summaries. Crosswalk is versioned/dated/sourced per CLAUDE.md §4.4/§4.7 and is
@@ -52,10 +52,10 @@ dir.create("output", showWarnings = FALSE, recursive = TRUE)
 clean_path <- "data/processed/assess_2026_clean.csv"
 if (!file.exists(clean_path)) {
   stop("Missing: ", clean_path,
-       " — run scripts/06_apply_layer1a_rules.R first.")
+       " — run scripts/02_clean_current.R first.")
 }
 
-# Explicit col_types to silence the parsing warning observed in 06
+# Explicit col_types to silence the parsing warning observed in 02
 # (Assessment Class 2/3 and pct columns guess as logical when
 # the first few hundred rows have them empty).
 assess_clean <- read_csv(
@@ -89,9 +89,10 @@ cat(sprintf("Loaded clean frame: %s rows\n", comma(nrow(assess_clean))))
 # Un-merged they form two group_by groups and collide on one polygon downstream.
 # Only the crosswalk's relation=="merge" rows run here, BEFORE aggregation, so
 # medians/SDs are recomputed from the pooled rows (never averaged from summaries).
-# The 1:1 renames/renumbers/typos/aliases/suffix-drift resolve post-aggregation
-# in 08b — they do not change which rows aggregate together, so they need not run
-# here. Source of truth: data/reference/neighbourhood_crosswalk_<YYYYMMDD>.csv.
+# The 1:1 renames/renumbers/typos/aliases/suffix-drift are applied to the gated
+# aggregate below (in this script, after the N<100 gate) — they do not change
+# which rows aggregate together, so they need not run here, before the group_by.
+# Source of truth: data/reference/neighbourhood_crosswalk_<YYYYMMDD>.csv.
 assess_clean <- apply_crosswalk(assess_clean, relations = "merge")
 
 # --- Derive unit_present (port of Stata3 lines 31–42) -------
@@ -171,6 +172,38 @@ cat(sprintf("Sanity gate (N < 100): %s neighbourhoods suppressed\n",
             comma(n_suppressed)))
 
 
+# --- Resolve to canonical id/name (relocated from 06_geojson_current) -------
+# The aggregate step is the reconciliation home: resolve the section's own id+name
+# to canonical HERE so the builder (06_geojson_current) joins straight on canonical id with no
+# crosswalk of its own. Merges already pooled ROWS above (relation=="merge",
+# BEFORE aggregation, so medians/SDs recompute from pooled rows). The remaining
+# 1:1 relations (rename/renumber/typo/suffix_drift/alias) do not change which rows
+# aggregated together, so applying them to the gated aggregate here is identical
+# to the old "apply in 06_geojson_current" — just moved upstream. NEW-ID-WINS; same row count.
+agg_pre_crosswalk <- nbhd_agg_gated
+nbhd_agg_gated    <- apply_crosswalk(nbhd_agg_gated)
+stopifnot(nrow(nbhd_agg_gated) == nrow(agg_pre_crosswalk))
+
+# Audit trail (relocated from 06_geojson_current, CLAUDE.md §4.5): what the crosswalk changed.
+crosswalk_audit <- tibble(
+  assessment_name = agg_pre_crosswalk$Neighbourhood,
+  resolved_name   = nbhd_agg_gated$Neighbourhood,
+  resolved_id     = coalesce(nbhd_agg_gated$`Neighbourhood ID`, "NA"),
+  n_properties_in_aggregate = agg_pre_crosswalk$n_properties,
+  status = case_when(
+    coalesce(agg_pre_crosswalk$`Neighbourhood ID`, "NA") !=
+      coalesce(nbhd_agg_gated$`Neighbourhood ID`, "NA") |
+      agg_pre_crosswalk$Neighbourhood != nbhd_agg_gated$Neighbourhood ~ "resolved",
+    coalesce(nbhd_agg_gated$`Neighbourhood ID`, "NA") == "NA"         ~ "unresolved_no_mapping",
+    TRUE                                                              ~ "unchanged"
+  )
+)
+cat(sprintf("Crosswalk resolution — resolved: %d, unresolved (NA-id): %d, unchanged: %d\n",
+            sum(crosswalk_audit$status == "resolved"),
+            sum(crosswalk_audit$status == "unresolved_no_mapping"),
+            sum(crosswalk_audit$status == "unchanged")))
+
+
 # --- Diagnostic: NA-ID rows (new development areas) ----------
 # Memory entry #22: 12 named neighbourhoods carry Neighbourhood ID == "NA"
 # (new developments like Chappelle Area, Rapperswil, etc.). These will
@@ -199,14 +232,14 @@ cat(sprintf("Rows: %s neighbourhoods (incl. %s NA-id developing areas)\n",
 
 
 # --- Year-over-year change: 2026 vs 2025 --------------------
-# Match the historical pipeline's yoy_pct_change (08d) so the 2026 production
+# Match the historical pipeline's yoy_pct_change (04_aggregate_historical) so the 2026 production
 # aggregate carries the same column. yoy is keyed on canonical_id, NOT name, so a
 # rename (e.g. OLIVER -> WÎHKWÊNTÔWIN) no longer nulls the change across the
-# rename year. The 2025 historical aggregate already carries canonical ids (08d
-# resolves them). The 2026 aggregate's NA-id variants (e.g. CHAPPELLE AREA) are
-# not resolved until 08b, so we resolve a TEMP canonical key here purely for the
-# join — the row's own id stays untouched and 08b sets it canonically. yoy still
-# only exists where both years cleared the N<100 gate (2025 medians are gated).
+# rename year. Both the 2025 historical aggregate (04_aggregate_historical) and the 2026 aggregate
+# (resolved to canonical above, before this block) now carry canonical ids, so the
+# apply_crosswalk() below is idempotent — kept only as a defensive canonical key
+# for the join. yoy still only exists where both years cleared the N<100 gate
+# (2025 medians are gated).
 prev_path <- "output/hist_aggregates/neighbourhood_aggregates_2025.csv"
 if (file.exists(prev_path)) {
   prev_2025 <- read_csv(prev_path, show_col_types = FALSE) |>
@@ -231,7 +264,7 @@ if (file.exists(prev_path)) {
               comma(sum(!is.na(nbhd_agg_gated$yoy_pct_change))), out_path))
 } else {
   warning("2025 historical aggregate not found at ", prev_path,
-          " — yoy_pct_change not added. Run 08d first.")
+          " — yoy_pct_change not added. Run 04_aggregate_historical first.")
 }
 
 
@@ -248,3 +281,37 @@ nbhd_agg_gated |>
     mean_pct_with_unit          = mean(pct_with_unit,        na.rm = TRUE)
   ) |>
   print()
+
+
+# --- Non-residential signal for the builder (relocated from 06_geojson_current) -------------
+# A boundary id is "non_residential" when it appears in the assessment data
+# (no-parking, all classes) but has NO surviving residential aggregate row.
+# Computing it here means the builder no longer re-scans the ~72 MB no-parking
+# frame — it reads this small sidecar instead. setdiff over the SAME id spaces
+# 06_geojson_current used: raw no-parking ids vs the canonical, container-excluded aggregate ids.
+no_parking_ids <- read_csv(
+  "data/processed/assess_2026_no_parking.csv",
+  col_types = cols(`Neighbourhood ID` = col_character(), .default = col_guess())
+)$`Neighbourhood ID` |> unique()
+agg_ids <- nbhd_agg_gated |>
+  filter(!`Neighbourhood ID` %in% crosswalk_exclude_ids()) |>
+  pull(`Neighbourhood ID`) |> unique()
+non_residential_ids <- setdiff(no_parking_ids, agg_ids)
+non_residential_ids <- non_residential_ids[non_residential_ids != "NA"]
+write_csv(tibble(`Neighbourhood ID` = non_residential_ids),
+          "output/non_residential_ids_2026.csv")
+cat(sprintf("\nNon-residential ids (in data, no residential aggregate row): %d -> %s\n",
+            length(non_residential_ids), "output/non_residential_ids_2026.csv"))
+
+
+# --- Reconciliation diagnostics (relocated from 06_geojson_current, CLAUDE.md §4.5) ----------
+# Orphan rows (unresolved NA-id, no crosswalk maps them) + the dated audit trail
+# of what the crosswalk resolved. Diagnostics only (gitignored).
+not_rendered <- crosswalk_audit |> filter(status == "unresolved_no_mapping")
+write_csv(not_rendered, "output/neighbourhoods_2026_not_rendered_recovered.csv")
+audit_path <- sprintf("output/name_mapping_audit_log_%s.csv", format(Sys.Date(), "%Y%m%d"))
+crosswalk_audit |> filter(status != "unchanged") |> write_csv(audit_path)
+cat(sprintf("Wrote %s (%d resolved/unresolved rows); %d orphan NA-id row(s).\n",
+            audit_path, sum(crosswalk_audit$status != "unchanged"), nrow(not_rendered)))
+pruned <- prune_dated_files("output", "^name_mapping_audit_log_\\d{8}\\.csv$", keep = 2L)
+if (length(pruned)) cat(sprintf("Pruned %d old audit log(s).\n", length(pruned)))

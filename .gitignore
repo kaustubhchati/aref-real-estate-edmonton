@@ -87,6 +87,8 @@ pipeline/property-assessment/data/reference/neighbourhood_name_merges_*.csv
 # Property Assessment raw snapshots (current + historical) — refetch via the loader.
 **/data/raw/Property_Assessment_Data_*.csv
 **/data/raw/Property_Assessment_Current_*.csv
+# Property Information raw snapshots (dkk9-cj3x) — fetched by 06, like 01's above.
+**/data/raw/Property_Information_Current_*.csv
 
 # Shared-section data (City neighbourhood boundary + mature-neighbourhood
 # reference downloads) — large, re-downloaded at refresh. Shared CODE under
@@ -105,12 +107,23 @@ pipeline/building-permits/output/permit_coverage_summary.csv
 pipeline/building-permits/output/manifest.json
 pipeline/building-permits/output/permits_coverage.csv
 pipeline/building-permits/output/permits_category_counts.csv
+# Dwelling-units dropped-spanner diagnostic CSVs (per-run, dated) — regenerable
+# build diagnostics, same policy as the aggregates above.
+pipeline/building-permits/output/dwelling_units_*.csv
 
 # Local working doc — audit findings, not a repo artifact
 docs/STRUCTURE_AUDIT.md
+# Audit / review working docs — findings, not repo artifacts (same class as
+# docs/STRUCTURE_AUDIT.md above): the docs/audit/ directory + the dated frontend
+# audit report at the repo root.
+docs/audit/
+FRONTEND_AUDIT_*.md
 
 # Orchestration run logs — runtime output, regenerated each run
 runs/
+# Layer-1 rendered HTML reports — local-only, regenerated from the JSONL log on
+# every refresh (already covered by runs/ above; listed explicitly for intent).
+runs/reports/
 
 # PA regenerable output/ artifacts after the 08e/09a redirect: per-year geojsons
 # + manifest now land in output/ (the runner publishes them to website/public);
@@ -120,6 +133,8 @@ runs/
 pipeline/property-assessment/output/neighbourhoods_*_recovered.geojson
 pipeline/property-assessment/output/manifest.json
 pipeline/property-assessment/output/neighbourhood_aggregates_*.csv
+# 07's non-residential id sidecar (consumed by 08b) — regenerable intermediate.
+pipeline/property-assessment/output/non_residential_ids_*.csv
 pipeline/property-assessment/output/pa_hist_filter_scorecard.csv
 # Historical per-year aggregates + build logs (08d/08e outputs) — same
 # regenerable policy. The pattern above does NOT recurse into this subdir, so it

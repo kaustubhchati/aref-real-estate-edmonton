@@ -1,5 +1,5 @@
 # ============================================================
-# 08e_hist_build_geojson.R
+# 07_geojson_historical.R
 # AREF — Build one GeoJSON per historical Assessment Year
 # Author: Kaustubh Chati (Research Assistant, UAlberta Economics)
 #
@@ -17,14 +17,14 @@
 #   - New year: drop aggregate CSV, script picks it up
 #
 # PREREQUISITE:
-#   - 08d_hist_aggregate.R must have run successfully. 08d now resolves names/ids
+#   - 04_aggregate_historical.R must have run successfully. 04_aggregate_historical now resolves names/ids
 #     to canonical (crosswalk + boundary) and writes a Neighbourhood ID column,
 #     so this script joins by id only — no rescue table, no case-fold name match.
 #
 # INPUTS:
 #   output/hist_aggregates/neighbourhood_aggregates_YYYY.csv (all years, with
-#     canonical Neighbourhood ID from 08d)
-#   shared_path() City_of_Edmonton_-_Neighbourhoods_20260616.csv (boundary)
+#     canonical Neighbourhood ID from 04_aggregate_historical)
+#   shared_path("data") City_of_Edmonton_-_Neighbourhoods_*.csv (boundary, newest by glob)
 #   data/reference/neighbourhood_crosswalk_<YYYYMMDD>.csv (newest; only the
 #     container_exclude ids are read here, to drop umbrella polygons)
 #
@@ -39,7 +39,7 @@ library(scales)
 source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
 source(shared_path("reconcile_helpers.R"))
 
-# Historical GeoJSONs land in output/ (the section's build dir, same place 08b
+# Historical GeoJSONs land in output/ (the section's build dir, same place 06_geojson_current
 # writes the current-year file). Publishing output/ -> website/public is the
 # runner's handoff job now, NOT this script's — keeps the runner the sole
 # publisher. Filename pattern (neighbourhoods_<YYYY>_recovered.geojson) is
@@ -58,11 +58,20 @@ cat("=============================================================\n\n")
 #    Neighbourhood ID in aggregate CSVs.
 # ============================================================
 
-boundary_path <- shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
-
-if (!file.exists(boundary_path)) {
-  stop("Boundary file not found: ", boundary_path)
+# Newest neighbourhood boundary snapshot by glob — same sort(decreasing=TRUE)[1]
+# discipline 03/04 use for their inputs; a new City boundary drops in with no
+# code edit. The real on-disk name uses "_-_". Honest stop if none present.
+boundary_candidates <- list.files(
+  shared_path("data"),
+  pattern    = "^City_of_Edmonton_-_Neighbourhoods_.*\\.csv$",
+  full.names = TRUE
+)
+if (length(boundary_candidates) == 0) {
+  stop("No neighbourhood boundary CSV in ", shared_path("data"),
+       " matching City_of_Edmonton_-_Neighbourhoods_*.csv — download the latest ",
+       "City of Edmonton Neighbourhoods snapshot and save it there.")
 }
+boundary_path <- sort(boundary_candidates, decreasing = TRUE)[1]
 
 boundary_raw <- read_csv(boundary_path, show_col_types = FALSE)
 cat("Boundary rows loaded: ", nrow(boundary_raw), "\n")
@@ -96,7 +105,7 @@ agg_candidates <- list.files(
 )
 
 if (length(agg_candidates) == 0) {
-  stop("No aggregate CSVs found in output/hist_aggregates/. Run 08d first.")
+  stop("No aggregate CSVs found in output/hist_aggregates/. Run 04_aggregate_historical first.")
 }
 
 cat("Aggregate CSVs found: ", length(agg_candidates), "\n\n")
@@ -127,13 +136,13 @@ for (agg_path in sort(agg_candidates)) {
   yr <- as.integer(str_extract(basename(agg_path), "[0-9]{4}"))
   cat(sprintf("--- Year %d ---\n", yr))
   
-  # Load aggregates. 08d resolved names/ids to canonical and wrote a
+  # Load aggregates. 04_aggregate_historical resolved names/ids to canonical and wrote a
   # Neighbourhood ID column, so we join straight on id — no rescue table, no
   # case-fold name match (that old path silently dropped every variant name).
   aggregates <- read_csv(agg_path, show_col_types = FALSE)
   if (!"Neighbourhood ID" %in% names(aggregates)) {
     stop("Aggregate ", basename(agg_path), " has no Neighbourhood ID column — ",
-         "08d (which now writes canonical ids) must run before 08e.")
+         "04_aggregate_historical (which now writes canonical ids) must run before 07_geojson_historical.")
   }
   aggregates <- aggregates |>
     mutate(`Neighbourhood ID` = as.character(`Neighbourhood ID`))

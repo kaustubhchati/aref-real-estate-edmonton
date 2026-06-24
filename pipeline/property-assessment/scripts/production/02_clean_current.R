@@ -1,5 +1,5 @@
 # ============================================================
-# 06_apply_layer1a_rules.R
+# 02_clean_current.R
 # Apply validated Layer 1a rules (parking → R1 → R3) to the
 # post-parking public data and persist a single clean output frame.
 #
@@ -17,7 +17,8 @@
 #
 # Inputs:
 #   - data/processed/assess_2026_no_parking.csv   (from script 01, 394,492 rows)
-#   - data/raw/property_info_2026_20260519.csv    (Property Information snapshot)
+#   - data/raw/Property_Information_Current_*.csv  (Property Information, dkk9-cj3x;
+#       fetched via fetch_socrata_snapshot(), newest located by glob — no date literal)
 #
 # Output:
 #   - data/processed/assess_2026_clean.csv        (~338,944 rows expected)
@@ -32,13 +33,19 @@
 library(tidyverse)
 library(scales)
 
+# Repo-root anchoring + the shared Socrata fetch helper — used below to acquire
+# the current Property Information snapshot (dkk9-cj3x), the same way 01 acquires
+# the assessment data.
+source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
+source(shared_path("fetch_helpers.R"))
+
 dir.create("data/processed", showWarnings = FALSE, recursive = TRUE)
 
 
 # --- Load post-parking frame --------------------------------
 parking_clean_path <- "data/processed/assess_2026_no_parking.csv"
 if (!file.exists(parking_clean_path)) {
-  stop("Missing: ", parking_clean_path, " — run scripts/01_load_data.R first.")
+  stop("Missing: ", parking_clean_path, " — run scripts/01_fetch_current.R first.")
 }
 
 assess_post_parking <- read_csv(parking_clean_path, show_col_types = FALSE)
@@ -95,17 +102,36 @@ if (abs(.r1_pct) > 0.10) {
 }
 
 # --- Load Property Information for R3 + downstream join -----
-info_path <- "data/raw/property_info_2026_20260519.csv"
-if (!file.exists(info_path)) {
-  stop("Missing: ", info_path,
-       " — the Property Information snapshot is required for R3 and",
-       " for downstream Layer 2 aggregation. Pull the dkk9-cj3x dataset",
-       " from data.edmonton.ca and save to this path.")
+# Acquire the current Property Information snapshot (dkk9-cj3x, "Current Calendar
+# Year") via the shared Socrata helper — same export-endpoint + atomic temp-then-
+# rename + size/row/column floors discipline 01 uses for the assessment data. The
+# fetch writes a dated raw file to data/raw/; the glob below locates the newest,
+# so a future year is acquired AND found with no date/year literal in the consumed
+# path (mirrors how 03/04 discover their inputs).
+fetch_socrata_snapshot(
+  dataset_id    = "dkk9-cj3x",
+  dest_dir      = file.path("data", "raw"),
+  min_rows      = 220000L,
+  min_size_mb   = 40,
+  required_cols = c("Account Number", "lot_size", "Total Gross Area", "year_built"),
+  filename_stem = "Property_Information_Current"
+)
+
+info_candidates <- list.files(
+  path       = "data/raw",
+  pattern    = "^Property_Information_Current_.*\\.csv$",
+  full.names = TRUE
+)
+if (length(info_candidates) == 0) {
+  stop("No Property Information snapshot in data/raw/ matching ",
+       "Property_Information_Current_*.csv — the fetch above should have written ",
+       "one; check the dkk9-cj3x download.")
 }
+info_path <- sort(info_candidates, decreasing = TRUE)[1]   # newest by date suffix
 
 info_raw <- read_csv(info_path, show_col_types = FALSE)
-cat(sprintf("Loaded Property Information: %s rows\n",
-            comma(nrow(info_raw))))
+cat(sprintf("Loaded Property Information: %s rows  (%s)\n",
+            comma(nrow(info_raw)), basename(info_path)))
 
 # Rename only the fields that collide with the assessment side (info_ prefix
 # per §4.1 column convention). Keep the unique PI fields un-prefixed so

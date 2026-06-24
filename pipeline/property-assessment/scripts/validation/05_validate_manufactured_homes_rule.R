@@ -18,7 +18,8 @@
 #
 # Inputs:
 #   - data/processed/assess_2026_no_parking.csv    (post-parking public data)
-#   - data/raw/property_info_2026_20260519.csv      (Property Information, dkk9-cj3x)
+#   - data/raw/Property_Information_Current_*.csv    (Property Information, dkk9-cj3x;
+#       newest fetched snapshot, located by glob — no date literal)
 #   - data/validation/edmonton_row_labels_2023.csv  (oracle)
 #
 # Outputs (§6.2 naming):
@@ -58,7 +59,18 @@ cat("Rows after R1 filter (Assessment Class 1 == RESIDENTIAL):", nrow(assess_r1)
 # --- Load Property Information (dkk9-cj3x) ------------------
 # Columns colliding with assessment side are renamed info_ (§4.1).
 # Unique columns used here: lot_size, Total Gross Area, year_built.
-info_path <- "data/raw/property_info_2026_20260519.csv"
+# Auto-discover the newest fetched snapshot (06 acquires it via the shared helper);
+# same sort(decreasing=TRUE)[1] glob 03/04 use — no date/year literal.
+info_candidates <- list.files(
+  path       = "data/raw",
+  pattern    = "^Property_Information_Current_.*\\.csv$",
+  full.names = TRUE
+)
+if (length(info_candidates) == 0) {
+  stop("No Property Information snapshot in data/raw/ matching ",
+       "Property_Information_Current_*.csv — run 06 (which fetches dkk9-cj3x) first.")
+}
+info_path <- sort(info_candidates, decreasing = TRUE)[1]
 info_raw  <- read_csv(info_path, show_col_types = FALSE)
 cat("Property Information rows:", nrow(info_raw), "\n")
 

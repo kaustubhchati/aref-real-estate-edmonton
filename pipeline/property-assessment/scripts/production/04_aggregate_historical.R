@@ -1,12 +1,12 @@
 # ============================================================
-# 08d_hist_aggregate.R
+# 04_aggregate_historical.R
 # AREF — Historical neighbourhood aggregation (all years)
 # Author: Kaustubh Chati (Research Assistant, UAlberta Economics)
 #
 # PURPOSE: Run Stata3-equivalent Layer 2 aggregation on the
 #   historical cleaned CSV for every Assessment Year present.
 #   Outputs one aggregate CSV per year, schema-identical to
-#   output/neighbourhood_aggregates_2026.csv from script 07.
+#   output/neighbourhood_aggregates_2026.csv from script 05.
 #   Names/ids are resolved to canonical (crosswalk + boundary) BEFORE
 #   aggregating (see step 3b), so each row carries the canonical
 #   Neighbourhood ID and yoy is keyed on it, not on a name that a
@@ -18,12 +18,12 @@
 #   - Output filenames derived from data, not hardcoded.
 #
 # INPUTS:
-#   output/pa_hist_clean_YYYYMMDD.csv   (from script 07a_build_hist_clean.R)
+#   output/pa_hist_clean_YYYYMMDD.csv   (from script 03_clean_historical.R)
 #
 # OUTPUTS (one per Assessment Year):
 #   output/hist_aggregates/neighbourhood_aggregates_YYYY.csv
 #
-# SCHEMA per output CSV (matches script 07 output exactly):
+# SCHEMA per output CSV (matches script 05 output exactly):
 #   Neighbourhood ID, Neighbourhood, n_properties,
 #   avall_public, median_assessvalue, sd_assessedvalue,
 #   median_yearbuilt, pct_with_unit,
@@ -55,7 +55,7 @@ clean_candidates <- list.files(
 if (length(clean_candidates) == 0) {
   stop(paste(
     "No pa_hist_clean_*.csv found in output/.",
-    "Run 07_build_hist_clean.R first."
+    "Run 03_clean_historical.R first."
   ))
 }
 
@@ -86,7 +86,7 @@ cat("Years present: ",
 #
 #    TODO: if a future refresh includes legal_description in
 #    the historical download, replace this with the full
-#    str_detect("unit:") logic from script 07.
+#    str_detect("unit:") logic from script 05.
 # ============================================================
 
 pa_clean <- pa_clean |>
@@ -102,13 +102,26 @@ cat("      See script header for rationale.\n\n")
 #    combined rows, never averaged from two summaries), and a rename/typo must
 #    keep a neighbourhood in ONE group across years. Resolving here means every
 #    year's aggregate is keyed by the canonical id the boundary + frontend use,
-#    so 08e joins by id (no case-fold name match) and yoy is continuous across a
+#    so 07_geojson_historical joins by id (no case-fold name match) and yoy is continuous across a
 #    rename (OLIVER -> WÎHKWÊNTÔWIN). The historical file is name-only, so the
 #    crosswalk resolves by variant_name; canonical-named rows get their id from
 #    the boundary name lookup. Source: the single neighbourhood crosswalk.
 # ============================================================
 
-boundary_path <- shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
+# Newest neighbourhood boundary snapshot by glob — same sort(decreasing=TRUE)[1]
+# discipline 03/04 use for their inputs; a new City boundary drops in with no
+# code edit. The real on-disk name uses "_-_".
+boundary_candidates <- list.files(
+  shared_path("data"),
+  pattern    = "^City_of_Edmonton_-_Neighbourhoods_.*\\.csv$",
+  full.names = TRUE
+)
+if (length(boundary_candidates) == 0) {
+  stop("No neighbourhood boundary CSV in ", shared_path("data"),
+       " matching City_of_Edmonton_-_Neighbourhoods_*.csv — download the latest ",
+       "City of Edmonton Neighbourhoods snapshot and save it there.")
+}
+boundary_path <- sort(boundary_candidates, decreasing = TRUE)[1]
 boundary_lookup <- read_csv(boundary_path, show_col_types = FALSE) |>
   transmute(boundary_id = as.character(as.integer(`Neighbourhood Number`)),
             join_name   = str_to_upper(`Neighbourhood Name`))
@@ -152,7 +165,7 @@ for (yr in years_present) {
   yr_data <- pa_clean |> filter(`Assessment Year` == yr)
   cat(sprintf("  Rows: %s\n", format(nrow(yr_data), big.mark = ",")))
   
-  # --- Aggregate (Stata3 formula, script 07 port) -----------
+  # --- Aggregate (Stata3 formula, script 05 port) -----------
   # Group by canonical (id, name): same id always carries the same canonical
   # name post-resolution, so this pools merged/renamed rows into one correct row.
   nbhd_agg <- yr_data |>

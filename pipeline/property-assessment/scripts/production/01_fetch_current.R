@@ -1,5 +1,5 @@
 # ============================================================
-# 01_load_data.R
+# 01_fetch_current.R
 # Pull Edmonton property assessment data, flag schedule-priced
 # parking (coord, value) pairs, and persist the parking-cleaned
 # frame for the downstream rule chain. FIRST script in the section.
@@ -39,7 +39,7 @@ source(shared_path("fetch_helpers.R"))
 # Fetch the current-year assessment snapshot (q7d6-ambg) via the shared helper:
 # export endpoint only, atomic temp-then-rename to a dated raw file, and
 # size/row/column floors verified before promotion. The required_cols guard
-# (Lat/Long/Assessed Value plus the keys downstream 06/07/08 consume) runs
+# (Lat/Long/Assessed Value plus the keys downstream 02/05/06 consume) runs
 # INSIDE the helper, so a renamed/truncated source fails loud here rather than
 # crashing mid-clean. Floors ~half of observed (~440k rows / ~85 MB). The dated
 # raw snapshot is accepted provenance (gitignored, like 02's).

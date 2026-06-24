@@ -14,7 +14,7 @@
 // =============================================================================
 
 import { fmtCurrency, fmtNumber, fmtPct, fmtYear, fmtArea } from "../../utils/format.js";
-import { polyOutline, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
+import { polyOutline, rampFloor, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
 import { paintTransition, DUR_BASE } from "../../components/motion.js";
 
 // ---- Map view defaults (Edmonton, matches 09_build_choropleth.html) --------
@@ -43,8 +43,9 @@ export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 // path), so each band holds ~equal NUMBERS of neighbourhoods — fixing the orange
 // mid-plateau an interpolate-by-raw-value ramp produced (the central quartiles
 // are squeezed into a narrow $ range, so the median band barely changed colour
-// while all contrast dumped into the sparse tail). Gold low band reads as DATA on
-// the cream basemap (RAMP_FLOOR retired). Stops are keyed onto the per-year/metric
+// while all contrast dumped into the sparse tail). The low band uses the shared
+// RAMP_FLOOR (#fbe3a0, via rampFloor) — the same soft warm yellow as the Business
+// Census floor — so it reads as DATA on the cream basemap. Stops are keyed onto the per-year/metric
 // break scale ENRICHED with two IQR-derived tail breaks (see withTailBreaks):
 // mid75 = q75 + ½·IQR, near = q75 + IQR. The top band [near, ∞) = bright Ferrari
 // #cc0000 — because the high-value tail is long (~5·IQR every year), `near` sits
@@ -52,7 +53,7 @@ export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 // max polygon. `max` is a legend boundary only, NEVER a step threshold (that
 // would strand #cc0000 on one polygon). RAMP_ASSESSED is the exposed tunable.
 const RAMP_ASSESSED = [
-  { key: "min",    c: "#ffd247", label: "min"      }, // step BASE (value < q25) — warm gold
+  { key: "min",    c: rampFloor("#f5f0e8"), label: "min" }, // step BASE (value < q25) — shared soft-yellow floor (#fbe3a0), matches Business Census
   { key: "q25",    c: "#f5a02e", label: "Q25"      }, // amber
   { key: "median", c: "#ec6f2e", label: "median"   }, // orange-red — true phase-midpoint
   { key: "q75",    c: "#e0381c", label: "Q75"      }, // scarlet

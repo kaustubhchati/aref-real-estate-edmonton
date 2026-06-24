@@ -4,7 +4,7 @@
 # public data, build validation references from 2023 confidential file.
 #
 # Inputs:
-#   - assess_clean (from 01_load_data.R) — 394,492 rows, parking removed
+#   - assess_clean (from 01_fetch_current.R) — 394,492 rows, parking removed
 #     OR data/processed/assess_2026_no_parking.csv on disk
 #   - Property Information current year from data.edmonton.ca (dkk9-cj3x)
 #   - 2023 confidential xlsx located via AREF_CONF_PATH (env var; see _bootstrap.R conf_path)
