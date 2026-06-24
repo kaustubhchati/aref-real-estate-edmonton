@@ -24,7 +24,7 @@
 # INPUTS:
 #   output/hist_aggregates/neighbourhood_aggregates_YYYY.csv (all years, with
 #     canonical Neighbourhood ID from 08d)
-#   shared_path() City_of_Edmonton_-_Neighbourhoods_20260616.csv (boundary)
+#   shared_path("data") City_of_Edmonton_-_Neighbourhoods_*.csv (boundary, newest by glob)
 #   data/reference/neighbourhood_crosswalk_<YYYYMMDD>.csv (newest; only the
 #     container_exclude ids are read here, to drop umbrella polygons)
 #
@@ -58,11 +58,20 @@ cat("=============================================================\n\n")
 #    Neighbourhood ID in aggregate CSVs.
 # ============================================================
 
-boundary_path <- shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
-
-if (!file.exists(boundary_path)) {
-  stop("Boundary file not found: ", boundary_path)
+# Newest neighbourhood boundary snapshot by glob — same sort(decreasing=TRUE)[1]
+# discipline 07a/08d use for their inputs; a new City boundary drops in with no
+# code edit. The real on-disk name uses "_-_". Honest stop if none present.
+boundary_candidates <- list.files(
+  shared_path("data"),
+  pattern    = "^City_of_Edmonton_-_Neighbourhoods_.*\\.csv$",
+  full.names = TRUE
+)
+if (length(boundary_candidates) == 0) {
+  stop("No neighbourhood boundary CSV in ", shared_path("data"),
+       " matching City_of_Edmonton_-_Neighbourhoods_*.csv — download the latest ",
+       "City of Edmonton Neighbourhoods snapshot and save it there.")
 }
+boundary_path <- sort(boundary_candidates, decreasing = TRUE)[1]
 
 boundary_raw <- read_csv(boundary_path, show_col_types = FALSE)
 cat("Boundary rows loaded: ", nrow(boundary_raw), "\n")

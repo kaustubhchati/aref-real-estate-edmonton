@@ -108,7 +108,20 @@ cat("      See script header for rationale.\n\n")
 #    the boundary name lookup. Source: the single neighbourhood crosswalk.
 # ============================================================
 
-boundary_path <- shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
+# Newest neighbourhood boundary snapshot by glob — same sort(decreasing=TRUE)[1]
+# discipline 07a/08d use for their inputs; a new City boundary drops in with no
+# code edit. The real on-disk name uses "_-_".
+boundary_candidates <- list.files(
+  shared_path("data"),
+  pattern    = "^City_of_Edmonton_-_Neighbourhoods_.*\\.csv$",
+  full.names = TRUE
+)
+if (length(boundary_candidates) == 0) {
+  stop("No neighbourhood boundary CSV in ", shared_path("data"),
+       " matching City_of_Edmonton_-_Neighbourhoods_*.csv — download the latest ",
+       "City of Edmonton Neighbourhoods snapshot and save it there.")
+}
+boundary_path <- sort(boundary_candidates, decreasing = TRUE)[1]
 boundary_lookup <- read_csv(boundary_path, show_col_types = FALSE) |>
   transmute(boundary_id = as.character(as.integer(`Neighbourhood Number`)),
             join_name   = str_to_upper(`Neighbourhood Name`))

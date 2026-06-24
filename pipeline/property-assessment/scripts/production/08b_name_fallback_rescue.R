@@ -12,7 +12,7 @@
 #
 # Inputs:
 #   - output/neighbourhood_aggregates_2026.csv               (from script 07)
-#   - shared_path() pipeline/shared/data/City_of_Edmonton_-_Neighbourhoods_20260616.csv
+#   - shared_path("data") City_of_Edmonton_-_Neighbourhoods_*.csv  (boundary, newest by glob)
 #   - data/processed/assess_2026_no_parking.csv              (non-residential check)
 #   - data/reference/neighbourhood_crosswalk_<YYYYMMDD>.csv  (newest; the single
 #     reconciliation contract, authored by the reconcile one-shot, CLAUDE.md §4.4)
@@ -56,7 +56,20 @@ stopifnot(dir.exists("output"))
 
 
 # --- Path config --------------------------------------------
-boundary_path <- shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
+# Locate the newest neighbourhood boundary snapshot by glob — the same
+# sort(decreasing=TRUE)[1] discipline 07a/08d use for their inputs, so a new City
+# boundary drops in with no code edit. The real on-disk name uses "_-_".
+boundary_candidates <- list.files(
+  shared_path("data"),
+  pattern    = "^City_of_Edmonton_-_Neighbourhoods_.*\\.csv$",
+  full.names = TRUE
+)
+if (length(boundary_candidates) == 0) {
+  stop("No neighbourhood boundary CSV in ", shared_path("data"),
+       " matching City_of_Edmonton_-_Neighbourhoods_*.csv — download the latest ",
+       "City of Edmonton Neighbourhoods snapshot and save it there.")
+}
+boundary_path <- sort(boundary_candidates, decreasing = TRUE)[1]
 aggregates_path <- "output/neighbourhood_aggregates_2026.csv"
 post_parking_path <- "data/processed/assess_2026_no_parking.csv"
 

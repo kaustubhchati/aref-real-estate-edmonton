@@ -188,7 +188,15 @@ if (nrow(missing_canon) > 0) {
 # exist in the boundary and its renumber/rename variant_ids are gone
 # (new-id-wins). Guarded by file.exists so the one-shot still runs
 # without the 2.7 MB boundary present. Warnings only, never fatal.
-boundary_path <- shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
+# Newest boundary snapshot by glob (no date literal); "" when none present, so the
+# OPTIONAL file.exists() guard below self-skips and this one-shot still runs
+# without the 2.7 MB boundary on disk. Real on-disk name uses "_-_".
+boundary_candidates <- sort(list.files(
+  shared_path("data"),
+  pattern    = "^City_of_Edmonton_-_Neighbourhoods_.*\\.csv$",
+  full.names = TRUE
+), decreasing = TRUE)
+boundary_path <- if (length(boundary_candidates)) boundary_candidates[1] else ""
 if (file.exists(boundary_path)) {
   boundary_ids <- read_csv(boundary_path, show_col_types = FALSE) |>
     transmute(id = as.character(as.integer(`Neighbourhood Number`))) |>

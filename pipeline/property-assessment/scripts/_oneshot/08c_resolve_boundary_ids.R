@@ -27,7 +27,8 @@
 #   updated 20260617 mapping.
 #
 # INPUTS:
-#   City_of_Edmonton__Neighbourhoods_20260616.csv  — new boundary file
+#   shared_path("data") City_of_Edmonton_-_Neighbourhoods_*.csv — boundary file
+#       (correct on-disk name uses "_-_"; the live scripts locate it by glob)
 #   data/reference/neighbourhood_name_mappings_20260519.csv — existing rescue table
 #
 # OUTPUT (the migration that already happened):
@@ -42,7 +43,14 @@ source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file
 # 1. Load new boundary file
 # ============================================================
 
-boundary_path <- shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
+# Newest boundary snapshot by glob (no date literal); "" when none present, so the
+# existing file.exists() stop below still fires. Real on-disk name uses "_-_".
+boundary_candidates <- sort(list.files(
+  shared_path("data"),
+  pattern    = "^City_of_Edmonton_-_Neighbourhoods_.*\\.csv$",
+  full.names = TRUE
+), decreasing = TRUE)
+boundary_path <- if (length(boundary_candidates)) boundary_candidates[1] else ""
 
 if (!file.exists(boundary_path)) {
   stop(paste(
