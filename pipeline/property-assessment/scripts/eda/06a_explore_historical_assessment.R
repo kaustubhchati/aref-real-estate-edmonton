@@ -78,7 +78,7 @@ if (!exists("pa_res")) {
   stop(paste(
     "pa_res not found in environment.",
     "Run the filtering block first (prop_asses_hist -> pa_hist -> pa_res)",
-    "or source 01_load_data.R before running this script."
+    "or source 01_fetch_current.R before running this script."
   ))
 }
 

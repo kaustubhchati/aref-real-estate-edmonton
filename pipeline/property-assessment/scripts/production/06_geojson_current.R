@@ -1,7 +1,7 @@
 # ============================================================
-# 08b_name_fallback_rescue.R
+# 06_geojson_current.R
 # Build the current-year (2026) neighbourhood choropleth GeoJSON: take the
-# already-canonical aggregate (07 resolved ids via the crosswalk upstream), drop
+# already-canonical aggregate (05 resolved ids via the crosswalk upstream), drop
 # annexation-container umbrella rows, then spatial-join to the boundary polygons
 # and classify render states. PURE BUILDER: boundary in, aggregate CSV in,
 # classified GeoJSON out — no row-level re-reads, no reconciliation decisions.
@@ -12,15 +12,15 @@
 # WKT/WGS84, in pipeline/shared. Read via read_csv + st_as_sf(wkt=...).
 #
 # Inputs:
-#   - output/neighbourhood_aggregates_2026.csv               (from 07; canonical ids)
-#   - output/non_residential_ids_2026.csv                    (from 07; non-res signal)
+#   - output/neighbourhood_aggregates_2026.csv               (from 05; canonical ids)
+#   - output/non_residential_ids_2026.csv                    (from 05; non-res signal)
 #   - shared_path("data") City_of_Edmonton_-_Neighbourhoods_*.csv  (boundary, newest by glob)
 #
 # Output:
 #   - output/neighbourhoods_2026_recovered.geojson  (the choropleth source the
 #     FRONTEND consumes; uniform neighbourhoods_<YYYY>_recovered.geojson name
 #     shared with the historical years) — the ONLY file this builder writes.
-#     (The unresolved-rows CSV + dated crosswalk audit log are written by 07 now.)
+#     (The unresolved-rows CSV + dated crosswalk audit log are written by 05 now.)
 #
 # What this does:
 #   1. Load the (already-canonical) 2026 aggregates + the boundary polygons.
@@ -52,7 +52,7 @@ stopifnot(dir.exists("output"))
 
 # --- Path config --------------------------------------------
 # Locate the newest neighbourhood boundary snapshot by glob — the same
-# sort(decreasing=TRUE)[1] discipline 07a/08d use for their inputs, so a new City
+# sort(decreasing=TRUE)[1] discipline 03/04 use for their inputs, so a new City
 # boundary drops in with no code edit. The real on-disk name uses "_-_".
 boundary_candidates <- list.files(
   shared_path("data"),
@@ -66,7 +66,7 @@ if (length(boundary_candidates) == 0) {
 }
 boundary_path <- sort(boundary_candidates, decreasing = TRUE)[1]
 aggregates_path <- "output/neighbourhood_aggregates_2026.csv"
-non_residential_path <- "output/non_residential_ids_2026.csv"   # emitted by 07
+non_residential_path <- "output/non_residential_ids_2026.csv"   # emitted by 05
 
 # Hard fail with actionable errors if any input is missing
 for (p in c(boundary_path, aggregates_path, non_residential_path)) {
@@ -115,19 +115,19 @@ cat(sprintf("Container-excluded %d umbrella polygon(s): %s\n",
             if (length(exclude_ids)) paste(exclude_ids, collapse = ", ") else "(none)"))
 
 
-# The aggregate already carries canonical Neighbourhood IDs — 07 (the aggregate
+# The aggregate already carries canonical Neighbourhood IDs — 05 (the aggregate
 # step, the reconciliation home) resolved them via the crosswalk before the
 # polygon join, and emitted the audit trail. This builder applies NO crosswalk and
 # makes NO reconciliation decisions; it consumes the aggregate as-is.
 
 
-# --- Non-residential ids: read the sidecar 07 emitted -------
-# 07 computed setdiff(no-parking ids, canonical aggregate ids); the builder no
+# --- Non-residential ids: read the sidecar 05 emitted -------
+# 05 computed setdiff(no-parking ids, canonical aggregate ids); the builder no
 # longer re-scans the ~72 MB no-parking frame.
 non_residential_ids <- as.character(
   read_csv(non_residential_path, show_col_types = FALSE)$`Neighbourhood ID`)
 
-# --- Spatial join (same logic as script 08) -----------------
+# --- Spatial join (same join logic, unchanged) -----------------
 joined <- nbhd_polygons |>
   left_join(aggregates, by = "Neighbourhood ID")
 
@@ -174,7 +174,7 @@ print(remaining_no_data)
 
 
 # --- Write outputs ------------------------------------------
-# Trim to display columns (same as script 08)
+# Trim to display columns (same display trim, unchanged)
 geojson_ready <- joined |>
   transmute(
     `Neighbourhood ID`           = `Neighbourhood ID`,
@@ -206,7 +206,7 @@ cat(sprintf("\nWrote %s (%.2f MB, %d polygons)\n",
             nrow(geojson_ready)))
 
 
-# (The orphan-rows CSV and the dated crosswalk audit log are written by 07 now —
+# (The orphan-rows CSV and the dated crosswalk audit log are written by 05 now —
 # the reconciliation that produced them moved upstream with the crosswalk.)
 
 
@@ -227,7 +227,7 @@ cat(sprintf("  no_data (legitimate): %d\n",
 
 
 # --- Choropleth colour-scale domain -------------------------
-# Same logic as script 08, in case the rescue shifted the distribution
+# Same logic as before, in case the rescue shifted the distribution
 agg_vals <- joined |>
   st_drop_geometry() |>
   filter(polygon_state == "aggregated") |>

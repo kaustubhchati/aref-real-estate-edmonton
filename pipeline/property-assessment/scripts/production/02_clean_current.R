@@ -1,5 +1,5 @@
 # ============================================================
-# 06_apply_layer1a_rules.R
+# 02_clean_current.R
 # Apply validated Layer 1a rules (parking → R1 → R3) to the
 # post-parking public data and persist a single clean output frame.
 #
@@ -45,7 +45,7 @@ dir.create("data/processed", showWarnings = FALSE, recursive = TRUE)
 # --- Load post-parking frame --------------------------------
 parking_clean_path <- "data/processed/assess_2026_no_parking.csv"
 if (!file.exists(parking_clean_path)) {
-  stop("Missing: ", parking_clean_path, " — run scripts/01_load_data.R first.")
+  stop("Missing: ", parking_clean_path, " — run scripts/01_fetch_current.R first.")
 }
 
 assess_post_parking <- read_csv(parking_clean_path, show_col_types = FALSE)
@@ -107,7 +107,7 @@ if (abs(.r1_pct) > 0.10) {
 # rename + size/row/column floors discipline 01 uses for the assessment data. The
 # fetch writes a dated raw file to data/raw/; the glob below locates the newest,
 # so a future year is acquired AND found with no date/year literal in the consumed
-# path (mirrors how 07a/08d discover their inputs).
+# path (mirrors how 03/04 discover their inputs).
 fetch_socrata_snapshot(
   dataset_id    = "dkk9-cj3x",
   dest_dir      = file.path("data", "raw"),

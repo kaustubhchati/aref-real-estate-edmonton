@@ -13,63 +13,66 @@ sections:
     # Declared explicitly — do NOT infer it from an .Rproj file.
     cwd: pipeline/property-assessment
 
-    # Scripts in DEPENDENCY order — NOT numeric filename order.
+    # Scripts in DEPENDENCY order. After the Jun-2026 rename the 01..08 prefixes
+    # now coincide with this run order, but the prefix is only a stable
+    # lexical-sort handle — run order is THIS list, authoritative. Do not infer
+    # order from the numbers, and do not reorder a step to "match" them.
     # Each path is relative to `cwd` above.
     scripts:
-      - scripts/production/01_load_data.R
-      - scripts/production/06_apply_layer1a_rules.R
-      - scripts/production/07a_build_hist_clean.R
-      # --- 08d MUST run BEFORE 07 (dependency, not numeric, order) ---
-      # 07 reads 08d's prior-year output
+      - scripts/production/01_fetch_current.R
+      - scripts/production/02_clean_current.R
+      - scripts/production/03_clean_historical.R
+      # --- 04_aggregate_historical MUST run BEFORE 05_aggregate_current (dependency) ---
+      # 05 reads 04's prior-year output
       #   output/hist_aggregates/neighbourhood_aggregates_2025.csv
-      # to compute the yoy_pct_change column. In numeric order (07 before 08d)
-      # that file does not yet exist on a clean run, so 07's file.exists guard
-      # falls through to a warning and SILENTLY nulls yoy_pct_change.
-      # A future reader must NOT "correct" this back to numeric order.
-      - scripts/production/08d_hist_aggregate.R
-      - scripts/production/07_layer2_aggregates.R
+      # to compute the yoy_pct_change column. If 05 ran first, that file would not
+      # yet exist on a clean run, so 05's file.exists guard falls through to a
+      # warning and SILENTLY nulls yoy_pct_change. Keep 04 ahead of 05.
+      - scripts/production/04_aggregate_historical.R
+      - scripts/production/05_aggregate_current.R
       # 08_build_geojson.R removed 2026-06-22: it built a pre-rescue geojson the
-      # frontend never consumed. 08b is the sole current-year builder now.
-      - scripts/production/08b_name_fallback_rescue.R
-      - scripts/production/08e_hist_build_geojson.R
-      - scripts/production/09a_emit_manifest.R
+      # frontend never consumed. 06_geojson_current is the sole current-year builder now.
+      - scripts/production/06_geojson_current.R
+      - scripts/production/07_geojson_historical.R
+      - scripts/production/08_emit_manifest.R
 
     # Order invariants (data-driven; consumed by the dry-run check in
     # _run_engine.R). Each {before, after} pair must appear in that order in the
-    # scripts list above — this encodes the 08d-before-07 dependency documented
+    # scripts list above — this encodes the 04-before-05 dependency documented
     # there. Sections without this key carry no ordering constraint (and so no
     # longer mis-fail the dry run, as they did under the old hardcoded check).
     order_invariants:
-      - before: scripts/production/08d_hist_aggregate.R
-        after:  scripts/production/07_layer2_aggregates.R
+      - before: scripts/production/04_aggregate_historical.R
+        after:  scripts/production/05_aggregate_current.R
 
     # Expected outputs (data-driven; checked by the expected-outputs guard in
     # _run_engine.R). Map each producing script to the cwd-relative outputs it
     # must leave NON-EMPTY. A missing/zero-byte declared output flags that script
     # ok_empty_output (the chain continues) and the handoff refuses to publish it.
     # The handoff's own zero-byte check backstops EVERY published file regardless;
-    # this map is the earlier, script-level signal for the key products. (08e
-    # builds 2012-2025; the two endpoints below are a representative guard — the
-    # handoff size check covers the in-between years.)
+    # this map is the earlier, script-level signal for the key products.
+    # (07_geojson_historical builds 2012-2025; the two endpoints below are a
+    # representative guard — the handoff size check covers the in-between years.)
     expected_outputs:
-      scripts/production/07_layer2_aggregates.R:
+      scripts/production/05_aggregate_current.R:
         - output/neighbourhood_aggregates_2026.csv
-      scripts/production/08b_name_fallback_rescue.R:
+      scripts/production/06_geojson_current.R:
         - output/neighbourhoods_2026_recovered.geojson
-      scripts/production/08e_hist_build_geojson.R:
+      scripts/production/07_geojson_historical.R:
         - output/neighbourhoods_2012_recovered.geojson
         - output/neighbourhoods_2025_recovered.geojson
 
     # --- Handoff: publish output/ -> website/public after ALL scripts succeed ---
-    # The runner is now the SOLE writer of website/public. 08e/08b write the
-    # per-year GeoJSONs to output/ (uniform neighbourhoods_<YYYY>_recovered.geojson
-    # name); 09a writes output/manifest.json. This block declares the publish:
+    # The runner is now the SOLE writer of website/public. 07_geojson_historical
+    # and 06_geojson_current write the per-year GeoJSONs to output/ (uniform
+    # neighbourhoods_<YYYY>_recovered.geojson name); 08_emit_manifest writes
+    # output/manifest.json. This block declares the publish:
     # for every year the manifest lists, identity-copy that GeoJSON to public,
     # then publish the manifest. Manifest-driven — no year literals. {year} is the
     # placeholder the runner fills from the manifest.
     handoff:
       manifest:        output/manifest.json                         # cwd-relative; the year source (09a)
-      geojson_src_dir: output                                       # cwd-relative; where 08e/08b wrote
+      geojson_src_dir: output                                       # cwd-relative; where 07/06 geojson builders wrote
       geojson_pattern: neighbourhoods_{year}_recovered.geojson      # {year} <- manifest years
       dest_dir:        website/public/data/property-assessment      # repo-root-relative
       manifest_dest:   website/public/manifest.json                 # repo-root-relative

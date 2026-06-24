@@ -1,5 +1,5 @@
 # ============================================================
-# 09a_emit_manifest.R
+# 08_emit_manifest.R
 # AREF — Emit manifest.json for frontend year auto-discovery
 # Author: Kaustubh Chati (Research Assistant, UAlberta Economics)
 #
@@ -11,11 +11,11 @@
 # REFRESH-BY-DESIGN:
 #   - Discovers years from filenames — no hardcoded year list
 #   - Re-running after adding a new GeoJSON updates the manifest
-#   - One operator command: source("scripts/09a_emit_manifest.R")
+#   - One operator command: source("scripts/08_emit_manifest.R")
 #
 # INPUTS:
 #   output/neighbourhoods_YYYY_recovered.geojson
-#   (all years freshly built by 08e/08b this run)
+#   (all years freshly built by 07_geojson_historical/06_geojson_current this run)
 #
 # OUTPUT:
 #   output/manifest.json   (the runner publishes it to website/public/manifest.json)
@@ -89,7 +89,7 @@ geojson_files <- list.files(
 
 if (length(geojson_files) == 0) {
   stop("No GeoJSON files found in ", public_dir,
-       "\nRun 08e_hist_build_geojson.R first.")
+       "\nRun 07_geojson_historical.R first.")
 }
 
 years_found <- sort(as.integer(
@@ -182,8 +182,8 @@ cat("Years covered: ", paste(years_found, collapse = ", "), "\n")
 cat("Default year: ", max(years_found), "\n")
 cat("=============================================================\n")
 
-# NOTE: 09a only EMITS the manifest (its stated purpose). Copying the 2026
-# GeoJSON into website/public is the build step's job (08b output → public),
+# NOTE: 08_emit_manifest only EMITS the manifest (its stated purpose). Copying the 2026
+# GeoJSON into website/public is the build step's job (06_geojson_current output → public),
 # done before running this script. A prior trailing file.copy() here pulled a
 # stale output/neighbourhoods_2026_recovered.geojson (old 402-polygon boundary,
 # no yoy) over the freshly built file and was removed 2026-06-18.

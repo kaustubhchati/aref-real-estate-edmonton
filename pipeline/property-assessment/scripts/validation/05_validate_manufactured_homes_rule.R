@@ -60,7 +60,7 @@ cat("Rows after R1 filter (Assessment Class 1 == RESIDENTIAL):", nrow(assess_r1)
 # Columns colliding with assessment side are renamed info_ (§4.1).
 # Unique columns used here: lot_size, Total Gross Area, year_built.
 # Auto-discover the newest fetched snapshot (06 acquires it via the shared helper);
-# same sort(decreasing=TRUE)[1] glob 07a/08d use — no date/year literal.
+# same sort(decreasing=TRUE)[1] glob 03/04 use — no date/year literal.
 info_candidates <- list.files(
   path       = "data/raw",
   pattern    = "^Property_Information_Current_.*\\.csv$",
