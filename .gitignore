@@ -119,6 +119,9 @@ FRONTEND_AUDIT_*.md
 
 # Orchestration run logs — runtime output, regenerated each run
 runs/
+# Layer-1 rendered HTML reports — local-only, regenerated from the JSONL log on
+# every refresh (already covered by runs/ above; listed explicitly for intent).
+runs/reports/
 
 # PA regenerable output/ artifacts after the 08e/09a redirect: per-year geojsons
 # + manifest now land in output/ (the runner publishes them to website/public);

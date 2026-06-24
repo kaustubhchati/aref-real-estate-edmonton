@@ -88,4 +88,15 @@ if (any_empty) {
 }
 cat(sprintf("\nrefresh_id: %s\nlog: %s\n", refresh_id, log_path))
 
+# --- Layer 1: render this run's report + regenerate the index ----------------
+# POST-PUBLICATION and ADDITIVE: render_all() writes only to runs/reports/, never
+# the pipeline outputs or the JSONL — so it cannot perturb what the sections just
+# produced. The just-finished run's report does not exist yet, so the incremental
+# renderer renders it (and any not-yet-rendered run) and always rebuilds index.html.
+# Wrapped so a render failure can never fail an otherwise-successful refresh.
+tryCatch({
+  source(file.path(REPO_ROOT, "render_report.R"))
+  render_all(repo_root = REPO_ROOT)
+}, error = function(e) cat(sprintf("  [report] render skipped: %s\n", conditionMessage(e))))
+
 quit(status = if (any_fail) 1L else 0L)
