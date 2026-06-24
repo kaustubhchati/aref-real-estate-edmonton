@@ -133,6 +133,8 @@ runs/reports/
 pipeline/property-assessment/output/neighbourhoods_*_recovered.geojson
 pipeline/property-assessment/output/manifest.json
 pipeline/property-assessment/output/neighbourhood_aggregates_*.csv
+# 07's non-residential id sidecar (consumed by 08b) — regenerable intermediate.
+pipeline/property-assessment/output/non_residential_ids_*.csv
 pipeline/property-assessment/output/pa_hist_filter_scorecard.csv
 # Historical per-year aggregates + build logs (08d/08e outputs) — same
 # regenerable policy. The pattern above does NOT recurse into this subdir, so it
