@@ -47,13 +47,18 @@ function ensurePMTilesProtocol() {
 
 const SOURCE_ID = "permits";
 
-// The permits .pmtiles is hosted on Cloudflare R2 (NOT /public): PMTiles reads
-// tiles by HTTP range request, which Cloudflare Pages does not honor on static
-// assets but R2 does.
-const R2_BASE_URL = "https://pub-600ea350470345bbb93a035ad72875d5.r2.dev";
+// Where the permits .pmtiles is served from. PMTiles fetches tiles by HTTP
+// byte-range request, so the host MUST honor HTTP 206 Partial Content. That is
+// the whole reason this lives off /public: Cloudflare Pages does NOT honor range
+// requests on static assets, so the default below points at Cloudflare R2 (which
+// does). Any range-capable host works — e.g. an nginx VM, which serves ranges by
+// default. Override the origin with VITE_PMTILES_BASE (no trailing slash, no
+// /building-permits suffix); leave it unset to keep the current R2 default so the
+// Pages deploy is unchanged.
+const PMTILES_BASE = import.meta.env.VITE_PMTILES_BASE || "https://pub-600ea350470345bbb93a035ad72875d5.r2.dev";
 
 // The pmtiles:// prefix routes the URL through the registered protocol handler.
-const PERMITS_URL = `pmtiles://${R2_BASE_URL}/building-permits/permits.pmtiles`;
+const PERMITS_URL = `pmtiles://${PMTILES_BASE}/building-permits/permits.pmtiles`;
 
 // Click a dot → pinned popup; hover a dot → light preview popup; pointer cursor
 // while hovering. One shared instance each, so re-clicking/-hovering repositions

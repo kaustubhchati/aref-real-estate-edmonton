@@ -1,0 +1,13 @@
+# SPA routing fallback (Cloudflare Pages format).
+#
+# Serve index.html (with a 200, not a 301) for any path that is not a real
+# static file, so client-side routes like /properties/property-assessment
+# survive a hard refresh or a shared deep link.
+#
+# Cloudflare Pages serves real static files (/assets, /data, /styles,
+# /downloads, /manifest.json, ...) BEFORE applying this catch-all, so data and
+# basemap loads are unaffected — only unmatched paths fall through to the SPA.
+#
+# Non-Pages hosts need their own equivalent — see README "Deploying the site"
+# for the nginx try_files snippet.
+/*  /index.html  200

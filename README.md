@@ -86,10 +86,51 @@ Cloudflare Pages build settings:
 | Environment variable   | `NODE_VERSION` = `20`          |
 
 Note: the output directory is **relative to the root directory** (`website`), so it is
-`dist`, not `website/dist`. `website/public/_redirects` (`/*  /index.html  200`) handles
-single-page-app routing so deep links survive a refresh.
+`dist`, not `website/dist`.
 
 Live: https://aref-real-estate-edmonton.pages.dev/
 
 A University of Alberta server is the intended long-term home; the Cloudflare deploy is
 the free-tier proof and demo.
+
+### Single-page-app routing fallback (any host)
+
+The site is a client-routed SPA: only `index.html` is real, and React Router renders the
+rest in the browser. So the host must serve `index.html` (with a **200**, not a redirect)
+for any path that is not a real static file — otherwise a hard refresh or shared deep link
+to e.g. `/properties/property-assessment` returns a 404.
+
+The fallback **must not shadow real static assets** (`/assets`, `/data`, `/styles`,
+`/downloads`, `/manifest.json`): real files are served first, the SPA catches only the rest.
+
+- **Cloudflare Pages** — handled by `website/public/_redirects` (`/*  /index.html  200`),
+  which Vite copies into `dist/`. Pages serves existing files before applying the catch-all.
+- **nginx** (the UAlberta server) — add the equivalent `try_files` rule, which serves the
+  requested file/dir first and falls back to `index.html` only when neither exists:
+
+  ```nginx
+  location / {
+      try_files $uri $uri/ /index.html;
+  }
+  ```
+
+### Environment variables (host portability)
+
+Build-time `VITE_`-prefixed env vars let the serve target be configured instead of
+hardcoded. Each has an in-code default that reproduces the current Cloudflare Pages
+deploy, so **none are required** — set them only to point the site at a different host.
+(`.env`/`.env.*` are gitignored; set these in the build environment, e.g. a Cloudflare
+Pages variable or an `export` before `npm run build`.)
+
+| Variable             | Default                                          | Purpose |
+| -------------------- | ------------------------------------------------ | ------- |
+| `VITE_PMTILES_BASE`  | `https://pub-600ea350470345bbb93a035ad72875d5.r2.dev` | Origin the building-permits `.pmtiles` is fetched from. **The host MUST honor HTTP range requests (HTTP 206 Partial Content)** — PMTiles reads tiles by byte-range. Cloudflare Pages does **not** honor ranges on static assets, which is why the default is Cloudflare R2; a range-capable host (e.g. nginx, which serves ranges by default) could self-host the file. Give the origin only — no trailing slash, no `/building-permits` suffix. |
+| `VITE_BASE_PATH`     | `/`                                              | Public path the built site is served under. `/` = host root (current deploy). Set to a subpath like `/realestate/` (leading **and** trailing slash) for a non-root deploy. Drives both Vite's `base` and the router `basename` (via `import.meta.env.BASE_URL`), so they cannot drift. **Not yet a complete subpath deploy — see the caveat below.** |
+
+**Subpath caveat (`VITE_BASE_PATH` ≠ `/`).** `base` rebases bundled assets (`/assets/…`)
+and the router, but it does **not** rewrite the root-absolute runtime fetches the app issues
+for data (`/data/…`, `/manifest.json`), downloads (`/downloads/…`), and the basemap style
+(`/styles/custom-basemap.json`) — those are plain string literals Vite leaves untouched. So
+under a subpath they would 404. Until a follow-up routes those through `import.meta.env.BASE_URL`,
+`VITE_BASE_PATH` is groundwork; the only fully-working values today are `/` (root) and hosting
+those asset trees at the same absolute paths on the target host.
