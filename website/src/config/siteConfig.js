@@ -63,7 +63,7 @@ export const siteConfig = {
         "Per-year, per-job-category permit counts for Edmonton, " +
         "2009–2026. 12 job categories. Useful for trend analysis " +
         "and sector breakdowns.",
-      file: "/downloads/permits_category_counts.csv",
+      file: "/downloads/yeg_building-permits_category_counts.csv",
       size: "5 KB",
       rows: "18 years × 12 categories",
       section: "Building Activity",
@@ -76,7 +76,7 @@ export const siteConfig = {
         "Per-year counts of total permits, mapped permits, and " +
         "permits missing coordinates. Documents geocoding lag " +
         "for 2024–2026 years.",
-      file: "/downloads/permits_coverage.csv",
+      file: "/downloads/yeg_building-permits_coverage.csv",
       size: "< 1 KB",
       rows: "18 years",
       section: "Building Activity",

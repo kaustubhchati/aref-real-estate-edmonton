@@ -60,12 +60,12 @@ Rscript run_section.R building-permits
 Rscript run_section.R building-permits --dry-run
 ```
 
-For building-permits this runs `02_build_permits` (fetches today's snapshot) →
-`03_build_permit_aggregates` → `04_emit_manifest`, then copies the per-year
+For building-permits this runs `01_build_permits` (fetches today's snapshot) →
+`02_build_permit_aggregates` → `03_emit_manifest`, then copies the per-year
 neighbourhood GeoJSONs + `manifest.json` + the download CSVs into `website/public/`.
 
 **Do NOT run a single script as a refresh.** A standalone run (e.g.
-`Rscript scripts/production/03_build_permit_aggregates.R`) writes only to that section's
+`Rscript scripts/production/02_build_permit_aggregates.R`) writes only to that section's
 `output/` — it does **not** publish. Publishing lives only in the runner's handoff phase
 (reached only after the whole section succeeds), so a standalone run leaves
 `website/public/` stale (the silent staleness that has bitten the live map before).

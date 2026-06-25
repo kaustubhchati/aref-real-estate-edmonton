@@ -10,7 +10,7 @@
 #   - data/raw/General_Building_Permits_<date>.csv — newest snapshot,
 #     discovered automatically (operator places the bulk CSV in data/raw/).
 #   - data/reference/job_category_grouping_<date>.csv — newest grouping
-#     (the §4.7 contract emitted by 02a_build_job_grouping.R).
+#     (the §4.7 contract emitted by 01a_build_job_grouping.R).
 #
 # Outputs:
 #   - none (console inspection only)
@@ -38,7 +38,7 @@ grouping_files <- sort(list.files(
 ))
 if (length(grouping_files) == 0) {
   stop("No job_category_grouping_<YYYYMMDD>.csv in data/reference/. ",
-       "Run 02a_build_job_grouping.R first.")
+       "Run 01a_build_job_grouping.R first.")
 }
 grouping_path <- tail(grouping_files, 1)
 cat("Using grouping table:", basename(grouping_path), "\n")

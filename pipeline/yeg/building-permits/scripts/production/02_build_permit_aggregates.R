@@ -1,5 +1,5 @@
 # ============================================================
-# 03_build_permit_aggregates.R
+# 02_build_permit_aggregates.R
 # Purpose: per-neighbourhood RESIDENTIAL dwelling-unit permit aggregates, all
 #   years (2009–2026), as one CSV + one GeoJSON choropleth frame per year.
 #
@@ -41,11 +41,11 @@
 #   and nameless rows are dropped + logged — no assign-to-first, no duplication.
 #
 # Run context: from the section dir (pipeline/yeg/building-permits/),
-#   e.g. Rscript scripts/production/03_build_permit_aggregates.R
+#   e.g. Rscript scripts/production/02_build_permit_aggregates.R
 #
 # Join key: NEIGHBOURHOOD_NUMBER (integer) in permits
 #           ↔ Neighbourhood Number in boundary CSV (65fr-66s6)
-# Boundary: shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
+# Boundary: newest City_of_Edmonton_-_Neighbourhoods_*.csv via shared_path() glob
 #           (pipeline/yeg/shared/data/…; sourced via _bootstrap.R)
 #
 # Suppression gate: n_permits < 10 → suppressed_low_n
@@ -76,8 +76,8 @@ raw_path <- sort(raw_candidates, decreasing = TRUE)[1]
 cat("Using snapshot:", raw_path, "\n")
 
 # Freshness assertion (the chain's correctness depends on this). Under the
-# runner, 02 fetches TODAY's snapshot before 03 runs, so the newest file here
-# must be today's. If 02's fetch silently failed — or 03 is run standalone
+# runner, 01 fetches TODAY's snapshot before 02 runs, so the newest file here
+# must be today's. If 01's fetch silently failed — or 02 is run standalone
 # against a stale data/raw — this stops loud rather than aggregating yesterday's
 # permits into today's published choropleth.
 snapshot_date <- regmatches(basename(raw_path),
@@ -85,7 +85,7 @@ snapshot_date <- regmatches(basename(raw_path),
 if (length(snapshot_date) == 0 || snapshot_date != format(Sys.Date(), "%Y%m%d")) {
   stop("newest snapshot is '", basename(raw_path), "' (date ",
        if (length(snapshot_date)) snapshot_date else "none", "), not today's (",
-       format(Sys.Date(), "%Y%m%d"), ") — did 02 fetch this run? ",
+       format(Sys.Date(), "%Y%m%d"), ") — did 01 fetch this run? ",
        "Refusing to aggregate a stale snapshot.")
 }
 
@@ -106,7 +106,7 @@ permits <- permits_raw |>
     neighbourhood_number  = as.integer(neighbourhood_number),
     # Strip the "$" and thousands commas before parsing — CONSTRUCTION_VALUE
     # arrives as e.g. "$58,131", so a bare as.numeric() would NA every row.
-    # Mirrors the parse in 02_build_permits.R.
+    # Mirrors the parse in 01_build_permits.R.
     construction_value    = suppressWarnings(
                               as.numeric(str_remove_all(construction_value, "[$,]"))),
     units_added           = suppressWarnings(as.integer(units_added))
@@ -122,8 +122,22 @@ cat("Years present:", paste(sort(unique(permits$year)), collapse = ", "), "\n\n"
 # ============================================================
 # 3. Load boundary file
 # ============================================================
-
-boundary_path <- shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
+# Newest neighbourhood boundary snapshot by glob — same sort(decreasing=TRUE)[1]
+# discipline PA's 04/06/07 use. A new City boundary drops in with NO code edit
+# (refresh-by-design); zero date literals in the consumed path. The on-disk name
+# uses "_-_".
+boundary_candidates <- list.files(
+  shared_path("data"),
+  pattern    = "^City_of_Edmonton_-_Neighbourhoods_.*\\.csv$",
+  full.names = TRUE
+)
+if (length(boundary_candidates) == 0) {
+  stop("No neighbourhood boundary CSV in ", shared_path("data"),
+       " matching City_of_Edmonton_-_Neighbourhoods_*.csv — download the latest ",
+       "City of Edmonton Neighbourhoods snapshot and save it there.")
+}
+boundary_path <- sort(boundary_candidates, decreasing = TRUE)[1]
+cat("Using boundary:", basename(boundary_path), "\n")
 
 boundary_raw <- read_csv(boundary_path, show_col_types = FALSE)
 

@@ -1,11 +1,11 @@
 # ============================================================
-# 04_emit_manifest.R   (building-permits)
+# 03_emit_manifest.R   (building-permits)
 # Purpose: emit a manifest describing the per-year permit-neighbourhood
-#   GeoJSONs that 03 produced, for the frontend's year selector. Mirrors the
+#   GeoJSONs that 02 produced, for the frontend's year selector. Mirrors the
 #   property-assessment 09a pattern, BP-scoped (flat { years, defaultYear }).
 #
 # Inputs:
-#   output/permit_geojson/permit_neighbourhoods_<YYYY>.geojson   (from 03)
+#   output/permit_geojson/permit_neighbourhoods_<YYYY>.geojson   (from 02)
 #
 # Output:
 #   output/manifest.json = { "years": [...], "defaultYear": <max> }
@@ -16,7 +16,7 @@
 # lesson. No year literals — years come from the globbed file set.
 #
 # Run context: from the section dir (pipeline/yeg/building-permits/),
-#   e.g. Rscript scripts/production/04_emit_manifest.R
+#   e.g. Rscript scripts/production/03_emit_manifest.R
 # ============================================================
 
 library(jsonlite)
@@ -27,7 +27,7 @@ gj <- list.files(
   full.names = FALSE
 )
 if (length(gj) == 0) {
-  stop("No permit_neighbourhoods_<YYYY>.geojson in output/permit_geojson/ — run 03 first.")
+  stop("No permit_neighbourhoods_<YYYY>.geojson in output/permit_geojson/ — run 02 first.")
 }
 
 years <- sort(as.integer(

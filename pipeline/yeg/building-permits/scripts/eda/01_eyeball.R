@@ -8,7 +8,7 @@
 #   - data/raw/General_Building_Permits_<date>.csv — newest snapshot,
 #     discovered automatically. Operator places the bulk General Building
 #     Permits CSV in data/raw/ before running (manual download; Socrata
-#     dataset 24uj-dj8v — see 02_build_permits.R for the source URL).
+#     dataset 24uj-dj8v — see 01_build_permits.R for the source URL).
 #
 # Outputs:
 #   - none (console inspection only)
@@ -22,7 +22,7 @@ library(scales)
 
 # --- Load local dev snapshot --------------------------------
 # Operator places the bulk General Building Permits CSV in data/raw/ before
-# running (manual download — see 02_build_permits.R for the Socrata source).
+# running (manual download — see 01_build_permits.R for the Socrata source).
 # Discover the newest snapshot the same way 03 does, so no path is hardcoded.
 raw_candidates <- list.files(
   "data/raw", pattern = "^General_Building_Permits_.*\\.csv$",

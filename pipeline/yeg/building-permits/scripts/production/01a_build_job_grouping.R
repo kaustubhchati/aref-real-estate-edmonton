@@ -1,5 +1,5 @@
 # ============================================================
-# building-permits/scripts/production/02a_build_job_grouping.R
+# building-permits/scripts/production/01a_build_job_grouping.R
 # Purpose: build + persist the curated residential/commercial grouping
 #   for the 12 JOB_CATEGORY values — a §4.7 curated mapping with provenance.
 #   "job_group" takes "residential" or "commercial"; rationale/source explain
@@ -14,7 +14,7 @@
 #     columns: job_category, group, rationale, source, date_curated, curated_by
 #
 # Run context: from the section dir (pipeline/yeg/building-permits/),
-#   e.g. Rscript scripts/production/02a_build_job_grouping.R
+#   e.g. Rscript scripts/production/01a_build_job_grouping.R
 # ============================================================
 
 library(tidyverse)
@@ -24,8 +24,8 @@ ref_dir <- "data/reference"
 dir.create(ref_dir, showWarnings = FALSE, recursive = TRUE)
 
 # --- Load JOB_CATEGORY from the raw snapshot ----------------
-# Read the snapshot directly (standalone-safe: no dependency on 02's session).
-# Same newest-snapshot discovery 01 and 03 use — operator places the bulk
+# Read the snapshot directly (standalone-safe: no dependency on 01's session).
+# Same newest-snapshot discovery 01 and 02 use — operator places the bulk
 # General Building Permits CSV in data/raw/ before running. We need ONLY the
 # JOB_CATEGORY column: this script CHECKS its hardcoded grouping covers the
 # categories in the data; it does not derive the grouping. (The diagnostic

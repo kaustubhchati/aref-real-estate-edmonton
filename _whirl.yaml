@@ -90,16 +90,16 @@ sections:
   building-permits:
     cwd: pipeline/yeg/building-permits
 
-    # Dependency order: 02 fetches today's snapshot + builds the point geojson +
-    # coverage/category CSVs (using the COMMITTED job_category_grouping; 02 self-
-    # guards category drift via its n_unmapped stop). 03 reads that fresh snapshot
-    # + boundary -> per-year aggregates + choropleth geojsons. 04 emits the manifest.
+    # Dependency order: 01 fetches today's snapshot + builds the point geojson +
+    # coverage/category CSVs (using the COMMITTED job_category_grouping; 01 self-
+    # guards category drift via its n_unmapped stop). 02 reads that fresh snapshot
+    # + boundary -> per-year aggregates + choropleth geojsons. 03 emits the manifest.
     scripts:
-      - scripts/production/02_build_permits.R
-      - scripts/production/03_build_permit_aggregates.R
-      - scripts/production/04_emit_manifest.R
-    # 02a_build_job_grouping.R is NOT in the routine chain — it is an out-of-band
-    # re-curation tool, run only when 02's n_unmapped guard trips (the City adds a
+      - scripts/production/01_build_permits.R
+      - scripts/production/02_build_permit_aggregates.R
+      - scripts/production/03_emit_manifest.R
+    # 01a_build_job_grouping.R is NOT in the routine chain — it is an out-of-band
+    # re-curation tool, run only when 01's n_unmapped guard trips (the City adds a
     # JOB_CATEGORY the committed grouping doesn't cover). Re-run it against a present
     # snapshot, commit the new dated grouping, then run this chain. (Same spirit as
     # 08c sitting in property-assessment/scripts/_oneshot/.)
@@ -116,11 +116,16 @@ sections:
         - src_dir:  output/permit_geojson
           dest_dir: website/public/data/building-permits/permit-neighbourhoods
           pattern:  "permit_neighbourhoods_*.geojson"
+      # PUBLISH-TIME RENAME to the locked CSV naming standard (CLAUDE.md §6):
+      # output/ frames stay unprefixed (internal); the PUBLISHED copy carries the
+      # yeg_ city prefix + section + descriptor. These are all-years rolling files,
+      # so they take no year/span suffix (a span would be a forbidden date literal
+      # / break the frontend URL on rollover). manifest.json is not a CSV — kept as-is.
       files:
-        - { from: output/permits_coverage.csv,        to: website/public/data/building-permits/permits_coverage.csv }
-        - { from: output/permits_category_counts.csv, to: website/public/data/building-permits/permits_category_counts.csv }
+        - { from: output/permits_coverage.csv,        to: website/public/data/building-permits/yeg_building-permits_coverage.csv }
+        - { from: output/permits_category_counts.csv, to: website/public/data/building-permits/yeg_building-permits_category_counts.csv }
         - { from: output/manifest.json,               to: website/public/data/building-permits/manifest.json }
         # Download-page copies (siteConfig serves these from /downloads/); was
         # manual placement, now published from the one produced source.
-        - { from: output/permits_coverage.csv,        to: website/public/downloads/permits_coverage.csv }
-        - { from: output/permits_category_counts.csv, to: website/public/downloads/permits_category_counts.csv }
+        - { from: output/permits_coverage.csv,        to: website/public/downloads/yeg_building-permits_coverage.csv }
+        - { from: output/permits_category_counts.csv, to: website/public/downloads/yeg_building-permits_category_counts.csv }

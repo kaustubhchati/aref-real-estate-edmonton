@@ -1,5 +1,5 @@
 # ============================================================
-# 02_build_permits.R   (Stage A — source -> raw -> clean -> frontend-ready)
+# 01_build_permits.R   (Stage A — source -> raw -> clean -> frontend-ready)
 #
 # Purpose: ONE refresh-focused script. Pulls the current General Building
 #   Permits snapshot, cleans + groups it, and writes the artifacts the
@@ -9,8 +9,8 @@
 # Inputs:
 #   - Edmonton Open Data, Socrata dataset 24uj-dj8v — streamed via
 #     download.file() to data/raw/ (dated name). This is the legitimate
-#     refresh fetch; 02 does NOT need a pre-placed snapshot (unlike 01/03).
-#   - latest data/reference/job_category_grouping_<date>.csv (from 02a)
+#     refresh fetch; 01 streams its own snapshot (no pre-placed file needed).
+#   - latest data/reference/job_category_grouping_<date>.csv (from 01a)
 #
 # Outputs:
 #   - output/permits.geojson             (mappable points — Stage B -> PMTiles)
@@ -18,7 +18,7 @@
 #   - output/permits_category_counts.csv (per-(year, category) counts)
 #
 # Run context: from the section dir (pipeline/yeg/building-permits/),
-#   e.g. Rscript scripts/production/02_build_permits.R
+#   e.g. Rscript scripts/production/01_build_permits.R
 #
 # Pipeline:
 #   1. Download Socrata bulk CSV (dataset 24uj-dj8v) -> data/raw/ (dated name)
@@ -164,7 +164,7 @@ grouping_files <- sort(list.files(
 ))
 if (length(grouping_files) == 0) {
   stop("No job_category_grouping_<YYYYMMDD>.csv in data/reference/. ",
-       "Run 02a_build_job_grouping.R first.")
+       "Run 01a_build_job_grouping.R first.")
 }
 grouping_path <- tail(grouping_files, 1)   # most recent by date-sorted name
 cat("Using grouping table:", basename(grouping_path), "\n")
