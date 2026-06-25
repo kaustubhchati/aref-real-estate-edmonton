@@ -185,9 +185,10 @@ export default function PropertyAssessmentMap() {
   // Single effect on [url]: reset all derived state, then fetch if there's a
   // real URL. When url is null we leave gj/map null and the JSX renders
   // EmptyState instead of MapView — no fetch attempted, no errors logged.
-  // setMap(null) is safe even mid-flight: MapView is keyed by url, so it
-  // unmounts cleanly and map.remove() inside its useEffect cleanup destroys
-  // the old MapLibre instance.
+  // setMap(null) is safe even mid-flight: when url goes null the JSX renders
+  // EmptyState INSTEAD of MapView, so MapView unmounts and map.remove() in its
+  // cleanup destroys the instance. MapView is NOT keyed by url — a value→value
+  // year swap keeps the SAME MapView mounted and swaps the source in place.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setFetchError(null);

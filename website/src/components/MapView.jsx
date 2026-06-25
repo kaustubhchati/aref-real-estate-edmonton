@@ -32,7 +32,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { applyAppleClassic } from "./basemapTheme.js";
 import { siteConfig } from "../config/siteConfig.js";
 import {
-  MOTION_PASS, DUR_FAST, DUR_BASE, EASE, DIP_FLOOR, SKELETON_THRESHOLD, reduceMotion,
+  MOTION_PASS, SKELETON_THRESHOLD, reduceMotion,
 } from "./motion.js";
 
 export default function MapView({
@@ -155,68 +155,100 @@ export default function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // In-place YEAR/SOURCE swap (Option A — container dip-and-swap). On a
-  // geojsonUrl change WITHOUT a remount: dip the canvas to DIP_FLOOR, setData the
-  // new file, fade back in when the source settles. The map instance persists —
-  // ONE WebGL context, no map.remove(). The create effect above handles the
-  // FIRST load (loadedUrlRef === geojsonUrl), so this only runs on later swaps.
-  // Gated by MOTION_PASS + prefers-reduced-motion (reduced = instant setData).
+  // In-place YEAR/SOURCE swap on a PERSISTENT map (no remount, ONE WebGL context).
+  // On a geojsonUrl change: HIDE the data fills instantly, swap the source behind
+  // the seam, then — only once the new data is LOADED *and* fully RENDERED —
+  // dissolve the settled layer back in as one surface. Sequencing the reveal AFTER
+  // the render is what stops the new year painting in clump-by-clump (the fade must
+  // not run concurrently with the progressive tile paint). The create effect handles
+  // the FIRST load, so this runs only on later swaps. Reduced-motion = instant.
   useEffect(() => {
     const map = mapRef.current;
-    const container = containerRef.current;
-    if (!map || !container || !map.getSource(sourceId)) return undefined;
+    if (!map || !map.getSource(sourceId)) return undefined;
     if (geojsonUrl === loadedUrlRef.current) return undefined;
     loadedUrlRef.current = geojsonUrl;
 
+    // ---- The data-swap SEAM: the ONLY backend-aware step --------------------
+    // Mode A (today, per-year GeoJSON files): replace the source data with the new
+    // year's URL. Mode B (future, ONE combined multi-year source): drop setData and
+    //   map.setFilter(dataLayerId, ["==", ["get", "year"], year])
+    // instead — the source would also be created from the combined file (the
+    // addSource line in the create effect above). The A→B switch is THIS function
+    // (+ that one addSource line); the persistent-map lifecycle, the fade, the
+    // layers, feature-state, and the controls do NOT change.
+    function applyYearData() {
+      map.getSource(sourceId).setData(geojsonUrl); // mode A
+    }
+
     if (!MOTION_PASS || reduceMotion()) {
-      map.getSource(sourceId).setData(geojsonUrl); // instant, no dip
+      applyYearData(); // reduced motion: instant, no fade
       return undefined;
     }
 
-    let settled = false;
+    // We animate only the FILL data layers — basemap + the year-INVARIANT outlines
+    // / labels (same boundaries every year) stay put; only the choropleth fill
+    // dissolves. Skip a hidden pattern fill (opacity 0 → fading it would flash it).
+    const fills = layers.filter(
+      (l) => l.type === "fill" && l.paint?.["fill-opacity"] !== 0
+    );
+    // Restore a fill to its real (stateful hover/pin) opacity AND its own snappy
+    // transition. Used by the reveal AND by cleanup, so a superseded swap never
+    // leaves fills stuck hidden.
+    const restore = () =>
+      fills.forEach((l) => {
+        map.setPaintProperty(l.id, "fill-opacity-transition", l.paint?.["fill-opacity-transition"]);
+        map.setPaintProperty(l.id, "fill-opacity", l.paint["fill-opacity"]);
+      });
+
+    let done = false;
     let skeletonTimer = null;
     let maxTimer = null;
 
-    function settle() {
-      if (settled) return;
-      settled = true;
-      map.off("sourcedata", onSourceData);
+    // Dissolve the now-SETTLED layer in as one surface: restore() flips the
+    // transition back on and opacity 0 → its real expression. One-shot — detaches
+    // its own listeners so rapid swaps don't stack them.
+    function reveal() {
+      if (done) return;
+      done = true;
+      map.off("sourcedata", onData);
+      map.off("idle", reveal);
       clearTimeout(skeletonTimer);
       clearTimeout(maxTimer);
       onLoadingRef.current?.(false);
-      container.style.transition = `opacity ${DUR_BASE}ms ${EASE}`;
-      container.style.opacity = "1"; // fade back in
+      restore();
     }
 
-    function onSourceData(e) {
-      if (e.sourceId === sourceId && e.isSourceLoaded) settle();
+    // The new data is LOADED (parsed) here — but its tiles may still be painting,
+    // so don't reveal yet: wait for the next 'idle' (all tiles drawn). Attaching
+    // the 'idle' listener only AFTER the data loads avoids a premature 'idle' that
+    // fires during the fetch (while the source is briefly empty).
+    function onData(e) {
+      if (e.sourceId !== sourceId || !e.isSourceLoaded) return;
+      map.off("sourcedata", onData);
+      map.on("idle", reveal);
     }
 
-    // 1. Dip out — to the FLOOR, not 0, so the basemap never fully vanishes.
-    container.style.transition = `opacity ${DUR_FAST}ms ${EASE}`;
-    container.style.opacity = String(DIP_FLOOR);
+    // 1. Hide the fills INSTANTLY (transition 0 → no fade) so the new year's
+    //    progressive paint is never visible, then swap the data behind the seam.
+    fills.forEach((l) => {
+      map.setPaintProperty(l.id, "fill-opacity-transition", { duration: 0 });
+      map.setPaintProperty(l.id, "fill-opacity", 0);
+    });
+    map.on("sourcedata", onData);
+    applyYearData();
 
-    // 2. After the dip, swap the data and wait for the source to settle.
-    const dipTimer = setTimeout(() => {
-      map.on("sourcedata", onSourceData);
-      map.getSource(sourceId).setData(geojsonUrl);
-      // 3. Skeleton only if the new data is genuinely slow (> threshold).
-      skeletonTimer = setTimeout(() => {
-        if (!settled) onLoadingRef.current?.(true);
-      }, SKELETON_THRESHOLD);
-      // Safety net: never leave the canvas stuck-dimmed if 'sourcedata' never
-      // settles (e.g. a failed fetch) — force the fade-in after a hard cap.
-      maxTimer = setTimeout(settle, 8000);
-    }, DUR_FAST);
+    // Skeleton only if the swap is genuinely slow; safety net forces the reveal if
+    // neither 'sourcedata' nor 'idle' ever fires (e.g. a failed fetch).
+    skeletonTimer = setTimeout(() => { if (!done) onLoadingRef.current?.(true); }, SKELETON_THRESHOLD);
+    maxTimer = setTimeout(reveal, 8000);
 
     return () => {
-      clearTimeout(dipTimer);
       clearTimeout(skeletonTimer);
       clearTimeout(maxTimer);
-      map.off("sourcedata", onSourceData);
+      map.off("sourcedata", onData);
+      map.off("idle", reveal);
       onLoadingRef.current?.(false);
-      container.style.transition = "";
-      container.style.opacity = "1";
+      restore(); // a newer swap superseded this one — don't leave fills hidden
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geojsonUrl, sourceId]);
