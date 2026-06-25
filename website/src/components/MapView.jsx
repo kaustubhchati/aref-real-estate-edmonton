@@ -31,9 +31,6 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { applyAppleClassic } from "./basemapTheme.js";
 import { siteConfig } from "../config/siteConfig.js";
-import {
-  MOTION_PASS, SKELETON_THRESHOLD, reduceMotion,
-} from "./motion.js";
 
 export default function MapView({
   basemapStyle,
@@ -156,12 +153,19 @@ export default function MapView({
   }, []);
 
   // In-place YEAR/SOURCE swap on a PERSISTENT map (no remount, ONE WebGL context).
-  // On a geojsonUrl change: HIDE the data fills instantly, swap the source behind
-  // the seam, then — only once the new data is LOADED *and* fully RENDERED —
-  // dissolve the settled layer back in as one surface. Sequencing the reveal AFTER
-  // the render is what stops the new year painting in clump-by-clump (the fade must
-  // not run concurrently with the progressive tile paint). The create effect handles
-  // the FIRST load, so this runs only on later swaps. Reduced-motion = instant.
+  // The assessed ramp is now `interpolate` (a CONTINUOUS colour space), so on a year
+  // change we just swap the source data here + the per-year stops (the latter via
+  // the page's setPaintProperty repaint effect) and let nbhd-fill's
+  // fill-color-transition TWEEN the colour old→new. No opacity blank-then-fill —
+  // that was a workaround for the old `step` colours, which couldn't tween. Reduced-
+  // motion: paintTransition already yields a 0-duration fill-color-transition, so the
+  // colour snaps. The create effect handles the FIRST load, so this runs only on
+  // later swaps.
+  //
+  // TWEEN EXPERIMENT: whether setData actually tweens a DATA-driven fill-color is the
+  // load-bearing question — this path is deliberately UNCOVERED (no opacity fade) so
+  // a dev eyeball of one year swap answers it: colours FLOW (tween) or SNAP. If they
+  // snap, restore the sequenced opacity dissolve (git history).
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.getSource(sourceId)) return undefined;
@@ -174,82 +178,14 @@ export default function MapView({
     //   map.setFilter(dataLayerId, ["==", ["get", "year"], year])
     // instead — the source would also be created from the combined file (the
     // addSource line in the create effect above). The A→B switch is THIS function
-    // (+ that one addSource line); the persistent-map lifecycle, the fade, the
-    // layers, feature-state, and the controls do NOT change.
+    // (+ that one addSource line); the persistent-map lifecycle, the colour tween,
+    // the layers, feature-state, and the controls do NOT change.
     function applyYearData() {
       map.getSource(sourceId).setData(geojsonUrl); // mode A
     }
 
-    if (!MOTION_PASS || reduceMotion()) {
-      applyYearData(); // reduced motion: instant, no fade
-      return undefined;
-    }
-
-    // We animate only the FILL data layers — basemap + the year-INVARIANT outlines
-    // / labels (same boundaries every year) stay put; only the choropleth fill
-    // dissolves. Skip a hidden pattern fill (opacity 0 → fading it would flash it).
-    const fills = layers.filter(
-      (l) => l.type === "fill" && l.paint?.["fill-opacity"] !== 0
-    );
-    // Restore a fill to its real (stateful hover/pin) opacity AND its own snappy
-    // transition. Used by the reveal AND by cleanup, so a superseded swap never
-    // leaves fills stuck hidden.
-    const restore = () =>
-      fills.forEach((l) => {
-        map.setPaintProperty(l.id, "fill-opacity-transition", l.paint?.["fill-opacity-transition"]);
-        map.setPaintProperty(l.id, "fill-opacity", l.paint["fill-opacity"]);
-      });
-
-    let done = false;
-    let skeletonTimer = null;
-    let maxTimer = null;
-
-    // Dissolve the now-SETTLED layer in as one surface: restore() flips the
-    // transition back on and opacity 0 → its real expression. One-shot — detaches
-    // its own listeners so rapid swaps don't stack them.
-    function reveal() {
-      if (done) return;
-      done = true;
-      map.off("sourcedata", onData);
-      map.off("idle", reveal);
-      clearTimeout(skeletonTimer);
-      clearTimeout(maxTimer);
-      onLoadingRef.current?.(false);
-      restore();
-    }
-
-    // The new data is LOADED (parsed) here — but its tiles may still be painting,
-    // so don't reveal yet: wait for the next 'idle' (all tiles drawn). Attaching
-    // the 'idle' listener only AFTER the data loads avoids a premature 'idle' that
-    // fires during the fetch (while the source is briefly empty).
-    function onData(e) {
-      if (e.sourceId !== sourceId || !e.isSourceLoaded) return;
-      map.off("sourcedata", onData);
-      map.on("idle", reveal);
-    }
-
-    // 1. Hide the fills INSTANTLY (transition 0 → no fade) so the new year's
-    //    progressive paint is never visible, then swap the data behind the seam.
-    fills.forEach((l) => {
-      map.setPaintProperty(l.id, "fill-opacity-transition", { duration: 0 });
-      map.setPaintProperty(l.id, "fill-opacity", 0);
-    });
-    map.on("sourcedata", onData);
     applyYearData();
-
-    // Skeleton only if the swap is genuinely slow; safety net forces the reveal if
-    // neither 'sourcedata' nor 'idle' ever fires (e.g. a failed fetch).
-    skeletonTimer = setTimeout(() => { if (!done) onLoadingRef.current?.(true); }, SKELETON_THRESHOLD);
-    maxTimer = setTimeout(reveal, 8000);
-
-    return () => {
-      clearTimeout(skeletonTimer);
-      clearTimeout(maxTimer);
-      map.off("sourcedata", onData);
-      map.off("idle", reveal);
-      onLoadingRef.current?.(false);
-      restore(); // a newer swap superseded this one — don't leave fills hidden
-    };
+    return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geojsonUrl, sourceId]);
 

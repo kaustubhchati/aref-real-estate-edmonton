@@ -40,27 +40,22 @@ export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 //   c     = fill colour at that stop
 //   label = role in the IQR (shown in the legend)
 
-// ── Assessed-value $ ramp (RAMP_ASSESSED) — QUANTILE-CLASSED (step), 6 bands.
-// The map paints DISCRETE quantile bands (see buildFillColourExpression's step
-// path), so each band holds ~equal NUMBERS of neighbourhoods — fixing the orange
-// mid-plateau an interpolate-by-raw-value ramp produced (the central quartiles
-// are squeezed into a narrow $ range, so the median band barely changed colour
-// while all contrast dumped into the sparse tail). The low band uses the shared
-// RAMP_FLOOR (#fbe3a0, via rampFloor) — the same soft warm yellow as the Business
-// Census floor — so it reads as DATA on the cream basemap. Stops are keyed onto the per-year/metric
-// break scale ENRICHED with two IQR-derived tail breaks (see withTailBreaks):
-// mid75 = q75 + ½·IQR, near = q75 + IQR. The top band [near, ∞) = bright Ferrari
-// #cc0000 — because the high-value tail is long (~5·IQR every year), `near` sits
-// only ~20% up it, so that band is a VISIBLE ~top-12-15% region, not the single
-// max polygon. `max` is a legend boundary only, NEVER a step threshold (that
-// would strand #cc0000 on one polygon). RAMP_ASSESSED is the exposed tunable.
+// ── Assessed-value $ ramp (RAMP_ASSESSED) — 5-stop, INTERPOLATE over the per-year
+// quantile stop VALUES (min/q25/median/q75/max), the same mechanism Business Counts
+// uses. Breaks sit AT the quantile boundaries, so the colour space is CONTINUOUS (a
+// fill-color-transition can tween it on a year swap — the old `step` path couldn't)
+// while the mid-range still spans amber→orange→scarlet instead of a flat plateau
+// (verified on the 2026 distribution: the middle 50% spans dozens of distinct
+// colours). The low band uses the shared RAMP_FLOOR (#fbe3a0, via rampFloor) — the
+// soft warm yellow matching Business Census. Replaces the earlier `step` path + IQR
+// tail breaks (mid75/near), which existed ONLY because `step` needed manufactured
+// thresholds up the long tail. RAMP_ASSESSED is the exposed tunable.
 const RAMP_ASSESSED = [
-  { key: "min",    c: rampFloor("#f5f0e8"), label: "min" }, // step BASE (value < q25) — shared soft-yellow floor (#fbe3a0), matches Business Census
-  { key: "q25",    c: "#f5a02e", label: "Q25"      }, // amber
-  { key: "median", c: "#ec6f2e", label: "median"   }, // orange-red — true phase-midpoint
-  { key: "q75",    c: "#e0381c", label: "Q75"      }, // scarlet
-  { key: "mid75",  c: "#c01410", label: "Q75+½IQR" }, // deep red
-  { key: "near",   c: "#cc0000", label: "Q75+IQR"  }, // bright Ferrari — [near, ∞)
+  { key: "min",    c: rampFloor("#f5f0e8"), label: "min" }, // shared soft-yellow floor (#fbe3a0), matches Business Census
+  { key: "q25",    c: "#f5a02e", label: "Q25"    }, // amber
+  { key: "median", c: "#ec6f2e", label: "median" }, // orange-red
+  { key: "q75",    c: "#e0381c", label: "Q75"    }, // scarlet
+  { key: "max",    c: "#cc0000", label: "max"    }, // bright Ferrari
 ];
 
 // ── Amber-sienna (custom, YlOrBr family shifted)
@@ -108,22 +103,11 @@ const RAMP_DEFAULT = RAMP_ASSESSED;
 // map and legend consume. Returns null if any value is missing, non-finite, or
 // not strictly ascending — MapLibre's interpolate requires ascending inputs,
 // so a bad scale must fall back rather than throw at render time.
-// Enrich a {min,q25,median,q75,max} scale with two IQR-derived TAIL breaks so the
-// long high-value tail splits into visible step bands: mid75 = q75 + ½·IQR, near
-// = q75 + IQR. Pure + data-driven per year/metric (no literal $). Only the
-// assessed ramp (which declares the mid75/near keys) consumes these.
-function withTailBreaks(scale) {
-  if (!scale) return scale;
-  const iqr = scale.q75 - scale.q25;
-  return { ...scale, mid75: scale.q75 + iqr / 2, near: scale.q75 + iqr };
-}
-
 function buildStops(scale, ramp = RAMP_DEFAULT) {
-  // Assessed ramp keys onto the IQR-enriched scale (min,q25,median,q75,mid75,near);
-  // other ramps key onto the plain 5-break scale (min,q25,median,q75,max).
-  const sc = ramp === RAMP_ASSESSED ? withTailBreaks(scale) : scale;
+  // Every ramp now keys onto the plain {min,q25,median,q75,max} quantile scale; the
+  // assessed ramp's old IQR tail breaks (mid75/near) went with the step path.
   const stops = ramp.map((r) => ({
-    v: sc?.[r.key], c: r.c, label: r.label,
+    v: scale?.[r.key], c: r.c, label: r.label,
   }));
   const finite    = stops.every((s) => Number.isFinite(s.v));
   const ascending = stops.every(
@@ -411,40 +395,19 @@ export function makeDotPattern(size = 10, dotColor = "rgba(60,55,42,0.55)") {
 // otherwise → that state's flat fillColor (or fallback grey).
 function buildFillColourExpression(metricKey, stops) {
   const isYoy = metricKey === "yoy_pct_change";
-  // Assessed-value $ metrics are QUANTILE-CLASSED: a `step` over the value with
-  // the quantile breaks as thresholds, so each band holds ~equal NUMBERS of
-  // neighbourhoods (no interpolate-by-raw-value mid plateau). Every other
-  // sequential metric + yoy keep the continuous interpolate below — unchanged.
-  const useStep = METRIC_RAMP[metricKey] === RAMP_ASSESSED;
-
-  let aggregatedFill;
-  if (useStep) {
-    const value = ["number", ["get", metricKey], 0];
-    // Defensive: MapLibre `step` THROWS on non-ascending thresholds — drop any
-    // tied stop (buildStops already guarantees ascending; this is insurance).
-    const asc = [];
-    for (const s of stops) {
-      if (asc.length === 0 || s.v > asc[asc.length - 1].v) asc.push(s);
-    }
-    // asc[0].c is the BASE (value < asc[1].v = q25); asc[1..] are (threshold,colour).
-    const step = ["step", value, asc[0].c];
-    for (let i = 1; i < asc.length; i++) step.push(asc[i].v, asc[i].c);
-    aggregatedFill = step;
-  } else {
-    // yoy can be null on an aggregated polygon (new since the prior year).
-    // Coalesce missing to a sentinel OUTSIDE YOY_STOPS so we detect "no value"
-    // without relying on MapLibre null-comparison semantics. Non-yoy interpolate
-    // metrics never miss on an aggregated polygon, so they keep the 0 fallback.
-    const MISSING = -999;
-    const value = ["number", ["get", metricKey], isYoy ? MISSING : 0];
-    const interp = ["interpolate", ["linear"], value];
-    for (const s of stops) interp.push(s.v, s.c);
-    // For yoy, an aggregated-but-missing polygon is painted no_data grey (honest)
-    // instead of clamping the sentinel to an extreme ramp colour.
-    aggregatedFill = isYoy
-      ? ["case", ["==", value, MISSING], STATE_STYLE.no_data.fillColor, interp]
-      : interp;
-  }
+  // Every aggregated sequential metric INTERPOLATES over its per-year quantile stop
+  // VALUES (min/q25/median/q75/max) — a CONTINUOUS colour space (so the colour can
+  // tween on a year swap, which the old `step` path could not) with breaks still
+  // anchored at the quantile boundaries (no raw-value mid-plateau). yoy is the only
+  // special case: a missing prior-year value is painted no_data grey rather than
+  // clamped to an extreme ramp colour.
+  const MISSING = -999;
+  const value = ["number", ["get", metricKey], isYoy ? MISSING : 0];
+  const interp = ["interpolate", ["linear"], value];
+  for (const s of stops) interp.push(s.v, s.c);
+  const aggregatedFill = isYoy
+    ? ["case", ["==", value, MISSING], STATE_STYLE.no_data.fillColor, interp]
+    : interp;
 
   return [
     "case",
