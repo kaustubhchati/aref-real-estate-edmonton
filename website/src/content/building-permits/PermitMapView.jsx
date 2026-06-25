@@ -21,6 +21,7 @@ import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { applyAppleClassic } from "../../components/basemapTheme.js";
 import { siteConfig } from "../../config/siteConfig.js";
+import { sidebarLeftPad } from "../../components/mapPadding.js";
 
 import {
   BASEMAP_STYLE,
@@ -101,7 +102,9 @@ function wirePermitPopup(map, onPickRef) {
     if (!e.features?.length) return;
     const f = e.features[0];
     e.preventDefault();
-    map.flyTo({ center: f.geometry.coordinates, zoom: 15, duration: 900 });
+    // padding.left = live sidebar width so the point lands in the visible area
+    // right of the .sb overlay, not centred under it.
+    map.flyTo({ center: f.geometry.coordinates, zoom: 15, duration: 900, padding: { left: sidebarLeftPad(map) } });
   });
 
   map.on("mousemove", LAYER_ID, (e) => {

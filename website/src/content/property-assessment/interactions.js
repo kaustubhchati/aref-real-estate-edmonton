@@ -21,6 +21,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import maplibregl from "maplibre-gl";
 import { buildPopupHtml, POPUP_ROWS } from "./choroplethStyle.js";
+import { sidebarLeftPad } from "../../components/mapPadding.js";
 
 const SOURCE_ID = "nbhd";
 const FILL_LAYER_ID = "nbhd-fill";
@@ -288,7 +289,9 @@ function wireCopyButton(props) {
 
 function flyToFeature(map, feat, opts = {}) {
   map.fitBounds(bboxOfGeom(feat.geometry), {
-    padding: { top: 80, bottom: 80, left: 60, right: 60 },
+    // left = live sidebar width + breathing room, so the flown-to polygon clears
+    // the .sb overlay (and isn't over-shifted when the sidebar is collapsed).
+    padding: { top: 80, bottom: 80, left: sidebarLeftPad(map) + 60, right: 60 },
     duration: 900,
     maxZoom: 14,
     ...opts,
