@@ -25,7 +25,7 @@ import { CITY_BOUNDS } from "../../config/cityBounds.js";
 export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 
 export const MAP_VIEW = {
-  center: [-113.4938, 53.5461],
+  center: [-113.4956, 53.5356],   // Edmonton area-weighted centroid (centres default + constrained view)
   zoom: 10.2,
   minZoom: 7,
   maxZoom: 17,
