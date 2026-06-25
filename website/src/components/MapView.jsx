@@ -31,9 +31,6 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { applyAppleClassic } from "./basemapTheme.js";
 import { siteConfig } from "../config/siteConfig.js";
-import {
-  MOTION_PASS, DUR_FAST, DUR_BASE, EASE, DIP_FLOOR, SKELETON_THRESHOLD, reduceMotion,
-} from "./motion.js";
 
 export default function MapView({
   basemapStyle,
@@ -155,69 +152,40 @@ export default function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // In-place YEAR/SOURCE swap (Option A — container dip-and-swap). On a
-  // geojsonUrl change WITHOUT a remount: dip the canvas to DIP_FLOOR, setData the
-  // new file, fade back in when the source settles. The map instance persists —
-  // ONE WebGL context, no map.remove(). The create effect above handles the
-  // FIRST load (loadedUrlRef === geojsonUrl), so this only runs on later swaps.
-  // Gated by MOTION_PASS + prefers-reduced-motion (reduced = instant setData).
+  // In-place YEAR/SOURCE swap on a PERSISTENT map (no remount, ONE WebGL context).
+  // The assessed ramp is now `interpolate` (a CONTINUOUS colour space), so on a year
+  // change we just swap the source data here + the per-year stops (the latter via
+  // the page's setPaintProperty repaint effect) and let nbhd-fill's
+  // fill-color-transition TWEEN the colour old→new. No opacity blank-then-fill —
+  // that was a workaround for the old `step` colours, which couldn't tween. Reduced-
+  // motion: paintTransition already yields a 0-duration fill-color-transition, so the
+  // colour snaps. The create effect handles the FIRST load, so this runs only on
+  // later swaps.
+  //
+  // TWEEN EXPERIMENT: whether setData actually tweens a DATA-driven fill-color is the
+  // load-bearing question — this path is deliberately UNCOVERED (no opacity fade) so
+  // a dev eyeball of one year swap answers it: colours FLOW (tween) or SNAP. If they
+  // snap, restore the sequenced opacity dissolve (git history).
   useEffect(() => {
     const map = mapRef.current;
-    const container = containerRef.current;
-    if (!map || !container || !map.getSource(sourceId)) return undefined;
+    if (!map || !map.getSource(sourceId)) return undefined;
     if (geojsonUrl === loadedUrlRef.current) return undefined;
     loadedUrlRef.current = geojsonUrl;
 
-    if (!MOTION_PASS || reduceMotion()) {
-      map.getSource(sourceId).setData(geojsonUrl); // instant, no dip
-      return undefined;
+    // ---- The data-swap SEAM: the ONLY backend-aware step --------------------
+    // Mode A (today, per-year GeoJSON files): replace the source data with the new
+    // year's URL. Mode B (future, ONE combined multi-year source): drop setData and
+    //   map.setFilter(dataLayerId, ["==", ["get", "year"], year])
+    // instead — the source would also be created from the combined file (the
+    // addSource line in the create effect above). The A→B switch is THIS function
+    // (+ that one addSource line); the persistent-map lifecycle, the colour tween,
+    // the layers, feature-state, and the controls do NOT change.
+    function applyYearData() {
+      map.getSource(sourceId).setData(geojsonUrl); // mode A
     }
 
-    let settled = false;
-    let skeletonTimer = null;
-    let maxTimer = null;
-
-    function settle() {
-      if (settled) return;
-      settled = true;
-      map.off("sourcedata", onSourceData);
-      clearTimeout(skeletonTimer);
-      clearTimeout(maxTimer);
-      onLoadingRef.current?.(false);
-      container.style.transition = `opacity ${DUR_BASE}ms ${EASE}`;
-      container.style.opacity = "1"; // fade back in
-    }
-
-    function onSourceData(e) {
-      if (e.sourceId === sourceId && e.isSourceLoaded) settle();
-    }
-
-    // 1. Dip out — to the FLOOR, not 0, so the basemap never fully vanishes.
-    container.style.transition = `opacity ${DUR_FAST}ms ${EASE}`;
-    container.style.opacity = String(DIP_FLOOR);
-
-    // 2. After the dip, swap the data and wait for the source to settle.
-    const dipTimer = setTimeout(() => {
-      map.on("sourcedata", onSourceData);
-      map.getSource(sourceId).setData(geojsonUrl);
-      // 3. Skeleton only if the new data is genuinely slow (> threshold).
-      skeletonTimer = setTimeout(() => {
-        if (!settled) onLoadingRef.current?.(true);
-      }, SKELETON_THRESHOLD);
-      // Safety net: never leave the canvas stuck-dimmed if 'sourcedata' never
-      // settles (e.g. a failed fetch) — force the fade-in after a hard cap.
-      maxTimer = setTimeout(settle, 8000);
-    }, DUR_FAST);
-
-    return () => {
-      clearTimeout(dipTimer);
-      clearTimeout(skeletonTimer);
-      clearTimeout(maxTimer);
-      map.off("sourcedata", onSourceData);
-      onLoadingRef.current?.(false);
-      container.style.transition = "";
-      container.style.opacity = "1";
-    };
+    applyYearData();
+    return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geojsonUrl, sourceId]);
 

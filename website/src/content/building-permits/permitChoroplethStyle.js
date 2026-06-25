@@ -20,6 +20,7 @@
 import { fmtCurrency, fmtPct } from "../../utils/format.js";
 import { polyOutline, rampFloor, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
 import { CITY_BOUNDS } from "../../config/cityBounds.js";
+import { paintTransition, DUR_BASE } from "../../components/motion.js";
 
 export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 
@@ -284,6 +285,10 @@ export function choroplethLayers(stops, sub) {
       type: "fill",
       paint: {
         "fill-color": fillColor,
+        // Colour FLOWS old→new on a year swap (setData via the shared MapView seam)
+        // and on a stops refine — the SAME reduced-motion-aware tween PA's nbhd-fill
+        // uses (was relying on MapLibre's non-reduced-motion-aware 300ms default).
+        "fill-color-transition": paintTransition(DUR_BASE),
         "fill-opacity": FILL_OPACITY_EXPR,
         "fill-opacity-transition": { duration: 150, delay: 0 },
       },
@@ -294,6 +299,7 @@ export function choroplethLayers(stops, sub) {
       type: "fill",
       paint: {
         "fill-color": fillColor,
+        "fill-color-transition": paintTransition(DUR_BASE), // same shared tween as fill-a
         "fill-opacity": 0,
         "fill-opacity-transition": { duration: 150, delay: 0 },
       },
@@ -359,7 +365,11 @@ export function choroplethLayers(stops, sub) {
         "text-size": 11,
         "text-font": ["Noto Sans Regular"],
         "text-max-width": 8,
-        "text-anchor": "center",
+        // Collision avoidance: centred first (keeps the current look), then nudge
+        // to an offset anchor instead of dropping the label when crowded.
+        "text-variable-anchor": ["center", "top", "bottom", "left", "right"],
+        "text-radial-offset": 0.6,
+        "text-justify": "auto",
       },
       paint: {
         "text-color": "#3c3728",

@@ -58,6 +58,7 @@ import {
   indexNamesForSearch,
 } from "./interactions.js";
 import { fmtNumber } from "../../utils/format.js";
+import { useSearchParams } from "react-router-dom";
 
 // Animate a number from 0 → target on mount (ease-out cubic). Signals the figure
 // is computed, not static copy. Returns the current integer value.
@@ -82,11 +83,21 @@ export default function PropertyAssessmentMap() {
   // The manifest is the source of truth for which years exist. Until it loads,
   // we show a loading state; if it fails, an error state. year is null until
   // the manifest tells us a city's default.
+  // The analytical controls (city/year/metric) mirror to the URL query so a view
+  // is shareable/bookmarkable. Read here on first render (validated against the
+  // known cities / metrics), written by the effect below. The CAMERA (center,
+  // zoom) is intentionally NOT in the URL — controls only.
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [manifest, setManifest] = useState(null);
   const [manifestError, setManifestError] = useState(null);
-  const [city, setCity] = useState(DEFAULT_CITY);
-  const [year, setYear] = useState(null);
-  const [metric, setMetric] = useState(METRICS[0].key);
+  const [city, setCity] = useState(() =>
+    CITIES.includes(searchParams.get("city")) ? searchParams.get("city") : DEFAULT_CITY
+  );
+  const [year, setYear] = useState(null); // seeded from the URL/manifest once it loads (year validity needs the manifest)
+  const [metric, setMetric] = useState(() =>
+    METRICS.some((m) => m.key === searchParams.get("metric")) ? searchParams.get("metric") : METRICS[0].key
+  );
 
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
@@ -97,21 +108,43 @@ export default function PropertyAssessmentMap() {
   // Pattern B — hovered neighbourhood properties for the sidebar stat panel.
   const [hoveredFeature, setHoveredFeature] = useState(null);
 
-  // Load the manifest once on mount. We seed the year in the SAME update as the
-  // manifest so there's no frame where the manifest is loaded but no year is
-  // chosen yet (which would flash an empty state). City can't have changed yet
-  // — the controls only render after this resolves — so DEFAULT_CITY is right.
+  // Load the manifest once on mount and seed the year in the SAME update (no
+  // frame where the manifest is loaded but no year is chosen → no empty-state
+  // flash). The year comes from the URL if it's valid for the (URL-or-default)
+  // city, else that city's default — year validity needs the loaded manifest, so
+  // unlike city/metric it can't be seeded synchronously.
   useEffect(() => {
     let cancelled = false;
     loadManifest()
       .then((m) => {
         if (cancelled) return;
         setManifest(m);
-        setYear(getDefaultYear(m, DEFAULT_CITY));
+        const cityYears = getYearsForCity(m, city);
+        const urlYear = Number(searchParams.get("year"));
+        setYear(cityYears.includes(urlYear) ? urlYear : getDefaultYear(m, city));
       })
       .catch((err) => { if (!cancelled) setManifestError(err.message); });
     return () => { cancelled = true; };
+    // Runs once on mount; city/searchParams here are the first-render URL values.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Mirror the controls into the URL so the view is shareable/bookmarkable, but
+  // only the DEVIATIONS: bare path = all defaults, query = a deliberate selection.
+  // A default load writes an empty query (no-op → stays bare, no populate-on-load),
+  // and returning a control to its default drops it from the URL. Missing params
+  // default on read, so a partial link (e.g. ?year=2018) still restores fully.
+  // replace:true so a control change updates the link without history spam.
+  useEffect(() => {
+    if (!manifest) return; // nothing to reflect until the manifest resolves
+    const params = {};
+    if (city !== DEFAULT_CITY) params.city = city;
+    if (metric !== METRICS[0].key) params.metric = metric;
+    const defaultYear = getDefaultYear(manifest, city);
+    if (year != null && year !== defaultYear) params.year = String(year);
+    setSearchParams(params, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [city, year, metric, manifest]);
 
   // The years this city offers, and the URL for the current selection. A year
   // the manifest doesn't list (any Calgary year today) yields url=null →
@@ -152,9 +185,10 @@ export default function PropertyAssessmentMap() {
   // Single effect on [url]: reset all derived state, then fetch if there's a
   // real URL. When url is null we leave gj/map null and the JSX renders
   // EmptyState instead of MapView — no fetch attempted, no errors logged.
-  // setMap(null) is safe even mid-flight: MapView is keyed by url, so it
-  // unmounts cleanly and map.remove() inside its useEffect cleanup destroys
-  // the old MapLibre instance.
+  // setMap(null) is safe even mid-flight: when url goes null the JSX renders
+  // EmptyState INSTEAD of MapView, so MapView unmounts and map.remove() in its
+  // cleanup destroys the instance. MapView is NOT keyed by url — a value→value
+  // year swap keeps the SAME MapView mounted and swaps the source in place.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setFetchError(null);
