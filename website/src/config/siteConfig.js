@@ -20,6 +20,13 @@ export const siteConfig = {
   dept:   "Department of Economics",
   funder: "{Funder}",
 
+  // ---- Map attribution ---------------------------------------------------
+  // Appended to the map's AttributionControl via customAttribution. The basemap
+  // credit "© CARTO, © OpenStreetMap contributors" is supplied AUTOMATICALLY by
+  // the CARTO Voyager TileJSON, so do NOT repeat it here — this is the DATA
+  // credit only.
+  mapAttribution: "Data: City of Edmonton Open Data",
+
   // ---- Footer copy (placeholders) ----------------------------------------
   // Each line corresponds to one block in the footer (Footer.jsx).
   footer: {

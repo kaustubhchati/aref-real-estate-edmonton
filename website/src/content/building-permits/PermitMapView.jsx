@@ -20,6 +20,7 @@ import maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { applyAppleClassic } from "../../components/basemapTheme.js";
+import { siteConfig } from "../../config/siteConfig.js";
 
 import {
   BASEMAP_STYLE,
@@ -174,7 +175,9 @@ export default function PermitMapView({ className = "", onLoad, onPick }) {
       zoom: MAP_VIEW.zoom,
       minZoom: MAP_VIEW.minZoom,
       maxZoom: MAP_VIEW.maxZoom,
-      attributionControl: true,
+      // compact:true to match MapView; CARTO/OSM basemap credit is auto from the
+      // TileJSON, customAttribution APPENDS our data credit (siteConfig §6).
+      attributionControl: { compact: true, customAttribution: siteConfig.mapAttribution },
       // ctrl/⌘ + wheel (or two-finger) to zoom, so a plain page scroll isn't
       // hijacked by the map. Same guard as MapView.jsx (see the note there).
       cooperativeGestures: true,

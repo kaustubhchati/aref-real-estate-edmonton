@@ -30,6 +30,7 @@ import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { applyAppleClassic } from "./basemapTheme.js";
+import { siteConfig } from "../config/siteConfig.js";
 import {
   MOTION_PASS, DUR_FAST, DUR_BASE, EASE, DIP_FLOOR, SKELETON_THRESHOLD, reduceMotion,
 } from "./motion.js";
@@ -79,7 +80,9 @@ export default function MapView({
       zoom: view.zoom,
       minZoom: view.minZoom,
       maxZoom: view.maxZoom,
-      attributionControl: { compact: true },
+      // compact "i" toggle; the basemap CARTO/OSM credit comes from the TileJSON
+      // automatically, customAttribution APPENDS our data credit (siteConfig §6).
+      attributionControl: { compact: true, customAttribution: siteConfig.mapAttribution },
       // Scrolling over the map zooms only when the user holds ctrl/⌘ (or uses two
       // fingers on touch); a plain wheel scrolls the PAGE. Stops the full-width
       // embedded map from hijacking page scroll. 5.24 is boolean-only — the
