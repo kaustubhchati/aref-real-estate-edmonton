@@ -41,9 +41,12 @@ import "./index.css";
 // net-negative. One-time, no teardown.
 maplibregl.prewarm();
 
+// basename mounts the app under Vite's base path. import.meta.env.BASE_URL is set
+// by vite.config's `base`, so it is "/" by default — basename="/" is a no-op — and
+// it tracks a subpath deploy automatically without ever drifting from the build base.
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
         <Route element={<Layout />}>
           {/* Text pages — real stubs */}
