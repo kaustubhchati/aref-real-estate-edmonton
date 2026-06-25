@@ -15,7 +15,7 @@
 # Outputs:
 #   - none (console inspection only)
 #
-# Run context: from the section dir (pipeline/building-permits/),
+# Run context: from the section dir (pipeline/yeg/building-permits/),
 #   e.g. Rscript scripts/eda/02b_job_grouping_checks.R
 # ============================================================
 

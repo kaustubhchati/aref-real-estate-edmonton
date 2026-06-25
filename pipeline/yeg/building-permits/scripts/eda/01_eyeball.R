@@ -13,7 +13,7 @@
 # Outputs:
 #   - none (console inspection only)
 #
-# Run context: from the section dir (pipeline/building-permits/),
+# Run context: from the section dir (pipeline/yeg/building-permits/),
 #   e.g. Rscript scripts/eda/01_eyeball.R
 # ============================================================
 
@@ -120,7 +120,7 @@ permits_raw |>
 
 # if (!exists("permits_raw")) {
 #   permits_raw <- read_csv(
-#     "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/pipeline/building-permits/data/raw/General_Building_Permits_20260529.csv",
+#     "/Users/kaustubhchati/Desktop/RA/aref_property_assessment/pipeline/yeg/building-permits/data/raw/General_Building_Permits_20260529.csv",
 #     show_col_types = FALSE
 #   )
 # }

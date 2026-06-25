@@ -11,7 +11,7 @@ sections:
     # Authoritative working directory for this section, repo-root-relative.
     # Every script's bare-relative data/ and output/ path resolves against this.
     # Declared explicitly — do NOT infer it from an .Rproj file.
-    cwd: pipeline/property-assessment
+    cwd: pipeline/yeg/property-assessment
 
     # Scripts in DEPENDENCY order. After the Jun-2026 rename the 01..08 prefixes
     # now coincide with this run order, but the prefix is only a stable
@@ -79,12 +79,16 @@ sections:
       # Frontend-served CSVs published from the one produced source (was manual,
       # which let public drift on refresh). Report Card reads /data/...; the
       # Download page reads /downloads/... — both copies come from here now.
+      # PUBLISH-TIME RENAME to the locked standard (CLAUDE.md §6 / docs/STRUCTURE.md):
+      # the produced frame stays unprefixed in output/ (internal); the PUBLISHED
+      # artifact carries the yeg_ city prefix + section + _per_nbhd + data year:
+      #   yeg_<section>[_per_nbhd]_<dataYear>.csv
       files:
-        - { from: output/neighbourhood_aggregates_2026.csv, to: website/public/data/neighbourhood_aggregates_2026.csv }
-        - { from: output/neighbourhood_aggregates_2026.csv, to: website/public/downloads/neighbourhood_aggregates_2026.csv }
+        - { from: output/neighbourhood_aggregates_2026.csv, to: website/public/data/yeg_property-assessment_per_nbhd_2026.csv }
+        - { from: output/neighbourhood_aggregates_2026.csv, to: website/public/downloads/yeg_property-assessment_per_nbhd_2026.csv }
 
   building-permits:
-    cwd: pipeline/building-permits
+    cwd: pipeline/yeg/building-permits
 
     # Dependency order: 02 fetches today's snapshot + builds the point geojson +
     # coverage/category CSVs (using the COMMITTED job_category_grouping; 02 self-

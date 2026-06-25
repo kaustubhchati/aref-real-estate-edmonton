@@ -35,12 +35,12 @@ The bar is "researchers and the public can rely on it," not five-nines uptime.
 
 ## Run the current choropleth (demo)
 
-`pipeline/property-assessment/scripts/09_build_choropleth.html` — interactive MapLibre choropleth
+`pipeline/yeg/property-assessment/scripts/production/09_build_choropleth.html` — interactive MapLibre choropleth
 of 2026 median residential assessment, 402 Edmonton neighbourhoods. Serve from the repo root:
 
 ```sh
 python3 -m http.server 8000
-open http://localhost:8000/pipeline/property-assessment/scripts/09_build_choropleth.html
+open http://localhost:8000/pipeline/yeg/property-assessment/scripts/production/09_build_choropleth.html
 ```
 
 This standalone HTML is the reference the React build (`website/`) ports from.

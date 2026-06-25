@@ -2,7 +2,7 @@
 // PropertyAssessmentMap.jsx
 //
 // The Property Assessment route. Layout mirrors
-// pipeline/property-assessment/scripts/09_build_choropleth.html (09).
+// pipeline/yeg/property-assessment/scripts/09_build_choropleth.html (09).
 //
 //   ┌──── .content-map (flex row, full-bleed within shell-main) ────┐
 //   │ ┌─ .sb (300px) ─┐ ┌────── .canvas-wrap (flex 1) ──────────┐ │

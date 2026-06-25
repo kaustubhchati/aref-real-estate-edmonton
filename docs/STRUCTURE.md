@@ -69,7 +69,9 @@ Every section has the identical structure (including empty dirs with `.gitkeep`)
 
 ## 6. Pipeline ↔ website seam [TARGET]
 
-The pipeline **never writes into `website/` directly** except through designated handoff scripts using `website_path()`. Each section writes final outputs to its own `output/`; a single explicit handoff step copies them verbatim to the website. Output filenames are written in final form at `output/` and copied unchanged — no rename bridge.
+The pipeline **never writes into `website/` directly** except through the runner's handoff step (the sole publisher). Each section writes final outputs to its own `output/`; the handoff copies them to the website. **Published CSVs are renamed at copy time** to the locked standard `yeg_<section>[_per_nbhd]_<dataYear>.csv` (span variant for historical) — see CLAUDE.md §6: the `output/` frame stays **unprefixed** (internal), the published copy carries the `yeg_` city prefix. GeoJSONs and other artifacts are copied unchanged. (This publish-time rename **supersedes** the earlier "no rename bridge" rule, which predated the city-prefix naming standard.)
+
+> Sections live under a city container: `pipeline/yeg/<section>/` (Edmonton). `shared_path()`/`section_path()` anchor at `pipeline/yeg/`; `website_path()` is city-agnostic (the site is not city-nested yet).
 
 ## 7. Orchestration & run entry points [TARGET]
 

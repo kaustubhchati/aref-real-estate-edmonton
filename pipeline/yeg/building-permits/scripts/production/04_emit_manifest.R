@@ -15,7 +15,7 @@
 # Scans output/ (the freshly-built source), not public, per the sole-publisher
 # lesson. No year literals — years come from the globbed file set.
 #
-# Run context: from the section dir (pipeline/building-permits/),
+# Run context: from the section dir (pipeline/yeg/building-permits/),
 #   e.g. Rscript scripts/production/04_emit_manifest.R
 # ============================================================
 

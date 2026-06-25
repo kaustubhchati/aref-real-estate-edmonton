@@ -9,7 +9,7 @@
 # was removed 2026-06-22 — it did a redundant join the frontend never consumed).
 #
 # Boundary source: City of Edmonton Neighbourhoods CSV (65fr-66s6), 407 polygons,
-# WKT/WGS84, in pipeline/shared. Read via read_csv + st_as_sf(wkt=...).
+# WKT/WGS84, in pipeline/yeg/shared. Read via read_csv + st_as_sf(wkt=...).
 #
 # Inputs:
 #   - output/neighbourhood_aggregates_2026.csv               (from 05; canonical ids)

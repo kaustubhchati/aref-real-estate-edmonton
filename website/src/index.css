@@ -308,7 +308,7 @@ p  { margin: 0 0 0.75rem; }
 
 /* ---- Map pages ----------------------------------------------------------- */
 
-/* Open layout matching pipeline/property-assessment/scripts/09_build_choropleth.html:
+/* Open layout matching pipeline/yeg/property-assessment/scripts/09_build_choropleth.html:
    left sidebar + flex-filling map. shell-main now has no padding, so the map is
    full-bleed with margin:0 (no negative-margin cancel needed) and flex-1 so the
    map takes whatever vertical space sits between Nav and Footer. */

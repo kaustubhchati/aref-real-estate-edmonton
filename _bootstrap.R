@@ -27,11 +27,13 @@ ROOT <- rprojroot::find_root(rprojroot::has_file(".aref_root"))
 # Each joins its argument(s) onto the correct base. file.path() keeps them
 # OS-portable (no hardcoded slashes).
 
-# shared_path(): a resource shared across sections (e.g. neighbourhood boundaries)
-shared_path <- function(...) file.path(ROOT, "pipeline", "shared", ...)
+# shared_path(): a resource shared across sections (e.g. neighbourhood boundaries).
+# Edmonton-scoped: sections live under the city container pipeline/yeg/ (CLAUDE.md §3).
+shared_path <- function(...) file.path(ROOT, "pipeline", "yeg", "shared", ...)
 
-# section_path(): a file inside a NAMED section (cross-section reference)
-section_path <- function(section, ...) file.path(ROOT, "pipeline", section, ...)
+# section_path(): a file inside a NAMED section (cross-section reference), under the
+# Edmonton city container pipeline/yeg/.
+section_path <- function(section, ...) file.path(ROOT, "pipeline", "yeg", section, ...)
 
 # website_path(): a target in the frontend tree — use ONLY in designated
 # handoff scripts, never in ordinary pipeline scripts

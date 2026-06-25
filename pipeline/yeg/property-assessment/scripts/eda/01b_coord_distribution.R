@@ -13,7 +13,7 @@
 library(tidyverse)  # dplyr, ggplot2, readr, etc.
 library(scales)     # axis formatting (comma(), log scales)
 library(ggthemes)
-source(rprojroot::find_root_file("pipeline/property-assessment/scripts/_common/00_theme.R", criterion = rprojroot::has_file(".aref_root")))
+source(rprojroot::find_root_file("pipeline/yeg/property-assessment/scripts/_common/00_theme.R", criterion = rprojroot::has_file(".aref_root")))
 
 # --- Load (same snapshot as 01_fetch_current.R) ------------------
 url_assess_current <- "https://data.edmonton.ca/api/views/q7d6-ambg/rows.csv?accessType=DOWNLOAD"

@@ -13,7 +13,7 @@
 #   - data/reference/job_category_grouping_<YYYYMMDD>.csv
 #     columns: job_category, group, rationale, source, date_curated, curated_by
 #
-# Run context: from the section dir (pipeline/building-permits/),
+# Run context: from the section dir (pipeline/yeg/building-permits/),
 #   e.g. Rscript scripts/production/02a_build_job_grouping.R
 # ============================================================
 

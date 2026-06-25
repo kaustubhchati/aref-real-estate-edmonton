@@ -26,7 +26,7 @@
 # ---- Large regenerable API snapshots ----
 # Edmonton Property Information API (dkk9-cj3x) — refetch via the loader script.
 # Patterns use **/data/... so they match at any section depth
-# (e.g. pipeline/property-assessment/data/...) per CLAUDE.md §3.
+# (e.g. pipeline/yeg/property-assessment/data/...) per CLAUDE.md §3.
 **/data/raw/property_info_*.csv
 
 # Large derived outputs — regenerable from scripts 01, 03, 06.
@@ -75,14 +75,14 @@ secrets.json
 # at refresh. Same class as the other gitignored data snapshots (CLAUDE.md §3).
 **/business-census/data/Edmonton_Business_Census_*.csv
 
-pipeline/property-assessment/output/Screenshot*
-pipeline/property-assessment/output/hist_parking_*.csv
-pipeline/property-assessment/output/parking_*.csv
-pipeline/property-assessment/output/name_mapping_audit_log_*.csv
-pipeline/property-assessment/output/neighbourhoods_2026_new_boundaries.geojson
-pipeline/property-assessment/output/neighbourhoods_2026_recovered.geojson
-pipeline/property-assessment/output/pa_hist_clean_*.csv
-pipeline/property-assessment/data/reference/neighbourhood_name_merges_*.csv
+pipeline/yeg/property-assessment/output/Screenshot*
+pipeline/yeg/property-assessment/output/hist_parking_*.csv
+pipeline/yeg/property-assessment/output/parking_*.csv
+pipeline/yeg/property-assessment/output/name_mapping_audit_log_*.csv
+pipeline/yeg/property-assessment/output/neighbourhoods_2026_new_boundaries.geojson
+pipeline/yeg/property-assessment/output/neighbourhoods_2026_recovered.geojson
+pipeline/yeg/property-assessment/output/pa_hist_clean_*.csv
+pipeline/yeg/property-assessment/data/reference/neighbourhood_name_merges_*.csv
 
 # Property Assessment raw snapshots (current + historical) — refetch via the loader.
 **/data/raw/Property_Assessment_Data_*.csv
@@ -92,8 +92,8 @@ pipeline/property-assessment/data/reference/neighbourhood_name_merges_*.csv
 
 # Shared-section data (City neighbourhood boundary + mature-neighbourhood
 # reference downloads) — large, re-downloaded at refresh. Shared CODE under
-# pipeline/shared/ stays committable; only its data/ is excluded (CLAUDE.md §3).
-pipeline/shared/data/
+# pipeline/yeg/shared/ stays committable; only its data/ is excluded (CLAUDE.md §3).
+pipeline/yeg/shared/data/
 **/building-permits/output/permits.pmtiles
 **/building-permits/output/permits.pmtiles
 **/building-permits/output/permit_geojson/*.geojson
@@ -102,14 +102,14 @@ pipeline/shared/data/
 # per-year aggregates, coverage summary, manifest, and the served-copy-source
 # CSVs (the published copies live in website/public/data/building-permits/).
 # All regenerable via 02/03/04.
-pipeline/building-permits/output/permit_aggregates/permit_aggregates_*.csv
-pipeline/building-permits/output/permit_coverage_summary.csv
-pipeline/building-permits/output/manifest.json
-pipeline/building-permits/output/permits_coverage.csv
-pipeline/building-permits/output/permits_category_counts.csv
+pipeline/yeg/building-permits/output/permit_aggregates/permit_aggregates_*.csv
+pipeline/yeg/building-permits/output/permit_coverage_summary.csv
+pipeline/yeg/building-permits/output/manifest.json
+pipeline/yeg/building-permits/output/permits_coverage.csv
+pipeline/yeg/building-permits/output/permits_category_counts.csv
 # Dwelling-units dropped-spanner diagnostic CSVs (per-run, dated) — regenerable
 # build diagnostics, same policy as the aggregates above.
-pipeline/building-permits/output/dwelling_units_*.csv
+pipeline/yeg/building-permits/output/dwelling_units_*.csv
 
 # Local working doc — audit findings, not a repo artifact
 docs/STRUCTURE_AUDIT.md
@@ -130,19 +130,19 @@ runs/reports/
 # the aggregates/scorecard CSVs are build intermediates (the SERVED copies live
 # in website/public/downloads/ + website/public/data/). All regenerable from the
 # runner, so ignored — same policy as the other output/ artifacts above.
-pipeline/property-assessment/output/neighbourhoods_*_recovered.geojson
-pipeline/property-assessment/output/manifest.json
-pipeline/property-assessment/output/neighbourhood_aggregates_*.csv
+pipeline/yeg/property-assessment/output/neighbourhoods_*_recovered.geojson
+pipeline/yeg/property-assessment/output/manifest.json
+pipeline/yeg/property-assessment/output/neighbourhood_aggregates_*.csv
 # 07's non-residential id sidecar (consumed by 08b) — regenerable intermediate.
-pipeline/property-assessment/output/non_residential_ids_*.csv
-pipeline/property-assessment/output/pa_hist_filter_scorecard.csv
+pipeline/yeg/property-assessment/output/non_residential_ids_*.csv
+pipeline/yeg/property-assessment/output/pa_hist_filter_scorecard.csv
 # Historical per-year aggregates + build logs (08d/08e outputs) — same
 # regenerable policy. The pattern above does NOT recurse into this subdir, so it
 # was tracked by oversight; list the dir + log explicitly.
-pipeline/property-assessment/output/hist_aggregates/
-pipeline/property-assessment/output/hist_geojson_build_log.csv
+pipeline/yeg/property-assessment/output/hist_aggregates/
+pipeline/yeg/property-assessment/output/hist_geojson_build_log.csv
 # 08b's per-run unresolved-rows CSV — regenerable diagnostic, same policy.
-pipeline/property-assessment/output/neighbourhoods_2026_not_rendered_recovered.csv
+pipeline/yeg/property-assessment/output/neighbourhoods_2026_not_rendered_recovered.csv
 
 # Microsoft Office lock/temp files (created while a .doc/.docx is open).
 ~$*

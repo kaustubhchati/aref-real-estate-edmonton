@@ -35,7 +35,7 @@ dir.create("output", showWarnings = FALSE, recursive = TRUE)
 library(tidyverse)
 library(readxl)
 library(scales)
-source(rprojroot::find_root_file("pipeline/property-assessment/scripts/_common/00_theme.R", criterion = rprojroot::has_file(".aref_root")))
+source(rprojroot::find_root_file("pipeline/yeg/property-assessment/scripts/_common/00_theme.R", criterion = rprojroot::has_file(".aref_root")))
 source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
 
 

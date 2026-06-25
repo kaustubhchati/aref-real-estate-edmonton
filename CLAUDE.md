@@ -1,12 +1,12 @@
 # CLAUDE.md
 
-> **Version: v1.6 — authoritative. Supersedes all prior versions (v0.1–v1.5).**
+> **Version: v1.7 — authoritative. Supersedes all prior versions (v0.1–v1.6).**
 > This is the single source of project context for every Claude Code session — read it first.
 > If any other note, comment, or older doc frames *the website* as an "agent-driven platform,"
 > that framing is **retired** — see §1.
 > Owner / **builder**: KC (Research Assistant, UAlberta) — direct-push authority to `main` (§7).
 > Verifier: Olivia (post-hoc review, §7). Supervisor: Prof. Haifang Huang.
-> Last updated: 2026-06-21. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
+> Last updated: 2026-06-25. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
 > current open work tracked in **PHASE2_STATUS.md**.
 
 ---
@@ -106,24 +106,26 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
 ├─ REFRESH_NOTES.md              # quarterly refresh log Olivia reviews
 │
 ├─ pipeline/                     # BACKEND — R, runs on the laptop, never deploys
-│   ├─ shared/                   #   CITY-WIDE BASE-GEO SECTION: reference geometry whose
-│   │                            #   OUTPUTS feed many sections — neighbourhood boundary (the
-│   │                            #   canonical ID-join geometry), road network, vegetation,
-│   │                            #   speed zones. A data section (fetch→process→emit), NOT a
-│   │                            #   helper library. Reached via shared_path(). City-bound.
-│   │                            #   Base-geo-ONLY on disk now (boundary + Mature
-│   │                            #   Neighbourhoods); no orphaned scripts (Business Census
-│   │                            #   relocated to economy/).
-│   ├─ property-assessment/      #   BUILT — Layer 1a + 2, historical backfill, manifest
-│   │   ├─ scripts/              #     01_load … 09_build
-│   │   ├─ data/                 #     raw/  processed/  validation/  reference/
-│   │   └─ output/               #     this section's products: GeoJSON / PMTiles / CSVs
-│   ├─ building-permits/         #   BUILT — point PMTiles (R2) + neighbourhood aggregates
-│   ├─ economy/                  #   ECONOMY section — neighbourhood-level economic data
-│   │   └─ business-census/      #     BUILT — Business Census choropleth (relocated from
-│   │                            #     shared/); scripts/production/ data/ output/
-│   ├─ crime/                    #   (added when built)
-│   └─ …
+│   ├─ yeg/                      #   EDMONTON city container — city WRAPS section (§2/§10).
+│   │   │                        #   Sections live UNDER the city; shared/ is city-scoped.
+│   │   ├─ shared/               #     CITY-WIDE BASE-GEO SECTION: reference geometry whose
+│   │   │                        #     OUTPUTS feed many sections — neighbourhood boundary (the
+│   │   │                        #     canonical ID-join geometry), road network, vegetation,
+│   │   │                        #     speed zones. A data section (fetch→process→emit), NOT a
+│   │   │                        #     helper library. Reached via shared_path(). City-bound.
+│   │   │                        #     Base-geo-ONLY on disk now (boundary + Mature
+│   │   │                        #     Neighbourhoods); no orphaned scripts.
+│   │   ├─ property-assessment/  #     BUILT — Layer 1a + 2, historical backfill, manifest
+│   │   │   ├─ scripts/          #       01_load … 09_build
+│   │   │   ├─ data/             #       raw/  processed/  validation/  reference/
+│   │   │   └─ output/           #       this section's products: GeoJSON / PMTiles / CSVs
+│   │   ├─ building-permits/     #     BUILT — point PMTiles (R2) + neighbourhood aggregates
+│   │   ├─ economy/              #     ECONOMY section — neighbourhood-level economic data
+│   │   │   └─ business-census/  #       BUILT — Business Census choropleth; scripts/ data/ output/
+│   │   ├─ crime/                #     (added when built)
+│   │   └─ …
+│   └─ yyc/                      #   CALGARY placeholder (.gitkeep only). Wired in the
+│                                #   Calgary-introduction campaign — §10. No contents yet.
 │
 ├─ website/                      # FRONTEND — React + Vite, the deployable unit
 │   ├─ public/data/              #   built data the site serves (copied from each section's
@@ -149,20 +151,25 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
 
 - Three top folders, three jobs: `pipeline/` makes data (local only), `website/` is the
   deployable app, `docs/` is handover/prof material.
-- **Sections mirror across the repo.** `pipeline/<section>/` ↔ `website/src/content/<section>/`.
+- **Sections mirror across the repo.** `pipeline/<city>/<section>/` ↔ `website/src/content/<section>/`.
+  The city layer (`yeg/`) is on the **pipeline** side only; the frontend tree + the
+  `website/public/data/` handoff stay flat (un-citied) until a second city ships — same
+  deferral as the `yeg_`/`yyc_` output prefixes (§10). Edmonton sections resolve through
+  `shared_path()`/`section_path()`, which anchor at `pipeline/yeg/` (see `_bootstrap.R`).
 - **Each pipeline section is self-contained** (`scripts/ data/ output/`) and runs its own
   fetch → clean → aggregate → output. Cross-section base geometry — the neighbourhood
   boundary especially, plus road / vegetation / speed-zone reference layers — lives in
-  `pipeline/shared/`, emitted once for all sections to consume. `shared/` is a data section
-  (shared outputs), not a helper library; its scope is one city.
+  `pipeline/yeg/shared/`, emitted once for all sections to consume. `shared/` is a data section
+  (shared outputs), not a helper library; its scope is one city (so it is city-scoped → under `yeg/`).
 - Backend → frontend handoff is one copy: a section's `output/` → `website/public/data/`.
 - Restricted/confidential inputs live **only** in a section's `data/` (`raw/` or `validation/`)
   and are **gitignored** — never committed, never deployed.
-- **Fit note:** only create folders for sections that exist. Built today: `property-assessment`,
-  `building-permits`, `economy/business-census`, plus the `pipeline/shared/` base-geo section
-  (now boundary + Mature Neighbourhoods only — the Business Census script that previously
-  squatted here has been relocated to `economy/`; road/vegetation layers pending). Copy the
-  pattern per new section — no empty stubs.
+- **Fit note:** only create folders for sections that exist. Built today, all under
+  `pipeline/yeg/`: `property-assessment`, `building-permits`, `economy/business-census`, plus
+  the `pipeline/yeg/shared/` base-geo section (boundary + Mature Neighbourhoods only;
+  road/vegetation layers pending). `pipeline/yyc/` exists as an empty Calgary placeholder
+  (`.gitkeep` only) — no section folders until Calgary is wired (§10). Copy the pattern per new
+  section — no empty stubs.
 
 ---
 
@@ -193,7 +200,7 @@ These bind every pipeline script. (Carried from the validated phase-1 methodolog
   never fuzzy matching or silent auto-correction. Non-destructive (`_recovered` artifacts).
   Established example: `neighbourhood_name_mappings_20260519.csv` (8 mappings).
 - **4.8 Socrata fetches go through the shared helper.** All bulk fetches call
-  `pipeline/shared/fetch_helpers.R::fetch_socrata_snapshot()`. Download-to-disk model: each fetch
+  `pipeline/yeg/shared/fetch_helpers.R::fetch_socrata_snapshot()`. Download-to-disk model: each fetch
   writes a dated raw snapshot to the section's `data/raw/` (provenance record), then reads it.
   Export endpoint only (`rows.csv?accessType=DOWNLOAD`); the `/resource/` query endpoint is never
   used because it silently caps at 1000 rows. Reliability is built in: a curl stall-detect handle
@@ -262,7 +269,7 @@ Everything else remains a placeholder.
   downloads). Don't over-engineer. Real structure (a shared `MapView`) is welcome *because* it
   makes the code clearer; cleverness the problem didn't ask for is not.
 - Patterns to follow in every file (worked reference example:
-  `pipeline/property-assessment/scripts/09_build_choropleth.html`):
+  `pipeline/yeg/property-assessment/scripts/production/09_build_choropleth.html`):
   header comment stating the file's contract; `// ===` section banners; data-driven tables
   (`STOPS`, `STATE_STYLE`, `POPUP_ROWS`) consumed by loops; small named single-purpose functions;
   comments explain the **why**, not the what; honest surfaced errors; plain readable code over clever.
@@ -270,14 +277,32 @@ Everything else remains a placeholder.
 
 **Data flow.**
 ```
-Edmonton Open Data → (quarterly, on laptop) pipeline/<section>/ fetch→clean→aggregate
-  → pipeline/<section>/output/ (GeoJSON / PMTiles / CSVs)
+Edmonton Open Data → (quarterly, on laptop) pipeline/yeg/<section>/ fetch→clean→aggregate
+  → pipeline/yeg/<section>/output/ (GeoJSON / PMTiles / CSVs)
   → copied to website/public/data/<section>/ → Vite build → website/dist/ → git push → host
 ```
 The Edmonton portal is touched **only at refresh time** on the laptop, never on a visit.
 **Fit note:** the neighbourhood choropleth is 407 polygons (City of Edmonton Neighbourhoods CSV
 65fr-66s6, adopted as the boundary source — §10) — load it as plain GeoJSON. Reserve PMTiles for
 high-volume layers (parcel-level properties, permit points) where it earns its keep.
+
+**Published-output CSV naming standard — LOCKED (the contract all sections conform to).**
+Web-served CSVs (the copies under `website/public/`) are named:
+- current-year:    `yeg_<section>[_per_nbhd]_<dataYear>.csv`
+- historical span: `yeg_<section>[_per_nbhd]_<minYear>-<maxYear>.csv`
+
+Rules: the `yeg_` city prefix is on **published** artifacts ONLY — a section's `output/` frames
+stay **unprefixed** (internal, keep their `YYYYMMDD`/working names). `_per_nbhd` marks a
+per-neighbourhood aggregate. Year / span endpoints reflect the **data**, never invented literals.
+This is a **publish-time rename**: the runner's handoff `to:` carries the standard name while
+`from:`/`output/` keep the internal name — which **supersedes** the older "no rename bridge"
+line in `docs/STRUCTURE.md`. Applied here to PA's served aggregate
+(`yeg_property-assessment_per_nbhd_2026.csv`, was `neighbourhood_aggregates_2026.csv`); other
+sections (e.g. BP's `permits_*` CSVs) conform as they are standardized. The `yeg_` prefix is the
+city token — the Calgary `yyc_` prefix builds on the same rule when Calgary ships (§10).
+(Programmatic year-derivation in the handoff name is a per-section follow-up: the handoff `files:`
+list does not yet template the year, so PA's published name currently mirrors the existing
+year literal in its `from:` path.)
 
 ---
 
@@ -316,7 +341,7 @@ Goal: a navigable shell with **one** working map, committed and deployed.
 3. Build the shell — `Layout`, `Header`, `Nav`, `Footer` — reading from `siteConfig`.
 4. Build shared components: `MapView`, `Legend`, `Tooltip`.
 5. Port the **Property Assessment choropleth** from
-   `pipeline/property-assessment/scripts/09_build_choropleth.html` into
+   `pipeline/yeg/property-assessment/scripts/production/09_build_choropleth.html` into
    `website/src/content/property-assessment/`. Match its behaviour: choropleth fill on
    `median_assessvalue`; hover + click-to-pin popups; neighbourhood search (fly-to); the locked
    colour scale (PHASE1_STATUS §5); the five polygon states (aggregated / suppressed N<100 /
@@ -357,7 +382,7 @@ Result: the **live clone** — shell + one real map — the proof the frame work
 - Hardcode org / university / professor / author names — `siteConfig` only. (§6.)
 - Add a runtime database, server, or API. (§1.)
 - Introduce stacks beyond React + Vite + PMTiles + MapLibre (+ Recharts for charts). (§2.)
-- Duplicate cross-section base geometry (boundary, road/vegetation layers) into sections — it lives in `pipeline/shared/`. (§3.)
+- Duplicate cross-section base geometry (boundary, road/vegetation layers) into sections — it lives in `pipeline/yeg/shared/`. (§3.)
 - Over-engineer, or merge code Olivia can't read. (§6.)
 
 **Both**
@@ -370,7 +395,7 @@ Result: the **live clone** — shell + one real map — the proof the frame work
 | `[OPEN]` | Resolve by | Status |
 |---|---|---|
 | Reconcile the colour-scale source reference (live page cites `PHASE1_STATUS.md §5`; confirm) | Before locking the React map | ✅ **Resolved** — per-year manifest scales + per-metric palettes locked (PHASE1 §12) |
-| Calgary: mirror Edmonton pipeline or use the RE-prefix filter? | Calgary work start | ✅ **Resolved (decision; execution blocked on prereqs)** — NOT a duplicate `pipeline/`. Edmonton city-coupling is shallow (dataset IDs, boundary CSV, special-entity list, oracle = config; rules key on column concepts, not Edmonton identifiers). Decision: **city wraps section** (`pipeline/<city>/<section>/`); each city carries its **own** `shared/` base-geo section (cities share no base layers, so no cross-city shared geo); rule-bearing sections parameterize by a per-city config (IDs / boundary / special entities / oracle-present); **outputs carry `yeg_`/`yyc_` prefixes** so both cities coexist in `data/processed/` + website handoff — but the prefixes are **DEFERRED to the Calgary-introduction campaign**: until a second city exists there is no namespace collision to disambiguate, so outputs and frontend paths stay unprefixed; the prefixes land across all sections at once when the second city is wired, not ahead of it. The validation tier already self-skips via `conf_path()` when a city has no oracle (no new code). **Blocked on, in order:** (1) building-permits migration finished; (2) `shared/` built out (road/vegetation layers in; the squatting Business Census script relocated to an Economy section); (3) Calgary schema inspected (column-concept map + numeric-ID boundary join confirmed). Do NOT write the city layer into §3 or the tree until it exists on disk (§0 rule 1). |
+| Calgary: mirror Edmonton pipeline or use the RE-prefix filter? | Calgary work start | ✅ **Resolved (decision; execution blocked on prereqs)** — NOT a duplicate `pipeline/`. Edmonton city-coupling is shallow (dataset IDs, boundary CSV, special-entity list, oracle = config; rules key on column concepts, not Edmonton identifiers). Decision: **city wraps section** (`pipeline/<city>/<section>/`); each city carries its **own** `shared/` base-geo section (cities share no base layers, so no cross-city shared geo); rule-bearing sections parameterize by a per-city config (IDs / boundary / special entities / oracle-present); **outputs carry `yeg_`/`yyc_` prefixes** so both cities coexist in `data/processed/` + website handoff — but the prefixes are **DEFERRED to the Calgary-introduction campaign**: until a second city exists there is no namespace collision to disambiguate, so outputs and frontend paths stay unprefixed; the prefixes land across all sections at once when the second city is wired, not ahead of it. The validation tier already self-skips via `conf_path()` when a city has no oracle (no new code). **Blocked on, in order:** (1) building-permits migration finished; (2) `shared/` built out (road/vegetation layers in; the squatting Business Census script relocated to an Economy section); (3) Calgary schema inspected (column-concept map + numeric-ID boundary join confirmed). **— UPDATE 2026-06-25 (v1.7): the city-container STRUCTURE has landed.** All Edmonton sections moved under `pipeline/yeg/` (+ empty `pipeline/yyc/` Calgary placeholder); `shared_path`/`section_path` (`_bootstrap.R`), `_whirl.yaml` cwds, `.gitignore`, and in-code paths repointed; the full chain runs byte-identical post-move; §3 tree now shows the city layer (so the §0-rule-1 "don't write it until it's on disk" gate is satisfied — it now IS). The published-output CSV **naming standard** (the `yeg_` prefix contract) is locked + applied to PA's served aggregate (§6). Still DEFERRED until Calgary DATA lands: the `yeg_`/`yyc_` prefix on the *remaining* published artifacts (per-year geojsons, BP CSVs), frontend + `website/public/data/` city-nesting, the per-city config, and the Calgary schema inspection itself. |
 | Identify canonical 2026 boundary shapefile (UAlberta Library data services) | Parallel track | ✅ **Resolved** — City of Edmonton Neighbourhoods CSV (`65fr-66s6`, 407 rows, WKT/WGS84) adopted as the boundary source; 08/08b read `read_csv` + `st_as_sf` |
 | R3b: optional catch for ~104 "building and land" manufactured-home FNs | Before R4, probably unnecessary | ↗ Carried to Phase 2 (low priority) |
 | Scoreboard schema columns (`dataset`, `city`, `layer`, …) for multi-section scoring | Before second section's rules | Open |
@@ -398,6 +423,27 @@ When in doubt, load §2 (locked architecture) and §9 (negative rules) — the l
 Revise when: a locked decision changes (§2), a new section is wired (§3), a new rule is validated
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
+- **v1.7 (2026-06-25)** — **Edmonton city container created — the Calgary-introduction
+  campaign's structural foundation (§10).** All Edmonton sections (`property-assessment`,
+  `building-permits`, `economy`, `shared`) `git mv`'d under `pipeline/yeg/` (history preserved);
+  empty `pipeline/yyc/` (`.gitkeep`) added as the Calgary placeholder. Repointed: `_bootstrap.R`
+  `shared_path()`/`section_path()` (now anchor `pipeline/yeg/…`; `website_path()` unchanged —
+  the site does not move), both `_whirl.yaml` cwds, the `.gitignore` anchored data-protection
+  patterns (verified still ignoring raw/output at the new paths), two EDA/validation
+  `find_root_file` code paths, and in-code/comment path strings. **Published-output CSV naming
+  standard LOCKED** (§6): `yeg_<section>[_per_nbhd]_<dataYear>.csv` (span variant for
+  historical), `yeg_` on published artifacts only, `output/` frames stay unprefixed — a
+  publish-time rename that **supersedes** `docs/STRUCTURE.md`'s old "no rename bridge" line;
+  applied to PA's served aggregate (`neighbourhood_aggregates_2026.csv` →
+  `yeg_property-assessment_per_nbhd_2026.csv`, ReportCard + siteConfig + handoff `to:` repointed,
+  content byte-identical). **Byte-identity gate:** full PA+BP chain + Business Census re-run
+  post-move; BP (46 files) and Business Census + PA current-year/2024-25 outputs byte-identical;
+  relocation proven computation-neutral. PA historical 2012-2023 outputs differ run-to-run due to
+  a **pre-existing, location-independent `readr`/`vroom` multi-threaded parse nondeterminism** on
+  the 5.5M-row historical CSV (two reads of the SAME file at the SAME path give `identical=FALSE`,
+  `all.equal=TRUE` — float-epsilon noise; NOT a relocation effect, NOT introduced here — flagged
+  for a future single-thread-read fix). §3 tree + rules + Fit note now show the city layer;
+  §10 Calgary row updated. Structural + naming only — no pipeline data logic changed.
 - **v1.6 (2026-06-21)** — Three decisions from the fetch-SOP + frontend-prep work
   recorded. §4.8: all Socrata bulk fetches go through the shared
   `fetch_socrata_snapshot()` (download-to-disk, export endpoint only, reliability

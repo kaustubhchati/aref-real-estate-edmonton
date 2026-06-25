@@ -6,7 +6,7 @@
 // next to choroplethStyle.js (the visual contract) and is wired in via
 // MapView's onLoad(map) hook — MapView itself stays interaction-agnostic.
 //
-// Ported from pipeline/property-assessment/scripts/09_build_choropleth.html.
+// Ported from pipeline/yeg/property-assessment/scripts/09_build_choropleth.html.
 // If a behaviour here disagrees with 09, 09 wins until we explicitly decide
 // to diverge.
 //

@@ -1,5 +1,5 @@
 # ============================================================
-# fetch_helpers.R   (pipeline/shared)
+# fetch_helpers.R   (pipeline/yeg/shared)
 # ------------------------------------------------------------
 # WHY: every Socrata bulk fetch in this repo goes through ONE helper, so the
 # export-endpoint discipline and the proven reliability layer cannot be bypassed

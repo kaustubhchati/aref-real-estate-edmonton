@@ -2,7 +2,7 @@
 // choroplethStyle.js
 //
 // The visual contract for the Property Assessment choropleth.
-// Ported VERBATIM from pipeline/property-assessment/scripts/09_build_choropleth.html:
+// Ported VERBATIM from pipeline/yeg/property-assessment/scripts/09_build_choropleth.html:
 // the same stops, the same five polygon states, the same outlines and patterns.
 // If you need to tweak a colour or threshold, change it here in one place —
 // Legend, MapView paint expressions, and any future popup all read from these

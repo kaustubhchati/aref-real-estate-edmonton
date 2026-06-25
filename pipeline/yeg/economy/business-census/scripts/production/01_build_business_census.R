@@ -5,10 +5,10 @@
 #   (local CSV) to the 2026 neighbourhood boundary and produce a GeoJSON
 #   choropleth (+ flat CSV + build log) for MapLibre rendering.
 #
-# Run context: from the section dir (pipeline/economy/business-census/),
+# Run context: from the section dir (pipeline/yeg/economy/business-census/),
 #   e.g. Rscript scripts/production/01_build_business_census.R
 #   Bootstrap-anchored (sources _bootstrap.R); the boundary is resolved via
-#   shared_path() (cross-section base geo, stays in pipeline/shared/).
+#   shared_path() (cross-section base geo, stays in pipeline/yeg/shared/).
 #
 # Source dataset: Edmonton Business Census - Neighbourhood Aggregation
 #   Local: data/Edmonton_Business_Census_-_Neighbourhood_Aggregation_20260619.csv

@@ -40,13 +40,13 @@
 #   single neighbourhood (oracle old/new name pairs unified). Genuine spanners
 #   and nameless rows are dropped + logged — no assign-to-first, no duplication.
 #
-# Run context: from the section dir (pipeline/building-permits/),
+# Run context: from the section dir (pipeline/yeg/building-permits/),
 #   e.g. Rscript scripts/production/03_build_permit_aggregates.R
 #
 # Join key: NEIGHBOURHOOD_NUMBER (integer) in permits
 #           ↔ Neighbourhood Number in boundary CSV (65fr-66s6)
 # Boundary: shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
-#           (pipeline/shared/data/…; sourced via _bootstrap.R)
+#           (pipeline/yeg/shared/data/…; sourced via _bootstrap.R)
 #
 # Suppression gate: n_permits < 10 → suppressed_low_n
 # (lower than assessment's N<100 — permits are sparser)

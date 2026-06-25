@@ -50,7 +50,7 @@ export const siteConfig = {
         "407 Edmonton neighbourhoods. Includes median/mean assessed " +
         "value, lot size, year built, condo share, and year-over-year " +
         "change. Suppressed where N < 100.",
-      file: "/downloads/neighbourhood_aggregates_2026.csv",
+      file: "/downloads/yeg_property-assessment_per_nbhd_2026.csv",
       size: "45 KB",
       rows: "407 neighbourhoods",
       section: "Properties & Land",

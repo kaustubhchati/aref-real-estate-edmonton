@@ -17,7 +17,7 @@
 #   - output/permits_coverage.csv        (per-year mapped / no-coord / no-value)
 #   - output/permits_category_counts.csv (per-(year, category) counts)
 #
-# Run context: from the section dir (pipeline/building-permits/),
+# Run context: from the section dir (pipeline/yeg/building-permits/),
 #   e.g. Rscript scripts/production/02_build_permits.R
 #
 # Pipeline:
@@ -27,7 +27,7 @@
 #   4. Emit the three output artifacts listed above
 #
 # Stage B (separate, run by hand after this script): tippecanoe turns the
-# GeoJSON into PMTiles. Run from pipeline/building-permits/:
+# GeoJSON into PMTiles. Run from pipeline/yeg/building-permits/:
 #
 #   tippecanoe -o output/permits.pmtiles --force \
 #     --layer=permits --minimum-zoom=9 --maximum-zoom=14 \
