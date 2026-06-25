@@ -240,7 +240,11 @@ export function bcensusLayers(stops, metricKey = "n_businesses_2025") {
         "text-size": 11,
         "text-font": ["Noto Sans Regular"],
         "text-max-width": 8,
-        "text-anchor": "center",
+        // Collision avoidance: centred first (keeps the current look), then nudge
+        // to an offset anchor instead of dropping the label when crowded.
+        "text-variable-anchor": ["center", "top", "bottom", "left", "right"],
+        "text-radial-offset": 0.6,
+        "text-justify": "auto",
       },
       paint: {
         "text-color": "#3c3728",

@@ -610,7 +610,12 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
         "text-size": 11,
         "text-font": ["Noto Sans Regular"],
         "text-max-width": 8,
-        "text-anchor": "center",
+        // Collision avoidance: try centred first (keeps the current on-centroid
+        // look), then nudge to an offset anchor instead of DROPPING the label
+        // when labels crowd at zoom 11+.
+        "text-variable-anchor": ["center", "top", "bottom", "left", "right"],
+        "text-radial-offset": 0.6,
+        "text-justify": "auto",
       },
       paint: {
         "text-color": "#3c3728",
@@ -631,7 +636,12 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
         "text-field": ["concat", "N=", ["to-string", ["get", "n_properties"]]],
         "text-size": 9,
         "text-font": ["Noto Sans Regular"],
-        "text-anchor": "center",
+        // Collision avoidance: try centred first (keeps the current on-centroid
+        // look), then nudge to an offset anchor instead of DROPPING the label
+        // when labels crowd at zoom 11+.
+        "text-variable-anchor": ["center", "top", "bottom", "left", "right"],
+        "text-radial-offset": 0.6,
+        "text-justify": "auto",
       },
       paint: {
         "text-color": "#7a7468",
