@@ -86,10 +86,30 @@ Cloudflare Pages build settings:
 | Environment variable   | `NODE_VERSION` = `20`          |
 
 Note: the output directory is **relative to the root directory** (`website`), so it is
-`dist`, not `website/dist`. `website/public/_redirects` (`/*  /index.html  200`) handles
-single-page-app routing so deep links survive a refresh.
+`dist`, not `website/dist`.
 
 Live: https://aref-real-estate-edmonton.pages.dev/
 
 A University of Alberta server is the intended long-term home; the Cloudflare deploy is
 the free-tier proof and demo.
+
+### Single-page-app routing fallback (any host)
+
+The site is a client-routed SPA: only `index.html` is real, and React Router renders the
+rest in the browser. So the host must serve `index.html` (with a **200**, not a redirect)
+for any path that is not a real static file — otherwise a hard refresh or shared deep link
+to e.g. `/properties/property-assessment` returns a 404.
+
+The fallback **must not shadow real static assets** (`/assets`, `/data`, `/styles`,
+`/downloads`, `/manifest.json`): real files are served first, the SPA catches only the rest.
+
+- **Cloudflare Pages** — handled by `website/public/_redirects` (`/*  /index.html  200`),
+  which Vite copies into `dist/`. Pages serves existing files before applying the catch-all.
+- **nginx** (the UAlberta server) — add the equivalent `try_files` rule, which serves the
+  requested file/dir first and falls back to `index.html` only when neither exists:
+
+  ```nginx
+  location / {
+      try_files $uri $uri/ /index.html;
+  }
+  ```
