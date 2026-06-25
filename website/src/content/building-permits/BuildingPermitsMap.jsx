@@ -371,17 +371,23 @@ export default function BuildingPermitsMap() {
 
         <section className="sb-section">
           <div className="sb-select-field">
-            <span className="sb-select-label">Year</span>
-            <select
-              className="sb-select"
+            <span className="sb-select-label">
+              Year <strong className="sb-year-value">{year}</strong>
+            </span>
+            {/* All 18 years live in ONE permits.pmtiles, so the slider just drives
+                the same instant setFilter (no file swap). min/max from YEARS
+                (manifest-derived, no literals); YEARS is contiguous so step = 1
+                maps every position to a real year. */}
+            <input
+              type="range"
+              className="sb-year-slider"
               aria-label="Year"
+              min={Math.min(...YEARS)}
+              max={Math.max(...YEARS)}
+              step={1}
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
-            >
-              {YEARS.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
+            />
           </div>
 
           {/* Permit type — colour-coded filter chips (the real control). Each
