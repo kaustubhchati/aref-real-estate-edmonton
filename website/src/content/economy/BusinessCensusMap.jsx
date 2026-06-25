@@ -36,6 +36,7 @@ import {
   buildBusinessCensusPopupHtml,
 } from "./businessCensusStyle.js";
 import { fmtNumber } from "../../utils/format.js";
+import { sidebarLeftPad } from "../../components/mapPadding.js";
 
 // Single committed GeoJSON — survey year 2025, no year axis.
 const DATA_URL = "/data/economy/business_census_2025.geojson";
@@ -66,7 +67,8 @@ function bboxOfGeom(geom) {
 }
 function flyToFeature(map, feat) {
   map.fitBounds(bboxOfGeom(feat.geometry), {
-    padding: { top: 80, bottom: 80, left: 60, right: 60 },
+    // left = live sidebar width + breathing room so the polygon clears the .sb overlay.
+    padding: { top: 80, bottom: 80, left: sidebarLeftPad(map) + 60, right: 60 },
     duration: 900, maxZoom: 14,
   });
 }

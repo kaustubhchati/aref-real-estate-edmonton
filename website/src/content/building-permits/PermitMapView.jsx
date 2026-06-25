@@ -20,6 +20,8 @@ import maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { applyAppleClassic } from "../../components/basemapTheme.js";
+import { siteConfig } from "../../config/siteConfig.js";
+import { sidebarLeftPad } from "../../components/mapPadding.js";
 
 import {
   BASEMAP_STYLE,
@@ -100,7 +102,9 @@ function wirePermitPopup(map, onPickRef) {
     if (!e.features?.length) return;
     const f = e.features[0];
     e.preventDefault();
-    map.flyTo({ center: f.geometry.coordinates, zoom: 15, duration: 900 });
+    // padding.left = live sidebar width so the point lands in the visible area
+    // right of the .sb overlay, not centred under it.
+    map.flyTo({ center: f.geometry.coordinates, zoom: 15, duration: 900, padding: { left: sidebarLeftPad(map) } });
   });
 
   map.on("mousemove", LAYER_ID, (e) => {
@@ -174,11 +178,25 @@ export default function PermitMapView({ className = "", onLoad, onPick }) {
       zoom: MAP_VIEW.zoom,
       minZoom: MAP_VIEW.minZoom,
       maxZoom: MAP_VIEW.maxZoom,
-      attributionControl: true,
+      maxBounds: MAP_VIEW.maxBounds,   // lock pan to the city extent (CITY_BOUNDS via MAP_VIEW)
+      // compact:true to match MapView; CARTO/OSM basemap credit is auto from the
+      // TileJSON, customAttribution APPENDS our data credit (siteConfig §6).
+      attributionControl: { compact: true, customAttribution: siteConfig.mapAttribution },
+      // ctrl/⌘ + wheel (or two-finger) to zoom, so a plain page scroll isn't
+      // hijacked by the map. Same guard as MapView.jsx (see the note there).
+      cooperativeGestures: true,
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new maplibregl.ScaleControl({ unit: "metric", maxWidth: 100 }), "bottom-right");
+    // Fullscreen the section wrapper (.content-map = sidebar + legend + map), not
+    // the bare canvas — same as MapView.jsx. Fallback to the map container.
+    map.addControl(
+      new maplibregl.FullscreenControl({
+        container: map.getContainer().closest(".content-map") || map.getContainer(),
+      }),
+      "top-right",
+    );
 
     // Fly-to is bound to double-click (in wirePermitPopup); disable the default
     // double-click-to-zoom so it doesn't fight our handler.

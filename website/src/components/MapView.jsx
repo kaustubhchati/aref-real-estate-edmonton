@@ -30,6 +30,7 @@ import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { applyAppleClassic } from "./basemapTheme.js";
+import { siteConfig } from "../config/siteConfig.js";
 import {
   MOTION_PASS, DUR_FAST, DUR_BASE, EASE, DIP_FLOOR, SKELETON_THRESHOLD, reduceMotion,
 } from "./motion.js";
@@ -79,11 +80,30 @@ export default function MapView({
       zoom: view.zoom,
       minZoom: view.minZoom,
       maxZoom: view.maxZoom,
-      attributionControl: { compact: true },
+      // Lock panning to the section's city extent (per-city CITY_BOUNDS via
+      // MAP_VIEW.maxBounds) so the user can't pan off into empty basemap.
+      maxBounds: view.maxBounds,
+      // compact "i" toggle; the basemap CARTO/OSM credit comes from the TileJSON
+      // automatically, customAttribution APPENDS our data credit (siteConfig §6).
+      attributionControl: { compact: true, customAttribution: siteConfig.mapAttribution },
+      // Scrolling over the map zooms only when the user holds ctrl/⌘ (or uses two
+      // fingers on touch); a plain wheel scrolls the PAGE. Stops the full-width
+      // embedded map from hijacking page scroll. 5.24 is boolean-only — the
+      // "use ctrl + scroll to zoom" overlay is MapLibre's built-in (no custom text).
+      cooperativeGestures: true,
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new maplibregl.ScaleControl({ unit: "metric", maxWidth: 100 }), "bottom-right");
+    // Fullscreen the whole section view — .content-map wraps the sidebar + legend
+    // + map, so both stay visible/readable in fullscreen (not just the bare
+    // canvas). Falls back to the map container if the wrapper isn't found.
+    map.addControl(
+      new maplibregl.FullscreenControl({
+        container: map.getContainer().closest(".content-map") || map.getContainer(),
+      }),
+      "top-right",
+    );
 
     map.on("error", (e) => {
       // Surface map errors honestly instead of swallowing them — CLAUDE.md §6.

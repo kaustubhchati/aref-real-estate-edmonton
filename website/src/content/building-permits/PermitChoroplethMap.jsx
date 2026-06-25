@@ -50,6 +50,7 @@ import {
 } from "./permitChoroplethStyle.js";
 import { fmtNumber } from "../../utils/format.js";
 import { DUR_SLOW, DUR_FAST } from "../../components/motion.js";
+import { sidebarLeftPad } from "../../components/mapPadding.js";
 
 // Crossfade timing. 500ms ease-out for the dissolve (MapLibre's built-in
 // transition easing); hover stays snappy at 150ms outside a switch.
@@ -93,7 +94,8 @@ function bboxOfGeom(geom) {
 }
 function flyToFeature(map, feat) {
   map.fitBounds(bboxOfGeom(feat.geometry), {
-    padding: { top: 80, bottom: 80, left: 60, right: 60 },
+    // left = live sidebar width + breathing room so the polygon clears the .sb overlay.
+    padding: { top: 80, bottom: 80, left: sidebarLeftPad(map) + 60, right: 60 },
     duration: 900, maxZoom: 14,
   });
 }

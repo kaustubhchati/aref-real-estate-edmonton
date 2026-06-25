@@ -16,6 +16,7 @@
 import { fmtCurrency, fmtNumber, fmtPct, fmtYear, fmtArea } from "../../utils/format.js";
 import { polyOutline, rampFloor, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
 import { paintTransition, DUR_BASE } from "../../components/motion.js";
+import { CITY_BOUNDS } from "../../config/cityBounds.js";
 
 // ---- Map view defaults (Edmonton, matches 09_build_choropleth.html) --------
 // (Data URL no longer lives here — single source of truth is dataSources.js,
@@ -25,6 +26,7 @@ export const MAP_VIEW = {
   zoom: 10.2,
   minZoom: 7,
   maxZoom: 17,
+  maxBounds: CITY_BOUNDS.Edmonton,   // lock pan to the city extent (per-city config)
 };
 
 export const BASEMAP_STYLE = "/styles/custom-basemap.json";
