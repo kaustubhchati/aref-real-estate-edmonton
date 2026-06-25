@@ -25,8 +25,9 @@ import {
   stripBuildingCode,
 } from "./permitStyle.js";
 import {
-  YEARS,
-  DEFAULT_YEAR,
+  loadPermitManifest,
+  permitYears,
+  permitDefaultYear,
   DEFAULT_GROUP,
   MONTHS,
   DEFAULT_MONTH,
@@ -274,7 +275,10 @@ function PermitLegend({ activeBuckets, onToggle, onReset, activeGroup }) {
 }
 
 export default function BuildingPermitsMap() {
-  const [year, setYear] = useState(DEFAULT_YEAR);
+  // Year list + default come from the BP manifest (no literals); null until it
+  // loads, which gates the slider, the map filter, and the tab title below.
+  const [years, setYears] = useState([]);
+  const [year, setYear] = useState(null);
   const [group, setGroup] = useState(DEFAULT_GROUP);
   const [month, setMonth] = useState(DEFAULT_MONTH);
   const [map, setMap] = useState(null);
@@ -305,11 +309,25 @@ export default function BuildingPermitsMap() {
     setActiveBuckets(new Set(ALL_BUCKET_IDS));
   }
 
+  // Year catalogue (list + default) from the published BP manifest — no literals.
+  // A failed load leaves the slider in its loading state; the map still renders.
+  useEffect(() => {
+    let cancelled = false;
+    loadPermitManifest()
+      .then((m) => {
+        if (cancelled) return;
+        setYears(permitYears(m));
+        setYear(permitDefaultYear(m));
+      })
+      .catch((err) => console.error("[BuildingPermitsMap] year catalogue:", err.message));
+    return () => { cancelled = true; };
+  }, []);
+
   // Re-apply the dot filter whenever the map is ready or a control changes
   // (year, permit type, month, or the active value tiers). setFilter is instant.
-  // Guard on `map` so we don't call it before onLoad hands us the instance.
+  // Guard on `map` + `year` so we don't filter before onLoad / the manifest land.
   useEffect(() => {
-    if (!map) return;
+    if (!map || year == null) return;
     map.setFilter(
       LAYER_ID,
       buildPermitFilter(year, group, month, activeBuckets)
@@ -332,6 +350,7 @@ export default function BuildingPermitsMap() {
 
   // Reflect the current selection in the browser tab title; restore on unmount.
   useEffect(() => {
+    if (year == null) return;
     document.title = `Building Activity · Edmonton ${year}`;
     return () => { document.title = "Open Data Centre"; };
   }, [year]);
@@ -358,6 +377,9 @@ export default function BuildingPermitsMap() {
   // HAVE coordinates; the no-coord share spikes in recent years (City geocoding
   // lag), so stating it is honest rather than silently understating.
   const cov = coverageForYear(coverage, year);
+  // Coverage span for the source note — derived from the manifest year list, so
+  // it rolls forward with the data (was a "2009–2026" literal).
+  const yearSpan = years.length ? `${Math.min(...years)}–${Math.max(...years)}` : "";
   const nNoCoord = cov ? Number(cov.n_no_coord) : 0;
 
   return (
@@ -367,28 +389,30 @@ export default function BuildingPermitsMap() {
         <div className="sb-inner">
         <div className="sb-header">
           <p className="eyebrow">Building Activity</p>
-          <h1 className="sb-title">Edmonton — {year}</h1>
+          <h1 className="sb-title">Edmonton — {year ?? "…"}</h1>
         </div>
 
         <section className="sb-section">
           <div className="sb-select-field">
             <span className="sb-select-label">
-              Year <strong className="sb-year-value">{year}</strong>
+              Year <strong className="sb-year-value">{year ?? "…"}</strong>
             </span>
-            {/* All 18 years live in ONE permits.pmtiles, so the slider just drives
-                the same instant setFilter (no file swap). min/max from YEARS
-                (manifest-derived, no literals); YEARS is contiguous so step = 1
-                maps every position to a real year. */}
-            <input
-              type="range"
-              className="sb-year-slider"
-              aria-label="Year"
-              min={Math.min(...YEARS)}
-              max={Math.max(...YEARS)}
-              step={1}
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-            />
+            {/* Every permit year lives in ONE permits.pmtiles, so the slider just
+                drives the same instant setFilter (no file swap). min/max come from
+                the manifest year list (no literals); years are contiguous so
+                step = 1 maps every position to a real year. */}
+            {year != null && (
+              <input
+                type="range"
+                className="sb-year-slider"
+                aria-label="Year"
+                min={Math.min(...years)}
+                max={Math.max(...years)}
+                step={1}
+                value={year}
+                onChange={(e) => setYear(Number(e.target.value))}
+              />
+            )}
           </div>
 
           {/* Permit type — colour-coded filter chips (the real control). Each
@@ -537,7 +561,7 @@ export default function BuildingPermitsMap() {
           marginTop: 8,
         }}>
           Source: City of Edmonton Open Data (24uj-dj8v). 226,184 permit points,
-          2009–2026.
+          {yearSpan}.
         </p>
         </div>{/* /sb-inner */}
       </aside>
