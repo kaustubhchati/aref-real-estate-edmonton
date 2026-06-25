@@ -113,3 +113,15 @@ The fallback **must not shadow real static assets** (`/assets`, `/data`, `/style
       try_files $uri $uri/ /index.html;
   }
   ```
+
+### Environment variables (host portability)
+
+Build-time `VITE_`-prefixed env vars let the serve target be configured instead of
+hardcoded. Each has an in-code default that reproduces the current Cloudflare Pages
+deploy, so **none are required** — set them only to point the site at a different host.
+(`.env`/`.env.*` are gitignored; set these in the build environment, e.g. a Cloudflare
+Pages variable or an `export` before `npm run build`.)
+
+| Variable             | Default                                          | Purpose |
+| -------------------- | ------------------------------------------------ | ------- |
+| `VITE_PMTILES_BASE`  | `https://pub-600ea350470345bbb93a035ad72875d5.r2.dev` | Origin the building-permits `.pmtiles` is fetched from. **The host MUST honor HTTP range requests (HTTP 206 Partial Content)** — PMTiles reads tiles by byte-range. Cloudflare Pages does **not** honor ranges on static assets, which is why the default is Cloudflare R2; a range-capable host (e.g. nginx, which serves ranges by default) could self-host the file. Give the origin only — no trailing slash, no `/building-permits` suffix. |
