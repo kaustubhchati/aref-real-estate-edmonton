@@ -553,6 +553,21 @@ p  { margin: 0 0 0.75rem; }
 .sb-select:focus { outline:none; border-color:var(--accent);
   box-shadow:0 0 0 3px var(--green-100); }
 
+/* ---- Year slider (Building Permits point map) ---------------------------- */
+/* Replaces the year <select>: all 18 years live in one PMTiles, so dragging just
+   drives the same instant setFilter. accent-color themes the native track + thumb
+   (no -webkit pseudo-elements needed — keeps it legible). The current year reads
+   out bold next to the "Year" label. */
+.sb-year-value { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+.sb-year-slider {
+  width: 100%;
+  margin: 8px 0 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.sb-year-slider:focus { outline: none; }
+.sb-year-slider:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
 /* ---- Map loading state (manifest fetch in flight) ----------------------- */
 /* Absolute-fills .canvas-wrap and centres, same as .canvas-empty, so the
    loading message sits exactly where the map/empty-state will. */
