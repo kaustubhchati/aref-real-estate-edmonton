@@ -2,8 +2,8 @@
 # 01_build_business_census.R   (economy/business-census section)
 #
 # Purpose: join the Edmonton Business Census Neighbourhood Aggregation
-#   (local CSV) to the 2026 neighbourhood boundary and produce a GeoJSON
-#   choropleth (+ flat CSV + build log) for MapLibre rendering.
+#   (fetched Socrata snapshot) to the neighbourhood boundary and produce a
+#   GeoJSON choropleth (+ flat CSV + build log) for MapLibre rendering.
 #
 # Run context: from the section dir (pipeline/yeg/economy/business-census/),
 #   e.g. Rscript scripts/production/01_build_business_census.R
@@ -11,10 +11,10 @@
 #   shared_path() (cross-section base geo, stays in pipeline/yeg/shared/).
 #
 # Source dataset: Edmonton Business Census - Neighbourhood Aggregation
-#   Local: data/Edmonton_Business_Census_-_Neighbourhood_Aggregation_20260619.csv
-#   Portal: https://data.edmonton.ca/resource/wh44-4bkz
-#   Columns: neighbourhood_name, neighbourhood_number, geom (Polygon WKT),
-#             survey_year, number_of_businesses, number_of_employees
+#   Socrata wh44-4bkz — fetched to data/raw/Edmonton_Business_Census_<YYYYMMDD>.csv
+#   via fetch_socrata_snapshot() (export endpoint, atomic, floors); newest-by-glob.
+#   Columns (export endpoint, Title Case): Neighbourhood Name, Neighbourhood Number,
+#             Geometry (Polygon WKT), Survey Year, Number of Businesses, Number of Employees
 #
 # Year coverage in downloaded file:
 #   2023 — 14 rows  (sparse pilot; excluded)
@@ -46,13 +46,13 @@
 #   business_census_2025.csv       — flat CSV for Download page
 #   business_census_build_log.txt  — coverage + sanity summary
 #
-# HANDOFF (manual — no in-script copy step):
-#   output/business_census_2025.geojson must be copied by hand to
-#   website/public/data/economy/business_census_2025.geojson — the live
+# HANDOFF (runner-published — this script never writes website/public):
+#   The runner publishes output/business_census_2025.geojson ->
+#   website/public/data/economy/business_census_2025.geojson via the
+#   business-census handoff in _whirl.yaml (the sole publisher). The live
 #   frontend (website/src/content/economy/BusinessCensusMap.jsx) fetches it
-#   from /data/economy/business_census_2025.geojson, NOT from this pipeline
-#   output. Re-copy after each rebuild, and keep the filename EXACTLY (the
-#   frontend DATA_URL is hardcoded to that name).
+#   from /data/economy/business_census_2025.geojson. Refresh through the runner:
+#   Rscript run_section.R business-census  (not a standalone script run).
 #
 # Author: KC (kaustubhchati@ualberta.ca)
 # ============================================================
@@ -60,18 +60,43 @@
 library(tidyverse)
 library(sf)
 
-# ── 0. Paths ────────────────────────────────────────────────
-# Repo-root anchoring + helpers (ROOT, shared_path(), …). Own-section files use
-# relative paths (cwd = section root); the boundary is cross-section base geo,
-# so it resolves through shared_path() (CLAUDE.md §3 addressing rules).
+# ── 0. Paths + inputs ───────────────────────────────────────
+# Repo-root anchoring + helpers (ROOT, shared_path(), …) and the shared Socrata
+# fetch helper. Own-section files use relative paths (cwd = section root); the
+# boundary is cross-section base geo, resolved via shared_path() newest-by-glob.
 source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
+source(shared_path("fetch_helpers.R"))
 
-CENSUS_CSV   <- file.path("data",
-                          "Edmonton_Business_Census_-_Neighbourhood_Aggregation_20260619.csv")
-BOUNDARY_CSV <- shared_path("data", "City_of_Edmonton_-_Neighbourhoods_20260616.csv")
-OUT_DIR      <- "output"
+OUT_DIR <- "output"
+dir.create(OUT_DIR,                  recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path("data", "raw"), recursive = TRUE, showWarnings = FALSE)
 
-dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+# Source snapshot via the shared helper: export endpoint only, atomic temp-then-
+# rename to a dated raw file, size/row/column floors verified before promotion.
+# Floors ~half of observed (545 rows / 2.47 MB). Refresh-by-design — zero date
+# literals; the dated snapshot is accepted provenance (gitignored).
+CENSUS_CSV <- fetch_socrata_snapshot(
+  dataset_id    = "wh44-4bkz",
+  dest_dir      = file.path("data", "raw"),
+  min_rows      = 250L,
+  min_size_mb   = 1,
+  required_cols = c("Survey Year", "Neighbourhood Number", "Neighbourhood Name",
+                    "Number of Businesses", "Number of Employees"),
+  filename_stem = "Edmonton_Business_Census"
+)
+
+# Newest neighbourhood boundary snapshot by glob — same discipline PA/BP use; a
+# new City boundary drops in with NO code edit (no date literal in the path).
+boundary_candidates <- list.files(
+  shared_path("data"),
+  pattern    = "^City_of_Edmonton_-_Neighbourhoods_.*\\.csv$",
+  full.names = TRUE
+)
+if (length(boundary_candidates) == 0) {
+  stop("No neighbourhood boundary CSV in ", shared_path("data"),
+       " matching City_of_Edmonton_-_Neighbourhoods_*.csv — download the latest.")
+}
+BOUNDARY_CSV <- sort(boundary_candidates, decreasing = TRUE)[1]
 
 # ── 1. Load boundary ────────────────────────────────────────
 
@@ -92,7 +117,7 @@ boundary_sf <- boundary_raw |>
 
 cat("  Polygons parsed:", nrow(boundary_sf), "\n\n")
 
-# ── 2. Load local Business Census CSV ───────────────────────
+# ── 2. Load Business Census snapshot ────────────────────────
 
 cat("Loading Business Census CSV...\n")
 census_raw <- read_csv(CENSUS_CSV, show_col_types = FALSE)

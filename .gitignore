@@ -71,9 +71,17 @@ secrets.json
 **/data/raw/General_Building_Permits_*.csv
 **/building-permits/output/permits.geojson
 
-# Economy / business-census — downloaded Socrata snapshot (wh44-4bkz), re-downloaded
-# at refresh. Same class as the other gitignored data snapshots (CLAUDE.md §3).
+# Economy / business-census — Socrata snapshot (wh44-4bkz), fetched to data/raw/
+# each refresh via fetch_socrata_snapshot(). Same class as the other gitignored
+# raw snapshots (CLAUDE.md §3 / §4.8). (Legacy data/ pattern kept for any pre-
+# fetch hand-download still on disk.)
+**/data/raw/Edmonton_Business_Census_*.csv
 **/business-census/data/Edmonton_Business_Census_*.csv
+# business-census output/ regenerables — the runner publishes the GeoJSON to
+# website/public/data/economy/; the flat CSV + build log are local intermediates.
+pipeline/yeg/economy/business-census/output/business_census_*.geojson
+pipeline/yeg/economy/business-census/output/business_census_*.csv
+pipeline/yeg/economy/business-census/output/business_census_build_log.txt
 
 pipeline/yeg/property-assessment/output/Screenshot*
 pipeline/yeg/property-assessment/output/hist_parking_*.csv

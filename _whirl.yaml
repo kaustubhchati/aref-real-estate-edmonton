@@ -129,3 +129,24 @@ sections:
         # manual placement, now published from the one produced source.
         - { from: output/permits_coverage.csv,        to: website/public/downloads/yeg_building-permits_coverage.csv }
         - { from: output/permits_category_counts.csv, to: website/public/downloads/yeg_building-permits_category_counts.csv }
+
+  business-census:
+    cwd: pipeline/yeg/economy/business-census
+
+    # Single-script section (one all-years source, no current/historical split):
+    # 01 fetches the Business Census snapshot (wh44-4bkz) + boundary (newest-by-
+    # glob), joins, and writes the choropleth GeoJSON (+ flat CSV + build log) to
+    # output/. Wired into the runner so a refresh is one command (was a manual
+    # download + hand-copied handoff).
+    scripts:
+      - scripts/production/01_build_business_census.R
+
+    # --- Handoff: publish the choropleth GeoJSON the frontend serves ------------
+    # The runner is the SOLE publisher (replaced the script's old hand-copy step).
+    # The frontend (BusinessCensusMap.jsx) fetches
+    # /data/economy/business_census_2025.geojson. The flat CSV + build log stay in
+    # output/ (not served). The GeoJSON name carries the production-year (2025) —
+    # frontend-coupled, kept verbatim (not a CSV, so out of the yeg_ CSV standard).
+    handoff:
+      files:
+        - { from: output/business_census_2025.geojson, to: website/public/data/economy/business_census_2025.geojson }
