@@ -20,8 +20,7 @@ import { useEffect, useMemo, useState } from "react";
 import { parseCsvAsObjects } from "./parseCsv.js";
 import { COLUMNS, DEFAULT_SORT } from "./columns.js";
 import { assetUrl } from "../../utils/assetUrl.js";
-
-const CSV_URL = assetUrl("/data/yeg_property-assessment_per_nbhd_2026.csv");
+import { loadManifest, getDefaultYear } from "../property-assessment/dataSources.js";
 
 // Coerce raw CSV string values to the types the table sorts/formats over.
 // Numeric columns become Number (or null for empty / "NA"); `suppressed`
@@ -79,17 +78,31 @@ export default function ReportCard() {
   const [error, setError] = useState(null);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState(DEFAULT_SORT);
+  // Data year, derived from the assessment manifest (no literal) — also labels the header.
+  const [year, setYear] = useState(null);
 
-  // Fetch + parse once on mount.
+  // Resolve the year from the manifest, then fetch + parse the CSV, once on mount.
   useEffect(() => {
     let cancelled = false;
-    fetch(CSV_URL)
+    // ASSUMPTION (load-bearing): the per-neighbourhood CSV year == the assessment
+    // manifest's defaultYear — both are single-refresh products of the same
+    // pipeline run (naming standard yeg_property-assessment_per_nbhd_<dataYear>.csv),
+    // so the manifest's defaultYear is the right signal for this CSV's filename.
+    loadManifest()
+      .then((m) => {
+        if (cancelled) return null;
+        const y = getDefaultYear(m, "Edmonton");
+        if (y == null) throw new Error("No default assessment year in manifest");
+        setYear(y);
+        return fetch(assetUrl(`/data/yeg_property-assessment_per_nbhd_${y}.csv`));
+      })
       .then((r) => {
+        if (!r) return null;                       // cancelled before the fetch
         if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
         return r.text();
       })
       .then((text) => {
-        if (cancelled) return;
+        if (cancelled || text == null) return;
         const coerced = parseCsvAsObjects(text).map(coerceRow);
         setRows(coerced);
       })
@@ -127,7 +140,7 @@ export default function ReportCard() {
       <header>
         <h1>Neighbourhood Report Card</h1>
         <p>
-          <strong>Edmonton — 2026.</strong> Layer-2 aggregates over the
+          <strong>Edmonton — {year ?? "…"}.</strong> Layer-2 aggregates over the
           Layer-1a-cleaned property assessments. <em>Calgary will appear
           here when its pipeline lands.</em>
         </p>
