@@ -2,17 +2,29 @@
 // dataSources.js
 //
 // The option-list seam for Building Permits — what the sidebar controls offer.
-// No URL resolution here: all 18 years live in a SINGLE permits.pmtiles, and
-// Year / Permit type / Month / value tier are applied as client-side MapLibre
-// filters (see BuildingPermitsMap.jsx), not by swapping files.
+// The year list + default come from the published BP manifest (the same file
+// the choropleth reads), so a refresh that adds a year flows through with no
+// edit here. Every permit year lives in ONE permits.pmtiles; Year / Permit type
+// / Month / value tier are client-side MapLibre filters (see BuildingPermitsMap),
+// not file swaps.
 // =============================================================================
 
-// Years — newest first.
-export const YEARS = [
-  2026,2025,2024,2023,2022,2021,2020,2019,2018,
-  2017,2016,2015,2014,2013,2012,2011,2010,2009,
-];
-export const DEFAULT_YEAR = 2026;
+import { assetUrl } from "../../utils/assetUrl.js";
+
+// Load the published BP manifest: { years:[...], defaultYear }. Errors surface
+// so the caller can show / log them. Mirrors property-assessment/dataSources.js.
+export async function loadPermitManifest() {
+  const res = await fetch(assetUrl("/data/building-permits/manifest.json"));
+  if (!res.ok) {
+    throw new Error(`Could not load the permit year catalogue (HTTP ${res.status})`);
+  }
+  return res.json();
+}
+
+// Years newest-first for the slider; the year to open on. Empty / null when the
+// manifest lacks the field (the UI shows a loading state until they resolve).
+export const permitYears = (m) => [...(m?.years ?? [])].sort((a, b) => b - a);
+export const permitDefaultYear = (m) => m?.defaultYear ?? null;
 
 // Permit type toggle — filters on job_group field in tile.
 export const ALL_GROUPS    = "All";

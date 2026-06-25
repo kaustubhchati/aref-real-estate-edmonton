@@ -105,13 +105,16 @@ sections, agent pipeline, and infrastructure.
       remaining: Olivia QA sign-off.
 - [ ] **Zoning choropleth** — nav leaf exists, no backend
       data yet.
-- [ ] **Business Counts** — migrated from StatCan to
-      Edmonton Business Census (neighbourhood level).
-      Requires explicit provenance note on ship.
+- [x] **Business Counts** — BUILT / live (Edmonton Business Census
+      choropleth at `/economy/business-counts`; provenance note shipped).
+      Refresh-by-design parity **PARKED**: its year is baked into the GeoJSON
+      filename + column keys with no manifest to source it from — needs a
+      backend `{surveyYear, priorYear}` emit. Spec: `docs/BC_MANIFEST_HANDBACK.md`.
 - [ ] **Salary Ranges table** — city-wide non-spatial
       table under Economy. Backend not started.
-- [ ] **Neighbourhood Report Card** — parked. Map +
-      functionality unresolved.
+- [x] **Neighbourhood Report Card** — BUILT / live (`/report-card`): sortable,
+      searchable Layer-2 aggregate table. CSV filename + header year derive from
+      the PA manifest (refresh-by-design). (Was "parked" — superseded.)
 
 ### Frontend — polish deferred from Phase 1
 - [ ] Neighbourhood search — custom combobox replacing
@@ -182,18 +185,26 @@ sections, agent pipeline, and infrastructure.
   PMTiles on R2, interactive legend, standard popup.
 - Permit Neighbourhoods choropleth — built (full assessment
   parity), deployed to demo; awaiting Olivia QA sign-off.
-- Download page — `/download` serves 3 cleaned CSVs
-  (2026 neighbourhood aggregates + permit category counts +
-  permit coverage) from `website/public/downloads/`,
-  data-driven from `siteConfig.downloads`.
+- Download page — `/download` serves 3 cleaned CSVs (PA neighbourhood
+  aggregates + permit category counts + permit coverage) from
+  `website/public/downloads/`. Labels / filenames / coverage spans are
+  manifest-resolved at render (no year literals); `siteConfig.downloads`
+  holds year-free token skeletons.
 - Cloudflare Pages (demo) + R2 (tiles) infrastructure.
+- Host-portable serve target (VM-ready): `VITE_BASE_PATH` (deploy base + router
+  basename), `VITE_PMTILES_BASE` (tiles origin), `_redirects` / nginx `try_files`
+  SPA fallback, and one base-resolution seam (`src/utils/assetUrl.js`) routing
+  every runtime asset fetch — Cloudflare-Pages defaults, subpath deploy works
+  end-to-end.
 - React + Vite + MapLibre + PMTiles stack (locked).
 - Tippecanoe recipe locked:
   `-r1 --no-tile-size-limit --no-feature-limit`.
 - Neighbourhood join: always on Neighbourhood ID,
   never on name (name drift is the documented failure).
-- Refresh-by-design: no year literals anywhere in
-  frontend; manifest.json drives year auto-discovery.
+- Refresh-by-design (frontend): no year literals in PA, Building Permits (point
+  + choropleth), Report Card, or Download — each section's `manifest.json` drives
+  year / filename / span auto-discovery. One parked exception: Business Counts
+  (needs a backend manifest emit — `docs/BC_MANIFEST_HANDBACK.md`).
 - Orchestration: thin callr runner, sole-publisher model, proven live on PA.
   Pipeline scripts → output/ only; runner publishes output/ → public/ per the
   manifest. cwd-per-section (YAML, not .Rproj); dependency order (08d-before-07).

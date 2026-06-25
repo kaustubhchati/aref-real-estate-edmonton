@@ -41,46 +41,52 @@ export const siteConfig = {
   // Publicly released CSV datasets, served as static files from
   // website/public/downloads/. DownloadPage.jsx renders this array — adding a
   // dataset is one entry here plus dropping the file in public/downloads/.
+  //
+  // Year-bearing bits are TEMPLATES, not literals: {year} / {span} /
+  // {recentSpan} / {yearCount} are filled by DownloadPage from the backend
+  // manifest named by `source` ("assessment" → PA manifest, "permits" → BP
+  // manifest), so labels, filenames, and spans roll forward on the next refresh
+  // with no edit here.
   downloads: [
     {
-      id: "pa-neighbourhood-2026",
-      label: "Property Assessment — 2026 Neighbourhood Aggregates",
+      id: "pa-neighbourhood",
+      source: "assessment",
+      label: "Property Assessment — {year} Neighbourhood Aggregates",
       description:
         "Layer 1a-cleaned residential assessment aggregated to " +
         "407 Edmonton neighbourhoods. Includes median/mean assessed " +
         "value, lot size, year built, condo share, and year-over-year " +
         "change. Suppressed where N < 100.",
-      file: "/downloads/yeg_property-assessment_per_nbhd_2026.csv",
+      file: "/downloads/yeg_property-assessment_per_nbhd_{year}.csv",
       size: "45 KB",
       rows: "407 neighbourhoods",
       section: "Properties & Land",
-      year: 2026,
     },
     {
       id: "permits-category-counts",
+      source: "permits",
       label: "Building Permits — Counts by Year and Category",
       description:
         "Per-year, per-job-category permit counts for Edmonton, " +
-        "2009–2026. 12 job categories. Useful for trend analysis " +
+        "{span}. 12 job categories. Useful for trend analysis " +
         "and sector breakdowns.",
       file: "/downloads/yeg_building-permits_category_counts.csv",
       size: "5 KB",
-      rows: "18 years × 12 categories",
+      rows: "{yearCount} years × 12 categories",
       section: "Building Activity",
-      year: 2026,
     },
     {
       id: "permits-coverage",
+      source: "permits",
       label: "Building Permits — Mapping Coverage by Year",
       description:
         "Per-year counts of total permits, mapped permits, and " +
         "permits missing coordinates. Documents geocoding lag " +
-        "for 2024–2026 years.",
+        "for {recentSpan} years.",
       file: "/downloads/yeg_building-permits_coverage.csv",
       size: "< 1 KB",
-      rows: "18 years",
+      rows: "{yearCount} years",
       section: "Building Activity",
-      year: 2026,
     },
   ],
 

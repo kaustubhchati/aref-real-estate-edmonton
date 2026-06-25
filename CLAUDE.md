@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> **Version: v1.8 — authoritative. Supersedes all prior versions (v0.1–v1.7).**
+> **Version: v1.9 — authoritative. Supersedes all prior versions (v0.1–v1.8).**
 > This is the single source of project context for every Claude Code session — read it first.
 > If any other note, comment, or older doc frames *the website* as an "agent-driven platform,"
 > that framing is **retired** — see §1.
@@ -57,6 +57,14 @@ random forest is discarded).
 - **No database, no server for the site.** SQL is not needed (build-time only, optional).
 - **Deploy = git push** to the host (UAlberta hosting is git-capable, push-based, like Cloudflare).
   Only `website/` builds and deploys; `pipeline/` stays on the laptop.
+- **The serve target is configuration, not assumption** (the VM-readiness campaign, §6/§12 v1.9).
+  The deploy base + router basename (`VITE_BASE_PATH`), the PMTiles origin (`VITE_PMTILES_BASE`),
+  and the SPA fallback (`website/public/_redirects` / an nginx `try_files` snippet) are
+  env-configurable with in-code Cloudflare-Pages defaults, so the current deploy is unchanged.
+  Every hand-issued runtime asset fetch (data, downloads, `manifest.json`, basemap style) routes
+  through **one base-resolution seam**, `website/src/utils/assetUrl.js` (joins the path to
+  `import.meta.env.BASE_URL`; a no-op at base `/`) — the frontend analogue of the backend's
+  sole-publisher seam. A subpath deploy (`VITE_BASE_PATH=/realestate/`) works end-to-end.
 - **GitHub = source of truth;** the host gets built artifacts only.
 - **Displayed identity is placeholdered** in `siteConfig.js` (§6) — no real
   university / centre / professor / author strings baked into pages yet.
@@ -260,7 +268,26 @@ Footer (funder line, data partners, territorial acknowledgment, logo, copyright)
 Improvement `map` (Building Permits point map), plus an **added** Permit Neighbourhoods `map`
 (neighbourhood choropleth, under Building Activity — our addition, not on the live source site),
 and the Download `page` (serves 3 cleaned CSVs from `public/downloads/`, `siteConfig.downloads`).
-Everything else remains a placeholder.
+Business Counts `map` (Business Census choropleth) is also built/live. Everything else remains a
+placeholder.
+
+**Host-portable + refresh-by-design (2026-06, the VM-readiness campaign — §12 v1.9).** The serve
+target is now config (§2) and a new data year needs no frontend edit:
+- **Host-decoupled.** SPA fallback shipped (`website/public/_redirects` + an nginx `try_files`
+  doc); R2 PMTiles origin → `VITE_PMTILES_BASE`; deploy base + router basename → `VITE_BASE_PATH`
+  (default `/`). All have in-code defaults reproducing the Cloudflare Pages deploy — see README.
+- **One base-resolution seam.** Every hand-issued runtime fetch (data, downloads, `manifest.json`,
+  basemap style) goes through `website/src/utils/assetUrl.js` (joins to `import.meta.env.BASE_URL`;
+  no-op at `/`), making a subpath deploy fully work (verified headless under `/realestate/`). The
+  basemap style URL is consolidated once in `website/src/components/basemapStyle.js` (was four
+  duplicate literals).
+- **Manifest-driven parity.** Following PA, the Building Permits point-map slider, the Report Card
+  table, and the Download page now source years / filenames / spans from the backend-emitted
+  manifests — zero year literals that 404 or mislabel on rollover (each proven by a simulated
+  next-year manifest advancing the UI with no code edit). **Business Counts is the one parked
+  exception**: its year is baked into the GeoJSON filename AND its column keys with no manifest to
+  source it from, so it needs a backend `{surveyYear, priorYear}` emit (frozen backend). Handback
+  spec: `docs/BC_MANIFEST_HANDBACK.md`.
 
 **Legibility standard — VERY IMPORTANT.** This code is maintained by people learning web dev
 (Olivia) and inherited by future RAs. **Legibility beats cleverness, always.**
@@ -384,6 +411,12 @@ Result: the **live clone** — shell + one real map — the proof the frame work
 - Introduce stacks beyond React + Vite + PMTiles + MapLibre (+ Recharts for charts). (§2.)
 - Duplicate cross-section base geometry (boundary, road/vegetation layers) into sections — it lives in `pipeline/yeg/shared/`. (§3.)
 - Over-engineer, or merge code Olivia can't read. (§6.)
+- Reintroduce a year literal in a frontend section (filename, label, metric key, span). Source the
+  year from the section's `manifest.json`, the PA/BP way. (§6 — refresh-by-design; the one parked
+  exception, Business Counts, is tracked in `docs/BC_MANIFEST_HANDBACK.md`.)
+- Hardcode the serve host, or a root-absolute runtime asset path that bypasses the base. The serve
+  target is env config (`VITE_BASE_PATH`/`VITE_PMTILES_BASE`); runtime fetches go through
+  `assetUrl`. (§2/§6.)
 
 **Both**
 - Propose commercial features, paid tiers, or Model D. (§1 — parked future idea, hard scope boundary now.)
@@ -423,6 +456,26 @@ When in doubt, load §2 (locked architecture) and §9 (negative rules) — the l
 Revise when: a locked decision changes (§2), a new section is wired (§3), a new rule is validated
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
+- **v1.9 (2026-06-25)** — **Frontend VM-readiness + refresh-by-design campaign** (three
+  frontend seams; structural/host-decoupling merged to `main`, the year-hardcode cleanup on a
+  review branch). **(1) Host-decoupling** (merged): added the missing `public/_redirects` SPA
+  fallback + an nginx `try_files` doc; lifted the R2 PMTiles origin to `VITE_PMTILES_BASE`; made
+  the deploy base + router basename `VITE_BASE_PATH` (default `/`) — all with in-code defaults so
+  the Cloudflare Pages deploy is byte-for-behaviour unchanged. **(2) Base-resolution seam**
+  (merged): routed all 14 root-absolute runtime asset fetches through one helper
+  `src/utils/assetUrl.js` (joins to `import.meta.env.BASE_URL`; no-op at `/`), consolidated the 4
+  duplicate basemap-style constants into `src/components/basemapStyle.js`, and **closed the
+  subpath caveat** — a `VITE_BASE_PATH=/realestate/` build now loads data/styles/downloads/
+  manifests under the subpath (verified with a headless browser). **(3) Year-hardcode cleanup**
+  (review branch `feature-year-hardcode-cleanup`): the BP point-map slider, the Report Card, and
+  the Download page (siteConfig restructured to year-free `{year}/{span}/{recentSpan}/{yearCount}`
+  token skeletons resolved in DownloadPage) now source years/filenames/spans from the PA + BP
+  manifests — refresh-by-design parity, each proven by a simulated next-year manifest advancing the
+  UI with no code edit; the Download page additionally gated by a character-identical
+  rendered-output diff. **Business Counts parked** (year baked into filename + column keys, no
+  manifest) — handback spec `docs/BC_MANIFEST_HANDBACK.md`. §2 (serve-target-is-config bullet), §6
+  (host-portable + refresh-by-design), §9 (two negative rules), README (subpath caveat → resolved;
+  refresh-by-design note) updated. Frontend-only; no pipeline data logic changed.
 - **v1.8 (2026-06-25)** — **Per-section website-standardization campaign**
   (building-permits + business-census brought to the PA conventions §6 defines;
   structural only, output byte-identical pre/post, each verified by an authorized

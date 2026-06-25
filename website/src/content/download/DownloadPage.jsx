@@ -5,13 +5,29 @@
 // Data-driven from siteConfig.downloads — adding a new dataset is
 // one entry in siteConfig.js, no JSX change needed.
 //
+// Year-bearing bits (label year, filename year, coverage spans, year counts)
+// are TEMPLATES in siteConfig with {year}/{span}/{recentSpan}/{yearCount}
+// tokens. We fill them here from the backend manifests the entry's `source`
+// names — "assessment" → PA /manifest.json, "permits" → the BP manifest — so
+// the page rolls forward on the next refresh with no edit to siteConfig.
+//
 // Layout: section header + card grid. Each card has a CSV icon,
 // label, description, metadata row (size / rows / section / year),
 // and a Download button anchoring the static file in /public/downloads/.
 // =============================================================================
 
+import { useEffect, useState } from "react";
+
 import { siteConfig } from "../../config/siteConfig.js";
 import { assetUrl } from "../../utils/assetUrl.js";
+import { loadManifest, getDefaultYear } from "../property-assessment/dataSources.js";
+import { loadPermitManifest, permitYears, permitDefaultYear } from "../building-permits/dataSources.js";
+
+// Replace {token}s in a template from a per-source value map. An unknown token
+// is left as-is so a typo is visible rather than silently dropped.
+function fill(template, vars) {
+  return template.replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : `{${k}}`));
+}
 
 // Minimal inline SVG CSV icon — file-table shape with CSV text.
 // No external dependency; renders at 32×40px.
@@ -55,6 +71,32 @@ function CsvIcon({ colour = "var(--accent)" }) {
 
 export default function DownloadPage() {
   const { downloads } = siteConfig;
+  // Token values per source, resolved from the manifests. null until both load.
+  const [ctx, setCtx] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([loadManifest(), loadPermitManifest()])
+      .then(([pa, bp]) => {
+        if (cancelled) return;
+        const bpY = permitYears(bp);
+        const bpMin = Math.min(...bpY), bpMax = Math.max(...bpY);
+        setCtx({
+          assessment: { year: getDefaultYear(pa, "Edmonton") },
+          permits: {
+            year: permitDefaultYear(bp),
+            span: `${bpMin}–${bpMax}`,
+            // Geocoding lag is a recent-data effect; describe it as the trailing
+            // 3 years (reproduces the old "2024–2026" and rolls forward).
+            recentSpan: `${bpMax - 2}–${bpMax}`,
+            yearCount: bpY.length,
+          },
+        });
+      })
+      .catch((err) => { if (!cancelled) setError(err.message); });
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <div className="shell-main">
@@ -91,128 +133,137 @@ export default function DownloadPage() {
           flexDirection: "column",
           gap: "1rem",
         }}>
-          {downloads.map((d) => (
-            <div key={d.id} style={{
-              display: "flex",
-              gap: "1.25rem",
-              alignItems: "flex-start",
-              padding: "1.25rem 1.5rem",
-              background: "var(--bg)",
-              border: "1px solid var(--border-soft)",
-              borderRadius: "var(--radius-lg)",
-              boxShadow: "var(--shadow-sm)",
-            }}>
-
-              {/* CSV icon */}
-              <div style={{ flexShrink: 0, paddingTop: 2 }}>
-                <CsvIcon />
-              </div>
-
-              {/* Card body */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{
-                  fontSize: "1rem",
-                  fontWeight: 600,
-                  color: "var(--text)",
-                  margin: "0 0 0.3rem",
-                  lineHeight: 1.3,
-                }}>
-                  {d.label}
-                </p>
-                <p style={{
-                  fontSize: "0.85rem",
-                  color: "var(--text-muted)",
-                  lineHeight: 1.5,
-                  margin: "0 0 0.75rem",
-                }}>
-                  {d.description}
-                </p>
-
-                {/* Metadata pills */}
-                <div style={{
+          {!ctx ? (
+            <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
+              {error ? `Could not load the dataset catalogue: ${error}` : "Loading…"}
+            </p>
+          ) : (
+            downloads.map((d) => {
+              const v = ctx[d.source];
+              return (
+                <div key={d.id} style={{
                   display: "flex",
-                  flexWrap: "wrap",
-                  gap: "0.4rem",
-                  marginBottom: "0.875rem",
+                  gap: "1.25rem",
+                  alignItems: "flex-start",
+                  padding: "1.25rem 1.5rem",
+                  background: "var(--bg)",
+                  border: "1px solid var(--border-soft)",
+                  borderRadius: "var(--radius-lg)",
+                  boxShadow: "var(--shadow-sm)",
                 }}>
-                  {[
-                    { icon: "📁", text: d.size },
-                    { icon: "⊞", text: d.rows },
-                    { icon: "◎", text: d.section },
-                    { icon: "◷", text: String(d.year) },
-                  ].map(({ icon, text }) => (
-                    <span key={text} style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
-                      fontSize: "0.72rem",
-                      color: "var(--text-muted)",
-                      background: "var(--bg-soft)",
-                      border: "1px solid var(--border-soft)",
-                      borderRadius: 999,
-                      padding: "2px 9px",
-                    }}>
-                      <span aria-hidden="true"
-                        style={{ fontSize: "0.7rem" }}>
-                        {icon}
-                      </span>
-                      {text}
-                    </span>
-                  ))}
-                </div>
 
-                {/* Download button */}
-                <a
-                  href={assetUrl(d.file)}
-                  download
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "6px 16px",
-                    fontSize: "0.82rem",
-                    fontWeight: 600,
-                    fontFamily: "inherit",
-                    color: "var(--accent-dark)",
-                    background: "var(--accent-soft)",
-                    border: "1px solid var(--green-300)",
-                    borderRadius: "var(--radius-md)",
-                    textDecoration: "none",
-                    cursor: "pointer",
-                    transition: "background 150ms, border-color 150ms",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background =
-                      "var(--green-100)";
-                    e.currentTarget.style.borderColor =
-                      "var(--accent)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background =
-                      "var(--accent-soft)";
-                    e.currentTarget.style.borderColor =
-                      "var(--green-300)";
-                  }}
-                >
-                  {/* Down-arrow download icon (inline SVG) */}
-                  <svg width="13" height="13"
-                    viewBox="0 0 13 13" fill="none"
-                    aria-hidden="true">
-                    <path d="M6.5 1v8M3 6.5l3.5 3.5 3.5-3.5"
-                      stroke="currentColor" strokeWidth="1.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path d="M1 11h11"
-                      stroke="currentColor" strokeWidth="1.6"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  Download CSV
-                </a>
-              </div>
-            </div>
-          ))}
+                  {/* CSV icon */}
+                  <div style={{ flexShrink: 0, paddingTop: 2 }}>
+                    <CsvIcon />
+                  </div>
+
+                  {/* Card body */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{
+                      fontSize: "1rem",
+                      fontWeight: 600,
+                      color: "var(--text)",
+                      margin: "0 0 0.3rem",
+                      lineHeight: 1.3,
+                    }}>
+                      {fill(d.label, v)}
+                    </p>
+                    <p style={{
+                      fontSize: "0.85rem",
+                      color: "var(--text-muted)",
+                      lineHeight: 1.5,
+                      margin: "0 0 0.75rem",
+                    }}>
+                      {fill(d.description, v)}
+                    </p>
+
+                    {/* Metadata pills */}
+                    <div style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "0.4rem",
+                      marginBottom: "0.875rem",
+                    }}>
+                      {[
+                        { icon: "📁", text: d.size },
+                        { icon: "⊞", text: fill(d.rows, v) },
+                        { icon: "◎", text: d.section },
+                        { icon: "◷", text: String(v.year) },
+                      ].map(({ icon, text }) => (
+                        <span key={text} style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                          fontSize: "0.72rem",
+                          color: "var(--text-muted)",
+                          background: "var(--bg-soft)",
+                          border: "1px solid var(--border-soft)",
+                          borderRadius: 999,
+                          padding: "2px 9px",
+                        }}>
+                          <span aria-hidden="true"
+                            style={{ fontSize: "0.7rem" }}>
+                            {icon}
+                          </span>
+                          {text}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Download button */}
+                    <a
+                      href={assetUrl(fill(d.file, v))}
+                      download
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "6px 16px",
+                        fontSize: "0.82rem",
+                        fontWeight: 600,
+                        fontFamily: "inherit",
+                        color: "var(--accent-dark)",
+                        background: "var(--accent-soft)",
+                        border: "1px solid var(--green-300)",
+                        borderRadius: "var(--radius-md)",
+                        textDecoration: "none",
+                        cursor: "pointer",
+                        transition: "background 150ms, border-color 150ms",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background =
+                          "var(--green-100)";
+                        e.currentTarget.style.borderColor =
+                          "var(--accent)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background =
+                          "var(--accent-soft)";
+                        e.currentTarget.style.borderColor =
+                          "var(--green-300)";
+                      }}
+                    >
+                      {/* Down-arrow download icon (inline SVG) */}
+                      <svg width="13" height="13"
+                        viewBox="0 0 13 13" fill="none"
+                        aria-hidden="true">
+                        <path d="M6.5 1v8M3 6.5l3.5 3.5 3.5-3.5"
+                          stroke="currentColor" strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path d="M1 11h11"
+                          stroke="currentColor" strokeWidth="1.6"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      Download CSV
+                    </a>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Footer note */}
