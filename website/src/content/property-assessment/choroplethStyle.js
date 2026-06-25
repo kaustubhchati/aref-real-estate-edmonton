@@ -22,7 +22,7 @@ import { CITY_BOUNDS } from "../../config/cityBounds.js";
 // (Data URL no longer lives here — single source of truth is dataSources.js,
 // which the page resolves from the (city, year) controls.)
 export const MAP_VIEW = {
-  center: [-113.4938, 53.5461],
+  center: [-113.4956, 53.5356],   // Edmonton area-weighted centroid (centres default + constrained view)
   zoom: 10.2,
   minZoom: 7,
   maxZoom: 17,

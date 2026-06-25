@@ -2,11 +2,17 @@
 // cityBounds.js
 //
 // Per-city camera pan bounds for MapLibre's `maxBounds`, as [[west, south],
-// [east, north]] in LngLat. setMaxBounds locks the map to a city's extent so a
-// user can't pan off into empty basemap. (Side effect: it also caps zoom-OUT at
-// roughly city-fit — you can't zoom out past where the bounds fill the viewport.
-// That is intended for a single-city map; widen the box if more zoom-out room is
-// wanted.)
+// [east, north]] in LngLat. setMaxBounds stops the camera running away to empty
+// basemap (panning is free until a far edge) WITHOUT cropping the city: the box
+// is a GENEROUS envelope, not a tight crop. At the city-viewing zoom the whole
+// city fits with slack on BOTH axes (pan free in every direction), and you can
+// still zoom out to see the city + a wide fringe.
+//
+// NOTE: an earlier tight box (data extent + 6 km) over-constrained this — it
+// forced the zoom floor too deep (city cut off at the edges), clamped panning to
+// one axis at max zoom-out (the "only up/down" bug), and sat off-centre. This
+// envelope fixes all three: same root cause (box smaller than the viewport),
+// same fix (make the box generous).
 //
 // Keyed by the city name the manifest uses, so this is the single per-city home
 // for the value: the section's MAP_VIEW references CITY_BOUNDS[city] rather than
@@ -14,11 +20,13 @@
 // here when its pipeline lands (CLAUDE.md §10 — city wraps section, per-city
 // config).
 //
-// Edmonton box = the 407-neighbourhood data extent (lng -113.71..-113.27,
-// lat 53.34..53.72) padded ~0.06 deg (~6 km) so edge neighbourhoods can be framed.
+// Edmonton envelope = centred on the city centroid (~[-113.50, 53.54]) and
+// extended ~0.9–1.0 deg (~60–110 km) past the 407-neighbourhood extent on every
+// side — generous enough that the whole city + surroundings frames with slack at
+// max zoom-out, tight enough to stop runaway panning across Alberta.
 // =============================================================================
 
 export const CITY_BOUNDS = {
-  Edmonton: [[-113.77, 53.28], [-113.21, 53.78]],
+  Edmonton: [[-114.60, 52.54], [-112.40, 54.54]],
   // Calgary: [[...], [...]],  // add with the Calgary-introduction campaign
 };
