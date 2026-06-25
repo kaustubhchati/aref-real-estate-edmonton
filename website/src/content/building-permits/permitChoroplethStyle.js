@@ -19,6 +19,7 @@
 
 import { fmtCurrency, fmtPct } from "../../utils/format.js";
 import { polyOutline, rampFloor, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
+import { CITY_BOUNDS } from "../../config/cityBounds.js";
 
 export const BASEMAP_STYLE = "/styles/custom-basemap.json";
 
@@ -27,6 +28,7 @@ export const MAP_VIEW = {
   zoom: 10.2,
   minZoom: 7,
   maxZoom: 17,
+  maxBounds: CITY_BOUNDS.Edmonton,   // lock pan to the city extent (per-city config)
 };
 
 // ---- Polygon states — identical to assessment -------------------------

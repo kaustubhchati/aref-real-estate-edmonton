@@ -15,6 +15,7 @@
 
 import { fmtCurrency } from "../../utils/format.js";
 import { VALUE_BUCKETS, ALL_BUCKET_IDS } from "./dataSources.js";
+import { CITY_BOUNDS } from "../../config/cityBounds.js";
 
 // ---- Map view defaults (Edmonton) ------------------------------------------
 export const BASEMAP_STYLE = "/styles/custom-basemap.json";
@@ -27,6 +28,7 @@ export const MAP_VIEW = {
   zoom: 10.2,
   minZoom: 7,
   maxZoom: 18,
+  maxBounds: CITY_BOUNDS.Edmonton,   // lock pan to the city extent (per-city config)
 };
 
 // The tippecanoe layer name baked into permits.pmtiles. The circle layer's

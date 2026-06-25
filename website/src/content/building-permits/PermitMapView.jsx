@@ -175,6 +175,7 @@ export default function PermitMapView({ className = "", onLoad, onPick }) {
       zoom: MAP_VIEW.zoom,
       minZoom: MAP_VIEW.minZoom,
       maxZoom: MAP_VIEW.maxZoom,
+      maxBounds: MAP_VIEW.maxBounds,   // lock pan to the city extent (CITY_BOUNDS via MAP_VIEW)
       // compact:true to match MapView; CARTO/OSM basemap credit is auto from the
       // TileJSON, customAttribution APPENDS our data credit (siteConfig §6).
       attributionControl: { compact: true, customAttribution: siteConfig.mapAttribution },

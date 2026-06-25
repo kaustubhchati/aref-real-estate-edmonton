@@ -80,6 +80,9 @@ export default function MapView({
       zoom: view.zoom,
       minZoom: view.minZoom,
       maxZoom: view.maxZoom,
+      // Lock panning to the section's city extent (per-city CITY_BOUNDS via
+      // MAP_VIEW.maxBounds) so the user can't pan off into empty basemap.
+      maxBounds: view.maxBounds,
       // compact "i" toggle; the basemap CARTO/OSM credit comes from the TileJSON
       // automatically, customAttribution APPENDS our data credit (siteConfig §6).
       attributionControl: { compact: true, customAttribution: siteConfig.mapAttribution },
