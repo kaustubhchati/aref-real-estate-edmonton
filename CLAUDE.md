@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> **Version: v1.7 — authoritative. Supersedes all prior versions (v0.1–v1.6).**
+> **Version: v1.8 — authoritative. Supersedes all prior versions (v0.1–v1.7).**
 > This is the single source of project context for every Claude Code session — read it first.
 > If any other note, comment, or older doc frames *the website* as an "agent-driven platform,"
 > that framing is **retired** — see §1.
@@ -423,6 +423,27 @@ When in doubt, load §2 (locked architecture) and §9 (negative rules) — the l
 Revise when: a locked decision changes (§2), a new section is wired (§3), a new rule is validated
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
+- **v1.8 (2026-06-25)** — **Per-section website-standardization campaign**
+  (building-permits + business-census brought to the PA conventions §6 defines;
+  structural only, output byte-identical pre/post, each verified by an authorized
+  refresh). **building-permits**: production scripts renumbered to 01..NN
+  (`02->01` build_permits, `02a->01a` job-grouping tool, `03->02` aggregates,
+  `04->03` manifest; `_whirl.yaml` + in-script cross-refs + README repointed; no
+  stream tags — one all-years source); boundary resolved **newest-by-glob**
+  (removed the hardcoded `..._20260616.csv` date literal — the sibling of PA's
+  old `property_info` hardcode); published CSVs renamed to the **yeg_ standard**
+  via the handoff (`permits_coverage`->`yeg_building-permits_coverage`,
+  `permits_category_counts`->`yeg_building-permits_category_counts`; all-years
+  rolling files take NO year/span suffix to stay literal-free + frontend-stable).
+  **business-census**: source switched to `fetch_socrata_snapshot(wh44-4bkz)`
+  (was a hardcoded local CSV) + boundary newest-by-glob; **wired into the runner**
+  as the `business-census` section (was a manual side-script with a hand-copied
+  handoff — the runner is now the sole publisher); `output/` regenerables
+  untracked + gitignored (matching PA/BP). `refresh.R` now drives all three
+  Edmonton sections. No pipeline data logic changed (KC's data-cleaning campaign
+  is separate). Noted-but-not-touched (out of structural scope): BC's inline
+  `ID_REMAP` duplicates the shared rescue oracle; BC's `2025` production-year is a
+  pre-existing frontend-coupled literal.
 - **v1.7 (2026-06-25)** — **Edmonton city container created — the Calgary-introduction
   campaign's structural foundation (§10).** All Edmonton sections (`property-assessment`,
   `building-permits`, `economy`, `shared`) `git mv`'d under `pipeline/yeg/` (history preserved);
