@@ -175,6 +175,9 @@ export default function PermitMapView({ className = "", onLoad, onPick }) {
       minZoom: MAP_VIEW.minZoom,
       maxZoom: MAP_VIEW.maxZoom,
       attributionControl: true,
+      // ctrl/⌘ + wheel (or two-finger) to zoom, so a plain page scroll isn't
+      // hijacked by the map. Same guard as MapView.jsx (see the note there).
+      cooperativeGestures: true,
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");

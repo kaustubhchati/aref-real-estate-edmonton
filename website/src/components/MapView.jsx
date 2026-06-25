@@ -80,6 +80,11 @@ export default function MapView({
       minZoom: view.minZoom,
       maxZoom: view.maxZoom,
       attributionControl: { compact: true },
+      // Scrolling over the map zooms only when the user holds ctrl/⌘ (or uses two
+      // fingers on touch); a plain wheel scrolls the PAGE. Stops the full-width
+      // embedded map from hijacking page scroll. 5.24 is boolean-only — the
+      // "use ctrl + scroll to zoom" overlay is MapLibre's built-in (no custom text).
+      cooperativeGestures: true,
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
