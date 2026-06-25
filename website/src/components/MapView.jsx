@@ -92,6 +92,15 @@ export default function MapView({
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new maplibregl.ScaleControl({ unit: "metric", maxWidth: 100 }), "bottom-right");
+    // Fullscreen the whole section view — .content-map wraps the sidebar + legend
+    // + map, so both stay visible/readable in fullscreen (not just the bare
+    // canvas). Falls back to the map container if the wrapper isn't found.
+    map.addControl(
+      new maplibregl.FullscreenControl({
+        container: map.getContainer().closest(".content-map") || map.getContainer(),
+      }),
+      "top-right",
+    );
 
     map.on("error", (e) => {
       // Surface map errors honestly instead of swallowing them — CLAUDE.md §6.

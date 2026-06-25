@@ -185,6 +185,14 @@ export default function PermitMapView({ className = "", onLoad, onPick }) {
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new maplibregl.ScaleControl({ unit: "metric", maxWidth: 100 }), "bottom-right");
+    // Fullscreen the section wrapper (.content-map = sidebar + legend + map), not
+    // the bare canvas — same as MapView.jsx. Fallback to the map container.
+    map.addControl(
+      new maplibregl.FullscreenControl({
+        container: map.getContainer().closest(".content-map") || map.getContainer(),
+      }),
+      "top-right",
+    );
 
     // Fly-to is bound to double-click (in wirePermitPopup); disable the default
     // double-click-to-zoom so it doesn't fight our handler.
