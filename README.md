@@ -71,6 +71,16 @@ neighbourhood GeoJSONs + `manifest.json` + the download CSVs into `website/publi
 `website/public/` stale (the silent staleness that has bitten the live map before).
 Always refresh through `run_section.R <section>`.
 
+### Refresh-by-design (no frontend edits on a year rollover)
+
+The site reads its years, filenames, and spans from the per-section `manifest.json`
+the pipeline emits — there are no year literals in the frontend. So a new data year is a
+**pipeline-only** change: emit the new GeoJSON/CSV + regenerate the section's manifest, and the
+maps, the Report Card table, and the Download page pick up the new year automatically. The one
+exception is **Business Counts**, whose year is baked into its source filename and column keys
+with no manifest to source it from — it is parked pending a small backend emit
+(`docs/BC_MANIFEST_HANDBACK.md`).
+
 ## Deploying the site
 
 The site is a static build hosted on Cloudflare Pages (free tier), connected to this
@@ -125,12 +135,15 @@ Pages variable or an `export` before `npm run build`.)
 | Variable             | Default                                          | Purpose |
 | -------------------- | ------------------------------------------------ | ------- |
 | `VITE_PMTILES_BASE`  | `https://pub-600ea350470345bbb93a035ad72875d5.r2.dev` | Origin the building-permits `.pmtiles` is fetched from. **The host MUST honor HTTP range requests (HTTP 206 Partial Content)** — PMTiles reads tiles by byte-range. Cloudflare Pages does **not** honor ranges on static assets, which is why the default is Cloudflare R2; a range-capable host (e.g. nginx, which serves ranges by default) could self-host the file. Give the origin only — no trailing slash, no `/building-permits` suffix. |
-| `VITE_BASE_PATH`     | `/`                                              | Public path the built site is served under. `/` = host root (current deploy). Set to a subpath like `/realestate/` (leading **and** trailing slash) for a non-root deploy. Drives both Vite's `base` and the router `basename` (via `import.meta.env.BASE_URL`), so they cannot drift. **Not yet a complete subpath deploy — see the caveat below.** |
+| `VITE_BASE_PATH`     | `/`                                              | Public path the built site is served under. `/` = host root (current deploy). Set to a subpath like `/realestate/` (leading **and** trailing slash) for a non-root deploy. Drives Vite's `base`, the router `basename`, **and** every runtime asset fetch (via `assetUrl` / `import.meta.env.BASE_URL`), so a subpath deploy is fully wired — see the note below. |
 
-**Subpath caveat (`VITE_BASE_PATH` ≠ `/`).** `base` rebases bundled assets (`/assets/…`)
-and the router, but it does **not** rewrite the root-absolute runtime fetches the app issues
-for data (`/data/…`, `/manifest.json`), downloads (`/downloads/…`), and the basemap style
-(`/styles/custom-basemap.json`) — those are plain string literals Vite leaves untouched. So
-under a subpath they would 404. Until a follow-up routes those through `import.meta.env.BASE_URL`,
-`VITE_BASE_PATH` is groundwork; the only fully-working values today are `/` (root) and hosting
-those asset trees at the same absolute paths on the target host.
+**Subpath deploy (`VITE_BASE_PATH` ≠ `/`) — fully supported.** Vite rebases the bundled
+assets and the router; the app's hand-issued runtime fetches — data (`/data/…`), downloads
+(`/downloads/…`), the `manifest.json` files, and the basemap style
+(`/styles/custom-basemap.json`) — all go through one helper, `website/src/utils/assetUrl.js`,
+which joins each path to `import.meta.env.BASE_URL`. At the default base `/` it is a no-op
+(today's deploy is unchanged); under `/realestate/` every fetch resolves to `/realestate/…`.
+Verified end-to-end: a `VITE_BASE_PATH=/realestate/` build loads its data, styles, and
+downloads under the subpath with zero requests to the host root. (The `.pmtiles` is the one
+exception — it is served from `VITE_PMTILES_BASE`, a separate range-capable origin, not the
+site base.)
