@@ -17,6 +17,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import maplibregl from "maplibre-gl";
 
 import Layout from "./shell/Layout.jsx";
 import Home from "./content/pages/Home.jsx";
@@ -32,6 +33,13 @@ import BusinessCensusMap from "./content/economy/BusinessCensusMap.jsx";
 import ReportCard from "./content/report-card/ReportCard.jsx";
 
 import "./index.css";
+
+// Warm MapLibre's worker pool + WebGL resources at app entry, BEFORE any map
+// mounts — the init overlaps React's first render, so the first map paints sooner.
+// This is a maps-first site (most sections are maps), so we deliberately do NOT
+// clearPrewarmedResources(): clearing then re-warming on the next map would be
+// net-negative. One-time, no teardown.
+maplibregl.prewarm();
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
