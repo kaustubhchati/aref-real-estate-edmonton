@@ -33,10 +33,11 @@ import {
 } from "./dataSources.js";
 import { parseCsvAsObjects } from "../report-card/parseCsv.js";
 import { fmtNumber, fmtCurrency } from "../../utils/format.js";
+import { assetUrl } from "../../utils/assetUrl.js";
 
 // Per-year coverage table — how many permits exist vs. how many are mappable.
 // Served from /public (a tiny 18-row CSV), a plain static fetch.
-const COVERAGE_URL = "/data/building-permits/yeg_building-permits_coverage.csv";
+const COVERAGE_URL = assetUrl("/data/building-permits/yeg_building-permits_coverage.csv");
 
 // Find the coverage row for one year. CSV cells are strings, so compare year
 // numerically. Returns null when the year isn't in the table.

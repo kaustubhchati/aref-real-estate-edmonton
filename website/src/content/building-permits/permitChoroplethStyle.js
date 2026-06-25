@@ -22,7 +22,8 @@ import { polyOutline, rampFloor, POLY_OUTLINE_WIDTH } from "../../components/cho
 import { CITY_BOUNDS } from "../../config/cityBounds.js";
 import { paintTransition, DUR_BASE } from "../../components/motion.js";
 
-export const BASEMAP_STYLE = "/styles/custom-basemap.json";
+// Basemap style is shared + base-resolved; re-exported so consumers here are unchanged.
+export { BASEMAP_STYLE } from "../../components/basemapStyle.js";
 
 export const MAP_VIEW = {
   center: [-113.4956, 53.5356],   // Edmonton area-weighted centroid (centres default + constrained view)

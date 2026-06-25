@@ -16,6 +16,8 @@
 // the pipeline adds its years to the manifest — that's the whole change.
 // =============================================================================
 
+import { assetUrl } from "../../utils/assetUrl.js";
+
 // Cities the switcher offers. Names, not data — the manifest decides which of
 // these actually have years. Calgary stays here so its (planned) button shows
 // even while its manifest years list is empty.
@@ -32,7 +34,7 @@ export const DEFAULT_CITY = "Edmonton";
 // below. Errors are surfaced, not swallowed — a missing/broken manifest is a
 // real problem the caller should see and show.
 export async function loadManifest() {
-  const res = await fetch("/manifest.json");
+  const res = await fetch(assetUrl("/manifest.json"));
   if (!res.ok) {
     throw new Error(`Could not load /manifest.json (HTTP ${res.status})`);
   }
@@ -73,7 +75,7 @@ export function cityHasAnyData(manifestData, city) {
 // without data never reaches here. The filename is currently year-keyed only
 // (Edmonton history); revisit the path shape when Calgary's files land.
 export function resolveDataUrl(city, year) {
-  return `/data/property-assessment/neighbourhoods_${year}_recovered.geojson`;
+  return assetUrl(`/data/property-assessment/neighbourhoods_${year}_recovered.geojson`);
 }
 
 // === Empty-state copy =========================================================

@@ -11,6 +11,7 @@
 // =============================================================================
 
 import { siteConfig } from "../../config/siteConfig.js";
+import { assetUrl } from "../../utils/assetUrl.js";
 
 // Minimal inline SVG CSV icon — file-table shape with CSV text.
 // No external dependency; renders at 32×40px.
@@ -162,7 +163,7 @@ export default function DownloadPage() {
 
                 {/* Download button */}
                 <a
-                  href={d.file}
+                  href={assetUrl(d.file)}
                   download
                   style={{
                     display: "inline-flex",

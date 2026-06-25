@@ -19,8 +19,9 @@ import { useEffect, useMemo, useState } from "react";
 
 import { parseCsvAsObjects } from "./parseCsv.js";
 import { COLUMNS, DEFAULT_SORT } from "./columns.js";
+import { assetUrl } from "../../utils/assetUrl.js";
 
-const CSV_URL = "/data/yeg_property-assessment_per_nbhd_2026.csv";
+const CSV_URL = assetUrl("/data/yeg_property-assessment_per_nbhd_2026.csv");
 
 // Coerce raw CSV string values to the types the table sorts/formats over.
 // Numeric columns become Number (or null for empty / "NA"); `suppressed`
