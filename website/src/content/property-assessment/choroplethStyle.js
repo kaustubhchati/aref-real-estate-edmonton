@@ -29,7 +29,8 @@ export const MAP_VIEW = {
   maxBounds: CITY_BOUNDS.Edmonton,   // lock pan to the city extent (per-city config)
 };
 
-export const BASEMAP_STYLE = "/styles/custom-basemap.json";
+// Basemap style is shared + base-resolved; re-exported so consumers here are unchanged.
+export { BASEMAP_STYLE } from "../../components/basemapStyle.js";
 
 // ---- Per-metric colour ramps -----------------------------------------------
 // Each metric colours by its own 5-stop ramp (min→Q25→median→Q75→max). The

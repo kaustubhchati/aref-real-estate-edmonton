@@ -37,9 +37,10 @@ import {
 } from "./businessCensusStyle.js";
 import { fmtNumber } from "../../utils/format.js";
 import { sidebarLeftPad } from "../../components/mapPadding.js";
+import { assetUrl } from "../../utils/assetUrl.js";
 
 // Single committed GeoJSON — survey year 2025, no year axis.
-const DATA_URL = "/data/economy/business_census_2025.geojson";
+const DATA_URL = assetUrl("/data/economy/business_census_2025.geojson");
 
 const SOURCE_ID = "bcensus";
 const FILL_LAYER_ID = "bcensus-fill";

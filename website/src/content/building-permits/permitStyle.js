@@ -18,7 +18,8 @@ import { VALUE_BUCKETS, ALL_BUCKET_IDS } from "./dataSources.js";
 import { CITY_BOUNDS } from "../../config/cityBounds.js";
 
 // ---- Map view defaults (Edmonton) ------------------------------------------
-export const BASEMAP_STYLE = "/styles/custom-basemap.json";
+// Basemap style is shared + base-resolved; re-exported so consumers here are unchanged.
+export { BASEMAP_STYLE } from "../../components/basemapStyle.js";
 // The self-hosted style (same one PropertyAssessmentMap uses). The CDN Voyager
 // URL was a temporary workaround while the map rendered blank — the real cause
 // was an invalid nested-zoom circle-radius expression, since fixed.

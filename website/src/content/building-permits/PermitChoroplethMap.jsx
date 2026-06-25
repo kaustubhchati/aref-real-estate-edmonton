@@ -51,6 +51,7 @@ import {
 import { fmtNumber } from "../../utils/format.js";
 import { DUR_SLOW, DUR_FAST } from "../../components/motion.js";
 import { sidebarLeftPad } from "../../components/mapPadding.js";
+import { assetUrl } from "../../utils/assetUrl.js";
 
 // Crossfade timing. 500ms ease-out for the dissolve (MapLibre's built-in
 // transition easing); hover stays snappy at 150ms outside a switch.
@@ -58,7 +59,7 @@ const FADE_MS = DUR_SLOW;
 const HOVER_MS = DUR_FAST;
 
 async function loadPermitManifest() {
-  const res = await fetch("/data/building-permits/manifest.json");
+  const res = await fetch(assetUrl("/data/building-permits/manifest.json"));
   if (!res.ok) {
     throw new Error(`Could not load the year catalogue (HTTP ${res.status})`);
   }
@@ -69,7 +70,7 @@ const SOURCE_ID = "pnbhd";
 
 // One file per year at a stable path; year is the only thing that varies.
 function dataUrl(year) {
-  return `/data/building-permits/permit-neighbourhoods/permit_neighbourhoods_${year}.geojson`;
+  return assetUrl(`/data/building-permits/permit-neighbourhoods/permit_neighbourhoods_${year}.geojson`);
 }
 
 // ---- Fly-to helpers (double-click). promoteId is "Neighbourhood ID". --------
