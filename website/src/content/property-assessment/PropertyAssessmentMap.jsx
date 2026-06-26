@@ -59,6 +59,7 @@ import {
   indexNamesForSearch,
 } from "./interactions.js";
 import { fmtNumber } from "../../utils/format.js";
+import { DUR_BASE, reduceMotion } from "../../components/motion.js";
 import { useSearchParams } from "react-router-dom";
 
 // Animate a number from 0 → target on mount (ease-out cubic). Signals the figure
@@ -96,6 +97,10 @@ export default function PropertyAssessmentMap() {
     CITIES.includes(searchParams.get("city")) ? searchParams.get("city") : DEFAULT_CITY
   );
   const [year, setYear] = useState(null); // seeded from the URL/manifest once it loads (year validity needs the manifest)
+  // Live drag position for the year slider (drives the thumb + readout). It
+  // commits to `year` on a throttle (see slideYear) so a fast drag doesn't pile
+  // overlapping colour fades — kept separate so the thumb still feels instant.
+  const [sliderYear, setSliderYear] = useState(null);
   const [metric, setMetric] = useState(() =>
     METRICS.some((m) => m.key === searchParams.get("metric")) ? searchParams.get("metric") : METRICS[0].key
   );
@@ -189,6 +194,38 @@ export default function PropertyAssessmentMap() {
   function changeCity(nextCity) {
     setCity(nextCity);
     setYear(getDefaultYear(manifest, nextCity));
+  }
+
+  // --- Year slider: live thumb, paced paint swap ------------------------------
+  // The thumb tracks the drag (sliderYear) for instant feedback; the heavier
+  // `year` commit — which drives the paint swap + every per-year stat — is
+  // throttled to ~DUR_BASE so a fast drag fires ONE clean fill-color fade per
+  // step instead of piling overlapping tweens. (Building Permits' slider needs
+  // no throttle: its setFilter is instant; PA's colour tween is ~DUR_BASE.)
+  // Under reduced motion the tween is already 0 (paintTransition), so commit live.
+  // Keep sliderYear in sync when year changes from elsewhere (default/url/city);
+  // a no-op during a drag (slideYear sets sliderYear first). Mirroring one bit of
+  // state, not a render cascade — disable the advisory as the fetch effect does.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setSliderYear(year); }, [year]);
+  const lastCommitRef = useRef(0);
+  const trailingRef = useRef(null);
+  useEffect(() => () => clearTimeout(trailingRef.current), []); // drop any pending commit on unmount
+  function slideYear(next) {
+    setSliderYear(next);                       // live thumb + readout
+    const gap = reduceMotion() ? 0 : DUR_BASE; // pacing window (0 = instant when motion is off)
+    clearTimeout(trailingRef.current);
+    const since = performance.now() - lastCommitRef.current;
+    if (since >= gap) {
+      lastCommitRef.current = performance.now();
+      setYear(next);                           // commit now: drives the same paint swap the dropdown drove
+    } else {
+      // Too soon after the last commit — land the latest value on the trailing edge.
+      trailingRef.current = setTimeout(() => {
+        lastCommitRef.current = performance.now();
+        setYear(next);
+      }, gap - since);
+    }
   }
 
   // Fetch the city's combined all-years file. url is constant across YEARS now
@@ -342,22 +379,29 @@ export default function PropertyAssessmentMap() {
               onChange={changeCity}
             />
           </div>
-          {/* 15 years is too many for a segmented toggle (see OptionToggle's
-              own note), so the year control is a native dropdown. years comes
-              straight from the manifest. */}
+          {/* Year is a range slider (matches the Building Permits point-map
+              slider). The thumb drives the SAME paint swap the dropdown drove,
+              just live — slideYear commits to `year`, which the repaint effect
+              turns into the setPaintProperty colour swap. min/max come from the
+              manifest year list (no literals); years are contiguous so step = 1
+              maps every position to a real year. sliderYear is the live drag
+              position (instant thumb + readout); `year` follows on a throttle. */}
           <div className="sb-select-field">
-            <span className="sb-select-label">Year</span>
-            <select
-              className="sb-select"
-              aria-label="Year"
-              data-default={year === years[0] ? "true" : "false"}
-              value={year ?? ""}
-              onChange={(e) => setYear(Number(e.target.value))}
-            >
-              {years.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
+            <span className="sb-select-label">
+              Year <strong className="sb-year-value">{sliderYear ?? year ?? "…"}</strong>
+            </span>
+            {year != null && (
+              <input
+                type="range"
+                className="sb-year-slider"
+                aria-label="Year"
+                min={Math.min(...years)}
+                max={Math.max(...years)}
+                step={1}
+                value={sliderYear ?? year}
+                onChange={(e) => slideYear(Number(e.target.value))}
+              />
+            )}
           </div>
           {/* Which aggregate column the choropleth colours by. */}
           <div className="sb-select-field">
