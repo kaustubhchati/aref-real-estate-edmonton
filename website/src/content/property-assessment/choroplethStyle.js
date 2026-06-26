@@ -196,8 +196,12 @@ function quantile(sorted, p) {
 // YoY top class is the SAME red the median map uses, read from RAMP_ASSESSED so
 // it can never drift. Only the warm extreme is shared; the rest of the ramp is
 // built colourblind-safe and balanced around it.
+// The COOL extreme is deepened to ColorBrewer Blues #08519c (higher chroma than
+// RdBu's #2166ac) to chroma-balance the high-chroma MEDIAN_RED warm arm — so
+// equal-magnitude decline reads about as emphatic as equal-magnitude growth
+// (KC's call: raise the cool side, never desaturate the bound red).
 const YOY_BAND_COLOURS = [
-  "#2166ac", // ≤ -E      darkest blue   (strong decline)
+  "#08519c", // ≤ -E      deep blue      (strong decline) — chroma-matched to #cc0000
   "#4393c3", // [-E,-E/3) medium blue
   "#92c5de", // [-E/3,0)  light blue     (mild decline)
   "#f4a582", // [0,+E/3)  light salmon   (mild growth)
