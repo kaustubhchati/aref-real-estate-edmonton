@@ -218,7 +218,7 @@ for (yr in years_present) {
 }
 
 # ============================================================
-# 5. Year-over-year change — MATCHED-SAMPLE (constant composition)
+# 5. Year-over-year change — MATCHED-SAMPLE (constant composition), LOG change
 #    The change is computed over parcels present in BOTH years (matched by
 #    Account Number), not by differencing two full-population medians. New builds
 #    entering the roll and demolitions/teardowns leaving therefore do NOT
@@ -228,6 +228,13 @@ for (yr in years_present) {
 #    cross-year change is matched. Keyed on canonical Neighbourhood ID so a rename
 #    (OLIVER -> WÎHKWÊNTÔWIN) stays one continuous series, and an account in the
 #    same canonical neighbourhood both years is the matched pair.
+#
+#    Expressed as a LOG change: ln(median_Y / median_Yprev) * 100. Log is
+#    symmetric about 0 (an x% rise and its offsetting fall have equal magnitude)
+#    and additive across periods — the scale repeat-sales / Case-Shiller estimate
+#    on. For small changes it ≈ the raw percent; it tames the long right tail of
+#    raw percent (unbounded above, floored at -100%). Displayed on the same
+#    diverging ramp until the scale-refit step.
 # ============================================================
 
 # One value per (canonical nbhd, account, year): median over any duplicate rows.
@@ -246,8 +253,7 @@ matched_yoy <- acct_year |>
   ungroup() |>
   filter(!is.na(.val_prev)) |>
   group_by(`Neighbourhood ID`, year = `Assessment Year`) |>
-  summarise(.matched_yoy = (median(.val, na.rm = TRUE) - median(.val_prev, na.rm = TRUE))
-            / median(.val_prev, na.rm = TRUE) * 100,
+  summarise(.matched_yoy = log(median(.val, na.rm = TRUE) / median(.val_prev, na.rm = TRUE)) * 100,
             n_matched = n(), .groups = "drop")
 
 all_agg <- map_dfr(years_present, function(yr) {

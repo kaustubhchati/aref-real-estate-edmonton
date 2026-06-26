@@ -249,13 +249,15 @@ if (file.exists(prev_path)) {
               median_2025 = median_assessvalue) |>
     filter(!is.na(.canon_id))
 
-  # --- MATCHED-SAMPLE (constant composition), 2026 vs 2025 ------------------
+  # --- MATCHED-SAMPLE (constant composition), LOG change, 2026 vs 2025 ------
   # Change computed over parcels present in BOTH years (matched by Account
   # Number), so new builds / demolitions don't masquerade as price change — same
-  # correction as 04_aggregate_historical. 2025 row-level values come from the
-  # cleaned historical (name-only is fine: each account is assigned by its 2026
-  # neighbourhood); the 2026 side is assess_clean resolved to canonical id, as
-  # the aggregate is. The LEVEL median stays full-population.
+  # correction as 04_aggregate_historical, expressed as a LOG change
+  # (ln(median_2026 / median_2025) * 100: symmetric about 0, additive). 2025
+  # row-level values come from the cleaned historical (name-only is fine: each
+  # account is assigned by its 2026 neighbourhood); the 2026 side is assess_clean
+  # resolved to canonical id, as the aggregate is. The LEVEL median stays
+  # full-population.
   hist_clean_path <- sort(list.files("output", pattern = "^pa_hist_clean_.*\\.csv$",
                                      full.names = TRUE), decreasing = TRUE)[1]
   val_2025 <- read_csv(hist_clean_path, show_col_types = FALSE,
@@ -268,8 +270,8 @@ if (file.exists(prev_path)) {
     summarise(.val_2026 = median(`Assessed Value`, na.rm = TRUE), .groups = "drop") |>
     inner_join(val_2025, by = ".acct") |>
     group_by(.canon_id = as.character(`Neighbourhood ID`)) |>
-    summarise(.matched_yoy = (median(.val_2026, na.rm = TRUE) - median(.val_2025, na.rm = TRUE))
-              / median(.val_2025, na.rm = TRUE) * 100, .groups = "drop")
+    summarise(.matched_yoy = log(median(.val_2026, na.rm = TRUE) / median(.val_2025, na.rm = TRUE)) * 100,
+              .groups = "drop")
 
   # Temp canonical key for the 2026 aggregate side (does not mutate output ids).
   canon_id_2026 <- nbhd_agg_gated |>
