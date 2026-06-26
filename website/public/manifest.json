@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "generated": "2026-06-24",
-  "last_updated": "2026-06-24",
+  "generated": "2026-06-26",
+  "last_updated": "2026-06-26",
   "cities": {
     "Edmonton": {
       "assessment": {
@@ -121,12 +121,12 @@
             "n_polygons": 275
           },
           "2024": {
-            "min": 85500,
-            "q25": 339625,
-            "median": 410000,
-            "q75": 470375,
-            "max": 1141500,
-            "n_polygons": 266
+            "min": 71000,
+            "q25": 287250,
+            "median": 362500,
+            "q75": 433875,
+            "max": 1138500,
+            "n_polygons": 279
           },
           "2025": {
             "min": 9500,
