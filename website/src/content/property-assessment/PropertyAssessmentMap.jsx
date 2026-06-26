@@ -111,6 +111,11 @@ export default function PropertyAssessmentMap() {
   // True while an in-place year swap's new data is genuinely slow (MapView
   // reports it via onLoading) — drives the skeleton-threshold fallback.
   const [swapLoading, setSwapLoading] = useState(false);
+  // First-paint cover: true once the map has actually DRAWN (MapView.onReady, on
+  // its first idle). The 4 MB combined file paints well after the page's own
+  // fetch resolves, so the skeleton must wait for this — not for gj — or it
+  // flashes a blank map (the gap that read as "nothing's there").
+  const [mapReady, setMapReady] = useState(false);
   // Pattern B — hovered neighbourhood properties for the sidebar stat panel.
   const [hoveredFeature, setHoveredFeature] = useState(null);
 
@@ -241,6 +246,7 @@ export default function PropertyAssessmentMap() {
     if (!url) {
       setMap(null);
       setGj(null);
+      setMapReady(false); // next real map must re-cover until it paints
       return undefined;
     }
 
@@ -527,7 +533,7 @@ export default function PropertyAssessmentMap() {
           // boundary (a city with no data), where the fetch effect tears down
           // map + gj. (url is constant per city now, so the boundary is stable.)
           <>
-            {url && (!gj || swapLoading) && <MapSkeleton />}
+            {url && (!mapReady || swapLoading) && <MapSkeleton />}
             {/* resetKey (not key) so a YEAR swap clears a caught error WITHOUT
                 remounting MapView — the map persists and dips-and-swaps in place. */}
             <MapErrorBoundary resetKey={url}>
@@ -542,6 +548,7 @@ export default function PropertyAssessmentMap() {
                 images={choroplethImages()}
                 onLoad={setMap}
                 onLoading={setSwapLoading}
+                onReady={() => setMapReady(true)}
               />
             </MapErrorBoundary>
           </>

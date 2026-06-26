@@ -42,6 +42,7 @@ export default function MapView({
   images = [],
   onLoad,
   onLoading,
+  onReady,
   className = "",
 }) {
   const containerRef = useRef(null);
@@ -61,6 +62,13 @@ export default function MapView({
   const onLoadingRef = useRef(onLoading);
   // eslint-disable-next-line react-hooks/refs
   onLoadingRef.current = onLoading;
+
+  // onReady(): optional — fired ONCE after the map's first idle (source loaded +
+  // layers painted), so a section can keep its loading cover up until the map is
+  // actually drawn, not merely until its own data fetch resolved.
+  const onReadyRef = useRef(onReady);
+  // eslint-disable-next-line react-hooks/refs
+  onReadyRef.current = onReady;
 
   // The live map instance + the URL currently in its source, so the in-place
   // swap effect can update data without re-creating the map (one WebGL context).
@@ -138,6 +146,11 @@ export default function MapView({
       // Section-specific wiring (popups, search, etc.) runs last so it can
       // assume every source + layer it expects is already on the map.
       if (onLoadRef.current) onLoadRef.current(map);
+
+      // First idle = the source has loaded AND the layers have painted. Signal
+      // the page once so it can drop its loading cover only now — the heavy
+      // combined GeoJSON paints well after its fetch resolves.
+      map.once("idle", () => { if (onReadyRef.current) onReadyRef.current(); });
 
       // Hand the live map + its loaded url to the in-place swap effect below.
       mapRef.current = map;
