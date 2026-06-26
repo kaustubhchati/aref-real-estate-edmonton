@@ -36,7 +36,7 @@ import {
   BASEMAP_STYLE,
   MAP_VIEW,
   METRICS,
-  YOY_STOPS,
+  yoyStopsFromValues,
   stopsFromScale,
   metricStops,
   applyYearMetric,
@@ -174,7 +174,8 @@ export default function PropertyAssessmentMap() {
   const noPriorYear = isYoy && year != null && year === earliestYear;
 
   // Colour ramp for the current metric:
-  //   yoy_pct_change     → the fixed diverging YOY_STOPS (same scale every year)
+  //   yoy_pct_change     → data-derived diverging scale (0-centred, robust ±E),
+  //                        same scale every year — see yoyStopsFromValues
   //   median_assessvalue → its locked per-year manifest scale
   //   everything else    → quantiles computed from the loaded polygons
   // gj is null until the fetch resolves — metricStops falls back to the locked
@@ -187,12 +188,29 @@ export default function PropertyAssessmentMap() {
   // year. null until the fetch resolves.
   const gjView = useMemo(() => projectYearCollection(gj, year), [gj, year]);
 
+  // All matched-log YoY values across EVERY year (from the combined source), for
+  // the data-derived diverging endpoints (yoyStopsFromValues). Sentinel/NA
+  // excluded — Number.isFinite drops the JSON null. One fixed scale, same every
+  // year; recomputes only on load.
+  const yoyAllValues = useMemo(() => {
+    if (!gj) return null;
+    const yrs = getYearsForCity(manifest, city);
+    const out = [];
+    for (const f of gj.features) {
+      for (const y of yrs) {
+        const v = f.properties[`yoy_pct_change_${y}`];
+        if (Number.isFinite(v) && v !== -999) out.push(v);
+      }
+    }
+    return out;
+  }, [gj, manifest, city]);
+
   const stops = useMemo(() => {
-    if (metric === "yoy_pct_change") return YOY_STOPS;
+    if (metric === "yoy_pct_change") return yoyStopsFromValues(yoyAllValues);
     return metric === "median_assessvalue"
       ? stopsFromScale(getColourScale(manifest, city, year), metric)
       : metricStops(gjView, metric);
-  }, [metric, manifest, city, year, gjView]);
+  }, [metric, manifest, city, year, gjView, yoyAllValues]);
 
   // Switching city resets the year to that city's default in the same update,
   // so we never carry one city's year onto another (or onto a city with none).

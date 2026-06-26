@@ -181,6 +181,9 @@ function quantile(sorted, p) {
 // 5%), matching fmtPct. blue = decline, warm = growth — accentuated arms (navy
 // decline, solid orange growth, strong red at the top) so the diverging signal
 // reads clearly against the basemap.
+// YOY_STOPS is the locked FALLBACK (used until the data loads, or if there's too
+// little of it). The live scale is yoyStopsFromValues below — same five colours,
+// but the endpoint is derived from the data so it tracks refreshes.
 const YOY_STOPS = [
   { v: -15, c: "#1040a0", label: "-15%" },
   { v:  -5, c: "#4393c3", label: "-5%"  },
@@ -189,6 +192,30 @@ const YOY_STOPS = [
   { v:  15, c: "#b83020", label: "+15%" },
 ];
 export { YOY_STOPS };
+
+// Data-derived diverging endpoints for the matched-log YoY (refresh-by-design —
+// no baked literal). 0 stays the neutral midpoint and the scale is balanced
+// (equal each side of 0 — Wilke's diverging rule), so up reads warm, down cool,
+// no-change neutral. The endpoint E = the 98th percentile of |yoy| across ALL
+// neighbourhood-years, so the long right tail (genuine extremes) is clamped and
+// the colour range is spent where the data actually lives — NOT recentred off 0
+// (most neighbourhoods genuinely rose; that warm lean is real signal). Inner
+// stops at ±E/3 mirror the old ±5/±15 ratio. The same RdBu-reversed colours.
+// Falls back to the locked YOY_STOPS until enough data has loaded.
+export function yoyStopsFromValues(values) {
+  const mags = (values ?? [])
+    .filter((v) => Number.isFinite(v))
+    .map(Math.abs)
+    .sort((a, b) => a - b);
+  if (mags.length < 20) return YOY_STOPS;
+  const E = quantile(mags, 0.98);
+  const colours = YOY_STOPS.map((s) => s.c);   // navy, blue, white, orange, red
+  return [-E, -E / 3, 0, E / 3, E].map((v, i) => ({
+    v,
+    c: colours[i],
+    label: `${v > 0 ? "+" : ""}${Math.round(v)}%`,
+  }));
+}
 
 // ---- Choropleth metrics ----------------------------------------------------
 // The columns the user can colour the map by. key = GeoJSON property,
