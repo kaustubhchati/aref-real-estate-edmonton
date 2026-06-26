@@ -154,3 +154,13 @@ pipeline/yeg/property-assessment/output/neighbourhoods_2026_not_rendered_recover
 
 # Microsoft Office lock/temp files (created while a .doc/.docx is open).
 ~$*
+
+# ---- Local working/session docs + scratch screenshots ----
+# Session handovers, capability-reference notes, and pasted screenshots are
+# local working artifacts, not repo content — same class as FRONTEND_AUDIT_*.md
+# above. Scoped patterns only (NOT a blanket *.md) so the tracked docs
+# (CLAUDE.md, README.md, PHASE*_STATUS.md, docs/*.md, …) stay tracked.
+SESSION_HANDOVER_*.md
+*_capability_reference.md
+section_scaffolding_engine.md
+/Screenshot*
