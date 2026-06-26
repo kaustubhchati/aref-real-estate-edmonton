@@ -242,12 +242,36 @@ cat(sprintf("Rows: %s neighbourhoods (incl. %s NA-id developing areas)\n",
 # (2025 medians are gated).
 prev_path <- "output/hist_aggregates/neighbourhood_aggregates_2025.csv"
 if (file.exists(prev_path)) {
+  # median_2025 per canonical id — kept ONLY for the suppression NA gate below
+  # (yoy exists where both 2025 and 2026 cleared the N<100 gate).
   prev_2025 <- read_csv(prev_path, show_col_types = FALSE) |>
     transmute(.canon_id = as.character(`Neighbourhood ID`),
               median_2025 = median_assessvalue) |>
     filter(!is.na(.canon_id))
 
-  # Temp canonical key for the 2026 side (does not mutate the output ids).
+  # --- MATCHED-SAMPLE (constant composition), 2026 vs 2025 ------------------
+  # Change computed over parcels present in BOTH years (matched by Account
+  # Number), so new builds / demolitions don't masquerade as price change — same
+  # correction as 04_aggregate_historical. 2025 row-level values come from the
+  # cleaned historical (name-only is fine: each account is assigned by its 2026
+  # neighbourhood); the 2026 side is assess_clean resolved to canonical id, as
+  # the aggregate is. The LEVEL median stays full-population.
+  hist_clean_path <- sort(list.files("output", pattern = "^pa_hist_clean_.*\\.csv$",
+                                     full.names = TRUE), decreasing = TRUE)[1]
+  val_2025 <- read_csv(hist_clean_path, show_col_types = FALSE,
+                       col_select = c(`Account Number`, `Assessment Year`, `Assessed Value`)) |>
+    filter(`Assessment Year` == 2025) |>
+    group_by(.acct = as.character(`Account Number`)) |>
+    summarise(.val_2025 = median(`Assessed Value`, na.rm = TRUE), .groups = "drop")
+  matched_2026 <- apply_crosswalk(assess_clean) |>
+    group_by(`Neighbourhood ID`, .acct = as.character(`Account Number`)) |>
+    summarise(.val_2026 = median(`Assessed Value`, na.rm = TRUE), .groups = "drop") |>
+    inner_join(val_2025, by = ".acct") |>
+    group_by(.canon_id = as.character(`Neighbourhood ID`)) |>
+    summarise(.matched_yoy = (median(.val_2026, na.rm = TRUE) - median(.val_2025, na.rm = TRUE))
+              / median(.val_2025, na.rm = TRUE) * 100, .groups = "drop")
+
+  # Temp canonical key for the 2026 aggregate side (does not mutate output ids).
   canon_id_2026 <- nbhd_agg_gated |>
     select(`Neighbourhood ID`, Neighbourhood) |>
     apply_crosswalk() |>
@@ -255,12 +279,16 @@ if (file.exists(prev_path)) {
   stopifnot(length(canon_id_2026) == nrow(nbhd_agg_gated))
 
   nbhd_agg_gated <- nbhd_agg_gated |>
-    mutate(.canon_id = canon_id_2026) |>
-    left_join(prev_2025, by = ".canon_id") |>
-    mutate(yoy_pct_change = (median_assessvalue - median_2025) / median_2025 * 100) |>
-    select(-.canon_id, -median_2025)
+    mutate(.canon_id = as.character(canon_id_2026)) |>
+    left_join(prev_2025,    by = ".canon_id") |>
+    left_join(matched_2026, by = ".canon_id") |>
+    # Preserve the suppression gate EXACTLY (NA where 2026 or 2025 suppressed);
+    # only the VALUE is matched-sample instead of full-pop differenced.
+    mutate(yoy_pct_change = if_else(is.na(median_assessvalue) | is.na(median_2025),
+                                    NA_real_, .matched_yoy)) |>
+    select(-.canon_id, -median_2025, -.matched_yoy)
   write_csv(nbhd_agg_gated, out_path)
-  cat(sprintf("Added yoy_pct_change (2026 vs 2025, keyed on canonical_id); %s neighbourhoods have a value. Re-wrote %s\n",
+  cat(sprintf("Added matched-sample yoy_pct_change (2026 vs 2025, canonical_id); %s neighbourhoods have a value. Re-wrote %s\n",
               comma(sum(!is.na(nbhd_agg_gated$yoy_pct_change))), out_path))
 } else {
   warning("2025 historical aggregate not found at ", prev_path,

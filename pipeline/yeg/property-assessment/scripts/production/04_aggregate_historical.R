@@ -218,28 +218,61 @@ for (yr in years_present) {
 }
 
 # ============================================================
-# 5. Year-over-year change — second pass over the written CSVs
-#    The per-year loop above processes years independently, so
-#    yoy can't be computed inside it. Read all aggregates back,
-#    compute the per-neighbourhood median yoy % change, and write
-#    the new yoy_pct_change column back into each year's CSV.
+# 5. Year-over-year change — MATCHED-SAMPLE (constant composition)
+#    The change is computed over parcels present in BOTH years (matched by
+#    Account Number), not by differencing two full-population medians. New builds
+#    entering the roll and demolitions/teardowns leaving therefore do NOT
+#    masquerade as price change — the documented composition correction
+#    (RPPI Handbook mix-adjustment; StatCan matched-model; FHFA "same physical
+#    units"). The LEVEL median per year (above) stays FULL-POPULATION — only this
+#    cross-year change is matched. Keyed on canonical Neighbourhood ID so a rename
+#    (OLIVER -> WÎHKWÊNTÔWIN) stays one continuous series, and an account in the
+#    same canonical neighbourhood both years is the matched pair.
 # ============================================================
+
+# One value per (canonical nbhd, account, year): median over any duplicate rows.
+acct_year <- pa_clean |>
+  group_by(`Neighbourhood ID`, `Account Number`, `Assessment Year`) |>
+  summarise(.val = median(`Assessed Value`, na.rm = TRUE), .groups = "drop")
+
+# For each account, its value in the IMMEDIATELY prior year (NA if last year is a
+# gap); the matched set for (nbhd, year) is the accounts with a value in both.
+# matched yoy = % change of the median over that constant set.
+matched_yoy <- acct_year |>
+  arrange(`Neighbourhood ID`, `Account Number`, `Assessment Year`) |>
+  group_by(`Neighbourhood ID`, `Account Number`) |>
+  mutate(.val_prev = if_else(`Assessment Year` - lag(`Assessment Year`) == 1L,
+                             lag(.val), NA_real_)) |>
+  ungroup() |>
+  filter(!is.na(.val_prev)) |>
+  group_by(`Neighbourhood ID`, year = `Assessment Year`) |>
+  summarise(.matched_yoy = (median(.val, na.rm = TRUE) - median(.val_prev, na.rm = TRUE))
+            / median(.val_prev, na.rm = TRUE) * 100,
+            n_matched = n(), .groups = "drop")
 
 all_agg <- map_dfr(years_present, function(yr) {
   read_csv(sprintf("output/hist_aggregates/neighbourhood_aggregates_%d.csv", yr),
            show_col_types = FALSE) |>
     mutate(year = yr)
 }) |>
-  # Key yoy on canonical_id, NOT name, so a rename does not break the series.
-  # NA-id rows (unmatched) fall back to their name as the key so they don't all
-  # collapse into one bogus "NA" group across years.
-  mutate(.yoy_key = coalesce(as.character(`Neighbourhood ID`), Neighbourhood)) |>
+  # .yoy_key only for ordering/suppression; .join_id (string) joins to the matched
+  # table without altering the written `Neighbourhood ID` column's type.
+  mutate(.yoy_key  = coalesce(as.character(`Neighbourhood ID`), Neighbourhood),
+         .join_id  = as.character(`Neighbourhood ID`)) |>
+  left_join(matched_yoy |>
+              transmute(.join_id = as.character(`Neighbourhood ID`), year, .matched_yoy),
+            by = c(".join_id", "year")) |>
   arrange(.yoy_key, year) |>
   group_by(.yoy_key) |>
-  mutate(yoy_pct_change = (median_assessvalue - lag(median_assessvalue))
-         / lag(median_assessvalue) * 100) |>
+  # Preserve the suppression gate EXACTLY: yoy exists only where this year's and
+  # the prior year's medians are both shown (median is NA when N<100-suppressed or
+  # first year), so the NA pattern is identical to the old full-pop yoy. Only the
+  # VALUE changes (matched vs full-pop differenced) for non-suppressed years.
+  mutate(yoy_pct_change = if_else(
+    is.na(median_assessvalue) | is.na(lag(median_assessvalue)),
+    NA_real_, .matched_yoy)) |>
   ungroup() |>
-  select(-.yoy_key)
+  select(-.yoy_key, -.join_id, -.matched_yoy)
 
 for (yr in years_present) {
   yr_data <- all_agg |> filter(year == yr) |> select(-year)
@@ -247,7 +280,7 @@ for (yr in years_present) {
     sprintf("output/hist_aggregates/neighbourhood_aggregates_%d.csv", yr))
 }
 
-cat(sprintf("yoy_pct_change written back into all %d aggregate CSVs.\n\n",
+cat(sprintf("Matched-sample yoy_pct_change written back into all %d aggregate CSVs.\n\n",
             length(years_present)))
 
 # ============================================================
