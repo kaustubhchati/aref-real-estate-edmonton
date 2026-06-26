@@ -139,6 +139,10 @@ runs/reports/
 # in website/public/downloads/ + website/public/data/). All regenerable from the
 # runner, so ignored — same policy as the other output/ artifacts above.
 pipeline/yeg/property-assessment/output/neighbourhoods_*_recovered.geojson
+# 07b combined all-years build intermediate (the PUBLISHED copy under
+# website/public/data/property-assessment/ is the tracked artifact, like the
+# per-year published GeoJSONs).
+pipeline/yeg/property-assessment/output/neighbourhoods_all_years.geojson
 pipeline/yeg/property-assessment/output/manifest.json
 pipeline/yeg/property-assessment/output/neighbourhood_aggregates_*.csv
 # 07's non-residential id sidecar (consumed by 08b) — regenerable intermediate.

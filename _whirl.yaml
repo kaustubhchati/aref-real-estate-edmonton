@@ -34,6 +34,13 @@ sections:
       # frontend never consumed. 06_geojson_current is the sole current-year builder now.
       - scripts/production/06_geojson_current.R
       - scripts/production/07_geojson_historical.R
+      # 07b reshapes the per-year GeoJSONs 06+07 wrote into ONE geometry-once
+      # file (neighbourhoods_all_years.geojson) carrying every year's values as
+      # <metric>_<year> / polygon_state_<year> properties, for the year-slider
+      # paint-swap. ADDITIVE: 06/07 still emit the per-year files the frontend
+      # consumes today; 07b publishes the combined file alongside. It reads only
+      # 06/07's outputs, so it runs after them.
+      - scripts/production/07b_combine_geojson.R
       - scripts/production/08_emit_manifest.R
 
     # Order invariants (data-driven; consumed by the dry-run check in
@@ -61,6 +68,8 @@ sections:
       scripts/production/07_geojson_historical.R:
         - output/neighbourhoods_2012_recovered.geojson
         - output/neighbourhoods_2025_recovered.geojson
+      scripts/production/07b_combine_geojson.R:
+        - output/neighbourhoods_all_years.geojson
 
     # --- Handoff: publish output/ -> website/public after ALL scripts succeed ---
     # The runner is now the SOLE writer of website/public. 07_geojson_historical
@@ -86,6 +95,10 @@ sections:
       files:
         - { from: output/neighbourhood_aggregates_2026.csv, to: website/public/data/yeg_property-assessment_per_nbhd_2026.csv }
         - { from: output/neighbourhood_aggregates_2026.csv, to: website/public/downloads/yeg_property-assessment_per_nbhd_2026.csv }
+        # Combined all-years choropleth (07b) — published alongside the per-year
+        # GeoJSONs (above, via the manifest-year loop) for the year-slider
+        # paint-swap. Name carries no year/span (literal-free, frontend-stable).
+        - { from: output/neighbourhoods_all_years.geojson, to: website/public/data/property-assessment/neighbourhoods_all_years.geojson }
 
   building-permits:
     cwd: pipeline/yeg/building-permits
