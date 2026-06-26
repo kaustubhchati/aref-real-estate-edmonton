@@ -172,13 +172,49 @@ cat("Rows dropped:", format(n_drop_r1, big.mark = ","),
 #    is.na(Lot Size) is a STRUCTURAL signal — manufactured homes
 #    do not own their land so no lot size is recorded.
 #    Also drop Assessed Value == 0 (data entry errors).
+#
+#    2024 LOT-SIZE FIELD-GAP CARVE-OUT (KC 2026-06-26):
+#    Edmonton's Jan-2024 Zoning Bylaw 20001 transition left Lot Size
+#    NULL for ~147k residential parcels in the City's 2024 historical
+#    export (61.5% lot-size-present vs ~97% in 2023/2025) — a SOURCE
+#    field-gap, NOT missing parcels (raw 2024 is a full ~427k accounts;
+#    see scratch attribution). A blanket NA-Lot-Size drop over-drops
+#    them. The GENUINE structural null-lot accounts (manufactured homes
+#    / leased land) carry the SAME account ids every year, so we
+#    identify that set from 2023 (a clean year) and keep removing
+#    exactly those from 2024, while RETAINING 2024's other null-lot
+#    parcels (the export field-gap). Account-ID set membership, sourced
+#    from 2023, applied to 2024. R1 + the assessed-value checks are
+#    unchanged, all years; non-2024 years behave exactly as before.
 # ============================================================
 
 n_pre_r3 <- nrow(pa_r1)
 
+# Structural null-lot set = accounts R3 drops for NA Lot Size in 2023 (the clean
+# year): manufactured homes / leased land own no land, so no lot size — persistent
+# ids. This 2023 set is the sole discriminator applied to 2024 below.
+structural_null_lot_2023 <- pa_r1 |>
+  filter(`Assessment Year` == 2023, is.na(`Lot Size`)) |>
+  distinct(`Account Number`) |>
+  pull(`Account Number`)
+
+n_2024_nulllot    <- sum(pa_r1$`Assessment Year` == 2024 & is.na(pa_r1$`Lot Size`))
+n_2024_structural <- sum(pa_r1$`Assessment Year` == 2024 & is.na(pa_r1$`Lot Size`) &
+                           pa_r1$`Account Number` %in% structural_null_lot_2023)
+cat("--- 2024 lot-size field-gap carve-out (KC) ---\n")
+cat("2023 structural null-lot accounts:   ", format(length(structural_null_lot_2023), big.mark = ","), "\n")
+cat("2024 null-lot parcels:               ", format(n_2024_nulllot, big.mark = ","), "\n")
+cat("  structural (removed from 2024):    ", format(n_2024_structural, big.mark = ","), "\n")
+cat("  field-gap  (retained in 2024):     ", format(n_2024_nulllot - n_2024_structural, big.mark = ","), "\n\n")
+
 pa_r3 <- pa_r1 |>
   filter(
-    !is.na(`Lot Size`),
+    # Drop NA Lot Size, EXCEPT 2024's field-gap: keep a row if it HAS a Lot Size,
+    # OR it is a 2024 null-lot parcel whose account is NOT in the 2023 structural
+    # set (i.e. the city-export field-gap, retained).
+    !is.na(`Lot Size`) |
+      (`Assessment Year` == 2024 &
+         !(`Account Number` %in% structural_null_lot_2023)),
     `Assessed Value` > 0,
     !is.na(`Assessed Value`)
   )
