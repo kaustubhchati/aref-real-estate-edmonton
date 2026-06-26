@@ -70,12 +70,68 @@ export function cityHasAnyData(manifestData, city) {
 
 // === Resolving a data file ====================================================
 
-// Map a (city, year) to its committed GeoJSON path. Gating lives upstream:
-// callers only resolve a year that getYearsForCity returned, so a city/year
-// without data never reaches here. The filename is currently year-keyed only
-// (Edmonton history); revisit the path shape when Calgary's files land.
+// Map a (city, year) to its committed per-year GeoJSON path. Gating lives
+// upstream: callers only resolve a year that getYearsForCity returned, so a
+// city/year without data never reaches here. The filename is currently
+// year-keyed only (Edmonton history); revisit the path shape when Calgary's
+// files land. RETAINED for the per-year fallback path — the live map now loads
+// the combined all-years file (resolveCombinedUrl) and paint-swaps the year.
 export function resolveDataUrl(city, year) {
   return assetUrl(`/data/property-assessment/neighbourhoods_${year}_recovered.geojson`);
+}
+
+// The ONE combined all-years GeoJSON for a city: geometry serialized once, every
+// year's values carried as flat <field>_<year> properties (built by 07b). The
+// map loads this once and a year change is a paint swap, not a data reload — no
+// year in the URL (refresh-by-design; years still come from the manifest).
+// City-agnostic today (Edmonton only); gating upstream (years.length) means a
+// city with no data resolves null, so Calgary never reaches here.
+export function resolveCombinedUrl(/* city */) {
+  return assetUrl(`/data/property-assessment/neighbourhoods_all_years.geojson`);
+}
+
+// === Per-year projection of the combined file =================================
+
+// The value fields the combined file carries per year as <field>_<year>. The
+// four identity fields (Neighbourhood ID, display_name, shapefile_name,
+// district) are year-invariant and NOT suffixed. Mirrors 07b's VALUE_COLS — the
+// backend/frontend contract for which columns are year-keyed.
+export const PER_YEAR_FIELDS = [
+  "polygon_state",
+  "n_properties",
+  "median_assessvalue",
+  "avall_public",
+  "sd_assessedvalue",
+  "median_yearbuilt",
+  "pct_with_unit",
+  "avg_assessvalue_without_unit",
+  "avg_lotsize",
+  "yoy_pct_change",
+];
+
+// Project a combined feature's properties to the BARE-named shape the rest of
+// the section already expects, for one year: <field>_<year> -> <field>. Identity
+// fields pass through untouched. This is the seam that lets metricStops, the
+// popups, search, and the sidebar stats keep reading bare names unchanged while
+// the underlying source is the combined all-years file.
+export function projectYearProps(props, year) {
+  const out = { ...props };
+  for (const f of PER_YEAR_FIELDS) out[f] = props[`${f}_${year}`];
+  return out;
+}
+
+// Project a whole combined FeatureCollection to one year's bare-named view.
+// Geometry is shared by reference (not copied) — only properties are reshaped —
+// so this stays cheap to recompute on every year change. Returns null on null.
+export function projectYearCollection(gj, year) {
+  if (!gj) return null;
+  return {
+    ...gj,
+    features: gj.features.map((ft) => ({
+      ...ft,
+      properties: projectYearProps(ft.properties, year),
+    })),
+  };
 }
 
 // === Empty-state copy =========================================================

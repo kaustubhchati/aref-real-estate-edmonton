@@ -21,6 +21,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import maplibregl from "maplibre-gl";
 import { buildPopupHtml, POPUP_ROWS } from "./choroplethStyle.js";
+import { projectYearProps } from "./dataSources.js";
 import { sidebarLeftPad } from "../../components/mapPadding.js";
 
 const SOURCE_ID = "nbhd";
@@ -117,6 +118,9 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
     if (!e.features?.length) return;
     map.getCanvas().style.cursor = "pointer";
     const f = e.features[0];
+    // The live source is the combined all-years file (year-suffixed props); the
+    // popup + sidebar read bare names, so project this feature to the shown year.
+    const props = projectYearProps(f.properties, year);
 
     // Always update popup position smoothly on every move.
     // Only update HTML (expensive DOM rebuild) when feature changes.
@@ -149,7 +153,7 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
       // Tier 1 sidebar panel: debounce 200ms on its own timer (independent of
       // the 900ms Tier 2 popup timer below).
       clearTimeout(sidebarTimer);
-      sidebarTimer = setTimeout(() => onHover?.(f.properties), 200);
+      sidebarTimer = setTimeout(() => onHover?.(props), 200);
 
       // Show popup only after 900ms dwell on the same feature.
       // This eliminates jitter when the cursor sweeps across the map
@@ -158,7 +162,7 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
         if (hoveredId === f.id) {
           hoverPopup
             .setLngLat(e.lngLat)
-            .setHTML(buildPopupHtml(f.properties, false, year))
+            .setHTML(buildPopupHtml(props, false, year))
             .addTo(map);
         }
       }, 900);
@@ -179,6 +183,8 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
   function onClickFill(e) {
     if (!e.features?.length) return;
     const f = e.features[0];
+    // Combined-source props (year-suffixed) → bare names for the shown year.
+    const props = projectYearProps(f.properties, year);
 
     clearHover();
     clearPinned();
@@ -187,9 +193,9 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
     setPinned(pinnedId, true);
     pinnedPopup
       .setLngLat(e.lngLat)
-      .setHTML(buildPopupHtml(f.properties, true, year))
+      .setHTML(buildPopupHtml(props, true, year))
       .addTo(map);
-    wireCopyButton(f.properties);
+    wireCopyButton(props);
     // The popup's own close button (X) clears feature-state pinning.
     pinnedPopup.once("close", () => {
       if (pinnedId !== null) {

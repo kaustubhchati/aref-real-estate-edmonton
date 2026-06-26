@@ -390,50 +390,106 @@ export function makeDotPattern(size = 10, dotColor = "rgba(60,55,42,0.55)") {
   return ctx.getImageData(0, 0, size, size);
 }
 
+// ---- Year-keyed property reads (combined all-years file) -------------------
+// The map source is the ONE combined GeoJSON (07b): geometry once, every year's
+// values as flat <field>_<year> properties. So every paint/filter/layout
+// expression that reads a per-year field reads `<field>_<year>` for the selected
+// year — and a YEAR change is a paint swap (applyYearMetric below), not a data
+// reload. Identity fields (display_name) are NOT year-keyed. yget centralises
+// the suffixing so the expression builders read like the old bare-name ones.
+const yget = (field, year) => ["get", `${field}_${year}`];
+
 // ---- Fill-colour expression -----------------------------------------------
 // case: state == aggregated → linear interpolation over the given stops,
-//       reading the chosen metric column
+//       reading the chosen metric column (for `year`)
 // otherwise → that state's flat fillColor (or fallback grey).
-function buildFillColourExpression(metricKey, stops) {
+function buildFillColourExpression(metricKey, year, stops) {
   const isYoy = metricKey === "yoy_pct_change";
   // Every aggregated sequential metric INTERPOLATES over its per-year quantile stop
   // VALUES (min/q25/median/q75/max) — a CONTINUOUS colour space (so the colour can
-  // tween on a year swap, which the old `step` path could not) with breaks still
-  // anchored at the quantile boundaries (no raw-value mid-plateau). yoy is the only
-  // special case: a missing prior-year value is painted no_data grey rather than
-  // clamped to an extreme ramp colour.
+  // tween on a year swap via fill-color-transition) with breaks still anchored at
+  // the quantile boundaries (no raw-value mid-plateau). yoy is the only special
+  // case: a missing prior-year value is painted no_data grey rather than clamped to
+  // an extreme ramp colour.
   const MISSING = -999;
-  const value = ["number", ["get", metricKey], isYoy ? MISSING : 0];
+  const value = ["number", yget(metricKey, year), isYoy ? MISSING : 0];
   const interp = ["interpolate", ["linear"], value];
   for (const s of stops) interp.push(s.v, s.c);
   const aggregatedFill = isYoy
     ? ["case", ["==", value, MISSING], STATE_STYLE.no_data.fillColor, interp]
     : interp;
 
+  const state = yget("polygon_state", year);
   return [
     "case",
-    ["==", ["get", "polygon_state"], "aggregated"],                  aggregatedFill,
-    ["==", ["get", "polygon_state"], "suppressed_low_n"],            STATE_STYLE.suppressed_low_n.fillColor,
-    ["==", ["get", "polygon_state"], "non_residential"],             STATE_STYLE.non_residential.fillColor,
-    ["==", ["get", "polygon_state"], "manufactured_home_community"], STATE_STYLE.manufactured_home_community.fillColor,
-    ["==", ["get", "polygon_state"], "no_data"],                     STATE_STYLE.no_data.fillColor,
+    ["==", state, "aggregated"],                  aggregatedFill,
+    ["==", state, "suppressed_low_n"],            STATE_STYLE.suppressed_low_n.fillColor,
+    ["==", state, "non_residential"],             STATE_STYLE.non_residential.fillColor,
+    ["==", state, "manufactured_home_community"], STATE_STYLE.manufactured_home_community.fillColor,
+    ["==", state, "no_data"],                     STATE_STYLE.no_data.fillColor,
     "#cccccc",
   ];
 }
 
-// Public fill-colour expression for the chosen metric + stops. The page uses
-// this with map.setPaintProperty to repaint on a metric/scale change without
-// remounting the map (see MapView's note on live updates).
-export function choroplethFillColor(metricKey = "median_assessvalue", stops = STOPS) {
-  return buildFillColourExpression(metricKey, stops);
+// Public fill-colour expression for the chosen metric + year + stops. The page
+// uses this (via applyYearMetric) with map.setPaintProperty to repaint on a
+// metric/year/scale change without remounting the map.
+export function choroplethFillColor(metricKey = "median_assessvalue", year, stops = STOPS) {
+  return buildFillColourExpression(metricKey, year, stops);
 }
+
+// ---- The other year-keyed expressions ---------------------------------------
+// fill-opacity (lifts aggregated polygons, dims glass states) and the per-state
+// FILTERS / colour matches / count label — all read polygon_state (or
+// n_properties) for `year`. Factored out so choroplethLayers (initial mount) and
+// applyYearMetric (year/metric change) build them from ONE source of truth.
+function fillOpacityExpr(year) {
+  const state = yget("polygon_state", year);
+  return [
+    "case",
+    ["==", state, "aggregated"],
+      [
+        "case",
+        ["boolean", ["feature-state", "hover"], false], 0.88,
+        ["boolean", ["feature-state", "pinned"], false], 0.88,
+        0.74,
+      ],
+    ["boolean", ["feature-state", "hover"], false], 0.15,
+    ["boolean", ["feature-state", "pinned"], false], 0.15,
+    0.04,
+  ];
+}
+const stateEqFilter = (year, state) => ["==", yget("polygon_state", year), state];
+const patternFilter = (year) => [
+  "in", yget("polygon_state", year),
+  ["literal", ["non_residential", "manufactured_home_community"]],
+];
+const patternMatch = (year) => [
+  "match", yget("polygon_state", year),
+  "non_residential",             "stripes",
+  "manufactured_home_community", "dots",
+  "stripes",
+];
+const solidOutlineFilter = (year) => [
+  "in", yget("polygon_state", year),
+  ["literal", ["aggregated", "non_residential", "manufactured_home_community"]],
+];
+const solidOutlineColor = (year) => [
+  "match", yget("polygon_state", year),
+  "non_residential",             STATE_STYLE.non_residential.outlineColor,
+  "manufactured_home_community", STATE_STYLE.manufactured_home_community.outlineColor,
+  STATE_STYLE.aggregated.outlineColor,
+];
+const suppressedCountText = (year) => [
+  "concat", "N=", ["to-string", yget("n_properties", year)],
+];
 
 // ---- Layer specs handed to MapView ----------------------------------------
 // One function so the consumer file is short. Layers are in z-order
 // (first = bottom). MapView inserts them all below the basemap's labels.
 // `stops` selects the colour ramp and `metricKey` the column to colour by;
 // both default to the locked median scale when a caller doesn't pass them.
-export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue") {
+export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue", year) {
   return [
     // 1. Fill colour for every polygon. Aggregated polygons get the solid ramp
     //    (lifting on hover/pin); non-aggregated polygons are near-transparent
@@ -443,22 +499,10 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
       id: "nbhd-fill",
       type: "fill",
       paint: {
-        "fill-color": buildFillColourExpression(metricKey, stops),
-        // Tween the colour on a metric/scale change instead of snapping.
+        "fill-color": buildFillColourExpression(metricKey, year, stops),
+        // Tween the colour on a metric/year/scale change instead of snapping.
         "fill-color-transition": paintTransition(DUR_BASE),
-        "fill-opacity": [
-          "case",
-          ["==", ["get", "polygon_state"], "aggregated"],
-            [
-              "case",
-              ["boolean", ["feature-state", "hover"], false], 0.88,
-              ["boolean", ["feature-state", "pinned"], false], 0.88,
-              0.74,
-            ],
-          ["boolean", ["feature-state", "hover"], false], 0.15,
-          ["boolean", ["feature-state", "pinned"], false], 0.15,
-          0.04,
-        ],
+        "fill-opacity": fillOpacityExpr(year),
         // Spec-compliant paint-level transition. Note: MapLibre does not
         // animate feature-state-driven changes (hover/pinned) through this —
         // it applies to data/zoom-driven opacity updates only.
@@ -469,18 +513,9 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
     {
       id: "nbhd-pattern",
       type: "fill",
-      filter: [
-        "in",
-        ["get", "polygon_state"],
-        ["literal", ["non_residential", "manufactured_home_community"]],
-      ],
+      filter: patternFilter(year),
       paint: {
-        "fill-pattern": [
-          "match", ["get", "polygon_state"],
-          "non_residential",             "stripes",
-          "manufactured_home_community", "dots",
-          "stripes",
-        ],
+        "fill-pattern": patternMatch(year),
         // Hidden: stripes/dots on a glass polygon look wrong — the outline
         // alone signals the state now. Layer kept so re-enabling is one value.
         "fill-opacity": 0.0,
@@ -491,18 +526,9 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
     {
       id: "nbhd-outline-solid",
       type: "line",
-      filter: [
-        "in",
-        ["get", "polygon_state"],
-        ["literal", ["aggregated", "non_residential", "manufactured_home_community"]],
-      ],
+      filter: solidOutlineFilter(year),
       paint: {
-        "line-color": [
-          "match", ["get", "polygon_state"],
-          "non_residential",             STATE_STYLE.non_residential.outlineColor,
-          "manufactured_home_community", STATE_STYLE.manufactured_home_community.outlineColor,
-          STATE_STYLE.aggregated.outlineColor,
-        ],
+        "line-color": solidOutlineColor(year),
         // Thin at city-wide zoom, fuller as you zoom into a neighbourhood, so
         // outlines don't visually crowd the choropleth when zoomed out.
         // Shared ~0.5px→1px discriminating stroke (choroplethTheme); replaces
@@ -514,7 +540,7 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
     {
       id: "nbhd-outline-suppressed",
       type: "line",
-      filter: ["==", ["get", "polygon_state"], "suppressed_low_n"],
+      filter: stateEqFilter(year, "suppressed_low_n"),
       paint: {
         "line-color":     STATE_STYLE.suppressed_low_n.outlineColor,
         // Same zoom ramp as the solid outline: thin out, full in.
@@ -530,7 +556,7 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
     {
       id: "nbhd-outline-nodata",
       type: "line",
-      filter: ["==", ["get", "polygon_state"], "no_data"],
+      filter: stateEqFilter(year, "no_data"),
       paint: {
         "line-color":     STATE_STYLE.no_data.outlineColor,
         // Same zoom ramp as the solid outline: thin out, full in.
@@ -594,10 +620,10 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
     {
       id: "nbhd-suppressed-count",
       type: "symbol",
-      filter: ["==", ["get", "polygon_state"], "suppressed_low_n"],
+      filter: stateEqFilter(year, "suppressed_low_n"),
       minzoom: 11,
       layout: {
-        "text-field": ["concat", "N=", ["to-string", ["get", "n_properties"]]],
+        "text-field": suppressedCountText(year),
         "text-size": 9,
         "text-font": ["Noto Sans Regular"],
         // Collision avoidance: try centred first (keeps the current on-centroid
@@ -614,6 +640,28 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
       },
     },
   ];
+}
+
+// Reapply every YEAR/METRIC-dependent map expression on a persistent map — the
+// paint-swap that replaces the old per-year setData. Called by the page on a
+// year OR metric change; the source (combined all-years file) is never reloaded,
+// so geometry stays put and nbhd-fill's fill-color-transition tweens the colour.
+// Mirrors choroplethLayers exactly (same builders), updating only the layers
+// whose expressions read a per-year field — nbhd-highlight (feature-state only)
+// and nbhd-labels (display_name) are year-invariant and untouched. Guarded:
+// the map can be mid-teardown (getLayer throws on a removed map).
+export function applyYearMetric(map, metricKey, year, stops) {
+  if (!map || !map.getLayer("nbhd-fill")) return;
+  map.setPaintProperty("nbhd-fill", "fill-color", buildFillColourExpression(metricKey, year, stops));
+  map.setPaintProperty("nbhd-fill", "fill-opacity", fillOpacityExpr(year));
+  map.setFilter("nbhd-pattern", patternFilter(year));
+  map.setPaintProperty("nbhd-pattern", "fill-pattern", patternMatch(year));
+  map.setFilter("nbhd-outline-solid", solidOutlineFilter(year));
+  map.setPaintProperty("nbhd-outline-solid", "line-color", solidOutlineColor(year));
+  map.setFilter("nbhd-outline-suppressed", stateEqFilter(year, "suppressed_low_n"));
+  map.setFilter("nbhd-outline-nodata", stateEqFilter(year, "no_data"));
+  map.setFilter("nbhd-suppressed-count", stateEqFilter(year, "suppressed_low_n"));
+  map.setLayoutProperty("nbhd-suppressed-count", "text-field", suppressedCountText(year));
 }
 
 // Pattern images for MapView to register on load (before any layer that

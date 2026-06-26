@@ -39,7 +39,7 @@ import {
   YOY_STOPS,
   stopsFromScale,
   metricStops,
-  choroplethFillColor,
+  applyYearMetric,
   choroplethLayers,
   choroplethImages,
 } from "./choroplethStyle.js";
@@ -50,7 +50,8 @@ import {
   getYearsForCity,
   getDefaultYear,
   getColourScale,
-  resolveDataUrl,
+  resolveCombinedUrl,
+  projectYearCollection,
   describeEmpty,
 } from "./dataSources.js";
 import {
@@ -146,11 +147,12 @@ export default function PropertyAssessmentMap() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [city, year, metric, manifest]);
 
-  // The years this city offers, and the URL for the current selection. A year
-  // the manifest doesn't list (any Calgary year today) yields url=null →
-  // EmptyState. resolveDataUrl always returns a path, so the gate lives here.
+  // The years this city offers, and the URL for the current selection. The map
+  // now loads ONE combined all-years file per city (07b) and a year change is a
+  // paint swap, not a new URL — so the URL depends only on whether the city has
+  // data. A city with no data (Calgary today) yields url=null → EmptyState.
   const years = getYearsForCity(manifest, city);
-  const url = year != null && years.includes(year) ? resolveDataUrl(city, year) : null;
+  const url = years.length ? resolveCombinedUrl(city) : null;
 
   const selectedMetric = METRICS.find((m) => m.key === metric) ?? METRICS[0];
 
@@ -168,12 +170,19 @@ export default function PropertyAssessmentMap() {
   // gj is null until the fetch resolves — metricStops falls back to the locked
   // STOPS until then. Memoised so its identity is stable between renders (the
   // repaint effect and the Legend both depend on it).
+  // The map source is the combined all-years file; project it to the selected
+  // year's bare-named view (<field>_<year> → <field>) for every JS consumer:
+  // the legend stops below, search, the sidebar stats, and the interactions.
+  // Cheap (properties only; geometry shared by reference) so it recomputes per
+  // year. null until the fetch resolves.
+  const gjView = useMemo(() => projectYearCollection(gj, year), [gj, year]);
+
   const stops = useMemo(() => {
     if (metric === "yoy_pct_change") return YOY_STOPS;
     return metric === "median_assessvalue"
       ? stopsFromScale(getColourScale(manifest, city, year), metric)
-      : metricStops(gj, metric);
-  }, [metric, manifest, city, year, gj]);
+      : metricStops(gjView, metric);
+  }, [metric, manifest, city, year, gjView]);
 
   // Switching city resets the year to that city's default in the same update,
   // so we never carry one city's year onto another (or onto a city with none).
@@ -182,20 +191,16 @@ export default function PropertyAssessmentMap() {
     setYear(getDefaultYear(manifest, nextCity));
   }
 
-  // Single effect on [url]: reset all derived state, then fetch if there's a
-  // real URL. When url is null we leave gj/map null and the JSX renders
-  // EmptyState instead of MapView — no fetch attempted, no errors logged.
-  // setMap(null) is safe even mid-flight: when url goes null the JSX renders
-  // EmptyState INSTEAD of MapView, so MapView unmounts and map.remove() in its
-  // cleanup destroys the instance. MapView is NOT keyed by url — a value→value
-  // year swap keeps the SAME MapView mounted and swaps the source in place.
+  // Fetch the city's combined all-years file. url is constant across YEARS now
+  // (a year change is a paint swap, not a new URL), so this re-runs only on a
+  // CITY change. When url is null (a city with no data, e.g. Calgary) we leave
+  // gj/map null and the JSX renders EmptyState instead of MapView; MapView then
+  // unmounts and map.remove() in its cleanup destroys the instance.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setFetchError(null);
-    // A null url = no data for this selection (e.g. a Calgary year): clear so the
-    // empty state shows and the persistent map tears down. A valid→valid change
-    // (a YEAR swap) keeps map + the old gj so MapView dips-and-swaps the source
-    // in place (one WebGL context); gj updates when the new file resolves.
+    // A null url = the city has no data: clear so the empty state shows and the
+    // persistent map tears down.
     if (!url) {
       setMap(null);
       setGj(null);
@@ -213,41 +218,41 @@ export default function PropertyAssessmentMap() {
     return () => { cancelled = true; };
   }, [url]);
 
-  // Repaint the fill when the metric or its colour scale changes, WITHOUT
-  // remounting the map (which would refetch the GeoJSON and reset zoom/pan).
-  // MapView reads `layers` only at mount, so live updates go through
-  // setPaintProperty — the mechanism MapView documents for exactly this.
+  // Repaint on a metric OR year change — a paint swap on the PERSISTENT map (no
+  // data reload, no remount). Year + metric both feed the year-keyed
+  // paint/filter/layout expressions; the combined source stays put and
+  // nbhd-fill's fill-color-transition tweens the colour old→new. This is the
+  // setData-free year slider — MapView reads `layers` only at mount, so every
+  // later update goes through applyYearMetric (setPaintProperty/setFilter).
   useEffect(() => {
     if (!map) return;
     try {
-      // The map can be mid-teardown here: switching to the no-prior-year empty
-      // state unmounts MapView without changing `url` (so `map` still points at
-      // the now-removed instance). getLayer on a removed map throws; ignore it
-      // — the next mounted map repaints via onLoad → this effect re-running.
-      if (map.getLayer("nbhd-fill")) {
-        map.setPaintProperty("nbhd-fill", "fill-color", choroplethFillColor(metric, stops));
-      }
+      // The map can be mid-teardown (switching to the no-prior-year empty state
+      // unmounts MapView without changing `url`). applyYearMetric guards getLayer;
+      // the try/catch backstops a fully-removed instance — the next mounted map
+      // repaints via onLoad → this effect re-running.
+      applyYearMetric(map, metric, year, stops);
     } catch {
       /* map removed; no-op */
     }
-  }, [map, metric, stops]);
+  }, [map, metric, year, stops]);
 
-  const names = useMemo(() => (gj ? indexNamesForSearch(gj) : []), [gj]);
-  const flyAndPinByName = useChoroplethInteractions(map, gj, year, setHoveredFeature);
+  const names = useMemo(() => (gjView ? indexNamesForSearch(gjView) : []), [gjView]);
+  const flyAndPinByName = useChoroplethInteractions(map, gjView, year, setHoveredFeature);
 
   // Sum n_properties across every polygon that has a finite count. This includes
   // aggregated + suppressed_low_n polygons and naturally excludes non_residential
   // / manufactured_home_community / no_data (which carry no count). Recomputes on
   // year switch (gj changes).
   const propertyCount = useMemo(() => {
-    if (!gj) return 0;
+    if (!gjView) return 0;
     let sum = 0;
-    for (const f of gj.features) {
+    for (const f of gjView.features) {
       const n = Number(f.properties?.n_properties);
       if (Number.isFinite(n)) sum += n;
     }
     return sum;
-  }, [gj]);
+  }, [gjView]);
 
   // Count-up of the cleaned property count, summed live from the loaded GeoJSON.
   const propCount = useCountUp(propertyCount);
@@ -471,12 +476,12 @@ export default function PropertyAssessmentMap() {
             body={`YoY change is not available for the earliest year in the dataset (${year}).`}
           />
         ) : url ? (
-          // Year/city swaps no longer remount: MapView persists and dips-and-
-          // swaps the source in place (one WebGL context). The boundary's
-          // resetKey={url} clears any caught error on a new selection without a
-          // remount, and still keeps a WebGL/MapLibre failure from blanking the
-          // page. MapView only mounts/unmounts on the url-null boundary (a city
-          // with no data), where the fetch effect tears down map + gj.
+          // The map loads the combined all-years file ONCE; a year change is a
+          // paint swap (applyYearMetric), not a remount or data reload. The
+          // boundary's resetKey={url} keeps a WebGL/MapLibre failure from
+          // blanking the page. MapView only mounts/unmounts on the url-null
+          // boundary (a city with no data), where the fetch effect tears down
+          // map + gj. (url is constant per city now, so the boundary is stable.)
           <>
             {url && (!gj || swapLoading) && <MapSkeleton />}
             {/* resetKey (not key) so a YEAR swap clears a caught error WITHOUT
@@ -489,7 +494,7 @@ export default function PropertyAssessmentMap() {
                 view={MAP_VIEW}
                 sourceId="nbhd"
                 promoteId="Neighbourhood ID"
-                layers={choroplethLayers(stops, metric)}
+                layers={choroplethLayers(stops, metric, year)}
                 images={choroplethImages()}
                 onLoad={setMap}
                 onLoading={setSwapLoading}
