@@ -357,3 +357,4 @@ per_year_split |>
   select(YEAR, n_permits, units_added_gross, units_demolished) |>
   arrange(YEAR) |>
   print(n = Inf)
+
