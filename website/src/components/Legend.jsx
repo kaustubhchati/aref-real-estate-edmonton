@@ -1,14 +1,19 @@
 // =============================================================================
 // Legend.jsx
 //
-// Data-driven legend for a two-part choropleth: a continuous colour ramp on
-// top, then a set of "non-ramp" categorical rows beneath.
+// Data-driven legend for a two-part choropleth: a colour ramp on top (a
+// continuous gradient OR discrete class swatches), then a set of "non-ramp"
+// categorical rows beneath.
 //
 // Both blocks are rendered from the same tables the map paints from — so the
 // legend can never drift from the map (CLAUDE.md §6). The section passes:
 //   • title         — heading above the ramp
-//   • stops         — [{ v, c, label }] from the section's style file
+//   • stops         — continuous: [{ v, c, label }]      → a vertical gradient bar
+//                     discrete:   [{ from, to, c, label }] → one swatch per class
+//                     (the band's colour + range), matching the map's `step` fill
 //   • format        — function applied to each stop's value for the row label
+//                     (gradient mode only; discrete rows use the band's own label)
+//   • discrete      — true → render stops as discrete class swatches (e.g. YoY)
 //   • greyTitle     — heading above the categorical block
 //   • greyStates    — [{ label, fillColor, pattern, outlineColor, outlineDash }]
 //
@@ -20,6 +25,7 @@ export default function Legend({
   title,
   stops,
   format,
+  discrete = false,   // true → render stops as discrete class swatches (e.g. YoY), not a gradient
   greyTitle = null,
   greyStates = null,
 }) {
@@ -41,14 +47,32 @@ export default function Legend({
     <aside className="legend">
       <h2 className="legend-title">{title}</h2>
 
-      {/* Vertical gradient bar + tick labels.
-          Bar runs top=max → bottom=min (dark at top,
-          light at bottom) so "high value = dark = top"
-          reads naturally.
-          WHY vertical: horizontal bar in a 264px sidebar
-          forces 5 dollar values into ~52px each — they
-          collide at any readable font size. Vertical gives
-          each tick its own line with no crowding. */}
+      {/* The colour scale. A CLASSED metric (discrete=true, e.g. YoY) shows one
+          swatch per band — exact colours that match the map's `step` fill, so
+          equal-coloured polygons are equal-class. A continuous metric shows a
+          vertical gradient bar with tick labels. Both read top = most positive.
+          WHY vertical gradient: a horizontal bar in a 264px sidebar crams 5
+          values into ~52px each — they collide; vertical gives each its own line. */}
+      {discrete ? (
+        <ul className="legend-list" style={{ marginBottom: 8 }}>
+          {/* Most-positive band at top (mirrors the gradient's high=top). Labels
+              are the band's own range string; tabular-nums aligns the digits. */}
+          {[...stops].reverse().map((s) => (
+            <li key={s.label} className="legend-row">
+              <span
+                className="legend-sw"
+                style={{ background: s.c, border: "1px solid var(--border)" }}
+              />
+              <span
+                className="legend-lab"
+                style={{ fontVariantNumeric: "tabular-nums" }}
+              >
+                {s.label}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
       <div style={{
         display: "flex",
         gap: 8,
@@ -124,6 +148,7 @@ export default function Legend({
           })}
         </div>
       </div>
+      )}
 
       {greyStates?.length > 0 && (
         <>

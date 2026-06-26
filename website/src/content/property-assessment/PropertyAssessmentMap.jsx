@@ -467,6 +467,7 @@ export default function PropertyAssessmentMap() {
             title={selectedMetric.label}
             stops={stops}
             format={selectedMetric.fmt}
+            discrete={isYoy}
           />
         </section>
 
