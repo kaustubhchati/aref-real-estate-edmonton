@@ -43,11 +43,11 @@ export default function Layout() {
           <Outlet />
         </SectionErrorBoundary>
       </main>
-      {immersive ? (
-        <EdgeReveal side="bottom" label="site footer"><Footer /></EdgeReveal>
-      ) : (
-        <Footer />
-      )}
+      {/* On the immersive map route the footer is fully removed (not just hidden):
+          the data table owns the bottom edge, and a hidden-but-present footer could
+          intercept pointer events over the map. The footer is present on every
+          other route. */}
+      {!immersive && <Footer />}
     </div>
   );
 }

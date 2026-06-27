@@ -28,6 +28,9 @@ import { useEffect, useRef, useState } from "react";
 
 // How close (px) the pointer must come to this edge to reveal the chrome.
 const REVEAL_PX = 28;
+// Only the LEFT band reveals (where the grip lives), so the centred map tools
+// (e.g. the search pill) are never covered by an accidental proximity reveal.
+const REVEAL_X = 220;
 
 export default function EdgeReveal({ side, label, children }) {
   const ref = useRef(null);
@@ -42,11 +45,13 @@ export default function EdgeReveal({ side, label, children }) {
       const el = ref.current;
       if (!el) return;
       const edgeY = el.getBoundingClientRect().top; // the marker sits on the edge
-      const close =
+      const nearEdge =
         side === "top"
           ? e.clientY <= edgeY + REVEAL_PX
           : e.clientY >= edgeY - REVEAL_PX;
-      setNear(close); // setState bails when unchanged, so this is cheap on move
+      // Gate to the left band so a centred search/tool pill never triggers it.
+      const nearGrip = e.clientX <= REVEAL_X;
+      setNear(nearEdge && nearGrip); // setState bails when unchanged, so this is cheap
     }
     function onLeave() { setNear(false); }
     window.addEventListener("pointermove", onMove, { passive: true });
