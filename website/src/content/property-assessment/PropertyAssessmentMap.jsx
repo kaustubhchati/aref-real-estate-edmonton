@@ -725,6 +725,7 @@ export default function PropertyAssessmentMap() {
           sparkValues={sparkValues}
           activeIndex={activeYearIndex}
           onClear={() => setSelectedIds([])}
+          compact={analystMode}
         />
       )}
 

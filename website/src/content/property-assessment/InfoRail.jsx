@@ -41,6 +41,8 @@ export default function InfoRail({
   sparkValues,  // active metric across `years` for the selected nbhd (null = gap)
   activeIndex,  // index of the active year within `years` (dots the sparkline)
   onClear,      // () => void — clear the selection
+  compact = false, // analyst view: the table carries the full stat list, so the rail
+                   // trims to name + sparkline + the single headline value
 }) {
   const state = feature.polygon_state;
   const meta = STATE_STYLE[state] || { label: state };
@@ -108,7 +110,9 @@ export default function InfoRail({
                 <dt className="rail-k">{activeMetric.label}</dt>
                 <dd className="rail-v">{activeMetric.fmt(activeVal)}</dd>
               </div>
-              {POPUP_ROWS.filter(([key]) => key !== activeMetric.key).map(([key, label, fmt]) => (
+              {/* Full stat list in default view; trimmed away in analyst view,
+                  where the data table carries every field for every nbhd. */}
+              {!compact && POPUP_ROWS.filter(([key]) => key !== activeMetric.key).map(([key, label, fmt]) => (
                 <div key={key} className="rail-row">
                   <dt className="rail-k">{label}</dt>
                   <dd className="rail-v">{fmt(feature[key])}</dd>
