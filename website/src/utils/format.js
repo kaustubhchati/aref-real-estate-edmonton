@@ -13,11 +13,12 @@
 // If you add a new formatter here, also add it to the JSDoc table below so
 // future readers can pick the right one by skim rather than by trial.
 //
-//   fmtCurrency(214500)  → "$214,500"
-//   fmtNumber(5722)      → "5,722"
-//   fmtPct(6.5)          → "6.5%"          (input is already 0-100 scale)
-//   fmtYear(1972)        → "1972"
-//   fmtArea(384.3)       → "384 m²"
+//   fmtCurrency(214500)      → "$214,500"
+//   fmtCurrencyShort(1410000)→ "$1.41M"      (compact, for dense tables)
+//   fmtNumber(5722)          → "5,722"
+//   fmtPct(6.5)              → "6.5%"          (input is already 0-100 scale)
+//   fmtYear(1972)            → "1972"
+//   fmtArea(384.3)           → "384 m²"
 // =============================================================================
 
 const DASH = "—";
@@ -25,6 +26,17 @@ const DASH = "—";
 export function fmtCurrency(v) {
   if (v == null || isNaN(+v)) return DASH;
   return "$" + Math.round(+v).toLocaleString();
+}
+
+// Abbreviated currency for the analyst table, where six numeric columns must fit
+// a bounded module: $1.41M / $353k / $920. Full precision still lives in
+// fmtCurrency (the rail + aggregate cards, where there's room).
+export function fmtCurrencyShort(v) {
+  if (v == null || isNaN(+v)) return DASH;
+  const n = Math.round(+v);
+  if (Math.abs(n) >= 1e6) return "$" + (n / 1e6).toFixed(2) + "M";   // $1.41M
+  if (Math.abs(n) >= 1e4) return "$" + Math.round(n / 1e3) + "k";    // $353k
+  return "$" + n.toLocaleString();                                   // $9,500
 }
 
 export function fmtNumber(v) {

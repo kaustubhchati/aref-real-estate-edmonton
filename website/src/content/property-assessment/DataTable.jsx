@@ -1,74 +1,173 @@
 // =============================================================================
 // DataTable.jsx
 //
-// The Property Assessment bottom data table (Felt zone 4) — the analytical
-// surface. Collapsed to a thin handle by default; click the handle (or press T)
-// to raise it. Desktop = bottom drawer; narrow/touch = fullscreen overlay (CSS).
+// The Property Assessment analyst data module (Felt zone 4) — the full tabular
+// form of the per-neighbourhood data. Collapsed to a centred pill handle by
+// default; click the handle (or press T) to raise the bounded panel (= analyst
+// view). Desktop = centred ~620px module floating at the bottom; narrow/touch =
+// fullscreen overlay (CSS).
 //
-// Data: the rows are derived ONCE in PropertyAssessmentMap from the RESIDENT
-// combined source (gjView.features) and passed in — no querySourceFeatures, no
-// tile-dedupe (the data is already in JS). This component only does the view:
-// type-to-filter, click-to-sort, the per-row sparkline, and the bidirectional
-// link to the shared selection (hover row → highlight polygon; click row →
-// select; a selected polygon scrolls its row into view + highlights it).
+// ENGINE: TanStack Table (@tanstack/react-table, headless) drives sorting,
+// name-filtering, and the row model. We bring the markup (the gel look + the
+// legibility bar stay ours); TanStack only owns the table logic. The HONEST area
+// aggregate is NOT a TanStack aggregation: a parcel-weighted mean must weight by
+// n_properties (TanStack's built-in mean is unweighted), so the exact/approx math
+// stays bespoke in PropertyAssessmentMap (selectionAggregate) and renders in the
+// unchanged AggregateHeader below. Constituent rows render through the same table.
+//
+// Data: rows are derived ONCE in PropertyAssessmentMap from the RESIDENT combined
+// source (gjView for the active-year values, gj for the per-row sparkline) and
+// passed in — no querySourceFeatures, no tile-dedupe (the data is already in JS).
+// Every metric value is carried on the row, so the table shows the SAME fields the
+// rail used to list, for every neighbourhood — the active metric's column is just
+// highlighted (it's what the map colours by + what Trend/Rank track).
 //
 // Props:
-//   rows         [{ id, name, state, value, yoy, series, rank }]  (value/yoy/rank
-//                are null for non-reportable rows → rendered as "—")
-//   metricLabel  header for the active-metric column
-//   metricFmt    formatter for the active-metric value
-//   showYoyCol   false when the active metric IS YoY (avoids a duplicate column)
+//   rows         [{ id, name, state, median_assessvalue, avall_public,
+//                   avg_lotsize, median_yearbuilt, yoy_pct_change, series, rank }]
+//                numeric fields are null for non-reportable rows → rendered "—"
+//   metric       active metric key — highlights its column; Trend/Rank track it
+//   metricLabel  active metric label — Trend/Rank header tooltips
 //   activeIndex  year index to dot in each row's sparkline
 //   selectedIds  current selection (row highlight + scroll-into-view)
 //   onSelectRow  (id) => void
 //   onHoverRow   (id | null) => void   (drives the polygon hover feature-state)
+//   aggregate    honest area aggregate, or null. Non-null = selection mode.
+//   onClearSelection (() => void)
+//   onExport     (format) => void — scoped export (CSV/GeoJSON/PNG)
+//   open         controlled: the table is raised (= analyst view)
+//   onToggle     () => void — toggle the table / analyst view
 // =============================================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 import Sparkline from "../../components/Sparkline.jsx";
 import ExportMenu from "./ExportMenu.jsx";
-import { fmtCurrency, fmtNumber, fmtPct } from "../../utils/format.js";
+import {
+  fmtArea,
+  fmtCurrency,
+  fmtCurrencyShort,
+  fmtNumber,
+  fmtPct,
+  fmtYear,
+} from "../../utils/format.js";
 
-// Sort comparator: nulls always last (regardless of direction), numbers numeric,
-// strings locale-compared.
-function comparator(sort) {
-  const dir = sort.dir === "asc" ? 1 : -1;
-  return (a, b) => {
-    const va = a[sort.key];
-    const vb = b[sort.key];
-    const na = va == null;
-    const nb = vb == null;
-    if (na && nb) return 0;
-    if (na) return 1;
-    if (nb) return -1;
-    if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
-    return String(va).localeCompare(String(vb)) * dir;
-  };
-}
+// The fixed metric columns, in the map's METRICS order. key = row field (already
+// the active-year value); label = compact header; fmt = cell formatter. These
+// mirror the choropleth's metrics so the table carries every variable the rail
+// shows. Adding a metric to the map → add its row here too (one place).
+const METRIC_COLS = [
+  { key: "median_assessvalue", label: "Median value", fmt: fmtCurrencyShort },
+  { key: "avall_public",       label: "Mean value",   fmt: fmtCurrencyShort },
+  { key: "avg_lotsize",        label: "Lot size",     fmt: fmtArea },
+  { key: "median_yearbuilt",   label: "Year built",   fmt: fmtYear },
+  { key: "yoy_pct_change",     label: "YoY %",        fmt: fmtPct },
+];
 
 export default function DataTable({
   rows,
+  metric,
   metricLabel,
-  metricFmt,
-  showYoyCol,
   activeIndex,
   selectedIds,
   onSelectRow,
   onHoverRow,
-  aggregate,         // honest area aggregate, or null. Non-null = selection mode.
-  onClearSelection,  // () => void
-  onExport,          // (format) => void — scoped export (CSV/GeoJSON/PNG)
-  open,              // controlled: the table is raised (= analyst view)
-  onToggle,          // () => void — toggle the table / analyst view
+  aggregate,
+  onClearSelection,
+  onExport,
+  open,
+  onToggle,
 }) {
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState({ key: "name", dir: "asc" });
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [sorting, setSorting] = useState([{ id: "name", desc: false }]);
   const scrollRef = useRef(null);
 
   // Selection mode = a multi-neighbourhood box-select is active (aggregate set):
-  // show the aggregate header + just the constituent rows. (The page raises the
-  // table — `open` — on a box-select; here we only render the aggregate.)
+  // the table shows the aggregate header + only the constituent rows.
   const selectionMode = !!aggregate;
+  const selectedSet = useMemo(() => new Set(selectedIds.map(String)), [selectedIds]);
+
+  // In selection mode the table data is just the constituents (the auditable
+  // detail behind the aggregate cards); otherwise it's every neighbourhood.
+  const data = useMemo(() => {
+    if (!selectionMode) return rows;
+    return rows.filter((r) => selectedSet.has(String(r.id)));
+  }, [rows, selectionMode, selectedSet]);
+
+  // Column defs (data-driven). accessorFn maps null → undefined so TanStack's
+  // sortUndefined keeps blanks last in BOTH directions; the cell renders "—".
+  // `meta.metricKey` lets the renderer highlight the active metric's column.
+  // Depends on activeIndex so the per-row Trend dots track the year slider.
+  const columns = useMemo(() => [
+    {
+      accessorKey: "name",
+      header: "Neighbourhood",
+      cell: (info) => info.getValue(),
+      meta: { className: "dt-name" },
+    },
+    ...METRIC_COLS.map((m) => ({
+      id: m.key,
+      accessorFn: (r) => r[m.key] ?? undefined,
+      header: m.label,
+      cell: (info) => {
+        const v = info.getValue();
+        return v == null ? "—" : m.fmt(v);
+      },
+      sortUndefined: "last",
+      enableGlobalFilter: false,
+      meta: { numeric: true, metricKey: m.key },
+    })),
+    {
+      id: "trend",
+      header: "Trend",
+      enableSorting: false,
+      enableGlobalFilter: false,
+      cell: ({ row }) => (
+        <Sparkline
+          values={row.original.series}
+          activeIndex={activeIndex}
+          width={80}
+          height={20}
+          ariaLabel={`${row.original.name} ${metricLabel} trend`}
+        />
+      ),
+      meta: { className: "dt-spark" },
+    },
+    {
+      id: "rank",
+      accessorFn: (r) => r.rank ?? undefined,
+      header: "Rank",
+      cell: (info) => {
+        const v = info.getValue();
+        return v == null ? "—" : v;
+      },
+      sortUndefined: "last",
+      enableGlobalFilter: false,
+      meta: { numeric: true },
+    },
+  ], [activeIndex, metricLabel]);
+
+  const table = useReactTable({
+    data,
+    columns,
+    // Filtering applies to name only (the lone string column); suppress it in
+    // selection mode so every constituent row stays visible under the aggregate.
+    state: { sorting, globalFilter: selectionMode ? "" : globalFilter },
+    onSortingChange: setSorting,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: "includesString",
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  });
+
+  const viewRows = table.getRowModel().rows;
 
   // Keyboard shortcut: T toggles the table (ignored while typing in a field).
   useEffect(() => {
@@ -82,50 +181,13 @@ export default function DataTable({
     return () => window.removeEventListener("keydown", onKey);
   }, [onToggle]);
 
-  // Columns (data-driven). The active-metric column's label is dynamic; YoY is
-  // dropped when it would duplicate the metric column. `trend` isn't sortable.
-  const cols = useMemo(() => {
-    const c = [
-      { key: "name", label: "Neighbourhood", numeric: false, sortable: true },
-      { key: "value", label: metricLabel, numeric: true, sortable: true },
-    ];
-    if (showYoyCol) c.push({ key: "yoy", label: "YoY", numeric: true, sortable: true });
-    c.push({ key: "trend", label: "Trend", numeric: false, sortable: false });
-    c.push({ key: "rank", label: "Rank", numeric: true, sortable: true });
-    return c;
-  }, [metricLabel, showYoyCol]);
-
-  const selectedSet = useMemo(() => new Set(selectedIds.map(String)), [selectedIds]);
-
-  const view = useMemo(() => {
-    let base;
-    if (selectionMode) {
-      // Selection mode: only the constituent rows (the auditable detail behind
-      // the aggregate cards).
-      base = rows.filter((r) => selectedSet.has(String(r.id)));
-    } else {
-      const q = query.trim().toLowerCase();
-      base = q ? rows.filter((r) => (r.name || "").toLowerCase().includes(q)) : rows;
-    }
-    return [...base].sort(comparator(sort));
-  }, [rows, query, sort, selectionMode, selectedSet]);
-
-  // When the selection changes to a single nbhd (e.g. clicked on the map), scroll
-  // its row into view if the table is open.
+  // When the selection narrows to a single nbhd (e.g. clicked on the map), scroll
+  // its row into view if the table is open. Re-run after a sort/filter reorders.
   useEffect(() => {
     if (!open || selectedIds.length !== 1 || !scrollRef.current) return;
     const row = scrollRef.current.querySelector(`[data-id="${CSS.escape(String(selectedIds[0]))}"]`);
     row?.scrollIntoView({ block: "nearest" });
-  }, [selectedIds, open, view]);
-
-  function toggleSort(col) {
-    if (!col.sortable) return;
-    setSort((s) =>
-      s.key === col.key
-        ? { key: col.key, dir: s.dir === "asc" ? "desc" : "asc" }
-        : { key: col.key, dir: col.numeric ? "desc" : "asc" }
-    );
-  }
+  }, [selectedIds, open, sorting, globalFilter]);
 
   return (
     <section className={`dt${open ? " dt--open" : ""}`} aria-label="Neighbourhood data table">
@@ -154,11 +216,11 @@ export default function DataTable({
                 type="text"
                 className="dt-filter search-input"
                 placeholder="Filter by name…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                value={globalFilter}
+                onChange={(e) => setGlobalFilter(e.target.value)}
                 aria-label="Filter neighbourhoods by name"
               />
-              <span className="dt-count">{view.length} of {rows.length}</span>
+              <span className="dt-count">{viewRows.length} of {rows.length}</span>
               <ExportMenu onExport={onExport} />
             </div>
           )}
@@ -166,57 +228,76 @@ export default function DataTable({
           <div className="dt-scroll" ref={scrollRef}>
             <table className="dt-table">
               <thead>
-                <tr>
-                  {cols.map((col) => {
-                    const active = sort.key === col.key;
-                    const ind = !col.sortable ? "" : active ? (sort.dir === "asc" ? "▲" : "▼") : "▾";
-                    return (
-                      <th
-                        key={col.key}
-                        className={col.numeric ? "numeric" : ""}
-                        aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
-                      >
-                        {col.sortable ? (
-                          <button
-                            type="button"
-                            className="dt-th-btn"
-                            onClick={() => toggleSort(col)}
-                            title="Sort"
-                          >
-                            {col.label}
-                            <span className={`dt-sort${active ? " active" : ""}`}>{ind}</span>
-                          </button>
-                        ) : (
-                          col.label
-                        )}
-                      </th>
-                    );
-                  })}
-                </tr>
+                {table.getHeaderGroups().map((hg) => (
+                  <tr key={hg.id}>
+                    {hg.headers.map((header) => {
+                      const meta = header.column.columnDef.meta || {};
+                      const sortable = header.column.getCanSort();
+                      const sorted = header.column.getIsSorted(); // 'asc' | 'desc' | false
+                      const ind = !sortable ? "" : sorted === "asc" ? "▲" : sorted === "desc" ? "▼" : "▾";
+                      const active = meta.metricKey === metric;
+                      return (
+                        <th
+                          key={header.id}
+                          className={`${meta.numeric ? "numeric" : ""}${active ? " is-active-metric" : ""}`}
+                          aria-sort={sorted ? (sorted === "asc" ? "ascending" : "descending") : "none"}
+                          title={header.column.id === "rank" ? `City rank by ${metricLabel}` : undefined}
+                        >
+                          {sortable ? (
+                            <button
+                              type="button"
+                              className="dt-th-btn"
+                              onClick={header.column.getToggleSortingHandler()}
+                              title="Sort"
+                            >
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                              <span className={`dt-sort${sorted ? " active" : ""}`}>{ind}</span>
+                            </button>
+                          ) : (
+                            flexRender(header.column.columnDef.header, header.getContext())
+                          )}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                ))}
               </thead>
               <tbody>
-                {view.length === 0 ? (
-                  <tr><td colSpan={cols.length} className="dt-empty">No neighbourhoods match “{query}”.</td></tr>
+                {viewRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={columns.length} className="dt-empty">
+                      No neighbourhoods match “{globalFilter}”.
+                    </td>
+                  </tr>
                 ) : (
-                  view.map((r) => (
-                    <tr
-                      key={r.id}
-                      data-id={r.id}
-                      className={`dt-row${selectedSet.has(String(r.id)) ? " is-selected" : ""}`}
-                      onClick={() => onSelectRow(r.id)}
-                      onMouseEnter={() => onHoverRow(r.id)}
-                      onMouseLeave={() => onHoverRow(null)}
-                    >
-                      <td className="dt-name">{r.name}</td>
-                      <td className="numeric">{r.value == null ? "—" : metricFmt(r.value)}</td>
-                      {showYoyCol && <td className="numeric">{r.yoy == null ? "—" : fmtPct(r.yoy)}</td>}
-                      <td className="dt-spark">
-                        <Sparkline values={r.series} activeIndex={activeIndex} width={80} height={20}
-                                   ariaLabel={`${r.name} trend`} />
-                      </td>
-                      <td className="numeric">{r.rank == null ? "—" : r.rank}</td>
-                    </tr>
-                  ))
+                  viewRows.map((row) => {
+                    const id = row.original.id;
+                    return (
+                      <tr
+                        key={id}
+                        data-id={id}
+                        className={`dt-row${selectedSet.has(String(id)) ? " is-selected" : ""}`}
+                        onClick={() => onSelectRow(id)}
+                        onMouseEnter={() => onHoverRow(id)}
+                        onMouseLeave={() => onHoverRow(null)}
+                      >
+                        {row.getVisibleCells().map((cell) => {
+                          const meta = cell.column.columnDef.meta || {};
+                          const active = meta.metricKey === metric;
+                          const cls = [
+                            meta.numeric ? "numeric" : "",
+                            meta.className || "",
+                            active ? "is-active-metric" : "",
+                          ].filter(Boolean).join(" ");
+                          return (
+                            <td key={cell.id} className={cls}>
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -231,7 +312,9 @@ export default function DataTable({
 // Honest area summary: the EXACT cards (count, total parcels, parcel-weighted
 // mean) are unlabelled; the APPROXIMATE ones (median, YoY) carry a "≈" tag and
 // the note explains why (no parcel data in-browser). The constituent rows below
-// make the rolled-up numbers auditable.
+// make the rolled-up numbers auditable. NOTE: deliberately NOT a TanStack
+// aggregationFn — a parcel-weighted mean must weight by n_properties, which the
+// built-in (unweighted) mean can't do; the honest math lives in selectionAggregate.
 function AggregateHeader({ aggregate: a, onClear, onExport }) {
   return (
     <div className="dt-agg">

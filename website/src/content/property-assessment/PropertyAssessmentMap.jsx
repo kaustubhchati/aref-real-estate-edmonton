@@ -433,16 +433,23 @@ export default function PropertyAssessmentMap() {
         id: p["Neighbourhood ID"],
         name: p.display_name,
         state: p.polygon_state,
-        value: num(p[metric]),
-        yoy: num(p.yoy_pct_change),
+        // Every metric value for the active year — the analyst table shows the
+        // FULL set (the same fields the rail lists), not just the active column.
+        // gjView is already projected to bare names for the active year.
+        median_assessvalue: num(p.median_assessvalue),
+        avall_public:       num(p.avall_public),
+        avg_lotsize:        num(p.avg_lotsize),
+        median_yearbuilt:   num(p.median_yearbuilt),
+        yoy_pct_change:     num(p.yoy_pct_change),
+        // Trend = the ACTIVE metric across every year (per-row sparkline).
         series: years.map((y) => num(gp[`${metric}_${y}`])),
         rank: null,
       };
     });
-    // City rank by the active metric (descending; highest = 1), among reportable rows.
+    // City rank by the ACTIVE metric (descending; highest = 1), reportable rows only.
     out
-      .filter((r) => r.value != null)
-      .sort((a, b) => b.value - a.value)
+      .filter((r) => r[metric] != null)
+      .sort((a, b) => b[metric] - a[metric])
       .forEach((r, i) => { r.rank = i + 1; });
     return out;
   }, [gjView, gj, metric, years]);
@@ -759,9 +766,8 @@ export default function PropertyAssessmentMap() {
       {url && gjView && (
         <DataTable
           rows={tableRows}
+          metric={metric}
           metricLabel={selectedMetric.label}
-          metricFmt={selectedMetric.fmt}
-          showYoyCol={metric !== "yoy_pct_change"}
           activeIndex={activeYearIndex}
           selectedIds={selectedIds}
           onSelectRow={selectNeighbourhood}

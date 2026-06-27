@@ -629,6 +629,7 @@ p  { margin: 0 0 0.75rem; }
   z-index: 96;
   display: flex;
   flex-direction: column;
+  align-items: center;    /* centre the pill handle AND the bounded panel */
   pointer-events: none;   /* only the pill + panel are interactive; corners pass through */
 }
 .dt-handle {
@@ -651,9 +652,14 @@ p  { margin: 0 0 0.75rem; }
 .dt-panel {
   pointer-events: auto;
   display: flex; flex-direction: column;
+  /* Bounded, centred module — never a full-width land-grab. ~620px fits the 8
+     columns; capped to the viewport on narrow screens. The map stays visible
+     above it (the .dt container is pointer-events:none outside the panel). */
+  width: min(620px, calc(100vw - 24px));
   max-height: 42svh; min-height: 0;
   background: var(--sidebar-bg);
-  border-top: 1px solid var(--sidebar-edge);
+  border: 1px solid var(--sidebar-edge); border-bottom: 0;
+  border-radius: 12px 12px 0 0;
   box-shadow: 0 -4px 14px rgba(74,60,33,0.12);
   animation: dt-rise var(--dur-base) var(--ease);
 }
@@ -680,6 +686,10 @@ p  { margin: 0 0 0.75rem; }
 .dt-table th.numeric, .dt-table td.numeric {
   text-align: right; font-variant-numeric: tabular-nums;
 }
+/* The column for the metric the MAP is colouring by — tinted so the table↔map
+   link reads at a glance (Trend + Rank also track this metric). accent-soft is a
+   solid tint, so the sticky header cell stays opaque over scrolling rows. */
+.dt-table th.is-active-metric, .dt-table td.is-active-metric { background: var(--accent-soft); }
 /* Sortable headers are real buttons (keyboard-operable); reset to inherit the th look. */
 .dt-th-btn {
   display: inline-flex; align-items: center; gap: 4px;
