@@ -37,12 +37,14 @@ function Icon({ d }) {
 export default function Toolbar({ names, onSearch, focusMode, onToggleFocus, onExport }) {
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef(null);
+  const triggerRef = useRef(null);
 
   // Close the export menu on outside click or Escape (mirrors the nav dropdown).
+  // Escape also returns focus to the trigger so keyboard focus isn't lost to body.
   useEffect(() => {
     if (!exportOpen) return undefined;
     const onDown = (e) => { if (!exportRef.current?.contains(e.target)) setExportOpen(false); };
-    const onEsc = (e) => { if (e.key === "Escape") setExportOpen(false); };
+    const onEsc = (e) => { if (e.key === "Escape") { setExportOpen(false); triggerRef.current?.focus(); } };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onEsc);
     return () => {
@@ -77,6 +79,7 @@ export default function Toolbar({ names, onSearch, focusMode, onToggleFocus, onE
       </button>
       <div className="toolbar-export" ref={exportRef}>
         <button
+          ref={triggerRef}
           type="button"
           className="toolbar-btn"
           onClick={() => setExportOpen((o) => !o)}

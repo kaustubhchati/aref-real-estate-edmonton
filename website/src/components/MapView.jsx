@@ -105,16 +105,18 @@ export default function MapView({
       // embedded map from hijacking page scroll. 5.24 is boolean-only — the
       // "use ctrl + scroll to zoom" overlay is MapLibre's built-in (no custom text).
       cooperativeGestures: true,
-      // PA opts into box-SELECT (Shift-drag) by passing boxSelect: the boxZoomEnd
-      // callback runs INSTEAD of the default fit-to-box zoom (MapLibre 5.20+).
-      // Sections that omit boxSelect keep the default box-zoom (undefined = default).
-      boxZoom: boxSelect
-        ? { boxZoomEnd: (m, s, e) => boxSelectRef.current?.(m, s, e) }
-        : undefined,
       // PA opts in (preserveDrawingBuffer) so the WebGL canvas can be exported to
       // PNG (getCanvas().toDataURL()) — without it the export is blank. Small perf
-      // cost, so it's opt-in; other sections leave it false.
+      // cost, so it's opt-in; other sections pass false (= the default).
       preserveDrawingBuffer: !!preserveDrawingBuffer,
+      // PA opts into box-SELECT (Shift-drag) by passing boxSelect: the boxZoomEnd
+      // callback runs INSTEAD of the default fit-to-box zoom (MapLibre 5.20+).
+      // SPREAD so the key is ABSENT for sections that don't opt in — Object.assign
+      // copies an explicit `undefined`, which would override the default
+      // boxZoom:true and silently disable box-zoom for BP / Business Census.
+      ...(boxSelect
+        ? { boxZoom: { boxZoomEnd: (m, s, e) => boxSelectRef.current?.(m, s, e) } }
+        : {}),
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");

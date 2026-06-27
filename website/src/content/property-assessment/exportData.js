@@ -51,7 +51,9 @@ export function buildGeoJson(features) {
 export function downloadText(filename, text, mime) {
   const url = URL.createObjectURL(new Blob([text], { type: mime }));
   triggerDownload(url, filename);
-  URL.revokeObjectURL(url);
+  // Defer the revoke off the click tick — revoking synchronously can abort the
+  // download in some browsers.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // Export the current map view as a PNG. Requires the map to have been created

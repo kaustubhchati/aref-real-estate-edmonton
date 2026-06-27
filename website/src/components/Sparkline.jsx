@@ -33,7 +33,8 @@ export default function Sparkline({
 
   if (finite.length < 2) {
     return (
-      <svg width={width} height={height} role="img" aria-label={`${ariaLabel}: not enough data`}>
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="sparkline"
+           role="img" aria-label={`${ariaLabel}: not enough data`}>
         <line x1={PAD} y1={height / 2} x2={width - PAD} y2={height / 2}
               stroke="var(--border)" strokeWidth="1" strokeDasharray="2 2" />
       </svg>

@@ -169,13 +169,21 @@ export default function DataTable({
                       <th
                         key={col.key}
                         className={col.numeric ? "numeric" : ""}
-                        onClick={() => toggleSort(col)}
                         aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
-                        title={col.sortable ? "Click to sort" : undefined}
-                        data-sortable={col.sortable ? "true" : "false"}
                       >
-                        {col.label}
-                        {col.sortable && <span className={`dt-sort${active ? " active" : ""}`}>{ind}</span>}
+                        {col.sortable ? (
+                          <button
+                            type="button"
+                            className="dt-th-btn"
+                            onClick={() => toggleSort(col)}
+                            title="Sort"
+                          >
+                            {col.label}
+                            <span className={`dt-sort${active ? " active" : ""}`}>{ind}</span>
+                          </button>
+                        ) : (
+                          col.label
+                        )}
                       </th>
                     );
                   })}
@@ -230,12 +238,13 @@ function AggregateHeader({ aggregate: a, onClear }) {
         <AggCard label="Total parcels" value={fmtNumber(a.totalParcels)} tag="exact" />
         <AggCard label="Mean assessed" value={fmtCurrency(a.parcelMean)} tag="parcel-weighted · exact" />
         <AggCard label="Median assessed" value={fmtCurrency(a.medianOfMedians)} tag="≈ median of medians" approx />
-        <AggCard label="YoY change" value={fmtPct(a.areaYoY)} tag="≈ nbhd-weighted" approx />
+        <AggCard label="YoY change" value={fmtPct(a.areaYoY)} tag="≈ parcel-weighted" approx />
       </div>
       <p className="dt-agg-note">
         {a.nReportable} reportable · {a.nSuppressed} suppressed · {a.nExcluded} non-residential / no-data
-        (excluded from values). Mean is parcel-exact; median &amp; YoY are neighbourhood-weighted
-        approximations — there is no parcel-level data in the browser.
+        (excluded from values). Mean is parcel-exact; the median is a median of neighbourhood medians
+        and YoY is parcel-weighted across neighbourhoods — both are approximations (no parcel-level
+        data in the browser).
       </p>
     </div>
   );

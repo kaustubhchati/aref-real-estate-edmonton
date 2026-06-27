@@ -451,6 +451,9 @@ export default function PropertyAssessmentMap() {
   // resident gjView, not tiles). 0 hits = clear; 1 = rail; many = table aggregate.
   function boxSelect(mapInst, startPos, endPos) {
     if (!gjView) return;
+    // Ignore a jitter shift-click (no real drag) so it doesn't blow away the
+    // current selection; an intentional empty-area drag is >3px and still clears.
+    if (Math.abs(endPos.x - startPos.x) < 3 && Math.abs(endPos.y - startPos.y) < 3) return;
     const x1 = Math.min(startPos.x, endPos.x);
     const x2 = Math.max(startPos.x, endPos.x);
     const y1 = Math.min(startPos.y, endPos.y);
@@ -604,10 +607,10 @@ export default function PropertyAssessmentMap() {
 
   return (
     <article className={`content-map pa-map${focusMode ? " is-focus" : ""}`}>
-      {/* TOP toolbar (Felt zone 1) — floating pill: search + focus toggle + export
-          shell. Always visible; a map zone, so it stays above the immersive
-          site-chrome reveal. Only rendered with data loaded. (onExport omitted →
-          the export button is a disabled shell until C4 wires it.) */}
+      {/* TOP toolbar (Felt zone 1) — floating pill: search, focus-mode toggle, and
+          an export menu (CSV / GeoJSON / PNG of the current selection, or all
+          neighbourhoods when none is selected). Always visible; a map zone, so it
+          stays above the immersive site-chrome reveal. Only rendered with data. */}
       {url && (
         <Toolbar
           names={names}
