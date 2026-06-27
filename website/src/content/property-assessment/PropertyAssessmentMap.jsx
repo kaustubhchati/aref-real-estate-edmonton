@@ -353,6 +353,23 @@ export default function PropertyAssessmentMap() {
     }
   }, [map, selectedIds]);
 
+  // Active-metric series across every year for the single-selected nbhd — the
+  // rail sparkline. All years are on the resident combined feature (gj), so this
+  // is free. null unless exactly one nbhd is selected; -999 (the YoY no-prior
+  // sentinel) and non-finite become gaps the sparkline skips.
+  const sparkValues = useMemo(() => {
+    if (singleSelectedId == null || !gj) return null;
+    const f = gj.features.find(
+      (ft) => String(ft.properties["Neighbourhood ID"]) === String(singleSelectedId)
+    );
+    if (!f) return null;
+    return years.map((y) => {
+      const v = f.properties[`${metric}_${y}`];
+      return Number.isFinite(v) && v !== -999 ? v : null;
+    });
+  }, [singleSelectedId, gj, metric, years]);
+  const activeYearIndex = years.indexOf(year);
+
   // Sum n_properties across every polygon that has a finite count. This includes
   // aggregated + suppressed_low_n polygons and naturally excludes non_residential
   // / manufactured_home_community / no_data (which carry no count). Recomputes on
@@ -429,11 +446,11 @@ export default function PropertyAssessmentMap() {
 
   return (
     <article className="content-map">
-      {/* LEFT control overlay — the active map instrument only: city, year,
-          metric, legend. Single-neighbourhood detail + search + provenance moved
-          to the right info rail (InfoRail), so this panel stays minimal. The .sb
-          recipe is shared with other sections — we only render LESS inside it
-          here, we do not restyle .sb. */}
+      {/* LEFT control panel (Felt zone 2) — the active map instrument: city, year,
+          metric + legend, plus the site-wide provenance note. Single-neighbourhood
+          detail lives in the right rail; search lives in the top toolbar. The .sb
+          recipe is shared with other sections — we render our own content inside it,
+          we do not restyle .sb. */}
       <aside ref={sbRef} className="sb" aria-label="Map controls">
         {/* Fixed-width holder so content never reflows as .sb animates its width — see .sb-inner in index.css. */}
         <div className="sb-inner">
@@ -442,6 +459,7 @@ export default function PropertyAssessmentMap() {
           <h1 className="sb-title">
             {city} — {year}
           </h1>
+          <p className="sb-sub">{propCount.toLocaleString()} cleaned residential properties</p>
         </div>
 
         <section className="sb-section">
@@ -498,6 +516,27 @@ export default function PropertyAssessmentMap() {
             discrete={isYoy}
           />
         </section>
+
+        {/* Site-wide provenance — always visible (the rail is now selection-gated).
+            Data vintage + the neighbourhood renaming caveat. */}
+        <div className="sb-ref">
+          <p>Data last updated: {manifest?.last_updated ?? "—"}</p>
+          <p>
+            Some neighbourhoods have been renamed or renumbered by the City of
+            Edmonton. Their full history is shown under the current name. For
+            example, Oliver was renamed Wîhkwêntôwin, effective 1 January 2025;
+            values before this date are shown under Wîhkwêntôwin.{" "}
+            <a
+              href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "var(--accent)" }}
+            >
+              City of Edmonton Naming Committee
+            </a>
+            .
+          </p>
+        </div>
         </div>{/* /sb-inner */}
       </aside>
 
@@ -549,28 +588,19 @@ export default function PropertyAssessmentMap() {
         )}
       </div>
 
-      {/* RIGHT info rail — persistent overlay mirroring .sb on the right edge.
-          Replaces the click popup: shows the selected neighbourhood's full
-          detail (or a default summary + search when nothing is selected). Only
-          rendered when the city has data, so a no-data city (Calgary) shows the
-          EmptyState alone. */}
-      {url && (
+      {/* RIGHT info rail (Felt zone 3) — hidden by default; mounts (and slides in)
+          only when EXACTLY one neighbourhood is selected. Shows that nbhd's detail
+          + a value sparkline, reactive to the active year/metric. Empty/multi
+          select → not rendered (multi aggregates land in the bottom table). */}
+      {url && selectedFeature && (
         <InfoRail
           feature={selectedFeature}
           year={year}
           metric={metric}
-          propCount={propCount}
-          lastUpdated={manifest?.last_updated}
-          names={names}
-          onSearch={flyAndPinByName}
+          years={years}
+          sparkValues={sparkValues}
+          activeIndex={activeYearIndex}
           onClear={() => setSelectedIds([])}
-          searchHint={
-            fetchError
-              ? `Search unavailable: ${fetchError}`
-              : gj
-                ? "Type a name and press Return to fly to it."
-                : "Loading…"
-          }
         />
       )}
     </article>

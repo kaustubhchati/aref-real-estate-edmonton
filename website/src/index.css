@@ -533,12 +533,13 @@ p  { margin: 0 0 0.75rem; }
   font-family: ui-monospace, Menlo, Consolas, monospace;
 }
 
-/* ----- Right info rail (Property Assessment) ----- */
+/* ----- Right info rail (Property Assessment, Felt zone 3) ----- */
 /* Mirrors the left .sb overlay on the RIGHT edge of the map: same frosted-panel
    recipe, flipped — right:0, border-left, shadow falling leftward onto the map.
-   A NEW class on purpose: the shared .sb (other sections' left sidebars) is left
-   untouched. Holds the selected-neighbourhood detail + search (see InfoRail.jsx);
-   same z-index:10 plane as .sb — they never overlap horizontally. */
+   A NEW class on purpose: the shared .sb is left untouched. HIDDEN BY DEFAULT —
+   PropertyAssessmentMap mounts it only when exactly one nbhd is selected, so it
+   slides in on mount. Holds that nbhd's detail + a value sparkline (InfoRail.jsx);
+   z-index:10, same plane as .sb (they never overlap horizontally). */
 .rail {
   position: absolute;
   top: 0;
@@ -556,14 +557,18 @@ p  { margin: 0 0 0.75rem; }
   font-size: 12.5px;
   line-height: 1.4;
   color: var(--text);
-  /* Match the section/canvas mount fade so the rail doesn't pop in. */
-  animation: motion-fade var(--dur-base) var(--ease);
+  /* Slide in from the right edge on mount (it mounts on selection). The global
+     prefers-reduced-motion guard zeroes this to an instant appear. */
+  animation: rail-slide-in var(--dur-base) var(--ease);
+}
+@keyframes rail-slide-in {
+  from { transform: translateX(16px); opacity: 0; }
+  to   { transform: none;            opacity: 1; }
 }
 /* Full width of the gutter-reduced content box (scrollbar-gutter:stable on .rail
    keeps it from reflowing) — a fixed px width would clip right-aligned values
    when a classic (non-overlay) scrollbar is present. */
 .rail-inner { width: 100%; }
-.rail-section { margin: 0 0 12px; }
 
 /* Selected-neighbourhood detail */
 .rail-detail-head {
@@ -590,6 +595,15 @@ p  { margin: 0 0 0.75rem; }
   text-transform: uppercase; letter-spacing: 0.05em; margin: 10px 0 4px;
 }
 .rail-state { font-size: 11px; font-style: italic; color: var(--text-muted); margin: 0 0 8px; }
+/* Value sparkline block (active metric across all years). */
+.rail-spark { margin: 4px 0 10px; }
+.rail-spark-cap {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 10px; color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 0.05em; margin: 0 0 3px;
+}
+.rail-spark-years { font-variant-numeric: tabular-nums; }
+.rail-spark .sparkline { width: 100%; height: auto; }  /* responsive in the rail (table rows use the fixed default) */
 .rail-rows { margin: 0; }
 .rail-row {
   display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
@@ -604,19 +618,6 @@ p  { margin: 0 0 0.75rem; }
 }
 .rail-v-muted { color: var(--text-subtle); font-weight: 500; font-style: italic; }
 .rail-note { font-size: 11px; color: var(--text-muted); line-height: 1.5; margin: 8px 0 0; }
-
-/* Default summary (nothing selected) */
-.rail-summary-title {
-  font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.08em; color: var(--text-muted); margin: 0 0 8px;
-}
-.rail-summary-lead { font-size: 12.5px; color: var(--text); line-height: 1.5; margin: 0 0 8px; }
-.rail-summary-hint { font-size: 11.5px; color: var(--text-muted); line-height: 1.5; margin: 0 0 12px; }
-.rail-ref {
-  font-size: 10.5px; color: var(--text-muted); line-height: 1.5;
-  border-top: 1px solid var(--border); padding-top: 10px; margin: 8px 0 0;
-}
-.rail-ref a { color: var(--accent); }
 
 /* ----- Map canvas ----- */
 
