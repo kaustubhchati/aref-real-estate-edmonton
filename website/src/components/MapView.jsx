@@ -44,6 +44,7 @@ export default function MapView({
   onLoading,
   onReady,
   boxSelect,
+  preserveDrawingBuffer = false,
   className = "",
 }) {
   const containerRef = useRef(null);
@@ -110,6 +111,10 @@ export default function MapView({
       boxZoom: boxSelect
         ? { boxZoomEnd: (m, s, e) => boxSelectRef.current?.(m, s, e) }
         : undefined,
+      // PA opts in (preserveDrawingBuffer) so the WebGL canvas can be exported to
+      // PNG (getCanvas().toDataURL()) — without it the export is blank. Small perf
+      // cost, so it's opt-in; other sections leave it false.
+      preserveDrawingBuffer: !!preserveDrawingBuffer,
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");

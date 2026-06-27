@@ -742,6 +742,22 @@ p  { margin: 0 0 0.75rem; }
 }
 .toolbar-btn:disabled { opacity: 0.5; cursor: default; }
 
+/* Export dropdown menu (CSV / GeoJSON / PNG). */
+.toolbar-export { position: relative; }
+.toolbar-menu {
+  position: absolute; top: calc(100% + 6px); right: 0;
+  display: flex; flex-direction: column; min-width: 170px;
+  background: var(--bg); border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+  padding: 4px; z-index: 1;
+}
+.toolbar-menu button {
+  font-family: inherit; font-size: 0.8rem; text-align: left; color: var(--text);
+  background: transparent; border: 0; border-radius: var(--radius-sm);
+  padding: 7px 10px; cursor: pointer;
+}
+.toolbar-menu button:hover { background: var(--accent-soft); color: var(--accent-dark); }
+
 /* Focus mode — hide the left control panel for an unobstructed map. Scoped to
    .pa-map (only the PA route sets it), so the shared .sb is untouched for BP/BC. */
 .pa-map .sb {

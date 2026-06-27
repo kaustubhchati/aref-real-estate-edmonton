@@ -35,6 +35,7 @@ import MapSkeleton from "../../components/MapSkeleton.jsx";
 import InfoRail from "./InfoRail.jsx";
 import DataTable from "./DataTable.jsx";
 import Toolbar from "./Toolbar.jsx";
+import { buildCsv, buildGeoJson, downloadText, exportPng } from "./exportData.js";
 import {
   BASEMAP_STYLE,
   MAP_VIEW,
@@ -466,6 +467,24 @@ export default function PropertyAssessmentMap() {
     setSelectedIds(ids);
   }
 
+  // Scoped export (C4): the selection if any, else ALL features. Built from the
+  // resident combined `gj` (every year on the feature) — pure client-side blobs.
+  function handleExport(format) {
+    if (!gj) return;
+    const set = selectedIds.length ? new Set(selectedIds.map(String)) : null;
+    const scoped = set
+      ? gj.features.filter((f) => set.has(String(f.properties["Neighbourhood ID"])))
+      : gj.features;
+    const base = `property-assessment_${city}_${selectedIds.length ? `${scoped.length}-selected` : "all"}`;
+    if (format === "csv") {
+      downloadText(`${base}.csv`, buildCsv(scoped, years), "text/csv;charset=utf-8");
+    } else if (format === "geojson") {
+      downloadText(`${base}.geojson`, buildGeoJson(scoped), "application/geo+json");
+    } else if (format === "png" && map) {
+      exportPng(map, `property-assessment_${city}_${year}.png`);
+    }
+  }
+
   // Honest area aggregate over the selection (C3). The browser holds only
   // neighbourhood aggregates and the combined file NULLs values for non-aggregated
   // polygons, so: counts + total parcels + parcel-weighted MEAN are EXACT (mean is
@@ -595,6 +614,7 @@ export default function PropertyAssessmentMap() {
           onSearch={flyAndPinByName}
           focusMode={focusMode}
           onToggleFocus={() => setFocusMode((f) => !f)}
+          onExport={handleExport}
         />
       )}
 
@@ -737,6 +757,7 @@ export default function PropertyAssessmentMap() {
                 onLoading={setSwapLoading}
                 onReady={() => setMapReady(true)}
                 boxSelect={boxSelect}
+                preserveDrawingBuffer
               />
             </MapErrorBoundary>
           </>

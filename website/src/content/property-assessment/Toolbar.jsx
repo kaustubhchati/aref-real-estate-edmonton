@@ -16,6 +16,7 @@
 //   onExport      () => void | undefined  — undefined = disabled shell (pre-C4)
 // =============================================================================
 
+import { useEffect, useRef, useState } from "react";
 import SearchInput from "../../components/SearchInput.jsx";
 
 // Small single-path stroke icons, matching the metric-control icon style.
@@ -34,6 +35,27 @@ function Icon({ d }) {
 }
 
 export default function Toolbar({ names, onSearch, focusMode, onToggleFocus, onExport }) {
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportRef = useRef(null);
+
+  // Close the export menu on outside click or Escape (mirrors the nav dropdown).
+  useEffect(() => {
+    if (!exportOpen) return undefined;
+    const onDown = (e) => { if (!exportRef.current?.contains(e.target)) setExportOpen(false); };
+    const onEsc = (e) => { if (e.key === "Escape") setExportOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [exportOpen]);
+
+  function choose(format) {
+    setExportOpen(false);
+    onExport?.(format);
+  }
+
   return (
     <div className="toolbar" role="toolbar" aria-label="Map tools">
       <div className="toolbar-search">
@@ -53,16 +75,27 @@ export default function Toolbar({ names, onSearch, focusMode, onToggleFocus, onE
         <Icon d={ICON_FOCUS} />
         <span className="toolbar-btn-label">Focus</span>
       </button>
-      <button
-        type="button"
-        className="toolbar-btn"
-        onClick={onExport}
-        disabled={!onExport}
-        title={onExport ? "Export the current selection" : "Export (coming soon)"}
-      >
-        <Icon d={ICON_EXPORT} />
-        <span className="toolbar-btn-label">Export</span>
-      </button>
+      <div className="toolbar-export" ref={exportRef}>
+        <button
+          type="button"
+          className="toolbar-btn"
+          onClick={() => setExportOpen((o) => !o)}
+          disabled={!onExport}
+          aria-haspopup="menu"
+          aria-expanded={exportOpen}
+          title="Export the selection (or all if none selected)"
+        >
+          <Icon d={ICON_EXPORT} />
+          <span className="toolbar-btn-label">Export</span>
+        </button>
+        {exportOpen && (
+          <div className="toolbar-menu" role="menu">
+            <button type="button" role="menuitem" onClick={() => choose("csv")}>CSV — all years</button>
+            <button type="button" role="menuitem" onClick={() => choose("geojson")}>GeoJSON — polygons</button>
+            <button type="button" role="menuitem" onClick={() => choose("png")}>PNG — map image</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
