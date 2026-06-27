@@ -408,7 +408,9 @@ Result: the **live clone** — shell + one real map — the proof the frame work
 - Rewrite the R pipeline. (§2.)
 - Hardcode org / university / professor / author names — `siteConfig` only. (§6.)
 - Add a runtime database, server, or API. (§1.)
-- Introduce stacks beyond React + Vite + PMTiles + MapLibre (+ Recharts for charts). (§2.)
+- Introduce stacks beyond React + Vite + PMTiles + MapLibre (+ Recharts for charts; + `@tanstack/react-table`,
+  headless, scoped to the PA analyst data table + box-select aggregation — KC's closing decision 2026-06-27).
+  Everything else stays hand-rolled. (§2.)
 - Duplicate cross-section base geometry (boundary, road/vegetation layers) into sections — it lives in `pipeline/yeg/shared/`. (§3.)
 - Over-engineer, or merge code Olivia can't read. (§6.)
 - Reintroduce a year literal in a frontend section (filename, label, metric key, span). Source the
