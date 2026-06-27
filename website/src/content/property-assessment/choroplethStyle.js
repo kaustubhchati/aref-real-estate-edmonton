@@ -336,89 +336,12 @@ export const POPUP_ROWS = [
   ["avg_lotsize",                  "Mean lot size",            fmtArea,     false],
 ];
 
-// HTML-escape a string for safe interpolation into a setHTML() call.
-// Tiny on purpose — popup content is the only place we hand-build HTML.
-function escapeHtml(s) {
-  if (s == null) return "";
-  return String(s).replace(/[&<>"']/g, (c) => (
-    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
-  ));
-}
-
-// Build the popup body for one feature. `pinned=true` suppresses the
-// "click to pin" footnote (the popup is already pinned). `year` is the
-// displayed assessment year, shown in the header so the numbers below are
-// never read out of context.
-//
-// This lives in the section's style file — not in interactions.js — because
-// the row table + state labels are the section's visual contract. Changing
-// a label or adding a row is a one-file edit here.
-// `detail` selects the tier:
-//   detail=false → Tier 2 (slim hover): name + district + headline + N props.
-//   detail=true  → Tier 3 (pinned click): name + district + year + state badge
-//                  + every row + copy button + dismiss hint.
-export function buildPopupHtml(p, detail, year) {
-  const state = p.polygon_state;
-  const meta = STATE_STYLE[state] || { label: state };
-
-  const parts = [
-    `<div class="pop-name">${escapeHtml(p.display_name)}</div>`,
-  ];
-  if (p.district) {
-    parts.push(`<div class="pop-district">${escapeHtml(p.district)} district</div>`);
-  }
-  // Year label + state badge are Tier 3 only — the slim hover stays terse.
-  if (detail && year != null) {
-    parts.push(`<div class="pop-year">${escapeHtml(String(year))} Assessment</div>`);
-  }
-  if (detail) {
-    parts.push(`<div class="pop-state ${state}">${escapeHtml(meta.label)}</div>`);
-  }
-
-  if (state === "aggregated") {
-    // Tier 2 (detail=false) is a slim preview: the headline metric + N
-    // properties only. Tier 3 (detail=true) keeps every row.
-    const rows = detail
-      ? POPUP_ROWS
-      : POPUP_ROWS.filter(([key, , , headline]) => headline || key === "n_properties");
-    for (const [key, label, fmt, headline] of rows) {
-      parts.push(
-        `<div class="pop-row${headline ? " headline" : ""}">` +
-          `<span class="pop-k">${label}</span>` +
-          `<span class="pop-v">${fmt(p[key])}</span>` +
-        `</div>`
-      );
-    }
-  } else if (state === "suppressed_low_n") {
-    // Count is informative; value itself is suppressed per the aggregation rule.
-    parts.push(
-      `<div class="pop-row">` +
-        `<span class="pop-k">N properties</span>` +
-        `<span class="pop-v">${fmtNumber(p.n_properties)}</span>` +
-      `</div>`,
-      `<div class="pop-row">` +
-        `<span class="pop-k">Median assessed</span>` +
-        `<span class="pop-v pop-v-muted">suppressed</span>` +
-      `</div>`,
-      `<div class="pop-reason">Fewer than 100 properties — aggregate values suppressed to protect privacy.</div>`
-    );
-  } else if (state === "non_residential") {
-    parts.push(`<div class="pop-reason">No residential properties in this area. May include river valley, industrial zones, parks, or commercial-only land.</div>`);
-  } else if (state === "manufactured_home_community") {
-    parts.push(`<div class="pop-reason">Manufactured home community. Lot sizes are not recorded for leased-land properties.</div>`);
-  } else if (state === "no_data") {
-    parts.push(`<div class="pop-reason">No assessment data for this boundary. Area may be unregistered, recently annexed, or a planning placeholder.</div>`);
-  }
-
-  if (detail) {
-    // Copy-stats button — wired up in interactions.js after the popup mounts
-    // (inline onclick in MapLibre popup HTML is unreliable).
-    parts.push(`<button class="pop-copy-btn" id="pop-copy-btn">Copy stats</button>`);
-    parts.push(`<div class="pop-pinned-hint">Click map to dismiss</div>`);
-  }
-  // Tier 2 hover has no hint — it's a quick preview, not an action prompt.
-  return parts.join("");
-}
+// NOTE: the per-feature DETAIL view (name, year, state badge, the POPUP_ROWS
+// table, suppression / no-data notes) used to be hand-built HTML here
+// (buildPopupHtml + escapeHtml) for a MapLibre popup. It now renders as React in
+// the right info rail — see InfoRail.jsx, which consumes POPUP_ROWS + STATE_STYLE
+// above (and owns the per-state note copy). POPUP_ROWS / STATE_STYLE stay here as
+// the section's visual contract; the HTML builders were removed with the popup.
 
 // ---- Pattern image factories ----------------------------------------------
 // Both return ImageData (broad browser support, Safari included) so

@@ -1,63 +1,58 @@
 // =============================================================================
 // interactions.js
 //
-// All section-specific map behaviour for the Property Assessment choropleth:
-// hover popup, click-to-pin popup, fly-to-and-pin by neighbourhood name. Lives
-// next to choroplethStyle.js (the visual contract) and is wired in via
-// MapView's onLoad(map) hook — MapView itself stays interaction-agnostic.
+// Section-specific map behaviour for the Property Assessment choropleth:
+//   • hover      → feature-state highlight ONLY (no DOM popup) + pointer cursor
+//   • click      → report the clicked Neighbourhood ID up via onSelect(id)
+//   • click empty→ onSelect(null) to clear the selection
+//   • dblclick   → fly-to the neighbourhood (no popup)
+//   • search     → flyAndPinByName(name): fly-to + onSelect(id)
 //
-// Ported from pipeline/yeg/property-assessment/scripts/09_build_choropleth.html.
-// If a behaviour here disagrees with 09, 09 wins until we explicitly decide
-// to diverge.
+// The single-neighbourhood DETAIL now lives in the right info rail (InfoRail.jsx),
+// driven by React `selectedId` — so this module no longer builds popups, holds
+// `year`, or owns the "pinned" feature-state. It reports selection via onSelect;
+// PropertyAssessmentMap turns `selectedId` into the `pinned` feature-state (so the
+// highlight survives year/metric changes, which never re-run this installer).
+// Hover state is the only feature-state this module owns.
+//
+// Wired in via MapView's onLoad(map) hook — MapView itself stays interaction-agnostic.
+// Ported from pipeline/yeg/property-assessment/scripts/09_build_choropleth.html;
+// where a behaviour here disagrees with 09, 09 wins until we explicitly diverge.
 //
 // Public surface:
-//   • installChoroplethInteractions(map, gj, year) → { flyAndPinByName, cleanup }
-//   • useChoroplethInteractions(map, gj, year)     → flyAndPinByName  (React hook)
-//   • indexNamesForSearch(gj)                      → string[] (sorted display names)
-//
-// `year` is the displayed assessment year, threaded into every popup header.
+//   • installChoroplethInteractions(map, gj, onSelect) → { flyAndPinByName, cleanup }
+//   • useChoroplethInteractions(map, gj, onSelect)     → flyAndPinByName (React hook)
+//   • indexNamesForSearch(gj)                          → string[] (sorted display names)
 // =============================================================================
 
 import { useEffect, useRef, useCallback } from "react";
-import maplibregl from "maplibre-gl";
-import { buildPopupHtml, POPUP_ROWS } from "./choroplethStyle.js";
-import { projectYearProps } from "./dataSources.js";
-import { sidebarLeftPad } from "../../components/mapPadding.js";
+import { sidebarLeftPad, sidebarRightPad } from "../../components/mapPadding.js";
 
 const SOURCE_ID = "nbhd";
 const FILL_LAYER_ID = "nbhd-fill";
 const ID_PROPERTY = "Neighbourhood ID";
 
 // ---- Public hook -----------------------------------------------------------
-// Page component pattern:
-//
-//   const [map, setMap] = useState(null);
-//   const [gj,  setGj]  = useState(null);
-//   const flyAndPin = useChoroplethInteractions(map, gj);
-//   ...
-//   <MapView onLoad={setMap} ... />
-//   <SearchInput onSelect={flyAndPin} ... />
-//
-// The hook installs handlers exactly once when BOTH map and gj are ready,
-// and tears them down on unmount (and before re-install if either changes).
-export function useChoroplethInteractions(map, gj, year, onHover) {
+// Installs handlers once when BOTH map and gj are ready, and tears them down on
+// unmount (and before re-install if either changes). `gj` is the combined source
+// (or its bare-named projection) — only its YEAR-INVARIANT parts are read here
+// (geometry, display_name, Neighbourhood ID), so a year change does NOT re-install.
+export function useChoroplethInteractions(map, gj, onSelect) {
   const apiRef = useRef(null);
-  // onHover (hovered feature properties → sidebar panel) is read through a ref
-  // so changing it doesn't tear down and re-install the map handlers.
-  const onHoverRef = useRef(onHover);
-  useEffect(() => { onHoverRef.current = onHover; }, [onHover]);
+  // onSelect is read through a ref so changing it (it closes over fresh React
+  // state) doesn't tear down and re-install the map handlers.
+  const onSelectRef = useRef(onSelect);
+  useEffect(() => { onSelectRef.current = onSelect; }, [onSelect]);
 
   useEffect(() => {
     if (!map || !gj) return undefined;
-    const api = installChoroplethInteractions(map, gj, year, (props) => {
-      onHoverRef.current?.(props);
-    });
+    const api = installChoroplethInteractions(map, gj, (id) => onSelectRef.current?.(id));
     apiRef.current = api;
     return () => {
       api.cleanup();
       apiRef.current = null;
     };
-  }, [map, gj, year]);
+  }, [map, gj]);
 
   // Stable identity for the search component — it doesn't need to re-render
   // when interactions re-install.
@@ -67,145 +62,51 @@ export function useChoroplethInteractions(map, gj, year, onHover) {
 }
 
 // ---- Plain-JS installer (the hook is a thin wrapper around this) ----------
-export function installChoroplethInteractions(map, gj, year, onHover) {
-  const hoverPopup = new maplibregl.Popup({
-    className: "popup-hover",        // Tier 2 — slim styling (see index.css)
-    closeButton: false, closeOnClick: false, offset: 8, maxWidth: "220px",
-  });
-  const pinnedPopup = new maplibregl.Popup({
-    closeButton: true, closeOnClick: false, offset: 8, maxWidth: "320px",
-  });
-
+export function installChoroplethInteractions(map, gj, onSelect) {
   // Tier 3 fly-to is bound to dblclick below; disable MapLibre's default
   // double-click-to-zoom so it doesn't fight our handler (must be done now,
   // not in the handler — the default fires first).
   map.doubleClickZoom.disable();
 
   // promoteId rewrites every feature.id to the value of "Neighbourhood ID".
-  // We track ids — not array indices — so feature-state survives source updates.
+  // We track the hovered id (not array indices) so feature-state survives source
+  // updates. The SELECTED (pinned) id is owned by React, not here.
   let hoveredId = null;
-  let pinnedId = null;
 
   function setHover(id, on) {
     map.setFeatureState({ source: SOURCE_ID, id }, { hover: on });
   }
-  function setPinned(id, on) {
-    map.setFeatureState({ source: SOURCE_ID, id }, { pinned: on });
-  }
-
   function clearHover() {
     if (hoveredId !== null) {
       setHover(hoveredId, false);
       hoveredId = null;
     }
-    hoverPopup.remove();
     map.getCanvas().style.cursor = "";
-  }
-  function clearPinned() {
-    if (pinnedId !== null) {
-      setPinned(pinnedId, false);
-      pinnedId = null;
-    }
-    pinnedPopup.remove();
   }
 
   // ---- Handlers (named so .off() can detach them on cleanup) -----------
-  let hoverTimer = null;      // Tier 2 popup dwell (900ms)
-  let sidebarTimer = null;    // Tier 1 sidebar panel debounce (200ms) — separate
-  let lastHoveredId = null;
-
   function onMouseMove(e) {
     if (!e.features?.length) return;
     map.getCanvas().style.cursor = "pointer";
-    const f = e.features[0];
-    // The live source is the combined all-years file (year-suffixed props); the
-    // popup + sidebar read bare names, so project this feature to the shown year.
-    const props = projectYearProps(f.properties, year);
-
-    // Always update popup position smoothly on every move.
-    // Only update HTML (expensive DOM rebuild) when feature changes.
-    if (pinnedId !== null) {
-      hoverPopup.remove();
-      clearTimeout(hoverTimer);
-      return;
-    }
-
-    // Position update on every frame — keeps popup anchored
-    // to cursor without jitter from stale lngLat.
-    if (hoverPopup.isOpen()) {
-      hoverPopup.setLngLat(e.lngLat);
-    }
-
-    // Feature changed — reset hover state and delay timer.
-    if (f.id !== lastHoveredId) {
-      clearTimeout(hoverTimer);
-
-      if (hoveredId !== null && hoveredId !== f.id) {
-        setHover(hoveredId, false);
-      }
-      hoveredId = f.id;
+    const id = e.features[0].id;
+    if (id !== hoveredId) {
+      if (hoveredId !== null) setHover(hoveredId, false);
+      hoveredId = id;
       setHover(hoveredId, true);
-
-      // Remove stale popup immediately when moving to a new feature.
-      hoverPopup.remove();
-      lastHoveredId = f.id;
-
-      // Tier 1 sidebar panel: debounce 200ms on its own timer (independent of
-      // the 900ms Tier 2 popup timer below).
-      clearTimeout(sidebarTimer);
-      sidebarTimer = setTimeout(() => onHover?.(props), 200);
-
-      // Show popup only after 900ms dwell on the same feature.
-      // This eliminates jitter when the cursor sweeps across the map
-      // and prevents the popup flashing on rapid movement.
-      hoverTimer = setTimeout(() => {
-        if (hoveredId === f.id) {
-          hoverPopup
-            .setLngLat(e.lngLat)
-            .setHTML(buildPopupHtml(props, false, year))
-            .addTo(map);
-        }
-      }, 900);
     }
   }
 
   function onMouseLeave() {
-    clearTimeout(hoverTimer);
-    clearTimeout(sidebarTimer);
-    lastHoveredId = null;
     clearHover();
-    // Clear the sidebar hover panel when the cursor leaves the fill.
-    onHover?.(null);
   }
 
-  // Tier 3 — single click opens the full pinned popup. Does NOT fly (fly-to is
-  // double-click only now).
+  // Single click selects the neighbourhood → fills the right rail (React state).
   function onClickFill(e) {
     if (!e.features?.length) return;
-    const f = e.features[0];
-    // Combined-source props (year-suffixed) → bare names for the shown year.
-    const props = projectYearProps(f.properties, year);
-
-    clearHover();
-    clearPinned();
-
-    pinnedId = f.id;
-    setPinned(pinnedId, true);
-    pinnedPopup
-      .setLngLat(e.lngLat)
-      .setHTML(buildPopupHtml(props, true, year))
-      .addTo(map);
-    wireCopyButton(props);
-    // The popup's own close button (X) clears feature-state pinning.
-    pinnedPopup.once("close", () => {
-      if (pinnedId !== null) {
-        setPinned(pinnedId, false);
-        pinnedId = null;
-      }
-    });
+    onSelect(e.features[0].id);
   }
 
-  // Fly-to — double click only. Does not open or close any popup.
+  // Fly-to — double click only. Does not change the selection.
   function onDblClickFill(e) {
     e.preventDefault();   // stop MapLibre's default zoom (also disabled above)
     if (!e.features?.length) return;
@@ -213,10 +114,10 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
     if (fullFeat) flyToFeature(map, fullFeat);
   }
 
+  // Click on empty basemap (not a polygon) clears the selection.
   function onMapClick(e) {
-    // Click on empty basemap (not a polygon) clears the pin.
     const hits = map.queryRenderedFeatures(e.point, { layers: [FILL_LAYER_ID] });
-    if (!hits.length) clearPinned();
+    if (!hits.length) onSelect(null);
   }
 
   map.on("mousemove", FILL_LAYER_ID, onMouseMove);
@@ -225,32 +126,13 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
   map.on("dblclick", FILL_LAYER_ID, onDblClickFill);
   map.on("click", onMapClick);
 
-  // ---- Search-driven fly-to + pin --------------------------------------
+  // ---- Search-driven fly-to + select -----------------------------------
   const nameIndex = buildNameIndex(gj);
   function flyAndPinByName(name) {
     const feat = nameIndex.lookup(name);
     if (!feat) return false;
-
-    clearHover();
-    clearPinned();
-
     flyToFeature(map, feat, { duration: 1100 });
-
-    pinnedId = feat.properties[ID_PROPERTY];
-    setPinned(pinnedId, true);
-
-    const [[minX, minY], [maxX, maxY]] = bboxOfGeom(feat.geometry);
-    pinnedPopup
-      .setLngLat([(minX + maxX) / 2, (minY + maxY) / 2])
-      .setHTML(buildPopupHtml(feat.properties, true, year))
-      .addTo(map);
-    wireCopyButton(feat.properties);
-    pinnedPopup.once("close", () => {
-      if (pinnedId !== null) {
-        setPinned(pinnedId, false);
-        pinnedId = null;
-      }
-    });
+    onSelect(feat.properties[ID_PROPERTY]);
     return true;
   }
 
@@ -260,10 +142,7 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
     map.off("click", FILL_LAYER_ID, onClickFill);
     map.off("dblclick", FILL_LAYER_ID, onDblClickFill);
     map.off("click", onMapClick);
-    clearTimeout(hoverTimer);
-    clearTimeout(sidebarTimer);
-    hoverPopup.remove();
-    pinnedPopup.remove();
+    clearHover();
   }
 
   return { flyAndPinByName, cleanup };
@@ -271,33 +150,17 @@ export function installChoroplethInteractions(map, gj, year, onHover) {
 
 // ---- Helpers --------------------------------------------------------------
 
-// Wire the "Copy stats" button inside a freshly-mounted pinned popup. Deferred
-// to a microtask (setTimeout 0) so the popup HTML is in the DOM first; inline
-// onclick in MapLibre popup HTML is unreliable, hence addEventListener here.
-// Copies the neighbourhood name + one "label: value" line per non-null stat.
-function wireCopyButton(props) {
-  setTimeout(() => {
-    const btn = document.getElementById("pop-copy-btn");
-    if (!btn) return;
-    btn.addEventListener("click", () => {
-      const name = props.display_name || props.shapefile_name || "";
-      const rows = POPUP_ROWS
-        .filter(([key]) => props[key] != null)
-        .map(([key, label, fmt]) => `${label}: ${fmt(props[key])}`)
-        .join("\n");
-      navigator.clipboard
-        .writeText(`${name}\n${rows}`)
-        .then(() => { btn.textContent = "Copied!"; })
-        .catch(() => { btn.textContent = "Failed"; });
-    });
-  }, 0);
-}
-
 function flyToFeature(map, feat, opts = {}) {
   map.fitBounds(bboxOfGeom(feat.geometry), {
-    // left = live sidebar width + breathing room, so the flown-to polygon clears
-    // the .sb overlay (and isn't over-shifted when the sidebar is collapsed).
-    padding: { top: 80, bottom: 80, left: sidebarLeftPad(map) + 60, right: 60 },
+    // Pad both overlays so the flown-to polygon clears the left control panel
+    // and the right info rail (each helper returns 0 when its panel is absent /
+    // collapsed, so this never over-shifts).
+    padding: {
+      top: 80,
+      bottom: 80,
+      left: sidebarLeftPad(map) + 60,
+      right: sidebarRightPad(map) + 60,
+    },
     duration: 900,
     maxZoom: 14,
     ...opts,

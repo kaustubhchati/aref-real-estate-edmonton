@@ -443,6 +443,89 @@ p  { margin: 0 0 0.75rem; }
   font-family: ui-monospace, Menlo, Consolas, monospace;
 }
 
+/* ----- Right info rail (Property Assessment) ----- */
+/* Mirrors the left .sb overlay on the RIGHT edge of the map: same frosted-panel
+   recipe, flipped — right:0, border-left, shadow falling leftward onto the map.
+   A NEW class on purpose: the shared .sb (other sections' left sidebars) is left
+   untouched. Holds the selected-neighbourhood detail + search (see InfoRail.jsx);
+   same z-index:10 plane as .sb — they never overlap horizontally. */
+.rail {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 300px;
+  z-index: 10;
+  background: var(--sidebar-bg);
+  border-left: 1px solid var(--sidebar-edge);
+  box-shadow: -4px 0 14px rgba(74,60,33,0.12), inset 0 1px 0 rgba(255,255,255,0.6);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  overflow-x: hidden;
+  padding: 14px 16px 18px 16px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text);
+  /* Match the section/canvas mount fade so the rail doesn't pop in. */
+  animation: motion-fade var(--dur-base) var(--ease);
+}
+.rail-inner { width: 268px; flex-shrink: 0; }
+.rail-section { margin: 0 0 12px; }
+
+/* Selected-neighbourhood detail */
+.rail-detail-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+}
+.rail-detail-titles { min-width: 0; }
+.rail-name {
+  font-size: 15px; font-weight: 600; color: var(--text);
+  margin: 0 0 1px; line-height: 1.25;
+}
+.rail-district {
+  font-size: 10px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.05em; margin: 0;
+}
+.rail-clear {
+  flex: 0 0 auto; width: 22px; height: 22px; border: 0; border-radius: 6px;
+  background: var(--bg-soft); color: var(--text-muted);
+  font-size: 12px; line-height: 1; cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+.rail-clear:hover { background: var(--bg); color: var(--text); }
+.rail-year {
+  font-size: 10.5px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.05em; margin: 10px 0 4px;
+}
+.rail-state { font-size: 11px; font-style: italic; color: var(--text-muted); margin: 0 0 8px; }
+.rail-rows { margin: 0; }
+.rail-row {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  font-size: 11.5px; padding: 4px 0; border-bottom: 0.5px solid rgba(0,0,0,0.06);
+}
+.rail-row:last-child { border-bottom: none; }
+.rail-row.headline .rail-v { font-size: 15px; color: var(--accent-dark); }
+.rail-row.is-active-metric .rail-k { color: var(--accent-dark); font-weight: 600; }
+.rail-k { color: var(--text-muted); margin: 0; }
+.rail-v {
+  font-weight: 600; color: var(--text);
+  font-variant-numeric: tabular-nums; margin: 0; text-align: right;
+}
+.rail-v-muted { color: var(--text-subtle); font-weight: 500; font-style: italic; }
+.rail-note { font-size: 11px; color: var(--text-muted); line-height: 1.5; margin: 8px 0 0; }
+
+/* Default summary (nothing selected) */
+.rail-summary-title {
+  font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-muted); margin: 0 0 8px;
+}
+.rail-summary-lead { font-size: 12.5px; color: var(--text); line-height: 1.5; margin: 0 0 8px; }
+.rail-summary-hint { font-size: 11.5px; color: var(--text-muted); line-height: 1.5; margin: 0 0 12px; }
+.rail-ref {
+  font-size: 10.5px; color: var(--text-muted); line-height: 1.5;
+  border-top: 1px solid var(--border); padding-top: 10px; margin: 8px 0 0;
+}
+.rail-ref a { color: var(--accent); }
+
 /* ----- Map canvas ----- */
 
 .canvas-wrap {
@@ -1000,12 +1083,21 @@ p  { margin: 0 0 0.75rem; }
   .shell-header { padding:0 1rem; height:50px; }
   .shell-header-separator, .shell-header-org { display:none; }
   .shell-nav { top:50px; }
-  .content-map { flex-direction:column; }
-  /* Mobile is a column: restore the sidebar to in-flow so it stacks above the
-     map at a capped height (overrides the desktop absolute overlay). */
+  /* Mobile is a column: controls, then map, then rail stack in flow and the
+     column scrolls (the desktop absolute overlays would otherwise float over a
+     tiny screen). overflow-y:auto is harmless for sections without a rail (their
+     two panels fit exactly, so nothing scrolls). */
+  .content-map { flex-direction:column; overflow-y:auto; }
+  /* Restore the sidebar to in-flow so it stacks above the map at a capped height
+     (overrides the desktop absolute overlay). */
   .sb { position:relative; bottom:auto; flex:0 0 auto; width:100%; max-height:45svh;
     border-right:none; border-bottom:0.5px solid rgba(0,0,0,0.10); }
   .canvas-wrap { min-height:55svh; }
+  /* The right info rail stacks BELOW the map on mobile (mirror of .sb above). */
+  .rail { position:relative; top:auto; right:auto; bottom:auto; flex:0 0 auto;
+    width:100%; max-height:45svh; border-left:none;
+    border-top:0.5px solid rgba(0,0,0,0.10); box-shadow:none; }
+  .rail-inner { width:100%; }
   .shell-footer-grid { grid-template-columns:1fr; gap:1.25rem; }
 }
 

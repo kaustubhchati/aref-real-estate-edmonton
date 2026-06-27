@@ -27,11 +27,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import MapView from "../../components/MapView.jsx";
 import Legend from "../../components/Legend.jsx";
-import SearchInput from "../../components/SearchInput.jsx";
 import OptionToggle from "../../components/OptionToggle.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
+import InfoRail from "./InfoRail.jsx";
 import {
   BASEMAP_STYLE,
   MAP_VIEW,
@@ -58,7 +58,6 @@ import {
   useChoroplethInteractions,
   indexNamesForSearch,
 } from "./interactions.js";
-import { fmtNumber } from "../../utils/format.js";
 import { DUR_BASE, reduceMotion } from "../../components/motion.js";
 import { useSearchParams } from "react-router-dom";
 
@@ -116,8 +115,12 @@ export default function PropertyAssessmentMap() {
   // fetch resolves, so the skeleton must wait for this — not for gj — or it
   // flashes a blank map (the gap that read as "nothing's there").
   const [mapReady, setMapReady] = useState(false);
-  // Pattern B — hovered neighbourhood properties for the sidebar stat panel.
-  const [hoveredFeature, setHoveredFeature] = useState(null);
+  // The clicked/searched neighbourhood (its "Neighbourhood ID" = promoteId), or
+  // null when nothing is selected. This drives the right info rail — click a
+  // polygon sets it, an empty-map click or the rail's clear button resets it.
+  // It persists across year/metric changes, so the rail tracks the locked
+  // neighbourhood live as you scrub the year. (Hover is highlight-only now.)
+  const [selectedId, setSelectedId] = useState(null);
 
   // Load the manifest once on mount and seed the year in the SAME update (no
   // frame where the manifest is loaded but no year is chosen → no empty-state
@@ -217,6 +220,7 @@ export default function PropertyAssessmentMap() {
   function changeCity(nextCity) {
     setCity(nextCity);
     setYear(getDefaultYear(manifest, nextCity));
+    setSelectedId(null); // a neighbourhood id is city-specific — drop the selection
   }
 
   // --- Year slider: live thumb, paced paint swap ------------------------------
@@ -298,8 +302,43 @@ export default function PropertyAssessmentMap() {
     }
   }, [map, metric, year, stops]);
 
-  const names = useMemo(() => (gjView ? indexNamesForSearch(gjView) : []), [gjView]);
-  const flyAndPinByName = useChoroplethInteractions(map, gjView, year, setHoveredFeature);
+  // Search datalist names + the selection wiring. Names come from the combined
+  // source (display_name is year-invariant), so they don't recompute per year.
+  // Clicking/searching reports the Neighbourhood ID up via setSelectedId.
+  const names = useMemo(() => (gj ? indexNamesForSearch(gj) : []), [gj]);
+  const flyAndPinByName = useChoroplethInteractions(map, gj, setSelectedId);
+
+  // The selected neighbourhood's projected (bare-named) props for the active
+  // year — recomputes when the year changes (gjView changes), so the rail's
+  // numbers track the year slider live. null when nothing is selected.
+  const selectedFeature = useMemo(() => {
+    if (selectedId == null || !gjView) return null;
+    const f = gjView.features.find(
+      (ft) => String(ft.properties["Neighbourhood ID"]) === String(selectedId)
+    );
+    return f ? f.properties : null;
+  }, [selectedId, gjView]);
+
+  // Mirror the selection into the map's `pinned` feature-state (the highlight the
+  // paint expressions already read), so the locked polygon stays outlined across
+  // year/metric changes. interactions.js only REPORTS clicks now; the pinned
+  // visual is owned here, next to the React selection.
+  const prevPinnedRef = useRef(null);
+  useEffect(() => {
+    if (!map) return;
+    try {
+      const prev = prevPinnedRef.current;
+      if (prev != null && prev !== selectedId) {
+        map.setFeatureState({ source: "nbhd", id: prev }, { pinned: false });
+      }
+      if (selectedId != null) {
+        map.setFeatureState({ source: "nbhd", id: selectedId }, { pinned: true });
+      }
+      prevPinnedRef.current = selectedId;
+    } catch {
+      /* map mid-teardown — the next mounted map re-applies via this effect */
+    }
+  }, [map, selectedId]);
 
   // Sum n_properties across every polygon that has a finite count. This includes
   // aggregated + suppressed_low_n polygons and naturally excludes non_residential
@@ -377,7 +416,12 @@ export default function PropertyAssessmentMap() {
 
   return (
     <article className="content-map">
-      <aside ref={sbRef} className="sb" aria-label="Map sidebar">
+      {/* LEFT control overlay — the active map instrument only: city, year,
+          metric, legend. Single-neighbourhood detail + search + provenance moved
+          to the right info rail (InfoRail), so this panel stays minimal. The .sb
+          recipe is shared with other sections — we only render LESS inside it
+          here, we do not restyle .sb. */}
+      <aside ref={sbRef} className="sb" aria-label="Map controls">
         {/* Fixed-width holder so content never reflows as .sb animates its width — see .sb-inner in index.css. */}
         <div className="sb-inner">
         <div className="sb-header">
@@ -385,11 +429,6 @@ export default function PropertyAssessmentMap() {
           <h1 className="sb-title">
             {city} — {year}
           </h1>
-          <p className="sb-sub">
-            {propCount.toLocaleString()} Layer 1a-cleaned residential
-            properties, neighbourhood aggregates. Hover any polygon for
-            detail; click to pin.
-          </p>
         </div>
 
         <section className="sb-section">
@@ -427,7 +466,8 @@ export default function PropertyAssessmentMap() {
               />
             )}
           </div>
-          {/* Which aggregate column the choropleth colours by. */}
+          {/* Which aggregate column the choropleth colours by. (Becomes a
+              segmented control in the next commit; still sourced from METRICS.) */}
           <div className="sb-select-field">
             <span className="sb-select-label">Metric</span>
             <select
@@ -445,24 +485,6 @@ export default function PropertyAssessmentMap() {
         </section>
 
         <section className="sb-section">
-          <SearchInput
-            label="Search neighbourhood"
-            placeholder="Search neighbourhood…"
-            hint={
-              fetchError
-                ? `Search unavailable: ${fetchError}`
-                : !url
-                  ? "Search will return when data lands."
-                  : gj
-                    ? "Enter a name and press Return to fly to it."
-                    : "Loading…"
-            }
-            names={names}
-            onSelect={flyAndPinByName}
-          />
-        </section>
-
-        <section className="sb-section">
           <Legend
             title={selectedMetric.label}
             stops={stops}
@@ -470,61 +492,6 @@ export default function PropertyAssessmentMap() {
             discrete={isYoy}
           />
         </section>
-
-        {/* Pattern B — live hover stat panel: name + selected metric + N props. */}
-        {!hoveredFeature ? (
-          <section className="sb-section sb-hover-panel sb-hover-empty">
-            <p className="sb-hover-hint">Hover a neighbourhood to see its stats</p>
-          </section>
-        ) : hoveredFeature.polygon_state === "aggregated" ? (
-          <section className="sb-section sb-hover-panel">
-            <p className="sb-hover-name">{hoveredFeature.display_name}</p>
-            <div className="sb-hover-rows">
-              <div className="sb-hover-row">
-                <span className="sb-hover-k">{selectedMetric.label}</span>
-                <span className="sb-hover-v">{selectedMetric.fmt(hoveredFeature[metric])}</span>
-              </div>
-              <div className="sb-hover-row">
-                <span className="sb-hover-k">N properties</span>
-                <span className="sb-hover-v">{fmtNumber(hoveredFeature.n_properties)}</span>
-              </div>
-            </div>
-          </section>
-        ) : (
-          <section className="sb-section sb-hover-panel sb-hover-muted">
-            <p className="sb-hover-name">{hoveredFeature.display_name}</p>
-            <p className="sb-hover-district sb-hover-state">No data</p>
-          </section>
-        )}
-
-        <div className="sb-ref">
-          <p>
-            {selectedMetric.label}, {city} {year}.
-            Layer 1a-cleaned residential properties.
-          </p>
-          <p>Data last updated: {manifest?.last_updated ?? "—"}</p>
-          {/* Identity-reconciliation note: the pipeline absorbs old neighbourhood
-              identities into their current one and shows the current name in every
-              year, so a user reading a neighbourhood's history under a new name (or
-              a suppressed 2024 value) has a plain-language explanation + the
-              regulatory source. Persistent footnote — reuses .sb-ref styling. */}
-          <p>
-            Some neighbourhoods have been renamed or renumbered by the City of
-            Edmonton. Their full history is shown under the current name. For
-            example, Oliver was renamed Wîhkwêntôwin, effective 1 January 2025;
-            values before this date are shown under Wîhkwêntôwin. Figures around
-            the 2024 transition may be limited or suppressed where data is below
-            reporting thresholds.{" "}
-            <a
-              href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "var(--accent)" }}
-            >
-              City of Edmonton Naming Committee
-            </a>.
-          </p>
-        </div>
         </div>{/* /sb-inner */}
       </aside>
 
@@ -575,6 +542,31 @@ export default function PropertyAssessmentMap() {
           <EmptyState title={empty.title} body={empty.body} />
         )}
       </div>
+
+      {/* RIGHT info rail — persistent overlay mirroring .sb on the right edge.
+          Replaces the click popup: shows the selected neighbourhood's full
+          detail (or a default summary + search when nothing is selected). Only
+          rendered when the city has data, so a no-data city (Calgary) shows the
+          EmptyState alone. */}
+      {url && (
+        <InfoRail
+          feature={selectedFeature}
+          year={year}
+          metric={metric}
+          propCount={propCount}
+          lastUpdated={manifest?.last_updated}
+          names={names}
+          onSearch={flyAndPinByName}
+          onClear={() => setSelectedId(null)}
+          searchHint={
+            fetchError
+              ? `Search unavailable: ${fetchError}`
+              : gj
+                ? "Type a name and press Return to fly to it."
+                : "Loading…"
+          }
+        />
+      )}
     </article>
   );
 }
