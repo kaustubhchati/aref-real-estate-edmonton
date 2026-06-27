@@ -294,21 +294,28 @@ p  { margin: 0 0 0.75rem; }
    reveal overlays the map instead of resizing it. */
 .shell-immersive { position: relative; }
 
-/* The edge hot-zone: a thin always-present strip at the very top (under the
-   header) / bottom that catches an edge-proximity hover. */
+/* The edge marker: a zero-height anchor at the very top (under the header) /
+   bottom. pointer-events:none — it NEVER covers the map, its controls, or the
+   side panels. Edge-proximity reveal is driven in JS (EdgeReveal.jsx) from the
+   pointer's distance to this edge, so nothing overlays the map to catch the hover.
+   z-index:95 only affects the revealed panel's stacking (over .sb/popup 10/20). */
 .edge-reveal {
   position: absolute;
   left: 0;
   right: 0;
-  height: 16px;
-  z-index: 95;   /* over the map overlays (.sb/popup 10/20), under the nav dropdown (500) */
+  height: 0;
+  z-index: 95;
+  pointer-events: none;
 }
 .edge-reveal--top    { top: 56px; }   /* directly beneath the sticky header (56px) */
 .edge-reveal--bottom { bottom: 0; }
 
-/* The chrome itself — slid out of view by default. pointer-events:none while
-   hidden so it can't intercept clicks on the map underneath. A small hide-delay
-   gives hysteresis (no flicker when the pointer skims the edge). */
+/* The chrome itself — slid out of view by default; pointer-events:none while
+   hidden so it can't intercept clicks. NOTE: the transform briefly makes this
+   panel a containing block for the nav dropdown (.shell-nav-sublist, which is
+   position:fixed) DURING the slide; harmless in practice because a dropdown only
+   opens once the panel has settled (the focused group button keeps it revealed →
+   transform:none). A hide-delay gives flicker-free hysteresis at the edge. */
 .edge-reveal-panel {
   position: absolute;
   left: 0;
@@ -320,19 +327,20 @@ p  { margin: 0 0 0.75rem; }
 .edge-reveal--top    .edge-reveal-panel { top: 0;    transform: translateY(-100%); }
 .edge-reveal--bottom .edge-reveal-panel { bottom: 0; transform: translateY(100%); }
 
-/* Reveal — pointer hover on the hot-zone or the revealed panel, keyboard focus
-   anywhere within, or an explicit tap (is-pinned). Shows promptly (delay 0). */
-.edge-reveal:hover .edge-reveal-panel,
+/* Reveal — JS sets .is-open from pointer-proximity + tap; CSS adds keyboard
+   focus-within and dwelling on the already-shown panel. Shows promptly (delay 0). */
+.edge-reveal.is-open .edge-reveal-panel,
 .edge-reveal:focus-within .edge-reveal-panel,
-.edge-reveal.is-pinned .edge-reveal-panel {
+.edge-reveal-panel:hover {
   transform: none;
   pointer-events: auto;
   transition-delay: 0ms;
 }
 
-/* The grip — a small, centred, always-visible handle: the discoverable touch
-   affordance and the keyboard/click toggle. Centred so it stays clear of the
-   corner map controls (zoom top-right, scale/attribution bottom-right). */
+/* The grip — a small, centred handle: the discoverable touch affordance and the
+   keyboard/click toggle. The ONLY part of the edge that takes pointer events, kept
+   narrow + centred so it never covers the corner map controls (zoom top-right,
+   scale/attribution bottom-right). */
 .edge-reveal-tab {
   position: absolute;
   left: 50%;
@@ -346,6 +354,7 @@ p  { margin: 0 0 0.75rem; }
   border: 0;
   background: transparent;
   cursor: pointer;
+  pointer-events: auto;
   z-index: 1;   /* above the hidden panel within this edge-reveal */
 }
 .edge-reveal--top    .edge-reveal-tab { top: 0; }
@@ -550,7 +559,10 @@ p  { margin: 0 0 0.75rem; }
   /* Match the section/canvas mount fade so the rail doesn't pop in. */
   animation: motion-fade var(--dur-base) var(--ease);
 }
-.rail-inner { width: 268px; flex-shrink: 0; }
+/* Full width of the gutter-reduced content box (scrollbar-gutter:stable on .rail
+   keeps it from reflowing) — a fixed px width would clip right-aligned values
+   when a classic (non-overlay) scrollbar is present. */
+.rail-inner { width: 100%; }
 .rail-section { margin: 0 0 12px; }
 
 /* Selected-neighbourhood detail */
@@ -585,7 +597,6 @@ p  { margin: 0 0 0.75rem; }
 }
 .rail-row:last-child { border-bottom: none; }
 .rail-row.headline .rail-v { font-size: 15px; color: var(--accent-dark); }
-.rail-row.is-active-metric .rail-k { color: var(--accent-dark); font-weight: 600; }
 .rail-k { color: var(--text-muted); margin: 0; }
 .rail-v {
   font-weight: 600; color: var(--text);
@@ -1197,11 +1208,14 @@ p  { margin: 0 0 0.75rem; }
   .shell-nav { top:50px; }
   /* Header is 50px on mobile, so the top edge-reveal sits just below it. */
   .edge-reveal--top { top:50px; }
-  /* Mobile is a column: controls, then map, then rail stack in flow and the
-     column scrolls (the desktop absolute overlays would otherwise float over a
-     tiny screen). overflow-y:auto is harmless for sections without a rail (their
-     two panels fit exactly, so nothing scrolls). */
-  .content-map { flex-direction:column; overflow-y:auto; }
+  /* Mobile is a column: the desktop absolute overlays go in-flow and stack. */
+  .content-map { flex-direction:column; }
+  /* Only the PA layout (the one with a right rail) stacks THREE panels, so only
+     it needs the column to scroll; gating on :has(.rail) leaves BP/BC mobile
+     exactly as before (overflow:hidden, two panels). On a short screen the PA
+     column may scroll — intended, so the bottom of the map + rail stays reachable
+     instead of being clipped. */
+  .content-map:has(.rail) { overflow-y:auto; }
   /* Restore the sidebar to in-flow so it stacks above the map at a capped height
      (overrides the desktop absolute overlay). */
   .sb { position:relative; bottom:auto; flex:0 0 auto; width:100%; max-height:45svh;

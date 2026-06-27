@@ -25,7 +25,7 @@
 // =============================================================================
 
 import SearchInput from "../../components/SearchInput.jsx";
-import { POPUP_ROWS, STATE_STYLE } from "./choroplethStyle.js";
+import { METRICS, POPUP_ROWS, STATE_STYLE } from "./choroplethStyle.js";
 import { fmtNumber } from "../../utils/format.js";
 
 // Plain-language reason shown for a non-aggregated polygon. Keyed by polygon_state;
@@ -45,7 +45,7 @@ const STATE_NOTE = {
 export default function InfoRail({
   feature,        // projected (bare-named) properties for the active year, or null
   year,           // active assessment year — labels the detail so numbers are in context
-  metric,         // active metric key — its row is emphasised in the detail table
+  metric,         // active metric key — shown as the headline of the detail table
   propCount,      // total cleaned residential properties (default-state headline)
   lastUpdated,    // manifest last_updated string (default-state footer)
   names,          // neighbourhood names for the search datalist
@@ -90,6 +90,15 @@ function RailDetail({ feature, year, metric, onClear }) {
   const state = feature.polygon_state;
   const meta = STATE_STYLE[state] || { label: state };
 
+  // The metric the MAP is currently colouring by — shown as the headline so the
+  // encoded value is ALWAYS visible. POPUP_ROWS doesn't include YoY, so without
+  // this the YoY figure would appear nowhere when YoY is the active metric.
+  // -999 is the YoY "no prior year" sentinel; map it (and null) to null so the
+  // formatter renders an em-dash rather than "-999%".
+  const activeMetric = METRICS.find((m) => m.key === metric) ?? METRICS[0];
+  const rawActive = feature[activeMetric.key];
+  const activeVal = rawActive == null || rawActive === -999 ? null : rawActive;
+
   return (
     <section className="rail-detail">
       <header className="rail-detail-head">
@@ -115,15 +124,14 @@ function RailDetail({ feature, year, metric, onClear }) {
 
       {state === "aggregated" ? (
         <dl className="rail-rows">
-          {POPUP_ROWS.map(([key, label, fmt, headline]) => (
-            <div
-              key={key}
-              className={
-                "rail-row" +
-                (headline ? " headline" : "") +
-                (key === metric ? " is-active-metric" : "")
-              }
-            >
+          {/* Active (colour-encoded) metric first, then the rest of the contract
+              minus a duplicate of it. */}
+          <div className="rail-row headline">
+            <dt className="rail-k">{activeMetric.label}</dt>
+            <dd className="rail-v">{activeMetric.fmt(activeVal)}</dd>
+          </div>
+          {POPUP_ROWS.filter(([key]) => key !== activeMetric.key).map(([key, label, fmt]) => (
+            <div key={key} className="rail-row">
               <dt className="rail-k">{label}</dt>
               <dd className="rail-v">{fmt(feature[key])}</dd>
             </div>

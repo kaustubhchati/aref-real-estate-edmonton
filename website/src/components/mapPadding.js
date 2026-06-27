@@ -13,15 +13,24 @@
 // present (defensive), so a section with only a left panel pays nothing on the right.
 // =============================================================================
 
-// Width of the left control overlay (.sb), or 0 if there isn't one.
-export function sidebarLeftPad(map) {
-  const sb = map.getContainer().closest(".content-map")?.querySelector(".sb");
-  return sb ? Math.round(sb.getBoundingClientRect().width) : 0;
+// Width of a map-edge overlay panel, or 0 when it isn't there OR isn't actually
+// overlaying the map. On mobile the panels stack IN FLOW (position:relative, full
+// width) rather than floating over the map, so padding the camera by their width
+// would shove the whole map off and no-op the fitBounds. We only pad when the
+// panel is an absolute overlay (the desktop case).
+function overlayWidth(map, selector) {
+  const el = map.getContainer().closest(".content-map")?.querySelector(selector);
+  if (!el || getComputedStyle(el).position !== "absolute") return 0;
+  return Math.round(el.getBoundingClientRect().width);
 }
 
-// Width of the right info rail (.rail), or 0 if there isn't one. Mirror of
-// sidebarLeftPad — keeps a flown-to neighbourhood clear of the PA detail rail.
+// Width of the left control overlay (.sb), or 0 if absent / not overlaying.
+export function sidebarLeftPad(map) {
+  return overlayWidth(map, ".sb");
+}
+
+// Width of the right info rail (.rail), or 0 if absent / not overlaying. Mirror
+// of sidebarLeftPad — keeps a flown-to neighbourhood clear of the PA detail rail.
 export function sidebarRightPad(map) {
-  const rail = map.getContainer().closest(".content-map")?.querySelector(".rail");
-  return rail ? Math.round(rail.getBoundingClientRect().width) : 0;
+  return overlayWidth(map, ".rail");
 }
