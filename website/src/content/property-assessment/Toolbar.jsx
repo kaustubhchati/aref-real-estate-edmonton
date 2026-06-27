@@ -1,27 +1,21 @@
 // =============================================================================
 // Toolbar.jsx
 //
-// The Property Assessment top toolbar (Felt zone 1) — a thin floating pill at
-// top-centre of the map, always visible (it's a MAP zone, so it stays above the
-// immersive site-chrome reveal). Holds:
-//   • neighbourhood search (local name search → fly + select; no geocoder),
-//   • a focus-mode toggle (hide the left control panel for a clean map),
-//   • an export button (shell here; wired to scoped export in C4).
+// The Property Assessment top toolbar — a thin floating pill at top-centre of the
+// map. Holds the neighbourhood search (local name search → fly + select; no
+// geocoder) and an export menu (CSV / GeoJSON / PNG of the current selection, or
+// all when none is selected).
 //
 // Props:
-//   names         string[]  — datalist of neighbourhood names for search
-//   onSearch      (name) => void   — select-by-name (fly + fill)
-//   focusMode     bool      — current focus state (for the toggle's pressed look)
-//   onToggleFocus () => void
-//   onExport      () => void | undefined  — undefined = disabled shell (pre-C4)
+//   names    string[]  — names for the search dropdown
+//   onSearch (name) => void   — select-by-name (fly + fill)
+//   onExport (format) => void — "csv" | "geojson" | "png"
 // =============================================================================
 
 import { useEffect, useRef, useState } from "react";
 import SearchInput from "../../components/SearchInput.jsx";
 
-// Small single-path stroke icons, matching the metric-control icon style.
-const ICON_FOCUS =
-  "M8 3H5a2 2 0 0 0-2 2v3 M21 8V5a2 2 0 0 0-2-2h-3 M3 16v3a2 2 0 0 0 2 2h3 M16 21h3a2 2 0 0 0 2-2v-3";
+// Single-path stroke icon, matching the metric-control icon style.
 const ICON_EXPORT =
   "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3";
 
@@ -34,7 +28,7 @@ function Icon({ d }) {
   );
 }
 
-export default function Toolbar({ names, onSearch, focusMode, onToggleFocus, onExport }) {
+export default function Toolbar({ names, onSearch, onExport }) {
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef(null);
   const triggerRef = useRef(null);
@@ -67,16 +61,6 @@ export default function Toolbar({ names, onSearch, focusMode, onToggleFocus, onE
           onSelect={onSearch}
         />
       </div>
-      <button
-        type="button"
-        className={`toolbar-btn${focusMode ? " active" : ""}`}
-        onClick={onToggleFocus}
-        aria-pressed={focusMode}
-        title={focusMode ? "Exit focus mode" : "Focus mode — hide the controls panel"}
-      >
-        <Icon d={ICON_FOCUS} />
-        <span className="toolbar-btn-label">Focus</span>
-      </button>
       <div className="toolbar-export" ref={exportRef}>
         <button
           ref={triggerRef}

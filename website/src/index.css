@@ -768,18 +768,6 @@ p  { margin: 0 0 0.75rem; }
 }
 .toolbar-menu button:hover { background: var(--accent-soft); color: var(--accent-dark); }
 
-/* Focus mode — hide the left control panel for an unobstructed map. Scoped to
-   .pa-map (only the PA route sets it), so the shared .sb is untouched for BP/BC. */
-.pa-map .sb {
-  transition: transform var(--dur-base) var(--ease), opacity var(--dur-base) var(--ease),
-              visibility var(--dur-base) var(--ease);
-}
-/* visibility:hidden (after the slide) also removes the hidden controls from the
-   keyboard tab order, so focus mode doesn't trap Tab on an invisible panel. */
-.pa-map.is-focus .sb {
-  transform: translateX(-110%); opacity: 0; pointer-events: none; visibility: hidden;
-}
-
 /* ----- Map canvas ----- */
 
 .canvas-wrap {

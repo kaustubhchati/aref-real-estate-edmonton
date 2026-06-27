@@ -156,8 +156,6 @@ export default function PropertyAssessmentMap() {
   // The neighbourhood whose table row is hovered — mirrored to the map's `hover`
   // feature-state so a row lights up its polygon (and vice-versa). null = none.
   const [hoveredRowId, setHoveredRowId] = useState(null);
-  // Focus mode (toolbar toggle): hide the left control panel for a clean map.
-  const [focusMode, setFocusMode] = useState(false);
 
   // Load the manifest once on mount and seed the year in the SAME update (no
   // frame where the manifest is loaded but no year is chosen → no empty-state
@@ -606,7 +604,7 @@ export default function PropertyAssessmentMap() {
   const empty = url ? null : describeEmpty(manifest, city, year);
 
   return (
-    <article className={`content-map pa-map${focusMode ? " is-focus" : ""}`}>
+    <article className="content-map pa-map">
       {/* TOP toolbar (Felt zone 1) — floating pill: search, focus-mode toggle, and
           an export menu (CSV / GeoJSON / PNG of the current selection, or all
           neighbourhoods when none is selected). Always visible; a map zone, so it
@@ -615,8 +613,6 @@ export default function PropertyAssessmentMap() {
         <Toolbar
           names={names}
           onSearch={flyAndPinByName}
-          focusMode={focusMode}
-          onToggleFocus={() => setFocusMode((f) => !f)}
           onExport={handleExport}
         />
       )}
