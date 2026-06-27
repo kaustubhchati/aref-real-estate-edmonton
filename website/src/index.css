@@ -720,6 +720,13 @@ p  { margin: 0 0 0.75rem; }
 .seg-icon { flex: 0 0 auto; }
 .seg-text { line-height: 1.2; }
 
+/* Fused metric control + legend (Felt zone 2). The segmented control already
+   names the active metric, so the legend's redundant title is hidden here and the
+   two sit flush as one "choose metric -> see its scale" unit. Scoped to
+   .metric-legend, so the shared Legend keeps its title everywhere else (BP/BC). */
+.metric-legend .seg { margin-bottom: 8px; }
+.metric-legend .legend-title { display: none; }
+
 /* ---- Dwelling Units legend crossfade ------------------------------------ */
 /* Keyed remount on metric/sub switch re-runs this fade, synced to the 500ms
    fill crossfade so the sequential↔diverging legend swap dissolves, not snaps. */

@@ -497,18 +497,22 @@ export default function PropertyAssessmentMap() {
               />
             )}
           </div>
-          {/* Which aggregate column the choropleth colours by — a single-select
-              segmented control sourced from the SAME METRICS table (no literals).
-              Single-select because the fill encodes exactly one metric. */}
+        </section>
+
+        {/* Fused metric + legend (Felt zone 2): the segmented control chooses the
+            metric; the legend directly below IS that metric's colour scale — one
+            unit. The legend's own title is hidden here (.metric-legend) since the
+            control already names the metric; the Legend component stays shared
+            and unchanged (only this context hides its title). */}
+        <section className="sb-section metric-legend">
+          {/* Single-select — the fill encodes exactly one metric. Sourced from the
+              SAME METRICS table (no literals). */}
           <SegmentedControl
             label="Metric"
             options={METRICS}
             value={metric}
             onChange={setMetric}
           />
-        </section>
-
-        <section className="sb-section">
           <Legend
             title={selectedMetric.label}
             stops={stops}
