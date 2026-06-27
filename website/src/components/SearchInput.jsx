@@ -1,16 +1,20 @@
 // =============================================================================
 // SearchInput.jsx
 //
-// Controlled <input> backed by a <datalist> for autocomplete. The parent owns
-// the names list and the onSelect callback (typically `flyAndPinByName` from
-// useChoroplethInteractions). This component is map-agnostic — pass it a
-// names array and a callback and it works for any "type a name, pick from a
-// list, do a thing" flow.
+// Controlled name search with a CUSTOM filtered dropdown (not a native <datalist>,
+// which dumped the whole ~403-name list over the map on focus). Behaviour:
+//   • no list until the user types,
+//   • then a height-capped, scrollable result panel of substring matches
+//     (bounded to the input's width, so it never overlays the right rail),
+//   • arrow-key / Enter / click to select; Escape or outside-click to close.
 //
-// Submit triggers: Enter key, or change event (datalist click).
+// Map-agnostic: parent passes a `names` array and an `onSelect(name)` callback
+// (typically flyAndPinByName). Selecting commits the name.
 // =============================================================================
 
 import { useEffect, useId, useRef, useState } from "react";
+
+const MAX_RESULTS = 50; // hard cap on rendered rows; the panel scrolls within max-height
 
 export default function SearchInput({
   names,
@@ -20,55 +24,93 @@ export default function SearchInput({
   label,
 }) {
   const [value, setValue] = useState("");
-  const listId = useId();
-  const inputRef = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+  const wrapRef = useRef(null);
+  const id = useId();
 
-  // Stable ref to onSelect — the native-event listener below should always
-  // call the freshest callback without needing to re-attach on every render.
-  const onSelectRef = useRef(onSelect);
-  onSelectRef.current = onSelect;
+  const q = value.trim().toLowerCase();
+  const matches = q
+    ? names.filter((n) => n.toLowerCase().includes(q)).slice(0, MAX_RESULTS)
+    : [];
+  const showList = open && q !== "" && matches.length > 0;
 
-  // The native `change` event fires once per commit (Enter, datalist-click,
-  // or blur with a changed value). React's onChange maps to `input`, which
-  // fires per-keystroke — wrong granularity for "submit". We do the change
-  // listener via a ref + addEventListener to match 09's behaviour.
+  // Close on outside click (Escape is handled in onKeyDown while focused).
   useEffect(() => {
-    const el = inputRef.current;
-    if (!el) return undefined;
-    function onCommit() {
-      const v = el.value.trim();
-      if (v) onSelectRef.current?.(v);
-    }
-    el.addEventListener("change", onCommit);
-    return () => el.removeEventListener("change", onCommit);
-  }, []);
+    if (!open) return undefined;
+    const onDown = (e) => { if (!wrapRef.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  function choose(name) {
+    onSelect?.(name);
+    setValue(name);
+    setOpen(false);
+    setActive(-1);
+  }
+
+  function onChange(e) {
+    setValue(e.target.value);
+    setOpen(true);
+    setActive(-1);
+  }
 
   function onKeyDown(e) {
-    if (e.key === "Enter") {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
-      const v = value.trim();
-      if (v) onSelect(v);
+      setOpen(true);
+      setActive((i) => Math.min(i + 1, matches.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (active >= 0 && matches[active]) choose(matches[active]);
+      else if (matches.length) choose(matches[0]);
+      else if (value.trim()) onSelect?.(value.trim()); // forgiving: try the typed text
+    } else if (e.key === "Escape") {
+      setOpen(false);
+      setActive(-1);
     }
   }
 
   return (
-    <div className="search">
-      {label && <label htmlFor={`${listId}-input`} className="search-label">{label}</label>}
+    <div className="search" ref={wrapRef}>
+      {label && <label htmlFor={`${id}-input`} className="search-label">{label}</label>}
       <input
-        id={`${listId}-input`}
-        ref={inputRef}
+        id={`${id}-input`}
         className="search-input"
         type="text"
-        list={listId}
+        role="combobox"
+        aria-expanded={showList}
+        aria-controls={`${id}-list`}
+        aria-autocomplete="list"
         autoComplete="off"
         placeholder={placeholder}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={onChange}
+        onFocus={() => { if (q) setOpen(true); }}
         onKeyDown={onKeyDown}
       />
-      <datalist id={listId}>
-        {names.map((n) => <option key={n} value={n} />)}
-      </datalist>
+      {showList && (
+        <ul className="search-results" id={`${id}-list`} role="listbox">
+          {matches.map((n, i) => (
+            <li
+              key={n}
+              role="option"
+              aria-selected={i === active}
+              className={`search-result${i === active ? " active" : ""}`}
+              // onMouseDown (not onClick) + preventDefault so the input's blur
+              // doesn't close the list before the selection registers.
+              onMouseDown={(e) => { e.preventDefault(); choose(n); }}
+              onMouseEnter={() => setActive(i)}
+            >
+              {n}
+            </li>
+          ))}
+        </ul>
+      )}
       {hint && <div className="search-hint">{hint}</div>}
     </div>
   );

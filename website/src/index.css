@@ -1020,7 +1020,21 @@ p  { margin: 0 0 0.75rem; }
 .legend-empty { margin: 0; font-size: 0.72rem; color: var(--text-subtle); }
 
 /* ---- Search (rendered inside .sb-section) -------------------------------- */
-.search { display: block; }
+.search { display: block; position: relative; }
+/* Filtered result dropdown — bounded to the input's width (so it can't overlay
+   the right rail) and height-capped + scrollable (so it can't flood the map). */
+.search-results {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  max-height: 240px; overflow-y: auto;
+  list-style: none; margin: 0; padding: 4px;
+  background: var(--bg); border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-lg); z-index: 5;
+}
+.search-result {
+  padding: 6px 9px; font-size: 0.82rem; border-radius: var(--radius-sm);
+  cursor: pointer; color: var(--text);
+}
+.search-result.active { background: var(--accent-soft); color: var(--accent-dark); }
 .search-label {
   display: block;
   font-size: 11px;
