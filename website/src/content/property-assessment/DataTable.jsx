@@ -49,6 +49,7 @@ import {
 } from "@tanstack/react-table";
 import Sparkline from "../../components/Sparkline.jsx";
 import ExportMenu from "./ExportMenu.jsx";
+import { METRICS } from "./choroplethStyle.js";
 import {
   fmtArea,
   fmtCurrency,
@@ -58,17 +59,27 @@ import {
   fmtYear,
 } from "../../utils/format.js";
 
-// The fixed metric columns, in the map's METRICS order. key = row field (already
-// the active-year value); label = compact header; fmt = cell formatter. These
-// mirror the choropleth's metrics so the table carries every variable the rail
-// shows. Adding a metric to the map → add its row here too (one place).
-const METRIC_COLS = [
-  { key: "median_assessvalue", label: "Median value", fmt: fmtCurrencyShort },
-  { key: "avall_public",       label: "Mean value",   fmt: fmtCurrencyShort },
-  { key: "avg_lotsize",        label: "Lot size",     fmt: fmtArea },
-  { key: "median_yearbuilt",   label: "Year built",   fmt: fmtYear },
-  { key: "yoy_pct_change",     label: "YoY %",        fmt: fmtPct },
-];
+// Per-metric PRESENTATION for the dense table: a compact column label + compact
+// formatter (e.g. $1.41M) that differ from the map's full label / formatter.
+// Keyed by metric key; a metric with no entry falls back to its METRICS label/fmt.
+const PRESENTATION = {
+  median_assessvalue: { label: "Median value", fmt: fmtCurrencyShort },
+  avall_public:       { label: "Mean value",   fmt: fmtCurrencyShort },
+  avg_lotsize:        { label: "Lot size",     fmt: fmtArea },
+  median_yearbuilt:   { label: "Year built",   fmt: fmtYear },
+  yoy_pct_change:     { label: "YoY %",        fmt: fmtPct },
+};
+
+// The fixed metric columns, DERIVED from the map's canonical METRICS (one source
+// of truth) in the same order — so a new map metric automatically gets a table
+// column. PRESENTATION supplies the compact label/formatter; anything unlisted
+// falls back to the metric's own label + formatter, so the column never silently
+// vanishes.
+const METRIC_COLS = METRICS.map((m) => ({
+  key: m.key,
+  label: PRESENTATION[m.key]?.label ?? m.label,
+  fmt: PRESENTATION[m.key]?.fmt ?? m.fmt,
+}));
 
 export default function DataTable({
   rows,
@@ -153,6 +164,9 @@ export default function DataTable({
     },
   ], [activeIndex, metricLabel]);
 
+  // React Compiler can't memoize a component that calls useReactTable (TanStack
+  // returns fresh functions each call); it safely skips this one — fine at 407 rows.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,
@@ -182,12 +196,15 @@ export default function DataTable({
   }, [onToggle]);
 
   // When the selection narrows to a single nbhd (e.g. clicked on the map), scroll
-  // its row into view if the table is open. Re-run after a sort/filter reorders.
+  // its row into view if the table is open. Re-runs after ANY reorder: a sort, a
+  // filter, OR a data change (year/metric rebuilds `data`, which can reorder a
+  // value/rank-sorted list). `data` is the memo, not the live row model, so this
+  // fires only on real reorders — not every render.
   useEffect(() => {
     if (!open || selectedIds.length !== 1 || !scrollRef.current) return;
     const row = scrollRef.current.querySelector(`[data-id="${CSS.escape(String(selectedIds[0]))}"]`);
     row?.scrollIntoView({ block: "nearest" });
-  }, [selectedIds, open, sorting, globalFilter]);
+  }, [selectedIds, open, sorting, globalFilter, data]);
 
   return (
     <section className={`dt${open ? " dt--open" : ""}`} aria-label="Neighbourhood data table">

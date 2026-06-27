@@ -34,9 +34,12 @@ export function fmtCurrency(v) {
 export function fmtCurrencyShort(v) {
   if (v == null || isNaN(+v)) return DASH;
   const n = Math.round(+v);
-  if (Math.abs(n) >= 1e6) return "$" + (n / 1e6).toFixed(2) + "M";   // $1.41M
-  if (Math.abs(n) >= 1e4) return "$" + Math.round(n / 1e3) + "k";    // $353k
-  return "$" + n.toLocaleString();                                   // $9,500
+  if (Math.abs(n) < 1e4) return "$" + n.toLocaleString();           // $9,500
+  // Round to thousands first, THEN promote to M — so a value that rounds up to
+  // 1000k (e.g. $999,800) reads "$1.00M", never "$1000k".
+  const k = Math.round(n / 1e3);
+  if (Math.abs(k) >= 1000) return "$" + (k / 1e3).toFixed(2) + "M"; // $1.41M
+  return "$" + k + "k";                                             // $353k
 }
 
 export function fmtNumber(v) {

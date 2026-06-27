@@ -1426,10 +1426,14 @@ p  { margin: 0 0 0.75rem; }
   .pa-year { width: min(84vw, 300px); }
   /* Bottom-left on mobile so it clears the centred year pill + corner controls. */
   .pa-legend { width: 42vw; left: 12px; right: auto; bottom: 10px; }
-  /* Bottom table: pin to the viewport bottom and go fullscreen below the header. */
+  /* Bottom table: pin to the viewport bottom and go fullscreen below the header.
+     Reset the desktop bounded module (width/borders/radius) so it's edge-to-edge. */
   .dt { position: fixed; }
   .dt.dt--open { top: 50px; }
-  .dt.dt--open .dt-panel { max-height: none; flex: 1 1 auto; }
+  .dt.dt--open .dt-panel {
+    max-height: none; flex: 1 1 auto;
+    width: 100%; border-left: 0; border-right: 0; border-radius: 0;
+  }
   .shell-footer-grid { grid-template-columns:1fr; gap:1.25rem; }
 }
 
