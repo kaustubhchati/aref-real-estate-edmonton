@@ -252,14 +252,25 @@ export function yoyStopsFromValues(values) {
 }
 
 // ---- Choropleth metrics ----------------------------------------------------
-// The columns the user can colour the map by. key = GeoJSON property,
-// label = control + legend text, fmt = value formatter for legend/popup.
+// The columns the user can colour the map by. ONE source of truth (the metric
+// control, the legend, the default, and the URL all read this):
+//   key   = GeoJSON property to colour by
+//   label = control + legend text
+//   fmt   = value formatter for legend / rail
+//   icon  = a single SVG <path d="…"> (Lucide-style, stroke-based, 24×24 viewBox)
+//           drawn by the segmented metric control (SegmentedControl.jsx). Adding
+//           a metric stays a ONE-PLACE change — add its row here, icon included.
 const METRICS = [
-  { key: "median_assessvalue", label: "Median assessed value",   fmt: fmtCurrency },
-  { key: "avall_public",       label: "Mean assessed value",     fmt: fmtCurrency },
-  { key: "avg_lotsize",        label: "Mean lot size",           fmt: fmtArea     },
-  { key: "median_yearbuilt",   label: "Median year built",       fmt: fmtYear     },
-  { key: "yoy_pct_change",     label: "Year-over-year change %", fmt: fmtPct      },
+  { key: "median_assessvalue", label: "Median assessed value",   fmt: fmtCurrency,
+    icon: "M12 2v20 M17 7H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" },             // dollar
+  { key: "avall_public",       label: "Mean assessed value",     fmt: fmtCurrency,
+    icon: "M3 3v18h18 M8 17V9 M13 17V5 M18 17v-7" },                                  // distribution / mean
+  { key: "avg_lotsize",        label: "Mean lot size",           fmt: fmtArea,
+    icon: "M15 3h6v6 M9 21H3v-6 M21 3l-7 7 M3 21l7-7" },                              // area / extent
+  { key: "median_yearbuilt",   label: "Median year built",       fmt: fmtYear,
+    icon: "M8 2v4 M16 2v4 M3 10h18 M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" }, // calendar
+  { key: "yoy_pct_change",     label: "Year-over-year change %", fmt: fmtPct,
+    icon: "M3 17l6-6 4 4 8-8 M21 7v6 M21 7h-6" },                                     // trending up
 ];
 export { METRICS };
 

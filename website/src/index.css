@@ -596,6 +596,37 @@ p  { margin: 0 0 0.75rem; }
    gel tokens on .opt-toggle-btn.active above — ONE recipe, no duplicate here. */
 .opt-toggle-gel .opt-toggle-buttons { background:#dedad4; }
 
+/* ---- SegmentedControl (the metric selector) ----------------------------- */
+/* Single-select, icon+label. Vertical stack so the longer metric labels
+   ("Year-over-year change %") read in full inside the 268px panel. Reuses the
+   gel active-pill recipe from .opt-toggle-btn.active so it matches the City
+   toggle visually. */
+.seg { margin: 0 0 8px; }
+.seg:last-child { margin-bottom: 0; }
+.seg-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-muted); font-weight: 600; margin: 0 0 6px;
+}
+.seg-options {
+  display: flex; flex-direction: column; gap: 2px;
+  background: #dedad4; border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 2px;
+}
+.seg-btn {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 6px 9px; font-size: 0.78rem; font-weight: 500;
+  font-family: inherit; color: var(--text-muted); text-align: left;
+  background: transparent; border: 0; border-radius: var(--radius-sm);
+  cursor: pointer; transition: background 120ms, color 120ms;
+}
+.seg-btn:hover:not(.active) { background: var(--bg); color: var(--text); }
+.seg-btn.active {
+  background: var(--gel-grad); color: var(--accent-dark); font-weight: 600;
+  box-shadow: var(--gel-bevel), var(--gel-lift);
+}
+.seg-icon { flex: 0 0 auto; }
+.seg-text { line-height: 1.2; }
+
 /* ---- Dwelling Units legend crossfade ------------------------------------ */
 /* Keyed remount on metric/sub switch re-runs this fade, synced to the 500ms
    fill crossfade so the sequential↔diverging legend swap dissolves, not snaps. */

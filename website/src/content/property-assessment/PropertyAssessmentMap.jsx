@@ -28,6 +28,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import MapView from "../../components/MapView.jsx";
 import Legend from "../../components/Legend.jsx";
 import OptionToggle from "../../components/OptionToggle.jsx";
+import SegmentedControl from "../../components/SegmentedControl.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
@@ -466,22 +467,15 @@ export default function PropertyAssessmentMap() {
               />
             )}
           </div>
-          {/* Which aggregate column the choropleth colours by. (Becomes a
-              segmented control in the next commit; still sourced from METRICS.) */}
-          <div className="sb-select-field">
-            <span className="sb-select-label">Metric</span>
-            <select
-              className="sb-select"
-              aria-label="Metric"
-              data-default={metric === METRICS[0].key ? "true" : "false"}
-              value={metric}
-              onChange={(e) => setMetric(e.target.value)}
-            >
-              {METRICS.map((m) => (
-                <option key={m.key} value={m.key}>{m.label}</option>
-              ))}
-            </select>
-          </div>
+          {/* Which aggregate column the choropleth colours by — a single-select
+              segmented control sourced from the SAME METRICS table (no literals).
+              Single-select because the fill encodes exactly one metric. */}
+          <SegmentedControl
+            label="Metric"
+            options={METRICS}
+            value={metric}
+            onChange={setMetric}
+          />
         </section>
 
         <section className="sb-section">
