@@ -33,6 +33,7 @@ import EmptyState from "../../components/EmptyState.jsx";
 import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
 import InfoRail from "./InfoRail.jsx";
+import DataTable from "./DataTable.jsx";
 import {
   BASEMAP_STYLE,
   MAP_VIEW,
@@ -131,6 +132,9 @@ export default function PropertyAssessmentMap() {
     (id) => setSelectedIds(id == null ? [] : [id]),
     []
   );
+  // The neighbourhood whose table row is hovered — mirrored to the map's `hover`
+  // feature-state so a row lights up its polygon (and vice-versa). null = none.
+  const [hoveredRowId, setHoveredRowId] = useState(null);
 
   // Load the manifest once on mount and seed the year in the SAME update (no
   // frame where the manifest is loaded but no year is chosen → no empty-state
@@ -353,6 +357,26 @@ export default function PropertyAssessmentMap() {
     }
   }, [map, selectedIds]);
 
+  // Row hover in the bottom table highlights its polygon via the SAME `hover`
+  // feature-state the map hover uses — the two are never active at once (the
+  // pointer is over the table OR the map). Clear the previous, set the new.
+  const prevRowHoverRef = useRef(null);
+  useEffect(() => {
+    if (!map) return;
+    const prev = prevRowHoverRef.current;
+    try {
+      if (prev != null && String(prev) !== String(hoveredRowId)) {
+        map.setFeatureState({ source: "nbhd", id: prev }, { hover: false });
+      }
+      if (hoveredRowId != null) {
+        map.setFeatureState({ source: "nbhd", id: hoveredRowId }, { hover: true });
+      }
+      prevRowHoverRef.current = hoveredRowId;
+    } catch {
+      /* map mid-teardown */
+    }
+  }, [map, hoveredRowId]);
+
   // Active-metric series across every year for the single-selected nbhd — the
   // rail sparkline. All years are on the resident combined feature (gj), so this
   // is free. null unless exactly one nbhd is selected; -999 (the YoY no-prior
@@ -369,6 +393,34 @@ export default function PropertyAssessmentMap() {
     });
   }, [singleSelectedId, gj, metric, years]);
   const activeYearIndex = years.indexOf(year);
+
+  // Rows for the bottom data table, derived from the RESIDENT combined source —
+  // gjView for the active-year value/yoy, gj (same feature order) for the per-row
+  // all-years sparkline. No querySourceFeatures: the data is already in JS.
+  // value/yoy/series entries are null for non-reportable polygons (rendered "—").
+  const tableRows = useMemo(() => {
+    if (!gjView || !gj) return [];
+    const num = (v) => (v == null || !Number.isFinite(+v) || +v === -999 ? null : +v);
+    const out = gjView.features.map((f, i) => {
+      const p = f.properties;
+      const gp = gj.features[i].properties;
+      return {
+        id: p["Neighbourhood ID"],
+        name: p.display_name,
+        state: p.polygon_state,
+        value: num(p[metric]),
+        yoy: num(p.yoy_pct_change),
+        series: years.map((y) => num(gp[`${metric}_${y}`])),
+        rank: null,
+      };
+    });
+    // City rank by the active metric (descending; highest = 1), among reportable rows.
+    out
+      .filter((r) => r.value != null)
+      .sort((a, b) => b.value - a.value)
+      .forEach((r, i) => { r.rank = i + 1; });
+    return out;
+  }, [gjView, gj, metric, years]);
 
   // Sum n_properties across every polygon that has a finite count. This includes
   // aggregated + suppressed_low_n polygons and naturally excludes non_residential
@@ -605,6 +657,22 @@ export default function PropertyAssessmentMap() {
           sparkValues={sparkValues}
           activeIndex={activeYearIndex}
           onClear={() => setSelectedIds([])}
+        />
+      )}
+
+      {/* BOTTOM data table (Felt zone 4) — the analytical surface over the
+          resident gjView. Collapsed to a handle by default; raises on click / T.
+          Rows link both ways to the shared selection. Only with data loaded. */}
+      {url && gjView && (
+        <DataTable
+          rows={tableRows}
+          metricLabel={selectedMetric.label}
+          metricFmt={selectedMetric.fmt}
+          showYoyCol={metric !== "yoy_pct_change"}
+          activeIndex={activeYearIndex}
+          selectedIds={selectedIds}
+          onSelectRow={selectNeighbourhood}
+          onHoverRow={setHoveredRowId}
         />
       )}
     </article>
