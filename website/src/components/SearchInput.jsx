@@ -27,6 +27,7 @@ export default function SearchInput({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const wrapRef = useRef(null);
+  const listRef = useRef(null);
   const id = useId();
 
   const q = value.trim().toLowerCase();
@@ -42,6 +43,12 @@ export default function SearchInput({
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
+
+  // Keep the keyboard-highlighted option scrolled into view.
+  useEffect(() => {
+    if (active < 0) return;
+    listRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: "nearest" });
+  }, [active]);
 
   function choose(name) {
     onSelect?.(name);
@@ -83,8 +90,10 @@ export default function SearchInput({
         className="search-input"
         type="text"
         role="combobox"
+        aria-label={label || placeholder}
         aria-expanded={showList}
-        aria-controls={`${id}-list`}
+        aria-controls={showList ? `${id}-list` : undefined}
+        aria-activedescendant={active >= 0 ? `${id}-opt-${active}` : undefined}
         aria-autocomplete="list"
         autoComplete="off"
         placeholder={placeholder}
@@ -94,12 +103,14 @@ export default function SearchInput({
         onKeyDown={onKeyDown}
       />
       {showList && (
-        <ul className="search-results" id={`${id}-list`} role="listbox">
+        <ul className="search-results" id={`${id}-list`} role="listbox" ref={listRef}>
           {matches.map((n, i) => (
             <li
               key={n}
+              id={`${id}-opt-${i}`}
               role="option"
               aria-selected={i === active}
+              data-active={i === active ? "true" : undefined}
               className={`search-result${i === active ? " active" : ""}`}
               // onMouseDown (not onClick) + preventDefault so the input's blur
               // doesn't close the list before the selection registers.

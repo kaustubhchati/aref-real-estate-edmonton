@@ -34,7 +34,6 @@ import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
 import InfoRail from "./InfoRail.jsx";
 import DataTable from "./DataTable.jsx";
-import ExportMenu from "./ExportMenu.jsx";
 import SearchInput from "../../components/SearchInput.jsx";
 import { buildCsv, buildGeoJson, downloadText, exportPng } from "./exportData.js";
 import {
@@ -649,8 +648,9 @@ export default function PropertyAssessmentMap() {
             >
               Clear{selectedIds.length ? ` (${selectedIds.length})` : ""}
             </button>
-            <ExportMenu onExport={handleExport} />
           </div>
+          {/* Export lives in the table header (reachable on mobile, where the
+              table is fullscreen and this toolset is behind it). */}
         </aside>
       )}
 
@@ -768,6 +768,7 @@ export default function PropertyAssessmentMap() {
           onHoverRow={setHoveredRowId}
           aggregate={selectionAggregate}
           onClearSelection={() => setSelectedIds([])}
+          onExport={handleExport}
           open={analystMode}
           onToggle={() => setAnalystMode((a) => !a)}
         />

@@ -49,8 +49,10 @@ export default function EdgeReveal({ side, label, children }) {
         side === "top"
           ? e.clientY <= edgeY + REVEAL_PX
           : e.clientY >= edgeY - REVEAL_PX;
-      // Gate to the left band so a centred search/tool pill never triggers it.
-      const nearGrip = e.clientX <= REVEAL_X;
+      // Gate to the left band so the centred search pill never triggers it — and
+      // on a narrow viewport cap the band left of the pill's centred left edge.
+      const limit = Math.min(REVEAL_X, (window.innerWidth - 280) / 2);
+      const nearGrip = e.clientX <= limit;
       setNear(nearEdge && nearGrip); // setState bails when unchanged, so this is cheap
     }
     function onLeave() { setNear(false); }

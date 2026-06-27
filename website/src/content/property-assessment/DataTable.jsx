@@ -26,6 +26,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Sparkline from "../../components/Sparkline.jsx";
+import ExportMenu from "./ExportMenu.jsx";
 import { fmtCurrency, fmtNumber, fmtPct } from "../../utils/format.js";
 
 // Sort comparator: nulls always last (regardless of direction), numbers numeric,
@@ -56,6 +57,7 @@ export default function DataTable({
   onHoverRow,
   aggregate,         // honest area aggregate, or null. Non-null = selection mode.
   onClearSelection,  // () => void
+  onExport,          // (format) => void — scoped export (CSV/GeoJSON/PNG)
   open,              // controlled: the table is raised (= analyst view)
   onToggle,          // () => void — toggle the table / analyst view
 }) {
@@ -145,7 +147,7 @@ export default function DataTable({
       {open && (
         <div className="dt-panel">
           {selectionMode ? (
-            <AggregateHeader aggregate={aggregate} onClear={onClearSelection} />
+            <AggregateHeader aggregate={aggregate} onClear={onClearSelection} onExport={onExport} />
           ) : (
             <div className="dt-toolbar">
               <input
@@ -157,6 +159,7 @@ export default function DataTable({
                 aria-label="Filter neighbourhoods by name"
               />
               <span className="dt-count">{view.length} of {rows.length}</span>
+              <ExportMenu onExport={onExport} />
             </div>
           )}
 
@@ -229,12 +232,15 @@ export default function DataTable({
 // mean) are unlabelled; the APPROXIMATE ones (median, YoY) carry a "≈" tag and
 // the note explains why (no parcel data in-browser). The constituent rows below
 // make the rolled-up numbers auditable.
-function AggregateHeader({ aggregate: a, onClear }) {
+function AggregateHeader({ aggregate: a, onClear, onExport }) {
   return (
     <div className="dt-agg">
       <div className="dt-agg-bar">
         <strong className="dt-agg-title">{a.nSelected} neighbourhoods selected</strong>
-        <button type="button" className="dt-agg-clear" onClick={onClear}>Clear selection</button>
+        <div className="dt-agg-actions">
+          <button type="button" className="dt-agg-clear" onClick={onClear}>Clear selection</button>
+          <ExportMenu onExport={onExport} />
+        </div>
       </div>
       <div className="dt-agg-cards">
         <AggCard label="Total parcels" value={fmtNumber(a.totalParcels)} tag="exact" />

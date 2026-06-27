@@ -339,7 +339,7 @@ p  { margin: 0 0 0.75rem; }
 
 /* The grip — a small handle: the discoverable touch affordance and the
    keyboard/click toggle. The ONLY part of the edge that takes pointer events.
-   Anchored to the LEFT corner so it clears the centred map zones (top toolbar +
+   Anchored to the LEFT corner so it clears the centred map zones (search pill +
    bottom table pill) and the right-corner map controls — keeping it tappable on
    touch even with those zones present. */
 .edge-reveal-tab {
@@ -720,6 +720,8 @@ p  { margin: 0 0 0.75rem; }
 .dt-card-tag { font-size: 9.5px; color: var(--text-subtle); }
 .dt-card.is-approx .dt-card-tag { color: var(--accent-dark); font-style: italic; }
 .dt-agg-note { font-size: 10.5px; color: var(--text-muted); line-height: 1.5; margin: 8px 0 0; }
+.dt-agg-actions { display: flex; align-items: center; gap: 8px; }
+.dt-toolbar .export-menu { margin-left: auto; }   /* push export to the right of the filter */
 
 /* ----- Floating boxes (Property Assessment locked layout) ----- */
 /* Compact cards floating over a full-bleed map. The left control box and the
@@ -729,6 +731,8 @@ p  { margin: 0 0 0.75rem; }
   position: absolute;
   z-index: 12;
   width: 248px; max-width: calc(100vw - 24px);
+  max-height: calc(100% - 24px); overflow-y: auto; overflow-x: hidden;
+  scrollbar-gutter: stable;
   background: var(--sidebar-bg);
   border: 1px solid var(--sidebar-edge);
   border-radius: 12px;
@@ -787,7 +791,8 @@ p  { margin: 0 0 0.75rem; }
 }
 .pa-year-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
 .pa-year .sb-year-slider { flex: 1 1 auto; margin: 0; }
-.is-analyst .pa-year { bottom: calc(42svh + 14px); }   /* clear the raised table */
+/* Clear the whole table stack: the panel (max 42svh) + the ~30px handle above it. */
+.is-analyst .pa-year { bottom: calc(42svh + 48px); }
 
 /* Bottom-right legend card (default view), lifted above the map's corner controls. */
 .pa-legend {
@@ -1409,7 +1414,8 @@ p  { margin: 0 0 0.75rem; }
   .pa-box, .rail { width: 44vw; padding: 10px 11px; }
   .pa-search { width: min(72vw, 250px); }
   .pa-year { width: min(84vw, 300px); }
-  .pa-legend { width: 42vw; }
+  /* Bottom-left on mobile so it clears the centred year pill + corner controls. */
+  .pa-legend { width: 42vw; left: 12px; right: auto; bottom: 10px; }
   /* Bottom table: pin to the viewport bottom and go fullscreen below the header. */
   .dt { position: fixed; }
   .dt.dt--open { top: 50px; }

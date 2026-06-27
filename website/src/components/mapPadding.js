@@ -24,9 +24,12 @@ function overlayWidth(map, selector) {
   return Math.round(el.getBoundingClientRect().width);
 }
 
-// Width of the left floating control box (PA), or 0 if absent / not overlaying.
+// Width of the left overlay, or 0 if absent / not overlaying. A section renders
+// exactly one of these: PA's floating control box (.pa-box--left) or the shared
+// .sb sidebar (Building Permits, Business Census) — the selector list resolves to
+// whichever is present, so PA's rename doesn't drop BP/BC camera padding.
 export function sidebarLeftPad(map) {
-  return overlayWidth(map, ".pa-box--left");
+  return overlayWidth(map, ".pa-box--left, .sb");
 }
 
 // Width of the right info rail (.rail), or 0 if absent / not overlaying. Mirror

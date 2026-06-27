@@ -14,7 +14,7 @@
 // contract the map paints from (choroplethStyle.js) + the shared format.js
 // formatters — so the rail can never drift from the map. It is the single home
 // for the per-state copy that used to live in buildPopupHtml. (Search moved to
-// the top toolbar; site-wide provenance lives in the left control panel.)
+// the top-centre search pill; site-wide provenance lives in the left control box.)
 // =============================================================================
 
 import Sparkline from "../../components/Sparkline.jsx";
