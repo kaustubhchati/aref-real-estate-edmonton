@@ -757,6 +757,7 @@ export default function PropertyAssessmentMap() {
                 onReady={() => setMapReady(true)}
                 boxSelect={boxSelect}
                 preserveDrawingBuffer
+                cooperativeGestures={false}
               />
             </MapErrorBoundary>
           </>

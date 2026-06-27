@@ -45,6 +45,7 @@ export default function MapView({
   onReady,
   boxSelect,
   preserveDrawingBuffer = false,
+  cooperativeGestures = true,
   className = "",
 }) {
   const containerRef = useRef(null);
@@ -100,11 +101,11 @@ export default function MapView({
       // compact "i" toggle; the basemap CARTO/OSM credit comes from the TileJSON
       // automatically, customAttribution APPENDS our data credit (siteConfig §6).
       attributionControl: { compact: true, customAttribution: siteConfig.mapAttribution },
-      // Scrolling over the map zooms only when the user holds ctrl/⌘ (or uses two
-      // fingers on touch); a plain wheel scrolls the PAGE. Stops the full-width
-      // embedded map from hijacking page scroll. 5.24 is boolean-only — the
-      // "use ctrl + scroll to zoom" overlay is MapLibre's built-in (no custom text).
-      cooperativeGestures: true,
+      // Default (BP/BC): scrolling zooms only with ctrl/⌘ (or two fingers); a
+      // plain wheel scrolls the PAGE, so an embedded map doesn't hijack scroll.
+      // PA opts OUT (cooperativeGestures=false) for a free-roam, full-bleed map:
+      // wheel/two-finger zooms directly, no modifier. PA-scoped via the prop.
+      cooperativeGestures,
       // PA opts in (preserveDrawingBuffer) so the WebGL canvas can be exported to
       // PNG (getCanvas().toDataURL()) — without it the export is blank. Small perf
       // cost, so it's opt-in; other sections pass false (= the default).
