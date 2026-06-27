@@ -26,7 +26,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Sparkline from "../../components/Sparkline.jsx";
-import { fmtPct } from "../../utils/format.js";
+import { fmtCurrency, fmtNumber, fmtPct } from "../../utils/format.js";
 
 // Sort comparator: nulls always last (regardless of direction), numbers numeric,
 // strings locale-compared.
@@ -54,11 +54,19 @@ export default function DataTable({
   selectedIds,
   onSelectRow,
   onHoverRow,
+  aggregate,         // honest area aggregate, or null. Non-null = selection mode.
+  onClearSelection,  // () => void
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState({ key: "name", dir: "asc" });
   const scrollRef = useRef(null);
+
+  // Selection mode = a multi-neighbourhood box-select is active (aggregate set).
+  // The table shows the aggregate header + just the constituent rows; raise it
+  // automatically so the rolled-up numbers are visible.
+  const selectionMode = !!aggregate;
+  useEffect(() => { if (selectionMode) setOpen(true); }, [selectionMode]);
 
   // Keyboard shortcut: T toggles the table (ignored while typing in a field).
   useEffect(() => {
@@ -88,10 +96,17 @@ export default function DataTable({
   const selectedSet = useMemo(() => new Set(selectedIds.map(String)), [selectedIds]);
 
   const view = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const base = q ? rows.filter((r) => (r.name || "").toLowerCase().includes(q)) : rows;
+    let base;
+    if (selectionMode) {
+      // Selection mode: only the constituent rows (the auditable detail behind
+      // the aggregate cards).
+      base = rows.filter((r) => selectedSet.has(String(r.id)));
+    } else {
+      const q = query.trim().toLowerCase();
+      base = q ? rows.filter((r) => (r.name || "").toLowerCase().includes(q)) : rows;
+    }
     return [...base].sort(comparator(sort));
-  }, [rows, query, sort]);
+  }, [rows, query, sort, selectionMode, selectedSet]);
 
   // When the selection changes to a single nbhd (e.g. clicked on the map), scroll
   // its row into view if the table is open.
@@ -119,23 +134,29 @@ export default function DataTable({
         aria-expanded={open}
       >
         <span className="dt-handle-title">Data table</span>
-        <span className="dt-handle-meta">{rows.length} neighbourhoods · press T</span>
+        <span className="dt-handle-meta">
+          {selectionMode ? `${aggregate.nSelected} selected` : `${rows.length} neighbourhoods · press T`}
+        </span>
         <span className="dt-handle-caret" aria-hidden="true">{open ? "▾" : "▴"}</span>
       </button>
 
       {open && (
         <div className="dt-panel">
-          <div className="dt-toolbar">
-            <input
-              type="text"
-              className="dt-filter search-input"
-              placeholder="Filter by name…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              aria-label="Filter neighbourhoods by name"
-            />
-            <span className="dt-count">{view.length} of {rows.length}</span>
-          </div>
+          {selectionMode ? (
+            <AggregateHeader aggregate={aggregate} onClear={onClearSelection} />
+          ) : (
+            <div className="dt-toolbar">
+              <input
+                type="text"
+                className="dt-filter search-input"
+                placeholder="Filter by name…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="Filter neighbourhoods by name"
+              />
+              <span className="dt-count">{view.length} of {rows.length}</span>
+            </div>
+          )}
 
           <div className="dt-scroll" ref={scrollRef}>
             <table className="dt-table">
@@ -190,5 +211,42 @@ export default function DataTable({
         </div>
       )}
     </section>
+  );
+}
+
+// ---- Selection-mode aggregate header (C3) ----------------------------------
+// Honest area summary: the EXACT cards (count, total parcels, parcel-weighted
+// mean) are unlabelled; the APPROXIMATE ones (median, YoY) carry a "≈" tag and
+// the note explains why (no parcel data in-browser). The constituent rows below
+// make the rolled-up numbers auditable.
+function AggregateHeader({ aggregate: a, onClear }) {
+  return (
+    <div className="dt-agg">
+      <div className="dt-agg-bar">
+        <strong className="dt-agg-title">{a.nSelected} neighbourhoods selected</strong>
+        <button type="button" className="dt-agg-clear" onClick={onClear}>Clear selection</button>
+      </div>
+      <div className="dt-agg-cards">
+        <AggCard label="Total parcels" value={fmtNumber(a.totalParcels)} tag="exact" />
+        <AggCard label="Mean assessed" value={fmtCurrency(a.parcelMean)} tag="parcel-weighted · exact" />
+        <AggCard label="Median assessed" value={fmtCurrency(a.medianOfMedians)} tag="≈ median of medians" approx />
+        <AggCard label="YoY change" value={fmtPct(a.areaYoY)} tag="≈ nbhd-weighted" approx />
+      </div>
+      <p className="dt-agg-note">
+        {a.nReportable} reportable · {a.nSuppressed} suppressed · {a.nExcluded} non-residential / no-data
+        (excluded from values). Mean is parcel-exact; median &amp; YoY are neighbourhood-weighted
+        approximations — there is no parcel-level data in the browser.
+      </p>
+    </div>
+  );
+}
+
+function AggCard({ label, value, tag, approx = false }) {
+  return (
+    <div className={`dt-card${approx ? " is-approx" : ""}`}>
+      <span className="dt-card-label">{label}</span>
+      <span className="dt-card-value">{value}</span>
+      <span className="dt-card-tag">{tag}</span>
+    </div>
   );
 }

@@ -43,6 +43,7 @@ export default function MapView({
   onLoad,
   onLoading,
   onReady,
+  boxSelect,
   className = "",
 }) {
   const containerRef = useRef(null);
@@ -70,6 +71,13 @@ export default function MapView({
   // eslint-disable-next-line react-hooks/refs
   onReadyRef.current = onReady;
 
+  // boxSelect(map, startPos, endPos): optional — when provided, Shift-drag does a
+  // box SELECT (this callback) instead of the default box-zoom (PA's C3). Read via
+  // a ref so it always sees the section's latest closure (the current gjView).
+  const boxSelectRef = useRef(boxSelect);
+  // eslint-disable-next-line react-hooks/refs
+  boxSelectRef.current = boxSelect;
+
   // The live map instance + the URL currently in its source, so the in-place
   // swap effect can update data without re-creating the map (one WebGL context).
   const mapRef = useRef(null);
@@ -96,6 +104,12 @@ export default function MapView({
       // embedded map from hijacking page scroll. 5.24 is boolean-only — the
       // "use ctrl + scroll to zoom" overlay is MapLibre's built-in (no custom text).
       cooperativeGestures: true,
+      // PA opts into box-SELECT (Shift-drag) by passing boxSelect: the boxZoomEnd
+      // callback runs INSTEAD of the default fit-to-box zoom (MapLibre 5.20+).
+      // Sections that omit boxSelect keep the default box-zoom (undefined = default).
+      boxZoom: boxSelect
+        ? { boxZoomEnd: (m, s, e) => boxSelectRef.current?.(m, s, e) }
+        : undefined,
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");

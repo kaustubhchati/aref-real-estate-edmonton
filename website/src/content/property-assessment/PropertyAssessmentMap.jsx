@@ -83,6 +83,25 @@ function useCountUp(target, duration = 900) {
   return val;
 }
 
+// Mean-of-all-vertices centroid of a (Multi)Polygon — a representative point for
+// "is this neighbourhood's centroid inside the box?" (C3 box-select).
+function geometryCentroid(geom) {
+  let sx = 0, sy = 0, n = 0;
+  (function walk(c) {
+    if (typeof c[0] === "number") { sx += c[0]; sy += c[1]; n += 1; }
+    else for (const inner of c) walk(inner);
+  })(geom.coordinates);
+  return n ? [sx / n, sy / n] : null;
+}
+
+// Plain median of a numeric array (used for the labelled "median of medians"
+// area approximation).
+function medianOf(arr) {
+  const s = [...arr].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
 export default function PropertyAssessmentMap() {
   // The manifest is the source of truth for which years exist. Until it loads,
   // we show a loading state; if it fails, an error state. year is null until
@@ -425,6 +444,71 @@ export default function PropertyAssessmentMap() {
     return out;
   }, [gjView, gj, metric, years]);
 
+  // Shift-drag box SELECT (C3): the boxZoomEnd callback hands us the pixel box;
+  // a neighbourhood joins the selection when its centroid PROJECTS inside the box
+  // (matches the plan's "centroid falls in the box"; dedup-free — we read the
+  // resident gjView, not tiles). 0 hits = clear; 1 = rail; many = table aggregate.
+  function boxSelect(mapInst, startPos, endPos) {
+    if (!gjView) return;
+    const x1 = Math.min(startPos.x, endPos.x);
+    const x2 = Math.max(startPos.x, endPos.x);
+    const y1 = Math.min(startPos.y, endPos.y);
+    const y2 = Math.max(startPos.y, endPos.y);
+    const ids = [];
+    for (const f of gjView.features) {
+      const c = geometryCentroid(f.geometry);
+      if (!c) continue;
+      const pt = mapInst.project(c);
+      if (pt.x >= x1 && pt.x <= x2 && pt.y >= y1 && pt.y <= y2) {
+        ids.push(f.properties["Neighbourhood ID"]);
+      }
+    }
+    setSelectedIds(ids);
+  }
+
+  // Honest area aggregate over the selection (C3). The browser holds only
+  // neighbourhood aggregates and the combined file NULLs values for non-aggregated
+  // polygons, so: counts + total parcels + parcel-weighted MEAN are EXACT (mean is
+  // linear → n-weighted mean of per-nbhd means = the true parcel mean over the
+  // reportable nbhds); MEDIAN and YoY are neighbourhood-weighted APPROXIMATIONS
+  // (no parcel distribution in-browser) and are labelled as such in the table.
+  // Suppressed nbhds contribute their count only; non-res/no-data are excluded.
+  const selectionAggregate = useMemo(() => {
+    if (selectedIds.length <= 1 || !gjView) return null;
+    const set = new Set(selectedIds.map(String));
+    const num = (v) => (v == null || !Number.isFinite(+v) || +v === -999 ? null : +v);
+    let nReportable = 0, nSuppressed = 0, nExcluded = 0;
+    let totalParcels = 0, sumNV = 0, sumN = 0, sumNYoY = 0, sumNYoYW = 0;
+    const medians = [];
+    for (const f of gjView.features) {
+      if (!set.has(String(f.properties["Neighbourhood ID"]))) continue;
+      const p = f.properties;
+      const n = num(p.n_properties);
+      if (p.polygon_state === "aggregated") {
+        nReportable++;
+        if (n != null) totalParcels += n;
+        const mean = num(p.avall_public);
+        if (mean != null && n != null) { sumNV += n * mean; sumN += n; }
+        const med = num(p.median_assessvalue);
+        if (med != null) medians.push(med);
+        const yoy = num(p.yoy_pct_change);
+        if (yoy != null && n != null) { sumNYoY += n * yoy; sumNYoYW += n; }
+      } else if (p.polygon_state === "suppressed_low_n") {
+        nSuppressed++;
+        if (n != null) totalParcels += n;
+      } else {
+        nExcluded++;
+      }
+    }
+    return {
+      nSelected: selectedIds.length,
+      nReportable, nSuppressed, nExcluded, totalParcels,
+      parcelMean: sumN > 0 ? sumNV / sumN : null,            // EXACT
+      medianOfMedians: medians.length ? medianOf(medians) : null, // APPROX
+      areaYoY: sumNYoYW > 0 ? sumNYoY / sumNYoYW : null,     // APPROX
+    };
+  }, [selectedIds, gjView]);
+
   // Sum n_properties across every polygon that has a finite count. This includes
   // aggregated + suppressed_low_n polygons and naturally excludes non_residential
   // / manufactured_home_community / no_data (which carry no count). Recomputes on
@@ -652,6 +736,7 @@ export default function PropertyAssessmentMap() {
                 onLoad={setMap}
                 onLoading={setSwapLoading}
                 onReady={() => setMapReady(true)}
+                boxSelect={boxSelect}
               />
             </MapErrorBoundary>
           </>
@@ -689,6 +774,8 @@ export default function PropertyAssessmentMap() {
           selectedIds={selectedIds}
           onSelectRow={selectNeighbourhood}
           onHoverRow={setHoveredRowId}
+          aggregate={selectionAggregate}
+          onClearSelection={() => setSelectedIds([])}
         />
       )}
     </article>

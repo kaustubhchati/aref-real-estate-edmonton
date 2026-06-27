@@ -691,6 +691,30 @@ p  { margin: 0 0 0.75rem; }
 .dt-spark { padding: 2px 12px; }
 .dt-empty { padding: 16px; text-align: center; color: var(--text-muted); }
 
+/* Selection-mode aggregate header (C3). Exact cards plain; approximate cards
+   dashed + tagged. */
+.dt-agg { padding: 10px 16px; border-bottom: 1px solid var(--border-soft); flex: 0 0 auto; }
+.dt-agg-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 8px; }
+.dt-agg-title { font-size: 13px; color: var(--text); }
+.dt-agg-clear {
+  font-family: inherit; font-size: 11px; color: var(--accent-dark);
+  background: var(--bg-soft); border: 1px solid var(--border); border-radius: 6px;
+  padding: 3px 9px; cursor: pointer;
+}
+.dt-agg-clear:hover { background: var(--bg); }
+.dt-agg-cards { display: flex; flex-wrap: wrap; gap: 8px; }
+.dt-card {
+  flex: 1 1 130px; min-width: 120px;
+  background: var(--bg-soft); border: 1px solid var(--border); border-radius: 8px;
+  padding: 7px 10px; display: flex; flex-direction: column; gap: 1px;
+}
+.dt-card.is-approx { border-style: dashed; }
+.dt-card-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.dt-card-value { font-size: 16px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.dt-card-tag { font-size: 9.5px; color: var(--text-subtle); }
+.dt-card.is-approx .dt-card-tag { color: var(--accent-dark); font-style: italic; }
+.dt-agg-note { font-size: 10.5px; color: var(--text-muted); line-height: 1.5; margin: 8px 0 0; }
+
 /* ----- Top toolbar (Property Assessment, Felt zone 1) ----- */
 /* Floating pill at top-centre of the map; z-index:96 keeps it above the immersive
    nav reveal (z95) — a map zone that "stays visible" per the Felt plan. */
