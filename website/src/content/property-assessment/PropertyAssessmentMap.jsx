@@ -34,6 +34,7 @@ import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
 import InfoRail from "./InfoRail.jsx";
 import DataTable from "./DataTable.jsx";
+import Toolbar from "./Toolbar.jsx";
 import {
   BASEMAP_STYLE,
   MAP_VIEW,
@@ -135,6 +136,8 @@ export default function PropertyAssessmentMap() {
   // The neighbourhood whose table row is hovered — mirrored to the map's `hover`
   // feature-state so a row lights up its polygon (and vice-versa). null = none.
   const [hoveredRowId, setHoveredRowId] = useState(null);
+  // Focus mode (toolbar toggle): hide the left control panel for a clean map.
+  const [focusMode, setFocusMode] = useState(false);
 
   // Load the manifest once on mount and seed the year in the SAME update (no
   // frame where the manifest is loaded but no year is chosen → no empty-state
@@ -497,7 +500,20 @@ export default function PropertyAssessmentMap() {
   const empty = url ? null : describeEmpty(manifest, city, year);
 
   return (
-    <article className="content-map">
+    <article className={`content-map pa-map${focusMode ? " is-focus" : ""}`}>
+      {/* TOP toolbar (Felt zone 1) — floating pill: search + focus toggle + export
+          shell. Always visible; a map zone, so it stays above the immersive
+          site-chrome reveal. Only rendered with data loaded. (onExport omitted →
+          the export button is a disabled shell until C4 wires it.) */}
+      {url && (
+        <Toolbar
+          names={names}
+          onSearch={flyAndPinByName}
+          focusMode={focusMode}
+          onToggleFocus={() => setFocusMode((f) => !f)}
+        />
+      )}
+
       {/* LEFT control panel (Felt zone 2) — the active map instrument: city, year,
           metric + legend, plus the site-wide provenance note. Single-neighbourhood
           detail lives in the right rail; search lives in the top toolbar. The .sb

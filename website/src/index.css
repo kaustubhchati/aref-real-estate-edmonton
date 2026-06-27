@@ -691,6 +691,42 @@ p  { margin: 0 0 0.75rem; }
 .dt-spark { padding: 2px 12px; }
 .dt-empty { padding: 16px; text-align: center; color: var(--text-muted); }
 
+/* ----- Top toolbar (Property Assessment, Felt zone 1) ----- */
+/* Floating pill at top-centre of the map; z-index:96 keeps it above the immersive
+   nav reveal (z95) — a map zone that "stays visible" per the Felt plan. */
+.toolbar {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  z-index: 96;
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px; border-radius: 10px;
+  background: var(--sidebar-bg); border: 1px solid var(--sidebar-edge);
+  box-shadow: 0 4px 14px rgba(74,60,33,0.16);
+  max-width: calc(100% - 24px);
+}
+.toolbar-search { width: 200px; max-width: 44vw; }
+.toolbar-search .search-input { padding: 5px 10px; font-size: 0.8rem; }
+.toolbar-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 9px; font-size: 0.78rem; font-family: inherit; font-weight: 500;
+  color: var(--text-muted); background: transparent; border: 0; border-radius: 7px;
+  cursor: pointer; transition: background 120ms, color 120ms; white-space: nowrap;
+}
+.toolbar-btn:hover:not(:disabled) { background: var(--bg-soft); color: var(--text); }
+.toolbar-btn.active {
+  background: var(--gel-grad); color: var(--accent-dark);
+  box-shadow: var(--gel-bevel), var(--gel-lift);
+}
+.toolbar-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* Focus mode — hide the left control panel for an unobstructed map. Scoped to
+   .pa-map (only the PA route sets it), so the shared .sb is untouched for BP/BC. */
+.pa-map .sb {
+  transition: transform var(--dur-base) var(--ease), opacity var(--dur-base) var(--ease);
+}
+.pa-map.is-focus .sb {
+  transform: translateX(-110%); opacity: 0; pointer-events: none;
+}
+
 /* ----- Map canvas ----- */
 
 .canvas-wrap {
@@ -1311,6 +1347,9 @@ p  { margin: 0 0 0.75rem; }
   .dt { position: fixed; }
   .dt.dt--open { top: 50px; }
   .dt.dt--open .dt-panel { max-height: none; flex: 1 1 auto; }
+  /* Toolbar: icons only on narrow screens to keep the floating pill compact. */
+  .toolbar-btn-label { display: none; }
+  .toolbar-search { width: 150px; }
   .shell-footer-grid { grid-template-columns:1fr; gap:1.25rem; }
 }
 
