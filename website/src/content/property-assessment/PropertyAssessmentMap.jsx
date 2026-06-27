@@ -34,7 +34,8 @@ import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
 import InfoRail from "./InfoRail.jsx";
 import DataTable from "./DataTable.jsx";
-import Toolbar from "./Toolbar.jsx";
+import ExportMenu from "./ExportMenu.jsx";
+import SearchInput from "../../components/SearchInput.jsx";
 import { buildCsv, buildGeoJson, downloadText, exportPng } from "./exportData.js";
 import {
   BASEMAP_STYLE,
@@ -156,6 +157,10 @@ export default function PropertyAssessmentMap() {
   // The neighbourhood whose table row is hovered — mirrored to the map's `hover`
   // feature-state so a row lights up its polygon (and vice-versa). null = none.
   const [hoveredRowId, setHoveredRowId] = useState(null);
+  // Analyst view: the bottom data table is raised. The table handle toggles it;
+  // a box-select enters it. While on, the left control box + search hide and the
+  // area-select tools show — the table becomes the stats surface.
+  const [analystMode, setAnalystMode] = useState(false);
 
   // Load the manifest once on mount and seed the year in the SAME update (no
   // frame where the manifest is loaded but no year is chosen → no empty-state
@@ -466,6 +471,8 @@ export default function PropertyAssessmentMap() {
       }
     }
     setSelectedIds(ids);
+    // An area select (≥2) is analyst work — raise the table to show the aggregate.
+    if (ids.length >= 2) setAnalystMode(true);
   }
 
   // Scoped export (C4): the selection if any, else ALL features. Built from the
@@ -555,27 +562,6 @@ export default function PropertyAssessmentMap() {
     return () => { document.title = "Open Data Centre"; };
   }, [metric, city, year]);
 
-  // Bottom-shadow cue when the sidebar overflows (content continues below).
-  const sbRef = useRef(null);
-  useEffect(() => {
-    const el = sbRef.current;
-    if (!el) return;
-    const check = () => {
-      const overflows = el.scrollHeight > el.clientHeight + 4;
-      el.classList.toggle("sb-scroll-shadow", overflows);
-    };
-    check();
-    el.addEventListener("scroll", check);
-    window.addEventListener("resize", check);
-    return () => {
-      el.removeEventListener("scroll", check);
-      window.removeEventListener("resize", check);
-    };
-    // manifest in deps: the <aside ref={sbRef}> only exists after the manifest
-    // loads (early returns gate it), so re-run once the sidebar actually mounts
-    // and sbRef.current is non-null.
-  }, [manifest]);
-
   // All hooks above run every render; only now do we branch the output, so the
   // loading/error short-circuits never change hook order.
   if (manifestError) {
@@ -604,116 +590,69 @@ export default function PropertyAssessmentMap() {
   const empty = url ? null : describeEmpty(manifest, city, year);
 
   return (
-    <article className="content-map pa-map">
-      {/* TOP toolbar (Felt zone 1) — floating pill: search, focus-mode toggle, and
-          an export menu (CSV / GeoJSON / PNG of the current selection, or all
-          neighbourhoods when none is selected). Always visible; a map zone, so it
-          stays above the immersive site-chrome reveal. Only rendered with data. */}
-      {url && (
-        <Toolbar
-          names={names}
-          onSearch={flyAndPinByName}
-          onExport={handleExport}
-        />
+    <article className={`content-map pa-map${analystMode ? " is-analyst" : ""}`}>
+      {/* TOP-CENTRE search pill — default view only (hidden in analyst view, where
+          all lookup happens in the table). The dropdown is bounded so it can't
+          flood the map or overlay the right rail (SearchInput). */}
+      {url && !analystMode && (
+        <div className="pa-search">
+          <SearchInput
+            placeholder="Search neighbourhood…"
+            names={names}
+            onSelect={flyAndPinByName}
+          />
+        </div>
       )}
 
-      {/* LEFT control panel (Felt zone 2) — the active map instrument: city, year,
-          metric + legend, plus the site-wide provenance note. Single-neighbourhood
-          detail lives in the right rail; search lives in the top toolbar. The .sb
-          recipe is shared with other sections — we render our own content inside it,
-          we do not restyle .sb. */}
-      <aside ref={sbRef} className="sb" aria-label="Map controls">
-        {/* Fixed-width holder so content never reflows as .sb animates its width — see .sb-inner in index.css. */}
-        <div className="sb-inner">
-        <div className="sb-header">
-          <p className="eyebrow">Properties & Land</p>
-          <h1 className="sb-title">
-            {city} — {year}
-          </h1>
-          <p className="sb-sub">{propCount.toLocaleString()} cleaned residential properties</p>
-        </div>
-
-        <section className="sb-section">
-          {/* opt-toggle-gel wrapper gives the segmented control its gel track +
-              raised active pill (see .opt-toggle-gel in index.css). */}
+      {/* LEFT floating box (vertically centred, hugs content).
+          DEFAULT: title + city switcher + metric selector + compact provenance.
+          ANALYST: area-select tools (clear + export). The city switcher renders
+          even with no data so a user can leave the Calgary empty state. */}
+      {!analystMode ? (
+        <aside className="pa-box pa-box--left" aria-label="Map controls">
+          <div className="pa-box-title">{city} — {year}</div>
+          {url && (
+            <p className="pa-box-sub">{propCount.toLocaleString()} cleaned residential properties</p>
+          )}
           <div className="opt-toggle-gel">
-            <OptionToggle
-              label="City"
-              options={CITIES}
-              value={city}
-              onChange={changeCity}
-            />
+            <OptionToggle label="City" options={CITIES} value={city} onChange={changeCity} />
           </div>
-          {/* Year is a range slider (matches the Building Permits point-map
-              slider). The thumb drives the SAME paint swap the dropdown drove,
-              just live — slideYear commits to `year`, which the repaint effect
-              turns into the setPaintProperty colour swap. min/max come from the
-              manifest year list (no literals); years are contiguous so step = 1
-              maps every position to a real year. sliderYear is the live drag
-              position (instant thumb + readout); `year` follows on a throttle. */}
-          <div className="sb-select-field">
-            <span className="sb-select-label">
-              Year <strong className="sb-year-value">{sliderYear ?? year ?? "…"}</strong>
-            </span>
-            {year != null && (
-              <input
-                type="range"
-                className="sb-year-slider"
-                aria-label="Year"
-                min={Math.min(...years)}
-                max={Math.max(...years)}
-                step={1}
-                value={sliderYear ?? year}
-                onChange={(e) => slideYear(Number(e.target.value))}
-              />
-            )}
-          </div>
-        </section>
-
-        {/* Fused metric + legend (Felt zone 2): the segmented control chooses the
-            metric; the legend directly below IS that metric's colour scale — one
-            unit. The legend's own title is hidden here (.metric-legend) since the
-            control already names the metric; the Legend component stays shared
-            and unchanged (only this context hides its title). */}
-        <section className="sb-section metric-legend">
-          {/* Single-select — the fill encodes exactly one metric. Sourced from the
-              SAME METRICS table (no literals). */}
-          <SegmentedControl
-            label="Metric"
-            options={METRICS}
-            value={metric}
-            onChange={setMetric}
-          />
-          <Legend
-            title={selectedMetric.label}
-            stops={stops}
-            format={selectedMetric.fmt}
-            discrete={isYoy}
-          />
-        </section>
-
-        {/* Site-wide provenance — always visible (the rail is now selection-gated).
-            Data vintage + the neighbourhood renaming caveat. */}
-        <div className="sb-ref">
-          <p>Data last updated: {manifest?.last_updated ?? "—"}</p>
-          <p>
-            Some neighbourhoods have been renamed or renumbered by the City of
-            Edmonton. Their full history is shown under the current name. For
-            example, Oliver was renamed Wîhkwêntôwin, effective 1 January 2025;
-            values before this date are shown under Wîhkwêntôwin.{" "}
-            <a
-              href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "var(--accent)" }}
+          {/* Single-select — the fill encodes exactly one metric (METRICS source). */}
+          {url && (
+            <SegmentedControl label="Metric" options={METRICS} value={metric} onChange={setMetric} />
+          )}
+          {url && (
+            <p className="pa-box-ref">
+              <span>Updated {manifest?.last_updated ?? "—"}.</span>{" "}
+              Some neighbourhoods were renamed (e.g. Oliver → Wîhkwêntôwin, 2025); a
+              neighbourhood's full history shows under its current name.{" "}
+              <a
+                href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Naming Committee
+              </a>.
+            </p>
+          )}
+        </aside>
+      ) : (
+        <aside className="pa-box pa-box--left pa-tools" aria-label="Area selection tools">
+          <div className="pa-box-title">Area select</div>
+          <p className="pa-box-sub">Shift-drag the map to select neighbourhoods.</p>
+          <div className="pa-tools-row">
+            <button
+              type="button"
+              className="pa-tools-btn"
+              onClick={() => setSelectedIds([])}
+              disabled={!selectedIds.length}
             >
-              City of Edmonton Naming Committee
-            </a>
-            .
-          </p>
-        </div>
-        </div>{/* /sb-inner */}
-      </aside>
+              Clear{selectedIds.length ? ` (${selectedIds.length})` : ""}
+            </button>
+            <ExportMenu onExport={handleExport} />
+          </div>
+        </aside>
+      )}
 
       <div className="canvas-wrap">
         {fetchError && url ? (
@@ -782,9 +721,41 @@ export default function PropertyAssessmentMap() {
         />
       )}
 
-      {/* BOTTOM data table (Felt zone 4) — the analytical surface over the
-          resident gjView. Collapsed to a handle by default; raises on click / T.
-          Rows link both ways to the shared selection. Only with data loaded. */}
+      {/* LEGEND — small card bottom-right (default view only). */}
+      {url && !analystMode && (
+        <div className="pa-legend">
+          <Legend
+            title={selectedMetric.label}
+            stops={stops}
+            format={selectedMetric.fmt}
+            discrete={isYoy}
+          />
+        </div>
+      )}
+
+      {/* YEAR — slim slider bottom-centre; lifted clear of the table in analyst
+          view (CSS keys off .is-analyst on the article). */}
+      {url && year != null && (
+        <div className="pa-year">
+          <span className="pa-year-label">
+            Year <strong className="sb-year-value">{sliderYear ?? year}</strong>
+          </span>
+          <input
+            type="range"
+            className="sb-year-slider"
+            aria-label="Year"
+            min={Math.min(...years)}
+            max={Math.max(...years)}
+            step={1}
+            value={sliderYear ?? year}
+            onChange={(e) => slideYear(Number(e.target.value))}
+          />
+        </div>
+      )}
+
+      {/* BOTTOM data table — the handle doubles as the analyst-view toggle
+          (open = analystMode). Analytical surface over the resident gjView; rows
+          link both ways to the shared selection. Only with data loaded. */}
       {url && gjView && (
         <DataTable
           rows={tableRows}
@@ -797,6 +768,8 @@ export default function PropertyAssessmentMap() {
           onHoverRow={setHoveredRowId}
           aggregate={selectionAggregate}
           onClearSelection={() => setSelectedIds([])}
+          open={analystMode}
+          onToggle={() => setAnalystMode((a) => !a)}
         />
       )}
     </article>

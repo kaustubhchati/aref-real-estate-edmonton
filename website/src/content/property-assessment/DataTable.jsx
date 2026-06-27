@@ -56,17 +56,17 @@ export default function DataTable({
   onHoverRow,
   aggregate,         // honest area aggregate, or null. Non-null = selection mode.
   onClearSelection,  // () => void
+  open,              // controlled: the table is raised (= analyst view)
+  onToggle,          // () => void — toggle the table / analyst view
 }) {
-  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState({ key: "name", dir: "asc" });
   const scrollRef = useRef(null);
 
-  // Selection mode = a multi-neighbourhood box-select is active (aggregate set).
-  // The table shows the aggregate header + just the constituent rows; raise it
-  // automatically so the rolled-up numbers are visible.
+  // Selection mode = a multi-neighbourhood box-select is active (aggregate set):
+  // show the aggregate header + just the constituent rows. (The page raises the
+  // table — `open` — on a box-select; here we only render the aggregate.)
   const selectionMode = !!aggregate;
-  useEffect(() => { if (selectionMode) setOpen(true); }, [selectionMode]);
 
   // Keyboard shortcut: T toggles the table (ignored while typing in a field).
   useEffect(() => {
@@ -74,11 +74,11 @@ export default function DataTable({
       if (e.key !== "t" && e.key !== "T") return;
       const tag = e.target.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.metaKey || e.ctrlKey) return;
-      setOpen((o) => !o);
+      onToggle?.();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [onToggle]);
 
   // Columns (data-driven). The active-metric column's label is dynamic; YoY is
   // dropped when it would duplicate the metric column. `trend` isn't sortable.
@@ -130,12 +130,14 @@ export default function DataTable({
       <button
         type="button"
         className="dt-handle"
-        onClick={() => setOpen((o) => !o)}
+        onClick={onToggle}
         aria-expanded={open}
       >
         <span className="dt-handle-title">Data table</span>
         <span className="dt-handle-meta">
-          {selectionMode ? `${aggregate.nSelected} selected` : `${rows.length} neighbourhoods · press T`}
+          {selectionMode
+            ? `${aggregate.nSelected} selected`
+            : `${rows.length} · ${open ? "Analyst view" : "Analyst view · press T"}`}
         </span>
         <span className="dt-handle-caret" aria-hidden="true">{open ? "▾" : "▴"}</span>
       </button>

@@ -24,9 +24,9 @@ function overlayWidth(map, selector) {
   return Math.round(el.getBoundingClientRect().width);
 }
 
-// Width of the left control overlay (.sb), or 0 if absent / not overlaying.
+// Width of the left floating control box (PA), or 0 if absent / not overlaying.
 export function sidebarLeftPad(map) {
-  return overlayWidth(map, ".sb");
+  return overlayWidth(map, ".pa-box--left");
 }
 
 // Width of the right info rail (.rail), or 0 if absent / not overlaying. Mirror

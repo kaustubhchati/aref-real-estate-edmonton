@@ -533,42 +533,38 @@ p  { margin: 0 0 0.75rem; }
   font-family: ui-monospace, Menlo, Consolas, monospace;
 }
 
-/* ----- Right info rail (Property Assessment, Felt zone 3) ----- */
-/* Mirrors the left .sb overlay on the RIGHT edge of the map: same frosted-panel
-   recipe, flipped — right:0, border-left, shadow falling leftward onto the map.
-   A NEW class on purpose: the shared .sb is left untouched. HIDDEN BY DEFAULT —
-   PropertyAssessmentMap mounts it only when exactly one nbhd is selected, so it
-   slides in on mount. Holds that nbhd's detail + a value sparkline (InfoRail.jsx);
-   z-index:10, same plane as .sb (they never overlap horizontally). */
+/* ----- Right info rail (Property Assessment) ----- */
+/* A compact floating box on the RIGHT, vertically centred and hugging its content
+   — the mirror of the left control box (.pa-box). Hidden by default; mounts only
+   when exactly one neighbourhood is selected. Holds that nbhd's detail + sparkline
+   (InfoRail.jsx). transform is reserved for the vertical centring, so it fades
+   (not slides) in. */
 .rail {
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 300px;
-  z-index: 10;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 248px;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100% - 24px);
+  z-index: 12;
   background: var(--sidebar-bg);
-  border-left: 1px solid var(--sidebar-edge);
-  box-shadow: -4px 0 14px rgba(74,60,33,0.12), inset 0 1px 0 rgba(255,255,255,0.6);
+  border: 1px solid var(--sidebar-edge);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(74,60,33,0.16), inset 0 1px 0 rgba(255,255,255,0.6);
   overflow-y: auto;
   scrollbar-gutter: stable;
   overflow-x: hidden;
-  padding: 14px 16px 18px 16px;
+  padding: 12px 14px;
   font-size: 12.5px;
   line-height: 1.4;
   color: var(--text);
-  /* Slide in from the right edge on mount (it mounts on selection). The global
-     prefers-reduced-motion guard zeroes this to an instant appear. */
-  animation: rail-slide-in var(--dur-base) var(--ease);
+  animation: rail-fade-in var(--dur-base) var(--ease);
 }
-@keyframes rail-slide-in {
-  from { transform: translateX(16px); opacity: 0; }
-  to   { transform: none;            opacity: 1; }
-}
-/* Full width of the gutter-reduced content box (scrollbar-gutter:stable on .rail
-   keeps it from reflowing) — a fixed px width would clip right-aligned values
-   when a classic (non-overlay) scrollbar is present. */
+@keyframes rail-fade-in { from { opacity: 0; } to { opacity: 1; } }
 .rail-inner { width: 100%; }
+/* Tightness: no trailing gap after the last detail row/note. */
+.rail-detail > *:last-child, .rail-rows .rail-row:last-child { margin-bottom: 0; }
 
 /* Selected-neighbourhood detail */
 .rail-detail-head {
@@ -725,48 +721,79 @@ p  { margin: 0 0 0.75rem; }
 .dt-card.is-approx .dt-card-tag { color: var(--accent-dark); font-style: italic; }
 .dt-agg-note { font-size: 10.5px; color: var(--text-muted); line-height: 1.5; margin: 8px 0 0; }
 
-/* ----- Top toolbar (Property Assessment, Felt zone 1) ----- */
-/* Floating pill at top-centre of the map; z-index:96 keeps it above the immersive
-   nav reveal (z95) — a map zone that "stays visible" per the Felt plan. */
-.toolbar {
-  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-  z-index: 96;
-  display: flex; align-items: center; gap: 6px;
-  padding: 5px; border-radius: 10px;
-  background: var(--sidebar-bg); border: 1px solid var(--sidebar-edge);
-  box-shadow: 0 4px 14px rgba(74,60,33,0.16);
-  max-width: calc(100% - 24px);
+/* ----- Floating boxes (Property Assessment locked layout) ----- */
+/* Compact cards floating over a full-bleed map. The left control box and the
+   right info rail (.rail, above) are mirrored — same radius/padding/shadow — and
+   each vertically centres on its edge and hugs its content. */
+.pa-box {
+  position: absolute;
+  z-index: 12;
+  width: 248px; max-width: calc(100vw - 24px);
+  background: var(--sidebar-bg);
+  border: 1px solid var(--sidebar-edge);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(74,60,33,0.16), inset 0 1px 0 rgba(255,255,255,0.6);
+  padding: 12px 14px;
+  font-size: 12.5px; line-height: 1.4; color: var(--text);
 }
-.toolbar-search { width: 200px; max-width: 44vw; }
-.toolbar-search .search-input { padding: 5px 10px; font-size: 0.8rem; }
-.toolbar-btn {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 5px 9px; font-size: 0.78rem; font-family: inherit; font-weight: 500;
-  color: var(--text-muted); background: transparent; border: 0; border-radius: 7px;
-  cursor: pointer; transition: background 120ms, color 120ms; white-space: nowrap;
-}
-.toolbar-btn:hover:not(:disabled) { background: var(--bg-soft); color: var(--text); }
-.toolbar-btn.active {
-  background: var(--gel-grad); color: var(--accent-dark);
-  box-shadow: var(--gel-bevel), var(--gel-lift);
-}
-.toolbar-btn:disabled { opacity: 0.5; cursor: default; }
+.pa-box--left { left: 12px; top: 50%; transform: translateY(-50%); }
+.pa-box > *:last-child { margin-bottom: 0; }   /* hug content — no trailing gap */
+.pa-box-title { font-size: 14px; font-weight: 600; color: var(--text); margin: 0 0 2px; }
+.pa-box-sub { font-size: 11px; color: var(--text-muted); margin: 0 0 10px; }
+.pa-box .opt-toggle-gel { margin: 0 0 10px; }
+.pa-box .opt-toggle, .pa-box .seg { margin: 0; }
+.pa-box-ref { font-size: 10px; color: var(--text-muted); line-height: 1.45; margin: 10px 0 0; }
+.pa-box-ref a { color: var(--accent); }
 
-/* Export dropdown menu (CSV / GeoJSON / PNG). */
-.toolbar-export { position: relative; }
-.toolbar-menu {
-  position: absolute; top: calc(100% + 6px); right: 0;
-  display: flex; flex-direction: column; min-width: 170px;
+/* Analyst area-select tools (left box, analyst view) + the export menu. */
+.pa-tools-row { display: flex; gap: 8px; margin-top: 8px; }
+.pa-tools-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: inherit; font-size: 0.78rem; font-weight: 500;
+  padding: 5px 9px; border-radius: 7px; cursor: pointer; white-space: nowrap;
+  background: var(--bg-soft); border: 1px solid var(--border); color: var(--text);
+}
+.pa-tools-btn:hover:not(:disabled) { background: var(--bg); }
+.pa-tools-btn:disabled { opacity: 0.5; cursor: default; }
+.export-menu { position: relative; }
+.export-menu-list {
+  position: absolute; top: calc(100% + 6px); left: 0; min-width: 170px;
+  display: flex; flex-direction: column;
   background: var(--bg); border: 1px solid var(--border-soft);
-  border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
-  padding: 4px; z-index: 1;
+  border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 4px; z-index: 5;
 }
-.toolbar-menu button {
+.export-menu-list button {
   font-family: inherit; font-size: 0.8rem; text-align: left; color: var(--text);
-  background: transparent; border: 0; border-radius: var(--radius-sm);
-  padding: 7px 10px; cursor: pointer;
+  background: transparent; border: 0; border-radius: var(--radius-sm); padding: 7px 10px; cursor: pointer;
 }
-.toolbar-menu button:hover { background: var(--accent-soft); color: var(--accent-dark); }
+.export-menu-list button:hover { background: var(--accent-soft); color: var(--accent-dark); }
+
+/* Top-centre search pill. z-index:96 keeps it above the nav reveal (z95). */
+.pa-search {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  z-index: 96; width: 250px; max-width: calc(100vw - 24px);
+}
+.pa-search .search-input { border-radius: 999px; box-shadow: 0 4px 14px rgba(74,60,33,0.16); }
+
+/* Bottom-centre year slider pill (lifted clear of the table in analyst view).
+   z-index:96 so it stays above the raised table when lifted. */
+.pa-year {
+  position: absolute; bottom: 46px; left: 50%; transform: translateX(-50%);
+  z-index: 96; display: flex; align-items: center; gap: 10px;
+  width: 300px; max-width: calc(100vw - 24px);
+  background: var(--sidebar-bg); border: 1px solid var(--sidebar-edge);
+  border-radius: 999px; box-shadow: 0 4px 14px rgba(74,60,33,0.16);
+  padding: 6px 14px;
+}
+.pa-year-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.pa-year .sb-year-slider { flex: 1 1 auto; margin: 0; }
+.is-analyst .pa-year { bottom: calc(42svh + 14px); }   /* clear the raised table */
+
+/* Bottom-right legend card (default view), lifted above the map's corner controls. */
+.pa-legend {
+  position: absolute; right: 12px; bottom: 34px; z-index: 12;
+  width: 200px; max-width: calc(100vw - 24px);
+}
 
 /* ----- Map canvas ----- */
 
@@ -868,13 +895,6 @@ p  { margin: 0 0 0.75rem; }
 }
 .seg-icon { flex: 0 0 auto; }
 .seg-text { line-height: 1.2; }
-
-/* Fused metric control + legend (Felt zone 2). The segmented control already
-   names the active metric, so the legend's redundant title is hidden here and the
-   two sit flush as one "choose metric -> see its scale" unit. Scoped to
-   .metric-legend, so the shared Legend keeps its title everywhere else (BP/BC). */
-.metric-legend .seg { margin-bottom: 8px; }
-.metric-legend .legend-title { display: none; }
 
 /* ---- Dwelling Units legend crossfade ------------------------------------ */
 /* Keyed remount on metric/sub switch re-runs this fade, synced to the 500ms
@@ -1379,32 +1399,21 @@ p  { margin: 0 0 0.75rem; }
   .shell-nav { top:50px; }
   /* Header is 50px on mobile, so the top edge-reveal sits just below it. */
   .edge-reveal--top { top:50px; }
-  /* Mobile is a column: the desktop absolute overlays go in-flow and stack. */
   .content-map { flex-direction:column; }
-  /* Only the PA layout (the one with a right rail) stacks THREE panels, so only
-     it needs the column to scroll; gating on :has(.rail) leaves BP/BC mobile
-     exactly as before (overflow:hidden, two panels). On a short screen the PA
-     column may scroll — intended, so the bottom of the map + rail stays reachable
-     instead of being clipped. */
-  .content-map:has(.rail) { overflow-y:auto; }
-  /* Restore the sidebar to in-flow so it stacks above the map at a capped height
-     (overrides the desktop absolute overlay). */
+  /* BP/BC (still .sb-based) stack the sidebar in-flow above the map; PA no longer
+     uses .sb (it's full-bleed with floating boxes). */
   .sb { position:relative; bottom:auto; flex:0 0 auto; width:100%; max-height:45svh;
     border-right:none; border-bottom:0.5px solid rgba(0,0,0,0.10); }
   .canvas-wrap { min-height:55svh; }
-  /* The right info rail stacks BELOW the map on mobile (mirror of .sb above). */
-  .rail { position:relative; top:auto; right:auto; bottom:auto; flex:0 0 auto;
-    width:100%; max-height:45svh; border-left:none;
-    border-top:0.5px solid rgba(0,0,0,0.10); box-shadow:none; }
-  .rail-inner { width:100%; }
-  /* Bottom table: pin to the viewport bottom (independent of the scrolling column)
-     and go fullscreen below the 50px header when open. */
+  /* PA floating boxes shrink so the left box + rail fit a narrow screen. */
+  .pa-box, .rail { width: 44vw; padding: 10px 11px; }
+  .pa-search { width: min(72vw, 250px); }
+  .pa-year { width: min(84vw, 300px); }
+  .pa-legend { width: 42vw; }
+  /* Bottom table: pin to the viewport bottom and go fullscreen below the header. */
   .dt { position: fixed; }
   .dt.dt--open { top: 50px; }
   .dt.dt--open .dt-panel { max-height: none; flex: 1 1 auto; }
-  /* Toolbar: icons only on narrow screens to keep the floating pill compact. */
-  .toolbar-btn-label { display: none; }
-  .toolbar-search { width: 150px; }
   .shell-footer-grid { grid-template-columns:1fr; gap:1.25rem; }
 }
 
