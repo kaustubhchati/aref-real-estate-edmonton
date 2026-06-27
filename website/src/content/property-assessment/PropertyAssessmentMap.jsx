@@ -23,7 +23,7 @@
 // EmptyState.
 // =============================================================================
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import MapView from "../../components/MapView.jsx";
 import Legend from "../../components/Legend.jsx";
@@ -116,12 +116,21 @@ export default function PropertyAssessmentMap() {
   // fetch resolves, so the skeleton must wait for this — not for gj — or it
   // flashes a blank map (the gap that read as "nothing's there").
   const [mapReady, setMapReady] = useState(false);
-  // The clicked/searched neighbourhood (its "Neighbourhood ID" = promoteId), or
-  // null when nothing is selected. This drives the right info rail — click a
-  // polygon sets it, an empty-map click or the rail's clear button resets it.
-  // It persists across year/metric changes, so the rail tracks the locked
-  // neighbourhood live as you scrub the year. (Hover is highlight-only now.)
-  const [selectedId, setSelectedId] = useState(null);
+  // The selected neighbourhoods, by "Neighbourhood ID" (= promoteId). ONE shared
+  // selection that every Felt zone reads/writes: a single click is length-1, a
+  // box-select (C3) sets the whole set, an empty-map click clears it. The right
+  // rail shows detail when exactly one is selected; the bottom table aggregates
+  // when many are. Persists across year/metric changes (it's ids, not values).
+  const [selectedIds, setSelectedIds] = useState([]);
+  // Exactly-one-selected id — drives the single-neighbourhood rail; null in the
+  // empty or multi-select cases.
+  const singleSelectedId = selectedIds.length === 1 ? selectedIds[0] : null;
+  // Click/search reports an id (or null to clear) → a length-1 (or empty)
+  // selection. Box-select (C3) will call setSelectedIds with the whole set.
+  const selectNeighbourhood = useCallback(
+    (id) => setSelectedIds(id == null ? [] : [id]),
+    []
+  );
 
   // Load the manifest once on mount and seed the year in the SAME update (no
   // frame where the manifest is loaded but no year is chosen → no empty-state
@@ -221,7 +230,7 @@ export default function PropertyAssessmentMap() {
   function changeCity(nextCity) {
     setCity(nextCity);
     setYear(getDefaultYear(manifest, nextCity));
-    setSelectedId(null); // a neighbourhood id is city-specific — drop the selection
+    setSelectedIds([]); // neighbourhood ids are city-specific — drop the selection
   }
 
   // --- Year slider: live thumb, paced paint swap ------------------------------
@@ -305,41 +314,44 @@ export default function PropertyAssessmentMap() {
 
   // Search datalist names + the selection wiring. Names come from the combined
   // source (display_name is year-invariant), so they don't recompute per year.
-  // Clicking/searching reports the Neighbourhood ID up via setSelectedId.
+  // Clicking/searching reports the Neighbourhood ID up via selectNeighbourhood.
   const names = useMemo(() => (gj ? indexNamesForSearch(gj) : []), [gj]);
-  const flyAndPinByName = useChoroplethInteractions(map, gj, setSelectedId);
+  const flyAndPinByName = useChoroplethInteractions(map, gj, selectNeighbourhood);
 
-  // The selected neighbourhood's projected (bare-named) props for the active
-  // year — recomputes when the year changes (gjView changes), so the rail's
-  // numbers track the year slider live. null when nothing is selected.
+  // The single-selected neighbourhood's projected (bare-named) props for the
+  // active year — recomputes when the year changes (gjView changes), so the
+  // rail's numbers track the year slider live. null unless EXACTLY one is selected.
   const selectedFeature = useMemo(() => {
-    if (selectedId == null || !gjView) return null;
+    if (singleSelectedId == null || !gjView) return null;
     const f = gjView.features.find(
-      (ft) => String(ft.properties["Neighbourhood ID"]) === String(selectedId)
+      (ft) => String(ft.properties["Neighbourhood ID"]) === String(singleSelectedId)
     );
     return f ? f.properties : null;
-  }, [selectedId, gjView]);
+  }, [singleSelectedId, gjView]);
 
-  // Mirror the selection into the map's `pinned` feature-state (the highlight the
-  // paint expressions already read), so the locked polygon stays outlined across
+  // Mirror the selection set into the map's `pinned` feature-state (the highlight
+  // the paint expressions already read), so selected polygons stay outlined across
   // year/metric changes. interactions.js only REPORTS clicks now; the pinned
-  // visual is owned here, next to the React selection.
-  const prevPinnedRef = useRef(null);
+  // visual is owned here. Set-diff: clear ids that left the set, (re)apply true
+  // for every current id — re-applying is idempotent and also re-pins after a map
+  // remount (where the new map starts with no feature-state).
+  const prevPinnedRef = useRef(new Set());
   useEffect(() => {
     if (!map) return;
+    const next = new Set(selectedIds.map(String));
+    const prev = prevPinnedRef.current;
     try {
-      const prev = prevPinnedRef.current;
-      if (prev != null && prev !== selectedId) {
-        map.setFeatureState({ source: "nbhd", id: prev }, { pinned: false });
+      for (const id of prev) {
+        if (!next.has(id)) map.setFeatureState({ source: "nbhd", id }, { pinned: false });
       }
-      if (selectedId != null) {
-        map.setFeatureState({ source: "nbhd", id: selectedId }, { pinned: true });
+      for (const id of next) {
+        map.setFeatureState({ source: "nbhd", id }, { pinned: true });
       }
-      prevPinnedRef.current = selectedId;
+      prevPinnedRef.current = next;
     } catch {
       /* map mid-teardown — the next mounted map re-applies via this effect */
     }
-  }, [map, selectedId]);
+  }, [map, selectedIds]);
 
   // Sum n_properties across every polygon that has a finite count. This includes
   // aggregated + suppressed_low_n polygons and naturally excludes non_residential
@@ -551,7 +563,7 @@ export default function PropertyAssessmentMap() {
           lastUpdated={manifest?.last_updated}
           names={names}
           onSearch={flyAndPinByName}
-          onClear={() => setSelectedId(null)}
+          onClear={() => setSelectedIds([])}
           searchHint={
             fetchError
               ? `Search unavailable: ${fetchError}`
