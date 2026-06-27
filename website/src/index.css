@@ -281,6 +281,87 @@ p  { margin: 0 0 0.75rem; }
 .shell-footer-copy { text-align:center; font-size:0.7rem;
   color:rgba(255,255,255,0.3); margin:0; padding-top:0.25rem; }
 
+/* ---- Immersive chrome (the PA map route only) --------------------------- */
+/* Layout adds .shell-immersive on an immersive route and wraps <Nav> + <Footer>
+   in <EdgeReveal> (EdgeReveal.jsx). The Nav (section selector) and Footer become
+   absolute overlays that slide off-screen and reveal on edge-hover / keyboard
+   focus / a tap on the grip — so the map fills the frame while the map's own
+   controls and the left/right overlays stay put. Scoped entirely to
+   .shell-immersive, so every other route (incl. Building Permits) is unchanged. */
+
+/* The shell becomes the positioning context; with the chrome pulled out of the
+   flex flow (absolute, below), shell-main grows to fill the freed space — and a
+   reveal overlays the map instead of resizing it. */
+.shell-immersive { position: relative; }
+
+/* The edge hot-zone: a thin always-present strip at the very top (under the
+   header) / bottom that catches an edge-proximity hover. */
+.edge-reveal {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 16px;
+  z-index: 95;   /* over the map overlays (.sb/popup 10/20), under the nav dropdown (500) */
+}
+.edge-reveal--top    { top: 56px; }   /* directly beneath the sticky header (56px) */
+.edge-reveal--bottom { bottom: 0; }
+
+/* The chrome itself — slid out of view by default. pointer-events:none while
+   hidden so it can't intercept clicks on the map underneath. A small hide-delay
+   gives hysteresis (no flicker when the pointer skims the edge). */
+.edge-reveal-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  transition: transform var(--dur-base) var(--ease);
+  transition-delay: 120ms;
+}
+.edge-reveal--top    .edge-reveal-panel { top: 0;    transform: translateY(-100%); }
+.edge-reveal--bottom .edge-reveal-panel { bottom: 0; transform: translateY(100%); }
+
+/* Reveal — pointer hover on the hot-zone or the revealed panel, keyboard focus
+   anywhere within, or an explicit tap (is-pinned). Shows promptly (delay 0). */
+.edge-reveal:hover .edge-reveal-panel,
+.edge-reveal:focus-within .edge-reveal-panel,
+.edge-reveal.is-pinned .edge-reveal-panel {
+  transform: none;
+  pointer-events: auto;
+  transition-delay: 0ms;
+}
+
+/* The grip — a small, centred, always-visible handle: the discoverable touch
+   affordance and the keyboard/click toggle. Centred so it stays clear of the
+   corner map controls (zoom top-right, scale/attribution bottom-right). */
+.edge-reveal-tab {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 46px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  z-index: 1;   /* above the hidden panel within this edge-reveal */
+}
+.edge-reveal--top    .edge-reveal-tab { top: 0; }
+.edge-reveal--bottom .edge-reveal-tab { bottom: 0; }
+.edge-reveal-grip {
+  width: 30px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  box-shadow: var(--shadow-sm);
+  transition: background 120ms;
+}
+.edge-reveal-tab:hover .edge-reveal-grip,
+.edge-reveal-tab:focus-visible .edge-reveal-grip { background: var(--accent); }
+.edge-reveal-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* ---- Content pages ------------------------------------------------------- */
 
 .content-page,
@@ -1114,6 +1195,8 @@ p  { margin: 0 0 0.75rem; }
   .shell-header { padding:0 1rem; height:50px; }
   .shell-header-separator, .shell-header-org { display:none; }
   .shell-nav { top:50px; }
+  /* Header is 50px on mobile, so the top edge-reveal sits just below it. */
+  .edge-reveal--top { top:50px; }
   /* Mobile is a column: controls, then map, then rail stack in flow and the
      column scrolls (the desktop absolute overlays would otherwise float over a
      tiny screen). overflow-y:auto is harmless for sections without a rail (their
