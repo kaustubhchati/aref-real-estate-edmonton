@@ -245,6 +245,40 @@ cat(sprintf("Wrote %s (%.1f MB, %s features)\n",
 
 
 # ============================================================
+# 4b2 — Served points artifact (GeoJSON one-file model)
+# ============================================================
+# WHY: the point map is being standardized OFF PMTiles onto Property Assessment's
+# one-file GeoJSON model — all years in a single file, scrubbed client-side by a
+# setFilter on each point's `year`. This emits that SERVED artifact: the same
+# mappable points as permits.geojson above, THINNED for transport —
+#   * coordinates rounded to 6 dp (~0.1 m, below any web-zoom resolution) via the
+#     GeoJSON driver's COORDINATE_PRECISION layer option, and
+#   * properties pruned to the eight the frontend actually renders. `year` is the
+#     scrub key; the other seven drive paint / popup / month + value filters.
+#     row_id, job_category and units_added are dropped — the point map reads none
+#     of them (job_category and units_added are choropleth/aggregate fields).
+# This is an ADDITIVE emit: permits.geojson above is UNCHANGED and remains the
+# tippecanoe/PMTiles source until that path is retired in a later commit. The
+# runner publishes THIS file to website/public via the _whirl.yaml handoff — the
+# point map's first artifact to travel through the sole-publisher (it was a hand-
+# built PMTiles uploaded to R2, absent from the handoff). No year literals: the
+# year axis rides on each point's `year` property + the committed manifest the
+# slider already reads.
+points_served <- permits_sf |>
+  select(year, month_number, job_group, construction_value,
+         building_type, work_type, job_description, address)
+
+served_path <- "output/permit_points_all_years.geojson"
+if (file.exists(served_path)) file.remove(served_path)
+st_write(points_served, served_path, driver = "GeoJSON",
+         layer_options = "COORDINATE_PRECISION=6", quiet = TRUE)
+
+served_mb <- file.info(served_path)$size / 1024 / 1024
+cat(sprintf("Wrote %s (%.1f MB, %s features, 6dp coords, 8 props)\n",
+            served_path, served_mb, comma(nrow(points_served))))
+
+
+# ============================================================
 # 4c — Per-(year, job_category) counts (frontend empty-state)
 # ============================================================
 # WHY: several job_category values are legacy taxonomy with GENUINELY ZERO
