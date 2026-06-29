@@ -24,37 +24,12 @@
 #   1. Download Socrata bulk CSV (dataset 24uj-dj8v) -> data/raw/ (dated name)
 #   2. Parse CONSTRUCTION_VALUE to numeric; flag coords + value
 #   3. Join the curated residential/commercial grouping (latest in reference/)
-#   4. Emit the three output artifacts listed above
+#   4. Emit the output artifacts listed above + the per-year served point files
 #
-# Stage B (separate, run by hand after this script): tippecanoe turns the
-# GeoJSON into PMTiles. Run from pipeline/yeg/building-permits/:
-#
-#   tippecanoe -o output/permits.pmtiles --force \
-#     --layer=permits --minimum-zoom=9 --maximum-zoom=14 \
-#     -y year -y month_number \
-#     -y job_category -y job_group \
-#     -y construction_value \
-#     -y building_type -y work_type \
-#     -y job_description -y units_added \
-#     -y address \
-#     -r1 --no-tile-size-limit --no-feature-limit \
-#     output/permits.geojson
-#
-# This is a NO-DROP build: every one of the ~226k points is present at every
-# zoom, so client-side year + job_category filters render honestly even at city
-# zoom. All three no-drop flags are required, for DIFFERENT reasons:
-#   -r1                  disables tippecanoe's default dot drop-rate — the REAL
-#                        cause of low-zoom sparsity (NOT the tile-size cap;
-#                        lifting that alone changes nothing).
-#   --no-feature-limit   allows >200k features in one tile; the z9 Edmonton tile
-#                        holds all 226k, over the 200k default (build fails
-#                        without it — no zoom levels get written).
-#   --no-tile-size-limit lifts the 500 KB-per-tile cap so the dense tiles write.
-# -y is a property allowlist (only those 10 columns enter the tiles; row_id and
-# others dropped). job_description is free-text and inflates the file more than
-# the other fields, so re-check the size after building. The tile is hosted on
-# R2 (no per-file cap), but if it grows large, lower tile detail (tippecanoe -d,
-# default 12) before sacrificing points.
+# The point map is served as per-year GeoJSON (one file per year, thinned), built
+# in section 4b2 below and published by the runner handoff — no tiling step. (The
+# old tippecanoe -> PMTiles -> R2 path was retired once the per-year GeoJSON model
+# landed; see git history if a high-fidelity local tile is ever wanted again.)
 #
 # Inputs:
 #   - Edmonton Open Data, dataset 24uj-dj8v (streamed; no local input needed)
@@ -262,12 +237,12 @@ cat(sprintf("Wrote %s (%.1f MB, %s features)\n",
 #     filter/legend can read it; the rest drive paint / popup / month + value
 #     filters). row_id, job_category and units_added are dropped — the point map
 #     reads none (job_category and units_added are choropleth/aggregate fields).
-# ADDITIVE: permits.geojson above is UNCHANGED and remains the tippecanoe/PMTiles
-# source until that path is retired in a later commit. The runner publishes these
-# files to website/public via the _whirl.yaml GLOB handoff — the point map's first
-# artifacts through the sole-publisher (it was a hand-built PMTiles on R2, absent
-# from the handoff). No year literals: the loop iterates the years PRESENT in the
-# data; the slider reads the same {years, defaultYear} manifest 03 emits.
+# permits.geojson above is now a full-detail LOCAL archive (all 11 props, full
+# precision) — no longer tiled (the tippecanoe/PMTiles/R2 path is retired). The
+# runner publishes these per-year files to website/public via the _whirl.yaml GLOB
+# handoff — the point map's served artifacts (it was a hand-built PMTiles on R2
+# before). No year literals: the loop iterates the years PRESENT in the data; the
+# slider reads the same {years, defaultYear} manifest 03 emits.
 points_dir <- "output/permit_points"
 if (dir.exists(points_dir)) unlink(points_dir, recursive = TRUE)
 dir.create(points_dir, showWarnings = FALSE)
@@ -320,15 +295,3 @@ cat(sprintf("Not mapped:     %s (no coordinates)\n",
             comma(sum(!permits_grouped$has_coord))))
 cat(sprintf("Category pairs: %s -> output/permits_category_counts.csv\n",
             comma(nrow(category_counts))))
-cat("\nNext (Stage B): tippecanoe output/permits.geojson -> .pmtiles\n")
-cat("  tippecanoe -o output/permits.pmtiles --force --layer=permits \\\n")
-cat("    --minimum-zoom=9 --maximum-zoom=14 \\\n")
-cat("    -y year -y month_number \\\n")
-cat("    -y job_category -y job_group -y construction_value \\\n")
-cat("    -y building_type -y work_type \\\n")
-cat("    -y job_description -y units_added -y address \\\n")
-cat("    -r1 --no-tile-size-limit --no-feature-limit \\\n")
-cat("    output/permits.geojson\n")
-cat("  (no-drop build: -r1 stops dot drop-rate thinning,\n")
-cat("   --no-feature-limit allows >200k in the z9 tile, --no-tile-size-limit\n")
-cat("   lifts the 500 KB cap. -y trims to 10 props. See header for why.)\n")
