@@ -105,6 +105,9 @@ pipeline/yeg/shared/data/
 **/building-permits/output/permits.pmtiles
 **/building-permits/output/permits.pmtiles
 **/building-permits/output/permit_geojson/*.geojson
+# Point-map per-year GeoJSONs (01's 4b2 emit) — regenerable output; the published
+# copies live in website/public/data/building-permits/permit-points/.
+**/building-permits/output/permit_points/*.geojson
 
 # Building-permits output/ regenerables (mirror PA's output/ convention above):
 # per-year aggregates, coverage summary, manifest, and the served-copy-source
@@ -118,6 +121,10 @@ pipeline/yeg/building-permits/output/permits_category_counts.csv
 # Dwelling-units dropped-spanner diagnostic CSVs (per-run, dated) — regenerable
 # build diagnostics, same policy as the aggregates above.
 pipeline/yeg/building-permits/output/dwelling_units_*.csv
+# EDA composition-recon CSVs (eda/01d building-type, eda/01e work-type, and any
+# future *_by_group recon) — exploratory, regenerable, never a published artifact.
+pipeline/yeg/building-permits/output/*_by_group.csv
+pipeline/yeg/building-permits/output/*_by_group_year.csv
 
 # Local working doc — audit findings, not a repo artifact
 docs/STRUCTURE_AUDIT.md
