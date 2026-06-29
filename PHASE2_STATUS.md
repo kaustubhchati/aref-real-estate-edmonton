@@ -190,15 +190,15 @@ sections, agent pipeline, and infrastructure.
   `website/public/downloads/`. Labels / filenames / coverage spans are
   manifest-resolved at render (no year literals); `siteConfig.downloads`
   holds year-free token skeletons.
-- Cloudflare Pages (demo) + R2 (tiles) infrastructure.
-- Host-portable serve target (VM-ready): `VITE_BASE_PATH` (deploy base + router
-  basename), `VITE_PMTILES_BASE` (tiles origin), `_redirects` / nginx `try_files`
-  SPA fallback, and one base-resolution seam (`src/utils/assetUrl.js`) routing
-  every runtime asset fetch — Cloudflare-Pages defaults, subpath deploy works
-  end-to-end.
-- React + Vite + MapLibre + PMTiles stack (locked).
-- Tippecanoe recipe locked:
-  `-r1 --no-tile-size-limit --no-feature-limit`.
+- **Host: Cloudflare Pages (current).** VM build DEFERRED until VM specs arrive;
+  resume = bare-server analysis fed real specs (cert→server choice,
+  local-FS→atomic-flip, egress→basemap/upgrades). (R2 tiles retired with the tiler
+  — BP points are per-year GeoJSON now; CLAUDE.md §12 v1.10.)
+- Host-portable serve target: `VITE_BASE_PATH` (deploy base + router basename),
+  `_redirects` / nginx `try_files` SPA fallback, and one base-resolution seam
+  (`src/utils/assetUrl.js`) routing every runtime asset fetch — Cloudflare-Pages
+  defaults, subpath deploy works end-to-end.
+- React + Vite + MapLibre stack (locked; PMTiles retired, §12 v1.10).
 - Neighbourhood join: always on Neighbourhood ID,
   never on name (name drift is the documented failure).
 - Refresh-by-design (frontend): no year literals in PA, Building Permits (point

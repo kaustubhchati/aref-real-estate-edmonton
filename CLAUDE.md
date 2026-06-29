@@ -36,7 +36,7 @@ direction — do not build it, do not assume it, do not propose it as the websit
 Two parts, different natures:
 
 - `pipeline/` — **backend.** R, runs on the laptop at refresh time, produces data files. Never deploys.
-- `website/` — **frontend.** React + Vite + PMTiles, builds to static files, deploys.
+- `website/` — **frontend.** React + Vite, builds to static files, deploys.
 
 Research infrastructure, not a commercial product. Users: Prof. Huang's group, partner
 researchers, the public. Bar: "researchers and the public can rely on it" — not five-nines uptime.
@@ -52,14 +52,14 @@ random forest is discarded).
 
 - **Backend = the existing R pipeline, unchanged.** Layer 1a (parking / R1 / R3) + Layer 2
   aggregates. No rewrite to SQL/Python; not called at runtime.
-- **Frontend = React + Vite + PMTiles**, MapLibre carried over. Build **one component and one
-  map at a time.**
+- **Frontend = React + Vite**, MapLibre carried over (map layers served as whole GeoJSON — per-year
+  where there's a year axis; PMTiles retired, §12 v1.10). Build **one component and one map at a time.**
 - **No database, no server for the site.** SQL is not needed (build-time only, optional).
 - **Deploy = git push** to the host (UAlberta hosting is git-capable, push-based, like Cloudflare).
   Only `website/` builds and deploys; `pipeline/` stays on the laptop.
 - **The serve target is configuration, not assumption** (the VM-readiness campaign, §6/§12 v1.9).
-  The deploy base + router basename (`VITE_BASE_PATH`), the PMTiles origin (`VITE_PMTILES_BASE`),
-  and the SPA fallback (`website/public/_redirects` / an nginx `try_files` snippet) are
+  The deploy base + router basename (`VITE_BASE_PATH`) and the SPA fallback
+  (`website/public/_redirects` / an nginx `try_files` snippet) are
   env-configurable with in-code Cloudflare-Pages defaults, so the current deploy is unchanged.
   Every hand-issued runtime asset fetch (data, downloads, `manifest.json`, basemap style) routes
   through **one base-resolution seam**, `website/src/utils/assetUrl.js` (joins the path to
@@ -127,7 +127,7 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
 │   │   │   ├─ scripts/          #       01_load … 09_build
 │   │   │   ├─ data/             #       raw/  processed/  validation/  reference/
 │   │   │   └─ output/           #       this section's products: GeoJSON / PMTiles / CSVs
-│   │   ├─ building-permits/     #     BUILT — point PMTiles (R2) + neighbourhood aggregates
+│   │   ├─ building-permits/     #     BUILT — point GeoJSON (per-year) + neighbourhood aggregates
 │   │   ├─ economy/              #     ECONOMY section — neighbourhood-level economic data
 │   │   │   └─ business-census/  #       BUILT — Business Census choropleth; scripts/ data/ output/
 │   │   ├─ crime/                #     (added when built)
@@ -274,8 +274,9 @@ placeholder.
 **Host-portable + refresh-by-design (2026-06, the VM-readiness campaign — §12 v1.9).** The serve
 target is now config (§2) and a new data year needs no frontend edit:
 - **Host-decoupled.** SPA fallback shipped (`website/public/_redirects` + an nginx `try_files`
-  doc); R2 PMTiles origin → `VITE_PMTILES_BASE`; deploy base + router basename → `VITE_BASE_PATH`
-  (default `/`). All have in-code defaults reproducing the Cloudflare Pages deploy — see README.
+  doc); deploy base + router basename → `VITE_BASE_PATH` (default `/`). All have in-code defaults
+  reproducing the Cloudflare Pages deploy — see README. (The R2 PMTiles-origin seam was removed
+  with the tiler, §12 v1.10.)
 - **One base-resolution seam.** Every hand-issued runtime fetch (data, downloads, `manifest.json`,
   basemap style) goes through `website/src/utils/assetUrl.js` (joins to `import.meta.env.BASE_URL`;
   no-op at `/`), making a subpath deploy fully work (verified headless under `/realestate/`). The
@@ -408,7 +409,7 @@ Result: the **live clone** — shell + one real map — the proof the frame work
 - Rewrite the R pipeline. (§2.)
 - Hardcode org / university / professor / author names — `siteConfig` only. (§6.)
 - Add a runtime database, server, or API. (§1.)
-- Introduce stacks beyond React + Vite + PMTiles + MapLibre (+ Recharts for charts; + `@tanstack/react-table`,
+- Introduce stacks beyond React + Vite + MapLibre (+ Recharts for charts; + `@tanstack/react-table`,
   headless, scoped to the PA analyst data table + box-select aggregation — KC's closing decision 2026-06-27).
   Everything else stays hand-rolled. (§2.)
 - Duplicate cross-section base geometry (boundary, road/vegetation layers) into sections — it lives in `pipeline/yeg/shared/`. (§3.)
@@ -417,7 +418,7 @@ Result: the **live clone** — shell + one real map — the proof the frame work
   year from the section's `manifest.json`, the PA/BP way. (§6 — refresh-by-design; the one parked
   exception, Business Counts, is tracked in `docs/BC_MANIFEST_HANDBACK.md`.)
 - Hardcode the serve host, or a root-absolute runtime asset path that bypasses the base. The serve
-  target is env config (`VITE_BASE_PATH`/`VITE_PMTILES_BASE`); runtime fetches go through
+  target is env config (`VITE_BASE_PATH`); runtime fetches go through
   `assetUrl`. (§2/§6.)
 
 **Both**
@@ -458,6 +459,23 @@ When in doubt, load §2 (locked architecture) and §9 (negative rules) — the l
 Revise when: a locked decision changes (§2), a new section is wired (§3), a new rule is validated
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
+- **v1.10 (2026-06-29)** — **BP point map standardized onto per-year GeoJSON; the tiler subsystem
+  retired; governance docs brought into the repo.** The Building Permits permit-point map — the
+  last tiled layer — moved off PMTiles onto the per-year GeoJSON model the choropleth already uses
+  (`permit_points_<year>.geojson` per year, thinned to 6-dp coords + the 8 rendered props; the
+  slider swaps the source via `setData` on the shared `MapView`). **Removed:** the hand-run
+  tippecanoe Stage B, go-pmtiles, the R2 tile host, the `VITE_PMTILES_BASE` seam, the `pmtiles` npm
+  dep + protocol handler, and the bespoke `PermitMapView` mount. **PMTiles therefore drops from the
+  §2/§9 locked stack** (now React + Vite + MapLibre). Chosen because per-year files (max ~7.7 MB)
+  fit Cloudflare Pages' 25 MiB per-file cap and keep feature counts light, whereas one all-years
+  points file (~105 MB) cannot be a Pages asset — the original reason the points were tiles on R2.
+  Verified end-to-end by a full `refresh.R` (all 3 sections `ok`; 18 `permit_points`
+  `handoff_copy` records). **Governance:** the serve-only-VM ADR is now tracked and `METHODOLOGY.md`
+  (reviewer-facing *why*) was added. **VM build DEFERRED** until specs arrive (PHASE2_STATUS). The
+  current-state `VITE_PMTILES_BASE` mentions (§2/§6/§9) are corrected here; incidental "PMTiles"
+  mentions in §3 tree comments + the §6 reserve-tiles note are superseded by this entry pending a
+  tidy sweep. Stale `PermitMapView` comments in the *shared* `MapView.jsx`/`basemapTheme.js` are
+  cosmetic-only and left untouched (freeze-the-working-core on shared code).
 - **v1.9 (2026-06-25)** — **Frontend VM-readiness + refresh-by-design campaign** (three
   frontend seams; structural/host-decoupling merged to `main`, the year-hardcode cleanup on a
   review branch). **(1) Host-decoupling** (merged): added the missing `public/_redirects` SPA
