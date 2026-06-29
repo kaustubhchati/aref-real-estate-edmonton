@@ -4,9 +4,9 @@
 // The option-list seam for Building Permits — what the sidebar controls offer.
 // The year list + default come from the published BP manifest (the same file
 // the choropleth reads), so a refresh that adds a year flows through with no
-// edit here. Every permit year lives in ONE permits.pmtiles; Year / Permit type
-// / Month / value tier are client-side MapLibre filters (see BuildingPermitsMap),
-// not file swaps.
+// edit here. Each year is its OWN per-year GeoJSON (permit-points/), so the Year
+// slider swaps the file (MapView setData); Permit type / Month / value tier are
+// client-side MapLibre filters on the loaded year (see BuildingPermitsMap).
 // =============================================================================
 
 import { assetUrl } from "../../utils/assetUrl.js";
@@ -25,6 +25,13 @@ export async function loadPermitManifest() {
 // manifest lacks the field (the UI shows a loading state until they resolve).
 export const permitYears = (m) => [...(m?.years ?? [])].sort((a, b) => b - a);
 export const permitDefaultYear = (m) => m?.defaultYear ?? null;
+
+// The per-year point GeoJSON for one year (published by the runner from 01's 4b2
+// emit). The slider passes the result as MapView's geojsonUrl, so a year change
+// is a setData swap. No year literal — the year comes from the manifest/slider;
+// the filename derives from it, mirroring the choropleth's permit_neighbourhoods.
+export const resolvePermitPointsUrl = (year) =>
+  assetUrl(`/data/building-permits/permit-points/permit_points_${year}.geojson`);
 
 // Permit type toggle — filters on job_group field in tile.
 export const ALL_GROUPS    = "All";
