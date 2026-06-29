@@ -245,37 +245,45 @@ cat(sprintf("Wrote %s (%.1f MB, %s features)\n",
 
 
 # ============================================================
-# 4b2 — Served points artifact (GeoJSON one-file model)
+# 4b2 — Served points artifacts (one GeoJSON PER YEAR)
 # ============================================================
-# WHY: the point map is being standardized OFF PMTiles onto Property Assessment's
-# one-file GeoJSON model — all years in a single file, scrubbed client-side by a
-# setFilter on each point's `year`. This emits that SERVED artifact: the same
-# mappable points as permits.geojson above, THINNED for transport —
+# WHY: the point map is being standardized OFF PMTiles onto the per-year GeoJSON
+# model the BP neighbourhood choropleth already uses — one file per year, the
+# slider swaps the source (setData) on a year change. PER YEAR, not one all-years
+# file, because the all-years points are ~105 MB — over Cloudflare Pages' 25 MiB
+# per-file cap (STRUCTURE_UPDATE.md: dense layers never ship as one inline
+# GeoJSON, which is exactly why the point map was a PMTiles on R2). Each year is
+# ~3-7 MB, comfortably under the cap, and ~12-16k features keeps the browser light.
+#
+# Each file is the same mappable points as permits.geojson above, THINNED:
 #   * coordinates rounded to 6 dp (~0.1 m, below any web-zoom resolution) via the
 #     GeoJSON driver's COORDINATE_PRECISION layer option, and
-#   * properties pruned to the eight the frontend actually renders. `year` is the
-#     scrub key; the other seven drive paint / popup / month + value filters.
-#     row_id, job_category and units_added are dropped — the point map reads none
-#     of them (job_category and units_added are choropleth/aggregate fields).
-# This is an ADDITIVE emit: permits.geojson above is UNCHANGED and remains the
-# tippecanoe/PMTiles source until that path is retired in a later commit. The
-# runner publishes THIS file to website/public via the _whirl.yaml handoff — the
-# point map's first artifact to travel through the sole-publisher (it was a hand-
-# built PMTiles uploaded to R2, absent from the handoff). No year literals: the
-# year axis rides on each point's `year` property + the committed manifest the
-# slider already reads.
-points_served <- permits_sf |>
-  select(year, month_number, job_group, construction_value,
-         building_type, work_type, job_description, address)
+#   * properties pruned to the eight the frontend renders (`year` kept so the
+#     filter/legend can read it; the rest drive paint / popup / month + value
+#     filters). row_id, job_category and units_added are dropped — the point map
+#     reads none (job_category and units_added are choropleth/aggregate fields).
+# ADDITIVE: permits.geojson above is UNCHANGED and remains the tippecanoe/PMTiles
+# source until that path is retired in a later commit. The runner publishes these
+# files to website/public via the _whirl.yaml GLOB handoff — the point map's first
+# artifacts through the sole-publisher (it was a hand-built PMTiles on R2, absent
+# from the handoff). No year literals: the loop iterates the years PRESENT in the
+# data; the slider reads the same {years, defaultYear} manifest 03 emits.
+points_dir <- "output/permit_points"
+if (dir.exists(points_dir)) unlink(points_dir, recursive = TRUE)
+dir.create(points_dir, showWarnings = FALSE)
 
-served_path <- "output/permit_points_all_years.geojson"
-if (file.exists(served_path)) file.remove(served_path)
-st_write(points_served, served_path, driver = "GeoJSON",
-         layer_options = "COORDINATE_PRECISION=6", quiet = TRUE)
-
-served_mb <- file.info(served_path)$size / 1024 / 1024
-cat(sprintf("Wrote %s (%.1f MB, %s features, 6dp coords, 8 props)\n",
-            served_path, served_mb, comma(nrow(points_served))))
+served_cols <- c("year", "month_number", "job_group", "construction_value",
+                 "building_type", "work_type", "job_description", "address")
+point_years <- sort(unique(permits_sf$year))
+for (yr in point_years) {
+  one_year  <- permits_sf[permits_sf$year == yr, served_cols]
+  out_year  <- file.path(points_dir, sprintf("permit_points_%d.geojson", yr))
+  st_write(one_year, out_year, driver = "GeoJSON",
+           layer_options = "COORDINATE_PRECISION=6", quiet = TRUE)
+}
+cat(sprintf("Wrote %d per-year point files to %s/ (%s..%s, %s features total)\n",
+            length(point_years), points_dir,
+            min(point_years), max(point_years), comma(nrow(permits_sf))))
 
 
 # ============================================================

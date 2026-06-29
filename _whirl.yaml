@@ -129,6 +129,12 @@ sections:
         - src_dir:  output/permit_geojson
           dest_dir: website/public/data/building-permits/permit-neighbourhoods
           pattern:  "permit_neighbourhoods_*.geojson"
+        # Point map per-year files (01's 4b2 emit): output/permit_points/ -> public's
+        # permit-points/. Same dir-remap shape as the choropleths above. Per-year
+        # (not one all-years file) keeps each under Cloudflare Pages' 25 MiB cap.
+        - src_dir:  output/permit_points
+          dest_dir: website/public/data/building-permits/permit-points
+          pattern:  "permit_points_*.geojson"
       # PUBLISH-TIME RENAME to the locked CSV naming standard (CLAUDE.md §6):
       # output/ frames stay unprefixed (internal); the PUBLISHED copy carries the
       # yeg_ city prefix + section + descriptor. These are all-years rolling files,
@@ -138,11 +144,6 @@ sections:
         - { from: output/permits_coverage.csv,        to: website/public/data/building-permits/yeg_building-permits_coverage.csv }
         - { from: output/permits_category_counts.csv, to: website/public/data/building-permits/yeg_building-permits_category_counts.csv }
         - { from: output/manifest.json,               to: website/public/data/building-permits/manifest.json }
-        # Point map's served artifact (GeoJSON one-file model): all-years points,
-        # thinned at emit (6dp coords, 8 rendered props incl. `year`). Published
-        # through the sole-publisher — the point map was a hand-built PMTiles on R2,
-        # absent from this handoff. GeoJSON (not a CSV), so from/to share the name.
-        - { from: output/permit_points_all_years.geojson, to: website/public/data/building-permits/permit_points_all_years.geojson }
         # Download-page copies (siteConfig serves these from /downloads/); was
         # manual placement, now published from the one produced source.
         - { from: output/permits_coverage.csv,        to: website/public/downloads/yeg_building-permits_coverage.csv }
