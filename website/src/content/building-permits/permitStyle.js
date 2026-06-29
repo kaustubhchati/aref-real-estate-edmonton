@@ -5,7 +5,7 @@
 // equivalent of property-assessment/choroplethStyle.js). Everything about how a
 // permit dot looks lives here: basemap + view defaults, the two job-group
 // colours, the construction-value → radius ramp, the single circle-layer spec,
-// the popups, and the client-side filter. PermitMapView reads this file and
+// the popups, and the client-side filter. The BP point map reads this file and
 // nothing else for styling, so a colour/size/threshold tweak is a one-file edit
 // (CLAUDE.md §6: data-driven tables, one source of truth).
 //
@@ -16,6 +16,7 @@
 import { fmtCurrency } from "../../utils/format.js";
 import { VALUE_BUCKETS, ALL_BUCKET_IDS } from "./dataSources.js";
 import { CITY_BOUNDS } from "../../config/cityBounds.js";
+import { paintTransition, DUR_BASE } from "../../components/motion.js";
 
 // ---- Map view defaults (Edmonton) ------------------------------------------
 // Basemap style is shared + base-resolved; re-exported so consumers here are unchanged.
@@ -32,9 +33,11 @@ export const MAP_VIEW = {
   maxBounds: CITY_BOUNDS.Edmonton,   // lock pan to the city extent (per-city config)
 };
 
-// The tippecanoe layer name baked into permits.pmtiles. The circle layer's
-// "source-layer" MUST equal this or the source loads but renders nothing.
-export const SOURCE_LAYER = "permits";
+// The GeoJSON source id the page registers the per-year points under (the shared
+// MapView fills `source` into the layer at mount). A GeoJSON source has NO
+// sub-layers, so the circle layer carries no "source-layer" — that was a
+// vector-tile/PMTiles-only key, removed in the move off tippecanoe.
+export const SOURCE_ID = "permits";
 
 // The id of the circle layer. Exported so the page can target it with
 // map.setFilter(LAYER_ID, …) without restating the string.
@@ -100,14 +103,13 @@ function buildRadiusExpression() {
 }
 
 // ---- The circle layer spec -------------------------------------------------
-// Returned WITHOUT `source` (PermitMapView fills that in). Colour by job_group,
-// size by construction-value tier, white halo so dots stay distinct on the light
-// Voyager basemap.
+// Returned WITHOUT `source` (the shared MapView fills that in). Colour by
+// job_group, size by construction-value tier, white halo so dots stay distinct
+// on the light Voyager basemap. No "source-layer": the source is plain GeoJSON.
 export function permitCircleLayer() {
   return {
     id: LAYER_ID,
     type: "circle",
-    "source-layer": SOURCE_LAYER,
     minzoom: 9,
     layout: {
       // Draw commercial (the ~16% minority) ON TOP so it isn't buried under the
@@ -117,6 +119,11 @@ export function permitCircleLayer() {
     },
     paint: {
       "circle-color":  buildColourExpression(),
+      // Tween the dot colour if the job-group palette ever changes; reduced-motion
+      // safe (paintTransition zeroes the duration under prefers-reduced-motion). A
+      // YEAR change is a data swap (MapView setData on a per-year file), so dots
+      // replace rather than tween — same per-year model as the choropleth.
+      "circle-color-transition": paintTransition(DUR_BASE),
       "circle-radius": buildRadiusExpression(),
       "circle-opacity": [
         "interpolate", ["linear"], ["zoom"],
@@ -258,12 +265,16 @@ export function buildPermitHoverHtml(p) {
 }
 
 // ---- Client-side filter ----------------------------------------------------
-// The sidebar controls are MapLibre filters on the already-loaded tile, not data
-// swaps. group is the "Permit type" pick ("All" / "Residential" / "Commercial");
-// the tile's job_group is lower-case, so we lower-case the picked value. month 0
-// is the "All months" sentinel. activeBucketIds is the Set of active value tiers.
-export function buildPermitFilter(year, group, month, activeBucketIds) {
-  const clauses = [["==", ["get", "year"], year]];
+// Type / month / value-tier filters on the LOADED per-year source (MapLibre
+// setFilter — instant, no refetch). There is deliberately NO year clause: each
+// GeoJSON file already holds exactly one year (the slider swaps the file via
+// MapView's setData), so a year filter would be redundant AND would blank the old
+// dots before the new file finishes loading. group is the "Permit type" pick
+// ("All" / "Residential" / "Commercial"); the data's job_group is lower-case, so
+// we lower-case the picked value. month 0 is the "All months" sentinel.
+// activeBucketIds is the Set of active value tiers.
+export function buildPermitFilter(group, month, activeBucketIds) {
+  const clauses = [];
 
   if (group !== "All") {
     clauses.push(["==", ["get", "job_group"], group.toLowerCase()]);

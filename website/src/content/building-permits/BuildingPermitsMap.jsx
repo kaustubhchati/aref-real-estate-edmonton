@@ -3,21 +3,26 @@
 //
 // The Building Permits route (nav leaf "Construction & Improvement"). A .sb
 // sidebar of controls beside a full-bleed .canvas-wrap holding the map. This is
-// a POINT-symbol map (orange/blue dots from a PMTiles vector source), so it uses
-// its OWN mount (PermitMapView), not the shared components/MapView.jsx.
+// a POINT-symbol map (orange/violet dots), now on the SHARED components/MapView
+// with a per-year GeoJSON source (one file per year under permit-points/).
 //
-// Four live, client-side filters — Year, Permit type (job_group), Month, and the
-// interactive construction-value tiers — applied via map.setFilter (instant, no
-// refetch). All 18 years live in one PMTiles.
+// The Year slider swaps the source file (MapView setData); Permit type
+// (job_group), Month, and the construction-value tiers are client-side
+// map.setFilter on the loaded year (instant, no refetch).
 // =============================================================================
 
 import { useEffect, useRef, useState } from "react";
 
-import PermitMapView from "./PermitMapView.jsx";
+import MapView from "../../components/MapView.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
+import { wirePermitPopup } from "./permitInteractions.js";
 import {
   LAYER_ID,
+  SOURCE_ID,
   COLOURS,
+  BASEMAP_STYLE,
+  MAP_VIEW,
+  permitCircleLayer,
   buildPermitFilter,
   VALUE_BUCKETS,
   ALL_BUCKET_IDS,
@@ -28,6 +33,7 @@ import {
   loadPermitManifest,
   permitYears,
   permitDefaultYear,
+  resolvePermitPointsUrl,
   DEFAULT_GROUP,
   MONTHS,
   DEFAULT_MONTH,
@@ -274,6 +280,9 @@ function PermitLegend({ activeBuckets, onToggle, onReset, activeGroup }) {
   );
 }
 
+// The circle layer spec — built once (MapView reads `layers` only at mount).
+const POINT_LAYERS = [permitCircleLayer()];
+
 export default function BuildingPermitsMap() {
   // Year list + default come from the BP manifest (no literals); null until it
   // loads, which gates the slider, the map filter, and the tab title below.
@@ -323,14 +332,16 @@ export default function BuildingPermitsMap() {
     return () => { cancelled = true; };
   }, []);
 
-  // Re-apply the dot filter whenever the map is ready or a control changes
-  // (year, permit type, month, or the active value tiers). setFilter is instant.
-  // Guard on `map` + `year` so we don't filter before onLoad / the manifest land.
+  // Re-apply the type/month/value filter when the map is ready or a control
+  // changes. setFilter is instant. The YEAR change is a source swap (geojsonUrl
+  // changes below → MapView setData), but `year` stays in the deps so the filter
+  // is re-asserted on the new year's data. Guard on `map` + `year` so we don't
+  // filter before onLoad / the manifest land.
   useEffect(() => {
     if (!map || year == null) return;
     map.setFilter(
       LAYER_ID,
-      buildPermitFilter(year, group, month, activeBuckets)
+      buildPermitFilter(group, month, activeBuckets)
     );
   }, [map, year, group, month, activeBuckets]);
 
@@ -382,6 +393,10 @@ export default function BuildingPermitsMap() {
   const yearSpan = years.length ? `${Math.min(...years)}–${Math.max(...years)}` : "";
   const nNoCoord = cov ? Number(cov.n_no_coord) : 0;
 
+  // The per-year point file the slider's `year` resolves to; null until the
+  // manifest sets `year`. A change here is what drives MapView's setData swap.
+  const pointsUrl = year != null ? resolvePermitPointsUrl(year) : null;
+
   return (
     <article className="content-map">
       <aside ref={sbRef} className="sb" aria-label="Map sidebar">
@@ -397,10 +412,10 @@ export default function BuildingPermitsMap() {
             <span className="sb-select-label">
               Year <strong className="sb-year-value">{year ?? "…"}</strong>
             </span>
-            {/* Every permit year lives in ONE permits.pmtiles, so the slider just
-                drives the same instant setFilter (no file swap). min/max come from
-                the manifest year list (no literals); years are contiguous so
-                step = 1 maps every position to a real year. */}
+            {/* Each year is its own GeoJSON file: moving the slider swaps the
+                source (MapView setData) and the type/month/value filter re-applies.
+                min/max come from the manifest year list (no literals); years are
+                contiguous so step = 1 maps every position to a real year. */}
             {year != null && (
               <input
                 type="range"
@@ -567,9 +582,26 @@ export default function BuildingPermitsMap() {
       </aside>
 
       <div className="canvas-wrap">
-        {/* PMTiles point map (no MapErrorBoundary); skeleton shows until onLoad. */}
+        {/* Per-year GeoJSON point map on the shared MapView; skeleton until the
+            first paint. The Year slider changes geojsonUrl -> MapView setData. */}
         {!map && <MapSkeleton />}
-        <PermitMapView className="canvas" onLoad={setMap} onPick={setClickedFeature} />
+        {pointsUrl && (
+          <MapView
+            className="canvas"
+            basemapStyle={BASEMAP_STYLE}
+            geojsonUrl={pointsUrl}
+            view={MAP_VIEW}
+            sourceId={SOURCE_ID}
+            layers={POINT_LAYERS}
+            onLoad={(m) => {
+              // MapView is section-agnostic, so the BP-specific wiring lives here:
+              // popups/hover/fly-to, and disabling dbl-click-zoom (dbl-click = fly-to).
+              wirePermitPopup(m, setClickedFeature);
+              m.doubleClickZoom.disable();
+              setMap(m);
+            }}
+          />
+        )}
       </div>
     </article>
   );

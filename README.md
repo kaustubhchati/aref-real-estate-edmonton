@@ -134,7 +134,6 @@ Pages variable or an `export` before `npm run build`.)
 
 | Variable             | Default                                          | Purpose |
 | -------------------- | ------------------------------------------------ | ------- |
-| `VITE_PMTILES_BASE`  | `https://pub-600ea350470345bbb93a035ad72875d5.r2.dev` | Origin the building-permits `.pmtiles` is fetched from. **The host MUST honor HTTP range requests (HTTP 206 Partial Content)** — PMTiles reads tiles by byte-range. Cloudflare Pages does **not** honor ranges on static assets, which is why the default is Cloudflare R2; a range-capable host (e.g. nginx, which serves ranges by default) could self-host the file. Give the origin only — no trailing slash, no `/building-permits` suffix. |
 | `VITE_BASE_PATH`     | `/`                                              | Public path the built site is served under. `/` = host root (current deploy). Set to a subpath like `/realestate/` (leading **and** trailing slash) for a non-root deploy. Drives Vite's `base`, the router `basename`, **and** every runtime asset fetch (via `assetUrl` / `import.meta.env.BASE_URL`), so a subpath deploy is fully wired — see the note below. |
 
 **Subpath deploy (`VITE_BASE_PATH` ≠ `/`) — fully supported.** Vite rebases the bundled
@@ -144,6 +143,4 @@ assets and the router; the app's hand-issued runtime fetches — data (`/data/�
 which joins each path to `import.meta.env.BASE_URL`. At the default base `/` it is a no-op
 (today's deploy is unchanged); under `/realestate/` every fetch resolves to `/realestate/…`.
 Verified end-to-end: a `VITE_BASE_PATH=/realestate/` build loads its data, styles, and
-downloads under the subpath with zero requests to the host root. (The `.pmtiles` is the one
-exception — it is served from `VITE_PMTILES_BASE`, a separate range-capable origin, not the
-site base.)
+downloads under the subpath with zero requests to the host root.
