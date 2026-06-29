@@ -103,7 +103,6 @@ pipeline/yeg/property-assessment/data/reference/neighbourhood_name_merges_*.csv
 # pipeline/yeg/shared/ stays committable; only its data/ is excluded (CLAUDE.md §3).
 pipeline/yeg/shared/data/
 **/building-permits/output/permits.pmtiles
-**/building-permits/output/permits.pmtiles
 **/building-permits/output/permit_geojson/*.geojson
 # Point-map per-year GeoJSONs (01's 4b2 emit) — regenerable output; the published
 # copies live in website/public/data/building-permits/permit-points/.
