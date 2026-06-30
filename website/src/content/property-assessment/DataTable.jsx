@@ -103,6 +103,17 @@ const FACETS = [
   },
 ];
 
+// LOAD-BEARING, NOT STYLISTIC — do NOT inline this back into a `[]` literal.
+// In selection mode we hand TanStack an EMPTY filter set, and it must be the SAME
+// array reference every render. TanStack's filter handling is REFERENTIAL: a fresh
+// `[]` literal each render reads as "the filters changed", so it recomputes the
+// faceted/filtered row models and re-renders via its own internal state — which
+// renders again, producing another fresh `[]` → an infinite re-render loop that
+// blocks the main thread and FREEZES box-select (D9: 5056 renders → hard hang;
+// this stable ref → 58, fixed). A future "tidy" that turns this back into an inline
+// `[]` reintroduces that freeze. Keep the reference stable.
+const EMPTY_COLUMN_FILTERS = [];
+
 // A multi-select column filter: a row passes when its value is in the selected set.
 // An empty/absent set means NO filter (every row passes) — so the default is "all".
 function multiSelectFilter(row, columnId, selected) {
@@ -117,6 +128,41 @@ function rangeFilter(row, columnId, value) {
   if (!value) return true;
   const v = row.getValue(columnId);
   return v != null && v >= value[0] && v <= value[1];
+}
+
+// Regression guard for the D9 freeze CLASS (not just its one instance). The freeze was
+// an UNSTABLE reference (a fresh [] each render) passed into a hot render path, which
+// drove a runaway re-render loop — silent in prod, a hard main-thread hang. This catches
+// that class LOUDLY in dev: it counts renders in a short window and warns ONCE if they
+// cross a sane threshold (a real interaction is well under it — D9's fixed box-select was
+// ~58; the loop was thousands), so the next unstable-ref slip screams immediately instead
+// of shipping as a prod freeze. The tally lives in an EFFECT, not the render body: effects
+// run after each commit — the only place refs/Date may be touched (the render-purity lint
+// forbids them in render) — and a no-dependency effect fires once per commit, so it counts
+// renders directly. Dev-only: import.meta.env.DEV is statically false in prod, so the body
+// is inert there (an empty post-commit effect).
+function useRenderStormGuard(label, threshold = 300, windowMs = 1000) {
+  const startRef = useRef(0);
+  const countRef = useRef(0);
+  const firedRef = useRef(false);
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const now = performance.now();
+    if (now - startRef.current > windowMs) { // a new window → reset the tally
+      startRef.current = now;
+      countRef.current = 0;
+      firedRef.current = false;
+    }
+    countRef.current += 1;
+    if (countRef.current > threshold && !firedRef.current) {
+      firedRef.current = true;
+      console.warn(
+        `[render-storm] <${label}> committed ${countRef.current}× within ${windowMs}ms — ` +
+        "likely an UNSTABLE reference (a fresh []/{}/fn passed into a hot render path, " +
+        "e.g. useReactTable state). See DataTable's EMPTY_COLUMN_FILTERS / the D9 box-select freeze."
+      );
+    }
+  }); // no deps → runs after EVERY commit
 }
 
 export default function DataTable({
@@ -141,6 +187,7 @@ export default function DataTable({
   const [sorting, setSorting] = useState([{ id: "name", desc: false }]);
   const [columnFilters, setColumnFilters] = useState([]); // categorical facets (D6)
   const scrollRef = useRef(null);
+  useRenderStormGuard("DataTable"); // dev-only: screams if an unstable ref re-storms (D9)
 
   // Selection mode = a multi-neighbourhood box-select is active (aggregate set):
   // the table shows the aggregate header + only the constituent rows.
@@ -240,8 +287,11 @@ export default function DataTable({
     // so they never desync from the selection aggregate — D6 recon #4).
     state: {
       sorting,
+      // globalFilter: "" is a stable PRIMITIVE (string), so a literal is safe here.
+      // columnFilters MUST be a stable reference — see EMPTY_COLUMN_FILTERS (an inline
+      // [] each render churns TanStack into an infinite re-render loop, the D9 freeze).
       globalFilter: selectionMode ? "" : globalFilter,
-      columnFilters: selectionMode ? [] : columnFilters,
+      columnFilters: selectionMode ? EMPTY_COLUMN_FILTERS : columnFilters,
     },
     // The facet columns exist only to drive faceting/filtering — keep them hidden.
     initialState: { columnVisibility: Object.fromEntries(FACETS.map((f) => [f.id, false])) },
