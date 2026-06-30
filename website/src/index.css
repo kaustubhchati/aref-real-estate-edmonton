@@ -715,6 +715,15 @@ p  { margin: 0 0 0.75rem; }
 }
 .dt-facet-opt:hover { background: var(--accent-soft); }
 .dt-facet-opt input { accent-color: var(--accent); }
+/* Polygon-state multi-select — toggle chips (one per state); pressed = included. */
+.dt-facet-toggles { display: flex; flex-wrap: wrap; gap: 5px; }
+.dt-facet-chip {
+  font-family: inherit; font-size: 0.72rem; font-weight: 500; cursor: pointer;
+  padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+  background: var(--bg-soft); border: 1px solid var(--border); color: var(--text-muted);
+}
+.dt-facet-chip:hover { background: var(--bg); }
+.dt-facet-chip.is-on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); }
 
 .dt-scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; }
 .dt-table { width: 100%; border-collapse: collapse; font-size: 12px; }

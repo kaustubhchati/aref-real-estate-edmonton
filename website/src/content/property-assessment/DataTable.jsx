@@ -300,15 +300,22 @@ export default function DataTable({
                 <span className="dt-count">{viewRows.length} of {rows.length}</span>
                 <ExportMenu onExport={onExport} year={year} years={years} selectedCount={selectedIds.length} />
               </div>
-              {/* Categorical facets (D6) — VIEW-only display filters over the table. */}
+              {/* Categorical facets (D6) — VIEW-only display filters over the table,
+                  rendered from the FACETS config: a dropdown or toggle chips per the
+                  facet's `control` (one path, no copy-pasted blocks). */}
               <div className="dt-facets" role="group" aria-label="Filter the table">
-                <FacetDropdown
-                  label="District"
-                  options={facetOptions("district")}
-                  selected={facetValue("district")}
-                  labelOf={(v) => v}
-                  onToggle={(v) => toggleFacet("district", v)}
-                />
+                {FACETS.map((f) => {
+                  const shared = {
+                    label: f.label,
+                    options: facetOptions(f.id),
+                    selected: facetValue(f.id),
+                    labelOf: f.labelOf,
+                    onToggle: (v) => toggleFacet(f.id, v),
+                  };
+                  return f.control === "dropdown"
+                    ? <FacetDropdown key={f.id} {...shared} />
+                    : <FacetToggles key={f.id} {...shared} />;
+                })}
               </div>
             </>
           )}
@@ -462,5 +469,29 @@ function FacetDropdown({ label, options, selected, labelOf, onToggle }) {
         ))}
       </div>
     </details>
+  );
+}
+
+// A multi-select facet rendered as toggle CHIPS (one per option) — for a small,
+// stable option set (the polygon states). aria-pressed reflects each chip's on/off;
+// clicking toggles it in the column filter. Default (nothing pressed) = all shown.
+function FacetToggles({ label, options, selected, labelOf, onToggle }) {
+  return (
+    <div className="dt-facet-toggles" role="group" aria-label={`Filter by ${label.toLowerCase()}`}>
+      {options.map((v) => {
+        const on = selected.includes(v);
+        return (
+          <button
+            key={v}
+            type="button"
+            className={`dt-facet-chip${on ? " is-on" : ""}`}
+            aria-pressed={on}
+            onClick={() => onToggle(v)}
+          >
+            {labelOf(v)}
+          </button>
+        );
+      })}
+    </div>
   );
 }
