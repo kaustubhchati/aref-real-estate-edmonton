@@ -26,7 +26,6 @@
 // =============================================================================
 
 import { useEffect, useRef, useCallback } from "react";
-import { sidebarLeftPad, sidebarRightPad } from "../../components/mapPadding.js";
 
 const SOURCE_ID = "nbhd";
 const FILL_LAYER_ID = "nbhd-fill";
@@ -152,15 +151,10 @@ export function installChoroplethInteractions(map, gj, onSelect) {
 
 function flyToFeature(map, feat, opts = {}) {
   map.fitBounds(bboxOfGeom(feat.geometry), {
-    // Pad both overlays so the flown-to polygon clears the left control panel
-    // and the right info rail (each helper returns 0 when its panel is absent /
-    // collapsed, so this never over-shifts).
-    padding: {
-      top: 80,
-      bottom: 80,
-      left: sidebarLeftPad(map) + 60,
-      right: sidebarRightPad(map) + 60,
-    },
+    // Plain edge margins: the controls + detail live in an IN-FLOW left panel (the
+    // map reflows into the canvas beside it), so there is no over-map overlay to
+    // compensate for — the map's own viewport already excludes the panel.
+    padding: { top: 80, bottom: 80, left: 60, right: 60 },
     duration: 900,
     maxZoom: 14,
     ...opts,

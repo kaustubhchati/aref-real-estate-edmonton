@@ -1454,20 +1454,19 @@ p  { margin: 0 0 0.75rem; }
   .sb { position:relative; bottom:auto; flex:0 0 auto; width:100%; max-height:45svh;
     border-right:none; border-bottom:0.5px solid rgba(0,0,0,0.10); }
   .canvas-wrap { min-height:55svh; }
-  /* PA floating boxes shrink so the left box + rail fit a narrow screen. */
-  .pa-box, .rail { width: 44vw; padding: 10px 11px; }
-  .pa-search { width: min(72vw, 250px); }
+  /* PA hybrid shell on mobile: stack the left panel above the canvas (IN FLOW —
+     never a fixed overlay, so the camera helper still reads 0). Shrink the top-bar
+     search; the dock stays bounded in the canvas foot (no fullscreen takeover). */
+  .pa-topbar-search { width: min(56vw, 250px); }
+  .pa-body { flex-direction: column; }
+  .pa-panel { flex: 0 0 auto; width: 100%; max-height: 38svh;
+    border-right: none; border-bottom: 0.5px solid var(--sidebar-edge); }
+  .pa-canvas { min-height: 54svh; }
+  .pa-canvas .canvas-wrap { min-height: 0; }   /* fill pa-canvas, not the shared 55svh */
   .pa-year { width: min(84vw, 300px); }
-  /* Bottom-left on mobile so it clears the centred year pill + corner controls. */
+  .dt-panel { width: calc(100vw - 24px); max-height: 48svh; }
+  /* Bottom-left so it clears the centred year pill + corner controls. */
   .pa-legend { width: 42vw; left: 12px; right: auto; bottom: 10px; }
-  /* Bottom table: pin to the viewport bottom and go fullscreen below the header.
-     Reset the desktop bounded module (width/borders/radius) so it's edge-to-edge. */
-  .dt { position: fixed; }
-  .dt.dt--open { top: 50px; }
-  .dt.dt--open .dt-panel {
-    max-height: none; flex: 1 1 auto;
-    width: 100%; border-left: 0; border-right: 0; border-radius: 0;
-  }
   .shell-footer-grid { grid-template-columns:1fr; gap:1.25rem; }
 }
 
