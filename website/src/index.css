@@ -416,6 +416,40 @@ p  { margin: 0 0 0.75rem; }
   background: var(--bg);
 }
 
+/* ===== Property Assessment hybrid shell (academic-glass) ==================== */
+/* The PA route restructures the shared full-bleed .content-map into a vertical
+   shell: a persistent TOP CONTEXT BAR over a BODY that splits into the left glass
+   PANEL (populated step-by-step) and the map CANVAS. (.pa-map was an unstyled free
+   hook; it now drives this column layout — .content-map is a flex ROW by default.)
+   The map's floating overlays (controls, legend, year, dock) live inside .pa-canvas
+   and position against it, so the body's panel/canvas split contains them. */
+.pa-map { flex-direction: column; }
+
+.pa-topbar {
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 9px 16px;
+  background: var(--sidebar-bg);
+  border-bottom: 1px solid var(--sidebar-edge);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.pa-topbar-context { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.pa-topbar-title { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; }
+.pa-topbar-sub {
+  font-size: 11px; color: var(--text-muted); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.pa-topbar-search { flex: 0 0 auto; width: 250px; max-width: 50vw; }
+.pa-topbar-search .search-input {
+  border-radius: 999px; box-shadow: 0 4px 14px rgba(74,60,33,0.16);
+}
+
+.pa-body { flex: 1 1 auto; display: flex; min-height: 0; }
+.pa-canvas {
+  position: relative;   /* containing block for the floating map overlays */
+  flex: 1 1 auto; min-width: 0; display: flex;
+}
+
 /* ----- Sidebar ----- */
 
 /* Apple-style fixed overlay: floats over the left edge of the map (which now
@@ -804,12 +838,8 @@ p  { margin: 0 0 0.75rem; }
 .export-menu-sub { font-size: 0.68rem; color: var(--text-muted); line-height: 1.3; }
 .export-menu-pair { color: var(--accent-dark); font-weight: 600; white-space: nowrap; }
 
-/* Top-centre search pill. z-index:96 keeps it above the nav reveal (z95). */
-.pa-search {
-  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
-  z-index: 96; width: 250px; max-width: calc(100vw - 24px);
-}
-.pa-search .search-input { border-radius: 999px; box-shadow: 0 4px 14px rgba(74,60,33,0.16); }
+/* (The neighbourhood search moved from a floating top-centre pill into the
+   persistent top context bar — see .pa-topbar-search above.) */
 
 /* Bottom-centre year slider pill (lifted clear of the table in analyst view).
    z-index:96 so it stays above the raised table when lifted. */

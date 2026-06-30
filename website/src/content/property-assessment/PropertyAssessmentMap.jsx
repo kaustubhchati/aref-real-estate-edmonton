@@ -686,14 +686,22 @@ export default function PropertyAssessmentMap() {
 
   // All hooks above run every render; only now do we branch the output, so the
   // loading/error short-circuits never change hook order.
+  // Pre-manifest shells render the new hybrid frame (.pa-map shell → body →
+  // canvas) so the surrounding chrome doesn't reflow when the manifest resolves.
+  // There is no context to show yet (no city/year/data), so the top bar + left
+  // panel are omitted and the message centres in the canvas.
   if (manifestError) {
     return (
-      <article className="content-map">
-        <div className="canvas-wrap">
-          <EmptyState
-            title="Could not load the data catalogue."
-            body={manifestError}
-          />
+      <article className="content-map pa-map">
+        <div className="pa-body">
+          <div className="pa-canvas">
+            <div className="canvas-wrap">
+              <EmptyState
+                title="Could not load the data catalogue."
+                body={manifestError}
+              />
+            </div>
+          </div>
         </div>
       </article>
     );
@@ -701,9 +709,13 @@ export default function PropertyAssessmentMap() {
 
   if (!manifest) {
     return (
-      <article className="content-map">
-        <div className="canvas-wrap">
-          <p className="map-loading">Loading data catalogue…</p>
+      <article className="content-map pa-map">
+        <div className="pa-body">
+          <div className="pa-canvas">
+            <div className="canvas-wrap">
+              <p className="map-loading">Loading data catalogue…</p>
+            </div>
+          </div>
         </div>
       </article>
     );
@@ -713,191 +725,204 @@ export default function PropertyAssessmentMap() {
 
   return (
     <article className={`content-map pa-map${analystMode ? " is-analyst" : ""}`}>
-      {/* TOP-CENTRE search pill — default view only (hidden in analyst view, where
-          all lookup happens in the table). The dropdown is bounded so it can't
-          flood the map or overlay the right rail (SearchInput). */}
-      {url && !analystMode && (
-        <div className="pa-search">
-          <SearchInput
-            placeholder="Search neighbourhood…"
-            names={names}
-            onSelect={flyAndPinByName}
-          />
+      {/* ===== TOP CONTEXT BAR — identity/context + neighbourhood search ===== */}
+      <header className="pa-topbar">
+        <div className="pa-topbar-context">
+          <span className="pa-topbar-title">{city} — {year}</span>
+          {url && (
+            <span className="pa-topbar-sub">
+              {propCount.toLocaleString()} cleaned residential properties
+            </span>
+          )}
         </div>
-      )}
-
-      {/* LEFT floating box (vertically centred, hugs content).
-          DEFAULT: title + city switcher + metric selector + compact provenance.
-          ANALYST: area-select tools (clear + export). The city switcher renders
-          even with no data so a user can leave the Calgary empty state. */}
-      {!analystMode ? (
-        <aside className="pa-box pa-box--left" aria-label="Map controls">
-          <div className="pa-box-title">{city} — {year}</div>
-          {url && (
-            <p className="pa-box-sub">{propCount.toLocaleString()} cleaned residential properties</p>
-          )}
-          <div className="opt-toggle-gel">
-            <OptionToggle label="City" options={CITIES} value={city} onChange={changeCity} />
+        {/* Search — default view only (hidden in analyst view, where all lookup
+            happens in the table). The dropdown is bounded (SearchInput). The
+            analyst-view gate is removed in the state refactor step. */}
+        {url && !analystMode && (
+          <div className="pa-topbar-search">
+            <SearchInput
+              placeholder="Search neighbourhood…"
+              names={names}
+              onSelect={flyAndPinByName}
+            />
           </div>
-          {/* Single-select — the fill encodes exactly one metric (METRICS source). */}
-          {url && (
-            <SegmentedControl label="Metric" options={METRICS} value={metric} onChange={setMetric} />
-          )}
-          {url && (
-            <p className="pa-box-ref">
-              <span>Updated {manifest?.last_updated ?? "—"}.</span>{" "}
-              Some neighbourhoods were renamed (e.g. Oliver → Wîhkwêntôwin, 2025); a
-              neighbourhood's full history shows under its current name.{" "}
-              <a
-                href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Naming Committee
-              </a>.
-            </p>
-          )}
-        </aside>
-      ) : (
-        <aside className="pa-box pa-box--left pa-tools" aria-label="Area selection tools">
-          <div className="pa-box-title">Area select</div>
-          <p className="pa-box-sub">Shift-drag the map to select neighbourhoods.</p>
-          <div className="pa-tools-row">
-            <button
-              type="button"
-              className="pa-tools-btn"
-              onClick={() => setSelectedIds([])}
-              disabled={!selectedIds.length}
-            >
-              Clear{selectedIds.length ? ` (${selectedIds.length})` : ""}
-            </button>
-          </div>
-          {/* Export lives in the table header (reachable on mobile, where the
-              table is fullscreen and this toolset is behind it). */}
-        </aside>
-      )}
-
-      <div className="canvas-wrap">
-        {fetchError && url ? (
-          // The fetch failed for a real URL — a load failure, NOT "no data
-          // for this selection" (that's the !url case below). Different copy
-          // so the user knows it's worth retrying.
-          <EmptyState
-            title="Could not load data"
-            body={`The ${city} ${year} dataset failed to load. Try refreshing or select a different year.`}
-          />
-        ) : noPriorYear ? (
-          // YoY needs a prior year; the earliest year in the dataset has none,
-          // so the whole year is blank for this metric (every polygon is NA).
-          <EmptyState
-            title="No prior year"
-            body={`YoY change is not available for the earliest year in the dataset (${year}).`}
-          />
-        ) : url ? (
-          // The map loads the combined all-years file ONCE; a year change is a
-          // paint swap (applyYearMetric), not a remount or data reload. The
-          // boundary's resetKey={url} keeps a WebGL/MapLibre failure from
-          // blanking the page. MapView only mounts/unmounts on the url-null
-          // boundary (a city with no data), where the fetch effect tears down
-          // map + gj. (url is constant per city now, so the boundary is stable.)
-          <>
-            {url && (!mapReady || swapLoading) && <MapSkeleton />}
-            {/* resetKey (not key) so a YEAR swap clears a caught error WITHOUT
-                remounting MapView — the map persists and dips-and-swaps in place. */}
-            <MapErrorBoundary resetKey={url}>
-              <MapView
-                className="canvas"
-                basemapStyle={BASEMAP_STYLE}
-                geojsonUrl={url}
-                view={MAP_VIEW}
-                sourceId="nbhd"
-                promoteId="Neighbourhood ID"
-                layers={choroplethLayers(stops, metric, year)}
-                images={choroplethImages()}
-                onLoad={setMap}
-                onLoading={setSwapLoading}
-                onReady={() => setMapReady(true)}
-                boxSelect={boxSelect}
-                preserveDrawingBuffer
-                cooperativeGestures={false}
-              />
-            </MapErrorBoundary>
-          </>
-        ) : (
-          <EmptyState title={empty.title} body={empty.body} />
         )}
+      </header>
+
+      {/* ===== BODY: (left panel — populated in a later step) + map canvas ===== */}
+      <div className="pa-body">
+        <div className="pa-canvas">
+          {/* LEFT floating box (vertically centred, hugs content) — relocated into
+              the persistent left panel in a later step.
+              DEFAULT: city switcher + metric selector + compact provenance.
+              ANALYST: area-select tools (clear). The city switcher renders even
+              with no data so a user can leave the Calgary empty state. */}
+          {!analystMode ? (
+            <aside className="pa-box pa-box--left" aria-label="Map controls">
+              <div className="opt-toggle-gel">
+                <OptionToggle label="City" options={CITIES} value={city} onChange={changeCity} />
+              </div>
+              {/* Single-select — the fill encodes exactly one metric (METRICS source). */}
+              {url && (
+                <SegmentedControl label="Metric" options={METRICS} value={metric} onChange={setMetric} />
+              )}
+              {url && (
+                <p className="pa-box-ref">
+                  <span>Updated {manifest?.last_updated ?? "—"}.</span>{" "}
+                  Some neighbourhoods were renamed (e.g. Oliver → Wîhkwêntôwin, 2025); a
+                  neighbourhood's full history shows under its current name.{" "}
+                  <a
+                    href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Naming Committee
+                  </a>.
+                </p>
+              )}
+            </aside>
+          ) : (
+            <aside className="pa-box pa-box--left pa-tools" aria-label="Area selection tools">
+              <div className="pa-box-title">Area select</div>
+              <p className="pa-box-sub">Shift-drag the map to select neighbourhoods.</p>
+              <div className="pa-tools-row">
+                <button
+                  type="button"
+                  className="pa-tools-btn"
+                  onClick={() => setSelectedIds([])}
+                  disabled={!selectedIds.length}
+                >
+                  Clear{selectedIds.length ? ` (${selectedIds.length})` : ""}
+                </button>
+              </div>
+              {/* Export lives in the table header (reachable on mobile, where the
+                  table is fullscreen and this toolset is behind it). */}
+            </aside>
+          )}
+
+          <div className="canvas-wrap">
+            {fetchError && url ? (
+              // The fetch failed for a real URL — a load failure, NOT "no data
+              // for this selection" (that's the !url case below). Different copy
+              // so the user knows it's worth retrying.
+              <EmptyState
+                title="Could not load data"
+                body={`The ${city} ${year} dataset failed to load. Try refreshing or select a different year.`}
+              />
+            ) : noPriorYear ? (
+              // YoY needs a prior year; the earliest year in the dataset has none,
+              // so the whole year is blank for this metric (every polygon is NA).
+              <EmptyState
+                title="No prior year"
+                body={`YoY change is not available for the earliest year in the dataset (${year}).`}
+              />
+            ) : url ? (
+              // The map loads the combined all-years file ONCE; a year change is a
+              // paint swap (applyYearMetric), not a remount or data reload. The
+              // boundary's resetKey={url} keeps a WebGL/MapLibre failure from
+              // blanking the page. MapView only mounts/unmounts on the url-null
+              // boundary (a city with no data), where the fetch effect tears down
+              // map + gj. (url is constant per city now, so the boundary is stable.)
+              <>
+                {url && (!mapReady || swapLoading) && <MapSkeleton />}
+                {/* resetKey (not key) so a YEAR swap clears a caught error WITHOUT
+                    remounting MapView — the map persists and dips-and-swaps in place. */}
+                <MapErrorBoundary resetKey={url}>
+                  <MapView
+                    className="canvas"
+                    basemapStyle={BASEMAP_STYLE}
+                    geojsonUrl={url}
+                    view={MAP_VIEW}
+                    sourceId="nbhd"
+                    promoteId="Neighbourhood ID"
+                    layers={choroplethLayers(stops, metric, year)}
+                    images={choroplethImages()}
+                    onLoad={setMap}
+                    onLoading={setSwapLoading}
+                    onReady={() => setMapReady(true)}
+                    boxSelect={boxSelect}
+                    preserveDrawingBuffer
+                    cooperativeGestures={false}
+                  />
+                </MapErrorBoundary>
+              </>
+            ) : (
+              <EmptyState title={empty.title} body={empty.body} />
+            )}
+          </div>
+
+          {/* RIGHT info rail (Felt zone 3) — hidden by default; mounts (and slides
+              in) only when EXACTLY one neighbourhood is selected. Relocated into
+              the left panel in a later step. Empty/multi select → not rendered
+              (multi aggregates land in the bottom table). */}
+          {url && selectedFeature && (
+            <InfoRail
+              feature={selectedFeature}
+              year={year}
+              metric={metric}
+              years={years}
+              sparkValues={sparkValues}
+              activeIndex={activeYearIndex}
+              onClear={() => setSelectedIds([])}
+              compact={analystMode}
+            />
+          )}
+
+          {/* LEGEND — small card bottom-right (default view only). */}
+          {url && !analystMode && (
+            <div className="pa-legend">
+              <Legend
+                title={selectedMetric.label}
+                stops={stops}
+                format={selectedMetric.fmt}
+                discrete={isYoy}
+              />
+            </div>
+          )}
+
+          {/* YEAR — slim slider bottom-centre; lifted clear of the table in analyst
+              view (CSS keys off .is-analyst on the article). */}
+          {url && year != null && (
+            <div className="pa-year">
+              <span className="pa-year-label">
+                Year <strong className="sb-year-value">{sliderYear ?? year}</strong>
+              </span>
+              <input
+                type="range"
+                className="sb-year-slider"
+                aria-label="Year"
+                min={Math.min(...years)}
+                max={Math.max(...years)}
+                step={1}
+                value={sliderYear ?? year}
+                onChange={(e) => slideYear(Number(e.target.value))}
+              />
+            </div>
+          )}
+
+          {/* BOTTOM data table — the handle doubles as the analyst-view toggle
+              (open = analystMode). Analytical surface over the resident gjView;
+              rows link both ways to the shared selection. Only with data loaded. */}
+          {url && gjView && (
+            <DataTable
+              rows={tableRows}
+              metric={metric}
+              metricLabel={selectedMetric.label}
+              activeIndex={activeYearIndex}
+              year={year}
+              years={years}
+              selectedIds={selectedIds}
+              onSelectRow={selectNeighbourhood}
+              onHoverRow={setHoveredRowId}
+              aggregate={selectionAggregate}
+              onClearSelection={() => setSelectedIds([])}
+              onExport={handleExport}
+              open={analystMode}
+              onToggle={() => setAnalystMode((a) => !a)}
+            />
+          )}
+        </div>
       </div>
-
-      {/* RIGHT info rail (Felt zone 3) — hidden by default; mounts (and slides in)
-          only when EXACTLY one neighbourhood is selected. Shows that nbhd's detail
-          + a value sparkline, reactive to the active year/metric. Empty/multi
-          select → not rendered (multi aggregates land in the bottom table). */}
-      {url && selectedFeature && (
-        <InfoRail
-          feature={selectedFeature}
-          year={year}
-          metric={metric}
-          years={years}
-          sparkValues={sparkValues}
-          activeIndex={activeYearIndex}
-          onClear={() => setSelectedIds([])}
-          compact={analystMode}
-        />
-      )}
-
-      {/* LEGEND — small card bottom-right (default view only). */}
-      {url && !analystMode && (
-        <div className="pa-legend">
-          <Legend
-            title={selectedMetric.label}
-            stops={stops}
-            format={selectedMetric.fmt}
-            discrete={isYoy}
-          />
-        </div>
-      )}
-
-      {/* YEAR — slim slider bottom-centre; lifted clear of the table in analyst
-          view (CSS keys off .is-analyst on the article). */}
-      {url && year != null && (
-        <div className="pa-year">
-          <span className="pa-year-label">
-            Year <strong className="sb-year-value">{sliderYear ?? year}</strong>
-          </span>
-          <input
-            type="range"
-            className="sb-year-slider"
-            aria-label="Year"
-            min={Math.min(...years)}
-            max={Math.max(...years)}
-            step={1}
-            value={sliderYear ?? year}
-            onChange={(e) => slideYear(Number(e.target.value))}
-          />
-        </div>
-      )}
-
-      {/* BOTTOM data table — the handle doubles as the analyst-view toggle
-          (open = analystMode). Analytical surface over the resident gjView; rows
-          link both ways to the shared selection. Only with data loaded. */}
-      {url && gjView && (
-        <DataTable
-          rows={tableRows}
-          metric={metric}
-          metricLabel={selectedMetric.label}
-          activeIndex={activeYearIndex}
-          year={year}
-          years={years}
-          selectedIds={selectedIds}
-          onSelectRow={selectNeighbourhood}
-          onHoverRow={setHoveredRowId}
-          aggregate={selectionAggregate}
-          onClearSelection={() => setSelectedIds([])}
-          onExport={handleExport}
-          open={analystMode}
-          onToggle={() => setAnalystMode((a) => !a)}
-        />
-      )}
     </article>
   );
 }
