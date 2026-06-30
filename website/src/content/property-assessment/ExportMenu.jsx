@@ -9,9 +9,10 @@
 // selection or all of the city. Matches the existing gel chrome idiom; closes on
 // outside-click / Escape (which returns focus to the trigger).
 //
-// Behaviour is frozen: the four format strings ("csv-current" | "csv-timeseries" |
-// "geojson" | "png") and the files they produce are unchanged from D2/D2a — this
-// is presentation only.
+// Format strings: "csv-current" | "csv-timeseries" | "geojson" | "png" (unchanged
+// from D2/D2a) plus "csv-aggregate" (D8 item 7) — the selection SUMMARY, offered in
+// the Data group ONLY when ≥2 are selected (an aggregate exists). The other four are
+// presentation-frozen; this file only adds the conditional fifth item.
 //
 // Props:
 //   onExport (format) => void  — fires the format string; absent = disabled
@@ -61,6 +62,12 @@ export default function ExportMenu({ onExport, year, years = [], selectedCount =
           sub: "One row per neighbourhood — spreadsheet / GIS.", sidecar: true },
         { format: "csv-timeseries", title: `All years (${span})`,
           sub: "One row per neighbourhood × year — panel analysis.", sidecar: true },
+        // Selection summary (item 7) — only with an aggregate (≥2 selected): the
+        // honest rollup + city comparison, distinct from the per-neighbourhood rows.
+        ...(selectedCount >= 2
+          ? [{ format: "csv-aggregate", title: "Selection summary",
+              sub: "Aggregate figures + city comparison — one row per measure.", sidecar: true }]
+          : []),
       ],
     },
     {

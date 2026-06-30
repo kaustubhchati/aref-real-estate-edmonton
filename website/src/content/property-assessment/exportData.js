@@ -112,6 +112,44 @@ export function buildTimeseriesCsv(features, years) {
   return lines.join("\n");
 }
 
+// Selection SUMMARY CSV (item 7): the box-selection's honest aggregate read against
+// the city baseline — a SMALL, tidy table (one row per measure), distinct from the
+// per-neighbourhood row/timeseries exports. Mirrors the item-8 aggregate cards: the
+// count breakdown, then the value measures with the selection figure, the city
+// baseline, and the delta on the SAME honest basis (level deltas relative, YoY in
+// percentage points, parcels as a share of city). Values are raw numbers rounded for
+// legibility (NOT display-formatted), so the CSV stays analysis-ready; an empty cell
+// means no value. Reads the passed-in aggregate/baseline only — no parcel re-math here.
+export function buildAggregateCsv(aggregate, cityBaseline) {
+  const a = aggregate || {};
+  const cb = cityBaseline || {};
+  const r2 = (v) => (v == null || !Number.isFinite(v) ? null : Math.round(v * 100) / 100);
+  const rel = (s, c) => (s == null || c == null || c === 0 ? null : ((s - c) / c) * 100); // relative %
+  const pp = (s, c) => (s == null || c == null ? null : s - c);                            // percentage points
+  const share = (s, c) => (s == null || c == null || c === 0 ? null : (s / c) * 100);      // % of city
+  // City neighbourhood total = the three state counts (only when all are present).
+  const cityNbhds =
+    cb.nReportable != null && cb.nSuppressed != null && cb.nExcluded != null
+      ? cb.nReportable + cb.nSuppressed + cb.nExcluded
+      : null;
+  const rows = [
+    ["measure", "selection", "city", "delta", "delta_unit", "basis"],
+    ["neighbourhoods", a.nSelected, cityNbhds, null, "", "count"],
+    ["reportable", a.nReportable, cb.nReportable, null, "", "count"],
+    ["suppressed", a.nSuppressed, cb.nSuppressed, null, "", "count"],
+    ["non_residential_or_no_data", a.nExcluded, cb.nExcluded, null, "", "count"],
+    ["total_parcels", a.totalParcels, cb.totalParcels,
+      r2(share(a.totalParcels, cb.totalParcels)), "pct_share_of_city", "exact"],
+    ["mean_assessed", r2(a.parcelMean), r2(cb.parcelMean),
+      r2(rel(a.parcelMean, cb.parcelMean)), "relative_pct", "parcel-weighted (exact)"],
+    ["median_assessed", r2(a.medianOfMedians), r2(cb.medianOfMedians),
+      r2(rel(a.medianOfMedians, cb.medianOfMedians)), "relative_pct", "median of neighbourhood medians (approx)"],
+    ["yoy_pct_change", r2(a.areaYoY), r2(cb.areaYoY),
+      r2(pp(a.areaYoY, cb.areaYoY)), "percentage_points", "parcel-weighted (approx)"],
+  ];
+  return rows.map((row) => row.map(csvCell).join(",")).join("\n");
+}
+
 // A GeoJSON FeatureCollection of exactly the chosen features (full properties).
 export function buildGeoJson(features) {
   return JSON.stringify({ type: "FeatureCollection", features });
