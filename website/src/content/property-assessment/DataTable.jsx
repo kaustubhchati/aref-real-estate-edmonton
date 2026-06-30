@@ -227,6 +227,21 @@ export default function DataTable({
 
   const viewRows = table.getRowModel().rows;
 
+  // --- Categorical facets (D6) — VIEW-only; the controls live in the dock header
+  // and read/write the hidden facet columns through TanStack. Each helper is generic
+  // over a facet id, so the two facets share one code path (no copy-pasted blocks). --
+  const facetValue = (id) => table.getColumn(id)?.getFilterValue() ?? [];
+  const facetOptions = (id) =>
+    Array.from(table.getColumn(id)?.getFacetedUniqueValues()?.keys() ?? [])
+      .filter((v) => v != null)
+      .sort();
+  function toggleFacet(id, v) {
+    const cur = facetValue(id);
+    table.getColumn(id)?.setFilterValue(
+      cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]
+    );
+  }
+
   // Keyboard shortcut: T toggles the table (ignored while typing in a field).
   useEffect(() => {
     function onKey(e) {
@@ -272,18 +287,30 @@ export default function DataTable({
           {selectionMode ? (
             <AggregateHeader aggregate={aggregate} onClear={onClearSelection} onExport={onExport} year={year} years={years} />
           ) : (
-            <div className="dt-toolbar">
-              <input
-                type="text"
-                className="dt-filter search-input"
-                placeholder="Filter by name…"
-                value={globalFilter}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                aria-label="Filter neighbourhoods by name"
-              />
-              <span className="dt-count">{viewRows.length} of {rows.length}</span>
-              <ExportMenu onExport={onExport} year={year} years={years} selectedCount={selectedIds.length} />
-            </div>
+            <>
+              <div className="dt-toolbar">
+                <input
+                  type="text"
+                  className="dt-filter search-input"
+                  placeholder="Filter by name…"
+                  value={globalFilter}
+                  onChange={(e) => setGlobalFilter(e.target.value)}
+                  aria-label="Filter neighbourhoods by name"
+                />
+                <span className="dt-count">{viewRows.length} of {rows.length}</span>
+                <ExportMenu onExport={onExport} year={year} years={years} selectedCount={selectedIds.length} />
+              </div>
+              {/* Categorical facets (D6) — VIEW-only display filters over the table. */}
+              <div className="dt-facets" role="group" aria-label="Filter the table">
+                <FacetDropdown
+                  label="District"
+                  options={facetOptions("district")}
+                  selected={facetValue("district")}
+                  labelOf={(v) => v}
+                  onToggle={(v) => toggleFacet("district", v)}
+                />
+              </div>
+            </>
           )}
 
           <div className="dt-scroll" ref={scrollRef}>
@@ -409,5 +436,31 @@ function AggCard({ label, value, tag, approx = false }) {
       <span className="dt-card-value">{value}</span>
       <span className="dt-card-tag">{tag}</span>
     </div>
+  );
+}
+
+// ---- Facet controls (D6) ---------------------------------------------------
+// A multi-select facet dropdown built on a native <details> disclosure — legible
+// and accessible with no custom open/close state. Options are data-driven; ticking
+// one toggles it in/out of the column filter. Selected count shows on the summary.
+function FacetDropdown({ label, options, selected, labelOf, onToggle }) {
+  return (
+    <details className="dt-facet-dd">
+      <summary className="dt-facet-summary">
+        {label}{selected.length ? ` · ${selected.length}` : ""}
+      </summary>
+      <div className="dt-facet-list">
+        {options.map((v) => (
+          <label key={v} className="dt-facet-opt">
+            <input
+              type="checkbox"
+              checked={selected.includes(v)}
+              onChange={() => onToggle(v)}
+            />
+            <span>{labelOf(v)}</span>
+          </label>
+        ))}
+      </div>
+    </details>
   );
 }
