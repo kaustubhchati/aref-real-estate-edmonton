@@ -28,11 +28,10 @@ import polylabel from "polylabel";
 
 import MapView from "../../components/MapView.jsx";
 import Legend from "../../components/Legend.jsx";
-import OptionToggle from "../../components/OptionToggle.jsx";
-import SegmentedControl from "../../components/SegmentedControl.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
+import IdentityCard from "./IdentityCard.jsx";
 import InfoRail from "./InfoRail.jsx";
 import DataTable from "./DataTable.jsx";
 import SearchInput from "../../components/SearchInput.jsx";
@@ -807,10 +806,11 @@ export default function PropertyAssessmentMap() {
 
   return (
     <article className="content-map pa-map">
-      {/* ===== TOP CONTEXT BAR — identity/context + neighbourhood search ===== */}
+      {/* ===== TOP CONTEXT BAR — property count + neighbourhood search =====
+          The section title ({city} — {year}) moved to the left-panel identity
+          card; the bar keeps the live property-count line (for now) + search. */}
       <header className="pa-topbar">
         <div className="pa-topbar-context">
-          <span className="pa-topbar-title">{city} — {year}</span>
           {url && (
             <span className="pa-topbar-sub">
               {propCount.toLocaleString()} cleaned residential properties
@@ -838,13 +838,21 @@ export default function PropertyAssessmentMap() {
             is selected. The city switcher renders even with no data so a user can
             leave the Calgary empty state. */}
         <aside className="pa-panel" aria-label="Map controls">
-          <div className="opt-toggle-gel">
-            <OptionToggle label="City" options={CITIES} value={city} onChange={changeCity} />
-          </div>
-          {/* Single-select — the fill encodes exactly one metric (METRICS source). */}
-          {url && (
-            <SegmentedControl label="Metric" options={METRICS} value={metric} onChange={setMetric} />
-          )}
+          {/* FIXED IDENTITY CARD — section title + city switcher + green
+              committed-year readout + collapsible metric selector. The city and
+              metric controls were relocated here (same handlers: changeCity /
+              setMetric); the year is a read-only readout — the slider in the
+              foot stays the control. */}
+          <IdentityCard
+            cities={CITIES}
+            city={city}
+            onCityChange={changeCity}
+            year={year}
+            metrics={METRICS}
+            metric={metric}
+            onMetricChange={setMetric}
+            hasData={!!url}
+          />
           {/* Box-select affordance — persistent now that the analyst tools box is
               gone (its Clear button lives in the dock's aggregate header). */}
           {url && (
