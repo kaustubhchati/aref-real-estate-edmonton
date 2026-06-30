@@ -36,7 +36,7 @@ import MapSkeleton from "../../components/MapSkeleton.jsx";
 import InfoRail from "./InfoRail.jsx";
 import DataTable from "./DataTable.jsx";
 import SearchInput from "../../components/SearchInput.jsx";
-import { buildCsv, buildGeoJson, downloadText, exportPng } from "./exportData.js";
+import { buildSnapshotCsv, buildTimeseriesCsv, buildGeoJson, downloadText, exportPng } from "./exportData.js";
 import {
   BASEMAP_STYLE,
   MAP_VIEW,
@@ -581,8 +581,16 @@ export default function PropertyAssessmentMap() {
       ? gj.features.filter((f) => set.has(String(f.properties["Neighbourhood ID"])))
       : gj.features;
     const base = `property-assessment_${city}_${selectedIds.length ? `${scoped.length}-selected` : "all"}`;
-    if (format === "csv") {
-      downloadText(`${base}.csv`, buildCsv(scoped, years), "text/csv;charset=utf-8");
+    // Provenance context for the CSVs — all from state, no literals.
+    const meta = {
+      city,
+      metric,
+      scope: selectedIds.length ? `${scoped.length} selected neighbourhoods` : "all neighbourhoods",
+    };
+    if (format === "csv-current") {
+      downloadText(`${base}_${year}.csv`, buildSnapshotCsv(scoped, year, meta), "text/csv;charset=utf-8");
+    } else if (format === "csv-timeseries") {
+      downloadText(`${base}_timeseries.csv`, buildTimeseriesCsv(scoped, years, meta), "text/csv;charset=utf-8");
     } else if (format === "geojson") {
       downloadText(`${base}.geojson`, buildGeoJson(scoped), "application/geo+json");
     } else if (format === "png" && map) {

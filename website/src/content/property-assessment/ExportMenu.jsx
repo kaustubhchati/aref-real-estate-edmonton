@@ -7,7 +7,8 @@
 // or Escape (which returns focus to the trigger).
 //
 // Props:
-//   onExport (format) => void   — "csv" | "geojson" | "png"; absent = disabled
+//   onExport (format) => void   — "csv-current" | "csv-timeseries" | "geojson" |
+//                                 "png"; absent = disabled
 // =============================================================================
 
 import { useEffect, useRef, useState } from "react";
@@ -56,7 +57,8 @@ export default function ExportMenu({ onExport }) {
       </button>
       {open && (
         <div className="export-menu-list" role="menu">
-          <button type="button" role="menuitem" onClick={() => choose("csv")}>CSV — all years</button>
+          <button type="button" role="menuitem" onClick={() => choose("csv-current")}>CSV — current year</button>
+          <button type="button" role="menuitem" onClick={() => choose("csv-timeseries")}>CSV — timeseries</button>
           <button type="button" role="menuitem" onClick={() => choose("geojson")}>GeoJSON — polygons</button>
           <button type="button" role="menuitem" onClick={() => choose("png")}>PNG — map image</button>
         </div>
