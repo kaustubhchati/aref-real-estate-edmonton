@@ -255,6 +255,11 @@ export default function PropertyAssessmentMap() {
   // The neighbourhood whose table row is hovered — mirrored to the map's `hover`
   // feature-state so a row lights up its polygon (and vice-versa). null = none.
   const [hoveredRowId, setHoveredRowId] = useState(null);
+  // Brush (D7): the ids currently passing the table's facet filters, reported up by
+  // the DataTable. The map DIMS everything not in this set (a third feature-state
+  // channel, distinct from selection/hover). null = no facet active → nothing dimmed.
+  // This drives ONLY the map dim — never the aggregate or export (D6 VIEW-only).
+  const [brushedIds, setBrushedIds] = useState(null);
   // The analysis dock (bottom data table) is RAISED. Two explicit RAISE drivers,
   // unchanged: a box-select of ≥2 auto-raises it (boxSelect), and the pill / T key
   // toggle it by hand. The persistent panel + canvas chrome no longer hide when
@@ -509,6 +514,37 @@ export default function PropertyAssessmentMap() {
       /* map mid-teardown */
     }
   }, [map, hoveredRowId]);
+
+  // Brush dim (D7) — the third feature-state channel. `dimmed` is set TRUE on every
+  // polygon NOT in brushedIds (the table's current facet view), so the out-of-filter
+  // polygons fade and the in-filter ones read as the live set. brushedIds === null
+  // (no facet active) → clear all dimming. Set-diff like the pinned/hover effects;
+  // hover + pinned win over dimmed in the paint expression, so selected/hovered
+  // polygons stay dominant. Feature-state is GPU-side, so even ~376 updates are cheap.
+  const prevDimmedRef = useRef(new Set());
+  useEffect(() => {
+    if (!map || !gj) return;
+    const next = new Set();
+    if (brushedIds) {
+      const keep = new Set(brushedIds.map(String));
+      for (const f of gj.features) {
+        const id = String(f.properties["Neighbourhood ID"]);
+        if (!keep.has(id)) next.add(id);
+      }
+    }
+    const prev = prevDimmedRef.current;
+    try {
+      for (const id of prev) {
+        if (!next.has(id)) map.setFeatureState({ source: "nbhd", id }, { dimmed: false });
+      }
+      for (const id of next) {
+        map.setFeatureState({ source: "nbhd", id }, { dimmed: true });
+      }
+      prevDimmedRef.current = next;
+    } catch {
+      /* map mid-teardown — the next mounted map re-applies via this effect */
+    }
+  }, [map, gj, brushedIds]);
 
   // Active-metric series across every year for the single-selected nbhd — the
   // rail sparkline. All years are on the resident combined feature (gj), so this
@@ -916,6 +952,7 @@ export default function PropertyAssessmentMap() {
                 aggregate={selectionAggregate}
                 onClearSelection={() => setSelectedIds([])}
                 onExport={handleExport}
+                onBrush={setBrushedIds}
                 open={dockOpen}
                 onToggle={() => setDockOpen((d) => !d)}
               />

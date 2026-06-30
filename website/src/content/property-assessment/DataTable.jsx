@@ -129,6 +129,7 @@ export default function DataTable({
   aggregate,
   onClearSelection,
   onExport,
+  onBrush,
   open,
   onToggle,
 }) {
@@ -282,6 +283,27 @@ export default function DataTable({
   // labels keep them unambiguous.
   const anyFacet = columnFilters.length > 0;
   const clearFacets = () => setColumnFilters([]);
+
+  // --- Brush (D7) -------------------------------------------------------------
+  // The IDs of the rows currently shown WHEN a facet is active — the map dims
+  // everything NOT in this set, so filtering the table visibly narrows the map.
+  // Gated on a facet being active and not in selection mode (per D6's rule: no
+  // facet → no dim). null = no brush. Reported UP to the map via onBrush; it feeds
+  // ONLY the dim channel — never the aggregate or export (the D6 VIEW-only ruling).
+  const brushActive = !selectionMode && columnFilters.length > 0;
+  const brushedIds = useMemo(
+    () => (brushActive ? viewRows.map((r) => r.original.id) : null),
+    [brushActive, viewRows]
+  );
+  // Report only on a real CONTENT change (a sorted signature ignores re-sorts and
+  // the row model's per-render identity churn — so this can't loop the parent).
+  const lastBrushSig = useRef("");
+  useEffect(() => {
+    const sig = brushedIds ? [...brushedIds].map(String).sort().join(",") : "";
+    if (sig === lastBrushSig.current) return;
+    lastBrushSig.current = sig;
+    onBrush?.(brushedIds);
+  }, [brushedIds, onBrush]);
 
   // Keyboard shortcut: T toggles the table (ignored while typing in a field).
   useEffect(() => {
