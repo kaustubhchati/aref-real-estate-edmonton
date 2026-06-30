@@ -791,6 +791,9 @@ p  { margin: 0 0 0.75rem; }
 .dt-card.is-approx { border-style: dashed; }
 .dt-card-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
 .dt-card-value { font-size: 16px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+/* vs-city comparison line (D8 item 8): the selection figure against the city
+   baseline — quieter than the value, but above the methodology tag. */
+.dt-card-cmp { font-size: 10.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .dt-card-tag { font-size: 9.5px; color: var(--text-subtle); }
 .dt-card.is-approx .dt-card-tag { color: var(--accent-dark); font-style: italic; }
 .dt-agg-note { font-size: 10.5px; color: var(--text-muted); line-height: 1.5; margin: 8px 0 0; }

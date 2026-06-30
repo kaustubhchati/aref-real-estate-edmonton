@@ -202,6 +202,47 @@ function medianOf(arr) {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
 
+// Honest parcel-weighted aggregate over a set of polygon features. Defined ONCE and
+// shared by BOTH the SELECTION aggregate (the box-selected set) and the CITY baseline
+// (every polygon, D8 item 8) — so the parcel-weighting math is never duplicated. The
+// browser holds only neighbourhood aggregates, so: counts + total parcels + the mean
+// are EXACT (the mean is linear → an n-weighted mean of per-nbhd means IS the true
+// parcel mean over the reportable nbhds); the MEDIAN (median of neighbourhood medians)
+// and YoY (neighbourhood-weighted) are APPROXIMATIONS (no parcel distribution in
+// browser) and are labelled as such where they render. Suppressed nbhds contribute
+// their count only; non-residential / no-data are excluded from values.
+function aggregateFeatures(features) {
+  const num = (v) => (v == null || !Number.isFinite(+v) || +v === -999 ? null : +v);
+  let nReportable = 0, nSuppressed = 0, nExcluded = 0;
+  let totalParcels = 0, sumNV = 0, sumN = 0, sumNYoY = 0, sumNYoYW = 0;
+  const medians = [];
+  for (const f of features) {
+    const p = f.properties;
+    const n = num(p.n_properties);
+    if (p.polygon_state === "aggregated") {
+      nReportable++;
+      if (n != null) totalParcels += n;
+      const mean = num(p.avall_public);
+      if (mean != null && n != null) { sumNV += n * mean; sumN += n; }
+      const med = num(p.median_assessvalue);
+      if (med != null) medians.push(med);
+      const yoy = num(p.yoy_pct_change);
+      if (yoy != null && n != null) { sumNYoY += n * yoy; sumNYoYW += n; }
+    } else if (p.polygon_state === "suppressed_low_n") {
+      nSuppressed++;
+      if (n != null) totalParcels += n;
+    } else {
+      nExcluded++;
+    }
+  }
+  return {
+    nReportable, nSuppressed, nExcluded, totalParcels,
+    parcelMean: sumN > 0 ? sumNV / sumN : null,            // EXACT (n-weighted)
+    medianOfMedians: medians.length ? medianOf(medians) : null, // APPROX
+    areaYoY: sumNYoYW > 0 ? sumNYoY / sumNYoYW : null,     // APPROX (n-weighted)
+  };
+}
+
 export default function PropertyAssessmentMap() {
   // The manifest is the source of truth for which years exist. Until it loads,
   // we show a loading state; if it fails, an error state. year is null until
@@ -661,48 +702,29 @@ export default function PropertyAssessmentMap() {
     }
   }
 
-  // Honest area aggregate over the selection (C3). The browser holds only
-  // neighbourhood aggregates and the combined file NULLs values for non-aggregated
-  // polygons, so: counts + total parcels + parcel-weighted MEAN are EXACT (mean is
-  // linear → n-weighted mean of per-nbhd means = the true parcel mean over the
-  // reportable nbhds); MEDIAN and YoY are neighbourhood-weighted APPROXIMATIONS
-  // (no parcel distribution in-browser) and are labelled as such in the table.
-  // Suppressed nbhds contribute their count only; non-res/no-data are excluded.
+  // Honest area aggregate over the SELECTION (C3) — the box-selected set rolled up by
+  // aggregateFeatures (the shared parcel-weighted math). Null until ≥2 are selected.
+  // The aggregate reads the SELECTION channel only (selectedIds) — never brushedIds:
+  // brushing stays VIEW-only (D6/D7 fence). nSelected rides alongside for the header.
   const selectionAggregate = useMemo(() => {
     if (selectedIds.length <= 1 || !gjView) return null;
     const set = new Set(selectedIds.map(String));
-    const num = (v) => (v == null || !Number.isFinite(+v) || +v === -999 ? null : +v);
-    let nReportable = 0, nSuppressed = 0, nExcluded = 0;
-    let totalParcels = 0, sumNV = 0, sumN = 0, sumNYoY = 0, sumNYoYW = 0;
-    const medians = [];
-    for (const f of gjView.features) {
-      if (!set.has(String(f.properties["Neighbourhood ID"]))) continue;
-      const p = f.properties;
-      const n = num(p.n_properties);
-      if (p.polygon_state === "aggregated") {
-        nReportable++;
-        if (n != null) totalParcels += n;
-        const mean = num(p.avall_public);
-        if (mean != null && n != null) { sumNV += n * mean; sumN += n; }
-        const med = num(p.median_assessvalue);
-        if (med != null) medians.push(med);
-        const yoy = num(p.yoy_pct_change);
-        if (yoy != null && n != null) { sumNYoY += n * yoy; sumNYoYW += n; }
-      } else if (p.polygon_state === "suppressed_low_n") {
-        nSuppressed++;
-        if (n != null) totalParcels += n;
-      } else {
-        nExcluded++;
-      }
-    }
-    return {
-      nSelected: selectedIds.length,
-      nReportable, nSuppressed, nExcluded, totalParcels,
-      parcelMean: sumN > 0 ? sumNV / sumN : null,            // EXACT
-      medianOfMedians: medians.length ? medianOf(medians) : null, // APPROX
-      areaYoY: sumNYoYW > 0 ? sumNYoY / sumNYoYW : null,     // APPROX
-    };
+    const selected = gjView.features.filter(
+      (f) => set.has(String(f.properties["Neighbourhood ID"]))
+    );
+    return { nSelected: selectedIds.length, ...aggregateFeatures(selected) };
   }, [selectedIds, gjView]);
+
+  // City baseline (D8 item 8): the SAME honest parcel-weighted aggregate over EVERY
+  // polygon, so each selection figure can be read against the whole city. Derived once
+  // per loaded year (gjView is the active-year projection) — so it re-derives on a year
+  // switch with the selection, never a literal. NOT a naive average of neighbourhood
+  // medians: the median is a median over ALL neighbourhood medians and the mean is
+  // parcel-exact, identical in basis to the selection so the delta is apples-to-apples.
+  const cityBaseline = useMemo(
+    () => (gjView ? aggregateFeatures(gjView.features) : null),
+    [gjView]
+  );
 
   // Sum n_properties across every polygon that has a finite count. This includes
   // aggregated + suppressed_low_n polygons and naturally excludes non_residential
@@ -950,6 +972,7 @@ export default function PropertyAssessmentMap() {
                 onSelectRow={selectNeighbourhood}
                 onHoverRow={setHoveredRowId}
                 aggregate={selectionAggregate}
+                cityBaseline={cityBaseline}
                 onClearSelection={() => setSelectedIds([])}
                 onExport={handleExport}
                 onBrush={setBrushedIds}

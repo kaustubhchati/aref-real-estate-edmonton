@@ -33,6 +33,8 @@
 //   onSelectRow  (id) => void
 //   onHoverRow   (id | null) => void   (drives the polygon hover feature-state)
 //   aggregate    honest area aggregate, or null. Non-null = selection mode.
+//   cityBaseline honest city-wide aggregate (every polygon) for the vs-city
+//                comparison in the AggregateHeader (D8 item 8), or null.
 //   onClearSelection (() => void)
 //   onExport     (format) => void — scoped export (CSV/GeoJSON/PNG)
 //   open         controlled: the table is raised (= analyst view)
@@ -127,6 +129,7 @@ export default function DataTable({
   onSelectRow,
   onHoverRow,
   aggregate,
+  cityBaseline,
   onClearSelection,
   onExport,
   onBrush,
@@ -364,7 +367,7 @@ export default function DataTable({
       {open && (
         <div className="dt-panel">
           {selectionMode ? (
-            <AggregateHeader aggregate={aggregate} onClear={onClearSelection} onExport={onExport} year={year} years={years} />
+            <AggregateHeader aggregate={aggregate} cityBaseline={cityBaseline} onClear={onClearSelection} onExport={onExport} year={year} years={years} />
           ) : (
             <>
               <div className="dt-toolbar">
@@ -496,14 +499,54 @@ export default function DataTable({
   );
 }
 
-// ---- Selection-mode aggregate header (C3) ----------------------------------
+// ---- Selection-vs-city comparison (D8 item 8) ------------------------------
+// Each value card reads its SELECTION figure against the CITY baseline (the same
+// honest parcel-weighted aggregate computed over every polygon). The comparison
+// KIND differs by metric so the delta stays honest — a percent-of-a-percent on YoY
+// would mislead, and a signed delta on a count is less meaningful than a share:
+//   • level (mean / median $): relative delta (sel−city)/city → "+6.4%"
+//   • rate  (YoY, already a %): pp difference  sel−city        → "+1.1pp"
+//   • share (parcel count):     sel / city                     → "8% of city"
+// These read the SELECTION channel only — never brushedIds (the VIEW-only fence).
+function fmtSignedPct(ratio) {            // ratio is a fraction (0.064 → "+6.4%")
+  const pct = ratio * 100;
+  return (pct >= 0 ? "+" : "") + pct.toFixed(1) + "%";
+}
+function fmtSignedPp(diff) {              // diff already in percentage points (0–100 scale)
+  return (diff >= 0 ? "+" : "") + diff.toFixed(1) + "pp";
+}
+function fmtSharePct(frac) {              // frac = sel/city → "8% of city" / "<1%" / "0%"
+  const pct = frac * 100;
+  const s = pct === 0 ? "0" : pct < 1 ? "<1" : String(Math.round(pct));
+  return `${s}% of city`;
+}
+
+// ---- Selection-mode aggregate header (C3 + D8 item 8) ----------------------
 // Honest area summary: the EXACT cards (count, total parcels, parcel-weighted
 // mean) are unlabelled; the APPROXIMATE ones (median, YoY) carry a "≈" tag and
-// the note explains why (no parcel data in-browser). The constituent rows below
-// make the rolled-up numbers auditable. NOTE: deliberately NOT a TanStack
-// aggregationFn — a parcel-weighted mean must weight by n_properties, which the
-// built-in (unweighted) mean can't do; the honest math lives in selectionAggregate.
-function AggregateHeader({ aggregate: a, onClear, onExport, year, years }) {
+// the note explains why (no parcel data in-browser). Each value card now also
+// carries a "vs city" line — the same figure against the city-wide baseline, on
+// the SAME parcel-weighted basis (item 8). The constituent rows below make the
+// rolled-up numbers auditable. NOTE: deliberately NOT a TanStack aggregationFn —
+// a parcel-weighted mean must weight by n_properties, which the built-in
+// (unweighted) mean can't do; the honest math lives in aggregateFeatures.
+function AggregateHeader({ aggregate: a, cityBaseline: cb, onClear, onExport, year, years }) {
+  // Build a card's "city <value> · <delta>" line, honest per metric kind. A null
+  // baseline (data still loading) or null figure yields no line — the cards then
+  // render exactly as they did before item 8.
+  const cmpLevel = (sel, cityVal, fmt) =>
+    cb && sel != null && cityVal != null && cityVal !== 0
+      ? `city ${fmt(cityVal)} · ${fmtSignedPct((sel - cityVal) / cityVal)}`
+      : null;
+  const cmpRate = (sel, cityVal, fmt) =>
+    cb && sel != null && cityVal != null
+      ? `city ${fmt(cityVal)} · ${fmtSignedPp(sel - cityVal)}`
+      : null;
+  const cmpShare = (sel, cityVal) =>
+    cb && sel != null && cityVal != null && cityVal !== 0
+      ? fmtSharePct(sel / cityVal)
+      : null;
+
   return (
     <div className="dt-agg">
       <div className="dt-agg-bar">
@@ -514,26 +557,32 @@ function AggregateHeader({ aggregate: a, onClear, onExport, year, years }) {
         </div>
       </div>
       <div className="dt-agg-cards">
-        <AggCard label="Total parcels" value={fmtNumber(a.totalParcels)} tag="exact" />
-        <AggCard label="Mean assessed" value={fmtCurrency(a.parcelMean)} tag="parcel-weighted · exact" />
-        <AggCard label="Median assessed" value={fmtCurrency(a.medianOfMedians)} tag="≈ median of medians" approx />
-        <AggCard label="YoY change" value={fmtPct(a.areaYoY)} tag="≈ parcel-weighted" approx />
+        <AggCard label="Total parcels" value={fmtNumber(a.totalParcels)} tag="exact"
+                 compare={cmpShare(a.totalParcels, cb?.totalParcels)} />
+        <AggCard label="Mean assessed" value={fmtCurrency(a.parcelMean)} tag="parcel-weighted · exact"
+                 compare={cmpLevel(a.parcelMean, cb?.parcelMean, fmtCurrency)} />
+        <AggCard label="Median assessed" value={fmtCurrency(a.medianOfMedians)} tag="≈ median of medians" approx
+                 compare={cmpLevel(a.medianOfMedians, cb?.medianOfMedians, fmtCurrency)} />
+        <AggCard label="YoY change" value={fmtPct(a.areaYoY)} tag="≈ parcel-weighted" approx
+                 compare={cmpRate(a.areaYoY, cb?.areaYoY, fmtPct)} />
       </div>
       <p className="dt-agg-note">
         {a.nReportable} reportable · {a.nSuppressed} suppressed · {a.nExcluded} non-residential / no-data
         (excluded from values). Mean is parcel-exact; the median is a median of neighbourhood medians
         and YoY is parcel-weighted across neighbourhoods — both are approximations (no parcel-level
-        data in the browser).
+        data in the browser). Each figure is shown against the city-wide baseline on the same
+        parcel-weighted basis — level deltas are relative, YoY is in percentage points (pp).
       </p>
     </div>
   );
 }
 
-function AggCard({ label, value, tag, approx = false }) {
+function AggCard({ label, value, tag, compare = null, approx = false }) {
   return (
     <div className={`dt-card${approx ? " is-approx" : ""}`}>
       <span className="dt-card-label">{label}</span>
       <span className="dt-card-value">{value}</span>
+      {compare && <span className="dt-card-cmp">{compare}</span>}
       <span className="dt-card-tag">{tag}</span>
     </div>
   );
