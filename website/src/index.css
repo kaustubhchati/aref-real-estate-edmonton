@@ -742,14 +742,31 @@ p  { margin: 0 0 0.75rem; }
 }
 .dt-facets-clear:hover { color: var(--text); }
 
-.dt-scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; }
-.dt-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+/* Scrolls BOTH axes: vertically through the rows, and horizontally on a narrow
+   (mobile) dock so the fixed chassis keeps its full column widths and SCROLLS
+   instead of crushing the numbers/sparkline under overflow:hidden. On the desktop
+   dock the table fits, so only the vertical scrollbar shows. */
+.dt-scroll { overflow: auto; min-height: 0; flex: 1 1 auto; }
+/* Fixed chassis: table-layout:fixed + the <colgroup> widths give a CONSTANT grid
+   — columns never reflow when values change or rows re-sort. tabular-nums + the
+   bare cell formatters keep the numbers width-stable; long names truncate (below)
+   rather than widen a column. Minimal ink: no vertical column rules; one header
+   underline; faint row hairlines; no zebra. */
+/* min-width holds the chassis together on a narrow dock: below it the .dt-scroll
+   scrolls horizontally rather than letting columns shrink + clip (the 80px
+   sparkline and right-aligned numbers fit at >=600px). The desktop dock is wider,
+   so it never triggers. */
+.dt-table { table-layout: fixed; width: 100%; min-width: 600px; border-collapse: collapse; font-size: 12px; }
 .dt-table thead th {
   position: sticky; top: 0; z-index: 1;
   background: var(--sidebar-bg);
   text-align: left; font-size: 10.5px; font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);
-  padding: 6px 12px; border-bottom: 1px solid var(--border); white-space: nowrap;
+  padding: 6px 8px; border-bottom: 1px solid var(--border);
+  /* Headers WRAP to a fixed (2-line) height so the full labels survive the narrow
+     fixed columns — body rows stay one line (nowrap above). Bottom-align so 1- and
+     2-line headers share a baseline. The column widths never change either way. */
+  white-space: normal; vertical-align: bottom; line-height: 1.2;
 }
 .dt-table th.numeric, .dt-table td.numeric {
   text-align: right; font-variant-numeric: tabular-nums;
@@ -760,19 +777,22 @@ p  { margin: 0 0 0.75rem; }
 .dt-table th.is-active-metric, .dt-table td.is-active-metric { background: var(--accent-soft); }
 /* Sortable headers are real buttons (keyboard-operable); reset to inherit the th look. */
 .dt-th-btn {
-  display: inline-flex; align-items: center; gap: 4px;
+  display: inline;   /* inline so the header label can WRAP; the sort arrow trails it */
   font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit;
   background: transparent; border: 0; padding: 0; cursor: pointer;
 }
 .dt-th-btn:hover { color: var(--text); }
-.dt-sort { color: var(--text-subtle); font-size: 0.85em; }
+.dt-sort { color: var(--text-subtle); font-size: 0.85em; margin-left: 4px; }
 .dt-sort.active { color: var(--accent); }
 .dt-row { cursor: pointer; }
-.dt-row td { padding: 5px 12px; border-bottom: 0.5px solid rgba(0,0,0,0.05); }
+/* nowrap + overflow:hidden guarantee a FIXED row height under table-layout:fixed
+   (a too-long value clips instead of wrapping to a second line). */
+.dt-row td { padding: 5px 8px; border-bottom: 0.5px solid rgba(0,0,0,0.05);
+  white-space: nowrap; overflow: hidden; }
 .dt-row:hover { background: var(--bg-soft); }
 .dt-row.is-selected { background: var(--accent-soft); }
-.dt-name { font-weight: 500; color: var(--text); }
-.dt-spark { padding: 2px 12px; }
+.dt-name { font-weight: 500; color: var(--text); text-overflow: ellipsis; }
+.dt-spark { padding: 2px 8px; }
 .dt-empty { padding: 16px; text-align: center; color: var(--text-muted); }
 
 /* Selection-mode aggregate header (C3). Exact cards plain; approximate cards
