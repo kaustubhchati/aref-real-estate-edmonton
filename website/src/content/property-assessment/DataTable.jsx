@@ -43,13 +43,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
   getFilteredRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import Sparkline from "../../components/Sparkline.jsx";
 import ExportMenu from "./ExportMenu.jsx";
-import { METRICS } from "./choroplethStyle.js";
+import { METRICS, STATE_STYLE } from "./choroplethStyle.js";
 import {
   fmtArea,
   fmtCurrency,
@@ -81,6 +83,25 @@ const METRIC_COLS = METRICS.map((m) => ({
   fmt: PRESENTATION[m.key]?.fmt ?? m.fmt,
 }));
 
+// Categorical facets (D6) — VIEW-only table filters, data-driven from the rows.
+// Each is a HIDDEN column (a faceting/filtering accessor that is never rendered) +
+// a control in the dock header, declared once here and mapped in a loop. `labelOf`
+// maps a raw value to its display label: district shows as-is; polygon_state uses
+// the existing STATE_STYLE contract (compact form, no hardcoded state list).
+const FACETS = [
+  { id: "district", label: "District", control: "dropdown", labelOf: (v) => v },
+  {
+    id: "state", label: "State", control: "toggles",
+    labelOf: (v) => STATE_STYLE[v]?.label.split(" (")[0] ?? v,
+  },
+];
+
+// A multi-select column filter: a row passes when its value is in the selected set.
+// An empty/absent set means NO filter (every row passes) — so the default is "all".
+function multiSelectFilter(row, columnId, selected) {
+  return !selected?.length || selected.includes(row.getValue(columnId));
+}
+
 export default function DataTable({
   rows,
   metric,
@@ -99,6 +120,7 @@ export default function DataTable({
 }) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState([{ id: "name", desc: false }]);
+  const [columnFilters, setColumnFilters] = useState([]); // categorical facets (D6)
   const scrollRef = useRef(null);
 
   // Selection mode = a multi-neighbourhood box-select is active (aggregate set):
@@ -164,6 +186,16 @@ export default function DataTable({
       enableGlobalFilter: false,
       meta: { numeric: true },
     },
+    // Hidden facet columns (D6) — accessor + multi-select filter only, never
+    // rendered (hidden via initialState.columnVisibility), so the VISIBLE table is
+    // unchanged. getFacetedUniqueValues reads these to populate the facet controls.
+    ...FACETS.map((f) => ({
+      id: f.id,
+      accessorFn: (r) => r[f.id],
+      filterFn: multiSelectFilter,
+      enableSorting: false,
+      enableGlobalFilter: false,
+    })),
   ], [activeIndex, metricLabel]);
 
   // React Compiler can't memoize a component that calls useReactTable (TanStack
@@ -172,15 +204,25 @@ export default function DataTable({
   const table = useReactTable({
     data,
     columns,
-    // Filtering applies to name only (the lone string column); suppress it in
-    // selection mode so every constituent row stays visible under the aggregate.
-    state: { sorting, globalFilter: selectionMode ? "" : globalFilter },
+    // Name filter + categorical facets both suppress in selection mode, so every
+    // constituent row stays visible under the aggregate (the facets are VIEW-only,
+    // so they never desync from the selection aggregate — D6 recon #4).
+    state: {
+      sorting,
+      globalFilter: selectionMode ? "" : globalFilter,
+      columnFilters: selectionMode ? [] : columnFilters,
+    },
+    // The facet columns exist only to drive faceting/filtering — keep them hidden.
+    initialState: { columnVisibility: Object.fromEntries(FACETS.map((f) => [f.id, false])) },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
+    onColumnFiltersChange: setColumnFilters,
     globalFilterFn: "includesString",
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
   });
 
   const viewRows = table.getRowModel().rows;
@@ -284,7 +326,7 @@ export default function DataTable({
               <tbody>
                 {viewRows.length === 0 ? (
                   <tr>
-                    <td colSpan={columns.length} className="dt-empty">
+                    <td colSpan={table.getVisibleLeafColumns().length} className="dt-empty">
                       No neighbourhoods match “{globalFilter}”.
                     </td>
                   </tr>
