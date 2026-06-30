@@ -39,9 +39,15 @@
 //   onExport     (format) => void — scoped export (CSV/GeoJSON/PNG)
 //   open         controlled: the table is raised (= analyst view)
 //   onToggle     () => void — toggle the table / analyst view
+//   rangeSlot    DOM node of the tuning rack's range slot (or null until it
+//                mounts). The metric-range slider is PORTALED here so it sits in
+//                the rack with the year slider; its TanStack wiring (faceted
+//                bounds + setRange + the VIEW-only brush) stays in THIS
+//                component — only the UI moves. [tuning-bay]
 // =============================================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   flexRender,
   getCoreRowModel,
@@ -182,6 +188,7 @@ export default function DataTable({
   onBrush,
   open,
   onToggle,
+  rangeSlot,
 }) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState([{ id: "name", desc: false }]);
@@ -470,15 +477,9 @@ export default function DataTable({
                     ? <FacetDropdown key={f.id} {...shared} />
                     : <FacetToggles key={f.id} {...shared} />;
                 })}
-                {/* Metric-range facet — on the active metric; bounds re-derive on
-                    metric switch (refresh-by-design). */}
-                <RangeFacet
-                  label={activeCol?.label ?? metricLabel}
-                  fmt={activeCol?.fmt ?? ((v) => v)}
-                  bounds={rangeBounds}
-                  value={rangeValue}
-                  onChange={setRange}
-                />
+                {/* The metric-range slider moved OUT of here into the tuning rack
+                    (portaled — see below). District/State (dropdown/toggles) stay
+                    in the dock; the rack is for SLIDERS specifically. */}
                 {anyFacet && (
                   <button type="button" className="dt-facets-clear" onClick={clearFacets}>
                     Clear filters
@@ -567,6 +568,26 @@ export default function DataTable({
           </div>
         </div>
       )}
+
+      {/* RANGE slider → TUNING RACK. The slider's brain stays in THIS component
+          (TanStack faceted bounds + setRange + the VIEW-only brush, all
+          unchanged); only its UI is PORTALED into the rack's slot (owned by
+          PropertyAssessmentMap) so every slider sits together. Rendered OUTSIDE
+          the {open} block so it's present whether the dock is open or not.
+          Disabled in selection mode (no filterable view). rangeSlot is null
+          until the rack mounts, so the portal simply waits. */}
+      {rangeSlot &&
+        createPortal(
+          <RangeFacet
+            label={activeCol?.label ?? metricLabel}
+            fmt={activeCol?.fmt ?? ((v) => v)}
+            bounds={rangeBounds}
+            value={rangeValue}
+            onChange={setRange}
+            disabled={selectionMode}
+          />,
+          rangeSlot
+        )}
     </section>
   );
 }
@@ -717,25 +738,31 @@ function FacetToggles({ label, options, selected, labelOf, onToggle }) {
 // a live readout. Two stacked native sliders (legible + robust over an overlapping
 // dual-thumb hack); each clamps against the other so lo never passes hi. `value` is
 // the column's [lo, hi] filter (undefined = full range); `bounds` is [min, max] from
-// getFacetedMinMaxValues — null/degenerate bounds render nothing.
-function RangeFacet({ label, fmt, bounds, value, onChange }) {
-  if (!bounds || bounds[0] === bounds[1]) return null;
-  const [min, max] = bounds;
-  const [lo, hi] = value ?? [min, max];
-  const step = (max - min) / 100;
+// getFacetedMinMaxValues.
+//
+// Now lives in the TUNING RACK (portaled there from the dock — see the createPortal
+// call in DataTable), so it must hold a FIXED slot: when there's no filterable view
+// (`disabled`, i.e. selection mode) or the bounds are null/degenerate, it renders an
+// INERT placeholder rather than null — the slot never appears/disappears. [tuning-bay]
+function RangeFacet({ label, fmt, bounds, value, onChange, disabled = false }) {
+  const usable = bounds && bounds[0] !== bounds[1];
+  const off = disabled || !usable;
+  const [min, max] = usable ? bounds : [0, 1];
+  const [lo, hi] = usable && value ? value : [min, max];
+  const step = (max - min) / 100 || 1;
   return (
-    <div className="dt-facet-range">
+    <div className={`dt-facet-range${off ? " is-disabled" : ""}`}>
       <span className="dt-facet-range-cap">
-        {label}: <strong>{fmt(lo)} – {fmt(hi)}</strong>
+        {label}: <strong>{off ? "—" : `${fmt(lo)} – ${fmt(hi)}`}</strong>
       </span>
       <div className="dt-facet-range-rows">
         <input
-          type="range" min={min} max={max} step={step} value={lo}
+          type="range" min={min} max={max} step={step} value={lo} disabled={off}
           aria-label={`${label} minimum`}
           onChange={(e) => onChange([Math.min(+e.target.value, hi), hi])}
         />
         <input
-          type="range" min={min} max={max} step={step} value={hi}
+          type="range" min={min} max={max} step={step} value={hi} disabled={off}
           aria-label={`${label} maximum`}
           onChange={(e) => onChange([lo, Math.max(+e.target.value, lo)])}
         />

@@ -730,6 +730,10 @@ p  { margin: 0 0 0.75rem; }
 .dt-facet-range-cap strong { color: var(--text); font-variant-numeric: tabular-nums; }
 .dt-facet-range-rows { display: flex; flex-direction: column; gap: 1px; }
 .dt-facet-range-rows input[type="range"] { width: 150px; height: 14px; margin: 0; accent-color: var(--accent); }
+/* Inert state — shown (not removed) when the range doesn't apply (selection mode)
+   or has no usable bounds, so the rack's range slot stays fixed. [tuning-bay] */
+.dt-facet-range.is-disabled { opacity: 0.45; }
+.dt-facet-range.is-disabled input[type="range"] { cursor: not-allowed; }
 /* Reset the facets (distinct from "Clear selection") — pushed to the row's end. */
 .dt-facets-clear {
   margin-left: auto; font-family: inherit; font-size: 0.72rem; font-weight: 600;
@@ -940,17 +944,31 @@ p  { margin: 0 0 0.75rem; }
   pointer-events: none;
 }
 
-/* Year slider pill — a static flex item in the foot, centred above the dock. */
-.pa-year {
+/* Tuning rack — ONE slim fixed band holding every slider (year + value-range),
+   a static flex item in the foot centred above the dock. Replaces the old
+   floating .pa-year pill: a bottom band (not a centred pill) reads as chrome and
+   never occludes the map centre. Light idiom. */
+.pa-rack {
   pointer-events: auto;
-  display: flex; align-items: center; gap: 10px;
-  width: 300px; max-width: calc(100vw - 24px);
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 18px;
+  width: min(680px, calc(100vw - 24px));
   background: var(--sidebar-bg); border: 1px solid var(--sidebar-edge);
-  border-radius: 999px; box-shadow: 0 4px 14px rgba(74,60,33,0.16);
-  padding: 6px 14px;
+  border-radius: var(--radius-lg); box-shadow: 0 4px 14px rgba(74,60,33,0.16);
+  padding: 7px 16px;
 }
-.pa-year-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
-.pa-year .sb-year-slider { flex: 1 1 auto; margin: 0; }
+.pa-rack-title {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-muted); font-weight: 700; white-space: nowrap;
+}
+.pa-rack-slot { display: flex; align-items: center; gap: 10px; }
+.pa-rack-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+/* Scoped (0,2,0) so it beats the later, equal-specificity .sb-year-slider base
+   (width:100%; margin:8px 0 0) — otherwise the year slider stretches + gains a
+   stray top margin and the rack wraps off its slim single row. */
+.pa-rack-slot .pa-rack-slider { flex: 0 0 auto; width: 150px; margin: 0; }
+.pa-rack-value { white-space: nowrap; }   /* green readout (sb-year-value) */
+/* The portaled metric-range slider: compact, sits in its own slot. */
+.pa-rack-range-slot .dt-facet-range { gap: 1px; min-width: 160px; }
 
 /* Bottom-right legend card (default view), lifted above the map's corner controls. */
 .pa-legend {
@@ -1577,9 +1595,9 @@ p  { margin: 0 0 0.75rem; }
     border-right: none; border-bottom: 0.5px solid var(--sidebar-edge); }
   .pa-canvas { min-height: 54svh; }
   .pa-canvas .canvas-wrap { min-height: 0; }   /* fill pa-canvas, not the shared 55svh */
-  .pa-year { width: min(84vw, 300px); }
+  .pa-rack { width: calc(100vw - 24px); }
   .dt-panel { width: calc(100vw - 24px); max-height: 48svh; }
-  /* Bottom-left so it clears the centred year pill + corner controls. */
+  /* Bottom-left so it clears the centred tuning rack + corner controls. */
   .pa-legend { width: 42vw; left: 12px; right: auto; bottom: 10px; }
   .shell-footer-grid { grid-template-columns:1fr; gap:1.25rem; }
 }
