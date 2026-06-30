@@ -661,24 +661,55 @@ p  { margin: 0 0 0.75rem; }
 .dt-handle-meta { color: var(--text-muted); font-size: 10.5px; }
 .dt-handle-caret { margin-left: auto; color: var(--text-muted); }
 
-.dt-panel {
+/* The animating SHELL — a TRUE height transition via the grid-rows 0fr↔1fr trick,
+   so the console rises/collapses smoothly and the handle + tuning rack above it
+   lower with it (note 6). Purely the animator; the visible box is .dt-panel. The
+   prefers-reduced-motion guard (bottom of file) curtails the transition to instant. */
+.dt-panel-wrap {
   pointer-events: auto;
-  display: flex; flex-direction: column;
-  /* Bounded, centred module — never a full-width land-grab. ~620px fits the 8
-     columns; capped to the viewport on narrow screens. The map stays visible
-     above it (the .dt container is pointer-events:none outside the panel). */
-  width: min(620px, calc(100vw - 24px));
-  max-height: 42svh; min-height: 0;
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-base) var(--ease);
+}
+.dt-panel-wrap.is-open { grid-template-rows: 1fr; }
+
+/* The bounded, centred console box — a horizontal split: summary segment | table.
+   overflow:hidden + min-height:0 let the grid row collapse it to 0. The width
+   GROWS when a summary is present (has-summary) so the TABLE area stays a constant
+   width (no chassis reflow on select) — the console just grows leftward; width
+   eases for a clean grow. The map stays visible above it (.dt is pointer-events:none). */
+.dt-panel {
+  overflow: hidden; min-height: 0;
+  display: flex; flex-direction: row;
+  /* Width is bounded to the CANVAS (viewport − the persistent 280px left panel −
+     a 24px margin), NOT the raw viewport, so the console never overflows the canvas
+     or paints over the panel on a narrow desktop. NO width transition: the console
+     grows instantly when a summary appears, so the table area stays a constant width
+     (a width ease would transiently squeeze it — a chassis reflow we don't want). */
+  width: min(620px, calc(100vw - 280px - 24px));
+  max-height: 42svh;
   background: var(--sidebar-bg);
   border: 1px solid var(--sidebar-edge); border-bottom: 0;
   border-radius: 12px 12px 0 0;
   box-shadow: 0 -4px 14px rgba(74,60,33,0.12);
-  animation: dt-rise var(--dur-base) var(--ease);
 }
-@keyframes dt-rise {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: none; }
+.dt-panel.has-summary { width: min(850px, calc(100vw - 280px - 24px)); }
+
+/* LEFT SEGMENT — the summary (single-select detail OR the selection aggregate),
+   bounded to the console height (note 9): it scrolls internally, never grows the
+   console. Fixed 230px so the table area to its right stays constant. */
+.dt-summary {
+  flex: 0 0 230px; min-width: 0;
+  overflow-y: auto; overflow-x: hidden;
+  border-right: 1px solid var(--border-soft);
 }
+.dt-summary .dt-agg { border-bottom: 0; padding: 12px; }     /* aggregate as a left column, not a header */
+.dt-summary .dt-agg-bar { flex-wrap: wrap; }                  /* title + clear + export wrap in the narrow column */
+.dt-summary .dt-agg-cards { flex-direction: column; }        /* cards stack vertically, not a wide row */
+.dt-summary .pa-detail { margin-top: 0; padding: 12px; border-top: 0; } /* same inset as the aggregate */
+
+/* RIGHT SEGMENT — toolbar/facets (normal mode) + the table; column flex so the
+   table scroll-area fills the remaining height. */
+.dt-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
 .dt-toolbar {
   display: flex; align-items: center; gap: 10px;
   padding: 8px 16px; flex: 0 0 auto;
@@ -704,7 +735,10 @@ p  { margin: 0 0 0.75rem; }
 .dt-facet-dd[open] .dt-facet-summary { background: var(--accent-soft); color: var(--accent-dark); }
 .dt-facet-list {
   position: absolute; top: calc(100% + 4px); left: 0; z-index: 5;
-  min-width: 180px; max-height: 240px; overflow-y: auto;
+  /* svh-capped so the dropdown stays WITHIN the console (which now clips via
+     overflow:hidden for the height transition) on short viewports — it scrolls
+     internally rather than being cut off at the panel edge. */
+  min-width: 180px; max-height: min(240px, 28svh); overflow-y: auto;
   display: flex; flex-direction: column; gap: 1px; padding: 5px;
   background: var(--gel-grad-gloss); box-shadow: var(--gel-lift-float), var(--gel-bevel);
   border: var(--gel-border); border-radius: var(--radius-md);
@@ -1616,7 +1650,11 @@ p  { margin: 0 0 0.75rem; }
   .pa-canvas { min-height: 54svh; }
   .pa-canvas .canvas-wrap { min-height: 0; }   /* fill pa-canvas, not the shared 55svh */
   .pa-rack { width: calc(100vw - 24px); }
-  .dt-panel { width: calc(100vw - 24px); max-height: 48svh; }
+  /* The summary | table split is too narrow side-by-side on a phone — STACK it
+     (summary on top, table below), like the old header layout, both full width. */
+  .dt-panel, .dt-panel.has-summary { width: calc(100vw - 24px); max-height: 56svh; flex-direction: column; }
+  .dt-summary { flex: 0 0 auto; max-height: 30svh; border-right: 0;
+    border-bottom: 1px solid var(--border-soft); }
   /* Bottom-left so it clears the centred tuning rack + corner controls. */
   .pa-legend { width: 42vw; left: 12px; right: auto; bottom: 10px; }
   .shell-footer-grid { grid-template-columns:1fr; gap:1.25rem; }

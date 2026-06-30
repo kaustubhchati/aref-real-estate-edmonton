@@ -44,6 +44,11 @@
 //                the rack with the year slider; its TanStack wiring (faceted
 //                bounds + setRange + the VIEW-only brush) stays in THIS
 //                component — only the UI moves. [tuning-bay]
+//   detail       the single-select InfoRail ELEMENT (or null) — rendered in the
+//                console's LEFT segment when exactly one nbhd is selected and the
+//                dock is up (the re-home, notes 7/8). The parent builds it (same
+//                component as the panel uses) and decides the container by dock
+//                state; this component just slots it in. [console-takeover]
 // =============================================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -61,6 +66,7 @@ import {
 import Sparkline from "../../components/Sparkline.jsx";
 import DistributionStrip from "./DistributionStrip.jsx";
 import ExportMenu from "./ExportMenu.jsx";
+import { DUR_BASE, reduceMotion } from "../../components/motion.js";
 import { METRICS, STATE_STYLE } from "./choroplethStyle.js";
 import {
   fmtArea,
@@ -206,12 +212,35 @@ export default function DataTable({
   open,
   onToggle,
   rangeSlot,
+  detail,
 }) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState([{ id: "name", desc: false }]);
   const [columnFilters, setColumnFilters] = useState([]); // categorical facets (D6)
   const scrollRef = useRef(null);
   useRenderStormGuard("DataTable"); // dev-only: screams if an unstable ref re-storms (D9)
+
+  // Smooth takeover (note 6): the panel's HEIGHT animates open↔closed via the
+  // grid-rows 0fr↔1fr trick, so the console RISES / COLLAPSES (and the handle +
+  // the tuning rack above it move with it) instead of popping. The heavy panel
+  // (the table) is mounted ONLY while open OR mid-collapse:
+  //   open  → mount, then expand on the NEXT frame so the 0fr→1fr transition runs
+  //   close → collapse, then unmount after the transition window (a TIMEOUT, not
+  //           transitionEnd: a sub-frame open→close cancels the expand RAF so the
+  //           grid never leaves 0fr and no transitionEnd would ever fire — the
+  //           timeout unmounts reliably either way). reduceMotion → unmount next tick.
+  const [panelMounted, setPanelMounted] = useState(open);
+  const [panelExpanded, setPanelExpanded] = useState(open);
+  useEffect(() => {
+    if (open) {
+      setPanelMounted(true);
+      const raf = requestAnimationFrame(() => setPanelExpanded(true)); // expand after mount
+      return () => cancelAnimationFrame(raf);
+    }
+    setPanelExpanded(false); // collapse
+    const t = setTimeout(() => setPanelMounted(false), reduceMotion() ? 0 : DUR_BASE + 60);
+    return () => clearTimeout(t);
+  }, [open]);
 
   // Selection mode = a multi-neighbourhood box-select is active (aggregate set):
   // the table shows the aggregate header + only the constituent rows.
@@ -428,11 +457,15 @@ export default function DataTable({
   // filter, OR a data change (year/metric rebuilds `data`, which can reorder a
   // value/rank-sorted list). `data` is the memo, not the live row model, so this
   // fires only on real reorders — not every render.
+  // panelMounted is a dep so this re-runs once the table actually mounts: opening
+  // the dock defers the table's mount by one render (panelMounted), so on the open
+  // commit scrollRef.current is still null — without this dep the scroll-to-row
+  // would be missed when the dock opens with a row already selected.
   useEffect(() => {
     if (!open || selectedIds.length !== 1 || !scrollRef.current) return;
     const row = scrollRef.current.querySelector(`[data-id="${CSS.escape(String(selectedIds[0]))}"]`);
     row?.scrollIntoView({ block: "nearest" });
-  }, [selectedIds, open, sorting, globalFilter, data]);
+  }, [selectedIds, open, sorting, globalFilter, data, panelMounted]);
 
   return (
     <section className={`dt${open ? " dt--open" : ""}`} aria-label="Neighbourhood data table">
@@ -451,63 +484,82 @@ export default function DataTable({
         <span className="dt-handle-caret" aria-hidden="true">{open ? "▾" : "▴"}</span>
       </button>
 
-      {open && (
-        <div className="dt-panel">
-          {selectionMode ? (
-            <AggregateHeader
-              aggregate={aggregate}
-              cityBaseline={cityBaseline}
-              distValues={distValues}
-              distLabel={activeCol?.label ?? metricLabel}
-              distFmt={activeCol?.fmt ?? ((v) => v)}
-              onClear={onClearSelection}
-              onExport={onExport}
-              year={year}
-              years={years}
-            />
-          ) : (
-            <>
-              <div className="dt-toolbar">
-                <input
-                  type="text"
-                  className="dt-filter search-input"
-                  placeholder="Filter by name…"
-                  value={globalFilter}
-                  onChange={(e) => setGlobalFilter(e.target.value)}
-                  aria-label="Filter neighbourhoods by name"
-                />
-                <span className="dt-count">{viewRows.length} of {rows.length}</span>
-                <ExportMenu onExport={onExport} year={year} years={years} selectedCount={selectedIds.length} />
-              </div>
-              {/* Categorical facets (D6) — VIEW-only display filters over the table,
-                  rendered from the FACETS config: a dropdown or toggle chips per the
-                  facet's `control` (one path, no copy-pasted blocks). */}
-              <div className="dt-facets" role="group" aria-label="Filter the table">
-                {FACETS.map((f) => {
-                  const shared = {
-                    label: f.label,
-                    options: facetOptions(f.id),
-                    selected: facetValue(f.id),
-                    labelOf: f.labelOf,
-                    onToggle: (v) => toggleFacet(f.id, v),
-                  };
-                  return f.control === "dropdown"
-                    ? <FacetDropdown key={f.id} {...shared} />
-                    : <FacetToggles key={f.id} {...shared} />;
-                })}
-                {/* The metric-range slider moved OUT of here into the tuning rack
-                    (portaled — see below). District/State (dropdown/toggles) stay
-                    in the dock; the rack is for SLIDERS specifically. */}
-                {anyFacet && (
-                  <button type="button" className="dt-facets-clear" onClick={clearFacets}>
-                    Clear filters
-                  </button>
+      {/* The animating shell — grid-rows 0fr↔1fr (is-open) gives a TRUE height
+          transition so the console rises/collapses smoothly. The panel mounts only
+          while open or mid-collapse (panelMounted, unmounted by the effect's timeout). */}
+      <div className={`dt-panel-wrap${panelExpanded ? " is-open" : ""}`}>
+        {panelMounted && (
+          <div className={`dt-panel${selectionMode || detail ? " has-summary" : ""}`}>
+            {/* LEFT SEGMENT — the summary: aggregate (N≥2) or single-select detail
+                (N=1). One segment, two contents by selection count (notes 7, 8);
+                bounded to the console height (note 9) via overflow-y. Absent at
+                N=0, so the table fills the console. */}
+            {(selectionMode || detail) && (
+              <div className="dt-summary">
+                {selectionMode ? (
+                  <AggregateHeader
+                    aggregate={aggregate}
+                    cityBaseline={cityBaseline}
+                    distValues={distValues}
+                    distLabel={activeCol?.label ?? metricLabel}
+                    distFmt={activeCol?.fmt ?? ((v) => v)}
+                    onClear={onClearSelection}
+                    onExport={onExport}
+                    year={year}
+                    years={years}
+                  />
+                ) : (
+                  detail /* the single-select InfoRail, re-homed from the left panel */
                 )}
               </div>
-            </>
-          )}
+            )}
 
-          <div className="dt-scroll" ref={scrollRef}>
+            {/* RIGHT SEGMENT — the table; its toolbar + facets ride on top in normal
+                mode (suppressed in selection mode, where the rows ARE the selection). */}
+            <div className="dt-main">
+              {!selectionMode && (
+                <>
+                  <div className="dt-toolbar">
+                    <input
+                      type="text"
+                      className="dt-filter search-input"
+                      placeholder="Filter by name…"
+                      value={globalFilter}
+                      onChange={(e) => setGlobalFilter(e.target.value)}
+                      aria-label="Filter neighbourhoods by name"
+                    />
+                    <span className="dt-count">{viewRows.length} of {rows.length}</span>
+                    <ExportMenu onExport={onExport} year={year} years={years} selectedCount={selectedIds.length} />
+                  </div>
+                  {/* Categorical facets (D6) — VIEW-only display filters over the table,
+                      rendered from the FACETS config: a dropdown or toggle chips per the
+                      facet's `control` (one path, no copy-pasted blocks). */}
+                  <div className="dt-facets" role="group" aria-label="Filter the table">
+                    {FACETS.map((f) => {
+                      const shared = {
+                        label: f.label,
+                        options: facetOptions(f.id),
+                        selected: facetValue(f.id),
+                        labelOf: f.labelOf,
+                        onToggle: (v) => toggleFacet(f.id, v),
+                      };
+                      return f.control === "dropdown"
+                        ? <FacetDropdown key={f.id} {...shared} />
+                        : <FacetToggles key={f.id} {...shared} />;
+                    })}
+                    {/* The metric-range slider moved OUT of here into the tuning rack
+                        (portaled — see below). District/State (dropdown/toggles) stay
+                        in the dock; the rack is for SLIDERS specifically. */}
+                    {anyFacet && (
+                      <button type="button" className="dt-facets-clear" onClick={clearFacets}>
+                        Clear filters
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <div className="dt-scroll" ref={scrollRef}>
             <table className="dt-table">
               {/* Fixed chassis: explicit per-column widths (meta.width) in column
                   order, so table-layout:fixed gives a constant grid — columns
@@ -591,9 +643,11 @@ export default function DataTable({
                 )}
               </tbody>
             </table>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* RANGE slider → TUNING RACK. The slider's brain stays in THIS component
           (TanStack faceted bounds + setRange + the VIEW-only brush, all

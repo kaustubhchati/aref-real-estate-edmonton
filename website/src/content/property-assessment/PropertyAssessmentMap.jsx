@@ -810,6 +810,23 @@ export default function PropertyAssessmentMap() {
 
   const empty = url ? null : describeEmpty(manifest, city, year);
 
+  // The single-select detail, built ONCE so it can render in EITHER home: the left
+  // panel (dock down) or the console's left segment (dock up). Same component +
+  // props — only the container is conditional (notes 7/8). null unless exactly one
+  // neighbourhood is selected.
+  const detailRail =
+    url && selectedFeature ? (
+      <InfoRail
+        feature={selectedFeature}
+        year={year}
+        metric={metric}
+        years={years}
+        sparkValues={sparkValues}
+        activeIndex={activeYearIndex}
+        onClear={() => setSelectedIds([])}
+      />
+    ) : null;
+
   return (
     <article className="content-map pa-map">
       {/* ===== TOP CONTEXT BAR — property count + neighbourhood search =====
@@ -880,21 +897,11 @@ export default function PropertyAssessmentMap() {
             </p>
           )}
 
-          {/* SINGLE-SELECT DETAIL — accretes below the controls when EXACTLY one
-              neighbourhood is selected (was the floating right rail). Coexists with
-              the analysis dock when both are present. Empty/multi select → not
-              rendered (multi aggregates land in the dock). */}
-          {url && selectedFeature && (
-            <InfoRail
-              feature={selectedFeature}
-              year={year}
-              metric={metric}
-              years={years}
-              sparkValues={sparkValues}
-              activeIndex={activeYearIndex}
-              onClear={() => setSelectedIds([])}
-            />
-          )}
+          {/* SINGLE-SELECT DETAIL — in the panel when the dock is DOWN. When the
+              dock is UP it re-homes into the console's left segment (passed as the
+              `detail` prop below), so it isn't shown twice. The identity card above
+              stays visible either way. */}
+          {!dockOpen && detailRail}
         </aside>
 
         <div className="pa-canvas">
@@ -1023,6 +1030,7 @@ export default function PropertyAssessmentMap() {
                 open={dockOpen}
                 onToggle={() => setDockOpen((d) => !d)}
                 rangeSlot={rangeSlot}
+                detail={dockOpen ? detailRail : null}
               />
             )}
           </div>
