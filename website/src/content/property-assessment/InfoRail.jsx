@@ -41,8 +41,6 @@ export default function InfoRail({
   sparkValues,  // active metric across `years` for the selected nbhd (null = gap)
   activeIndex,  // index of the active year within `years` (dots the sparkline)
   onClear,      // () => void — clear the selection
-  compact = false, // analyst view: the table carries the full stat list, so the rail
-                   // trims to name + sparkline + the single headline value
 }) {
   const state = feature.polygon_state;
   const meta = STATE_STYLE[state] || { label: state };
@@ -60,8 +58,10 @@ export default function InfoRail({
 
   return (
     // aria-live so a screen reader announces the neighbourhood when a click or
-    // search changes the selection (the rail is the detail surface now).
-    <aside className="rail" aria-label="Neighbourhood detail" aria-live="polite">
+    // search changes the selection. Now an in-flow block accreted into the left
+    // panel below the controls (.pa-detail), no longer a floating right rail; the
+    // .rail-* content classes are unchanged.
+    <div className="pa-detail" aria-label="Neighbourhood detail" aria-live="polite">
       <div className="rail-inner">
         <section className="rail-detail">
           <header className="rail-detail-head">
@@ -110,9 +110,8 @@ export default function InfoRail({
                 <dt className="rail-k">{activeMetric.label}</dt>
                 <dd className="rail-v">{activeMetric.fmt(activeVal)}</dd>
               </div>
-              {/* Full stat list in default view; trimmed away in analyst view,
-                  where the data table carries every field for every nbhd. */}
-              {!compact && POPUP_ROWS.filter(([key]) => key !== activeMetric.key).map(([key, label, fmt]) => (
+              {/* Full stat list (every field minus a duplicate of the active one). */}
+              {POPUP_ROWS.filter(([key]) => key !== activeMetric.key).map(([key, label, fmt]) => (
                 <div key={key} className="rail-row">
                   <dt className="rail-k">{label}</dt>
                   <dd className="rail-v">{fmt(feature[key])}</dd>
@@ -138,6 +137,6 @@ export default function InfoRail({
           )}
         </section>
       </div>
-    </aside>
+    </div>
   );
 }

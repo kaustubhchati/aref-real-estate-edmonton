@@ -416,6 +416,40 @@ p  { margin: 0 0 0.75rem; }
   background: var(--bg);
 }
 
+/* ===== Property Assessment hybrid shell (academic-glass) ==================== */
+/* The PA route restructures the shared full-bleed .content-map into a vertical
+   shell: a persistent TOP CONTEXT BAR over a BODY that splits into the left glass
+   PANEL (populated step-by-step) and the map CANVAS. (.pa-map was an unstyled free
+   hook; it now drives this column layout — .content-map is a flex ROW by default.)
+   The map's floating overlays (controls, legend, year, dock) live inside .pa-canvas
+   and position against it, so the body's panel/canvas split contains them. */
+.pa-map { flex-direction: column; }
+
+.pa-topbar {
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 9px 16px;
+  background: var(--sidebar-bg);
+  border-bottom: 1px solid var(--sidebar-edge);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.pa-topbar-context { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.pa-topbar-title { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; }
+.pa-topbar-sub {
+  font-size: 11px; color: var(--text-muted); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.pa-topbar-search { flex: 0 0 auto; width: 250px; max-width: 50vw; }
+.pa-topbar-search .search-input {
+  border-radius: 999px; box-shadow: 0 4px 14px rgba(74,60,33,0.16);
+}
+
+.pa-body { flex: 1 1 auto; display: flex; min-height: 0; }
+.pa-canvas {
+  position: relative;   /* containing block for the floating map overlays */
+  flex: 1 1 auto; min-width: 0; display: flex;
+}
+
 /* ----- Sidebar ----- */
 
 /* Apple-style fixed overlay: floats over the left edge of the map (which now
@@ -533,32 +567,14 @@ p  { margin: 0 0 0.75rem; }
   font-family: ui-monospace, Menlo, Consolas, monospace;
 }
 
-/* ----- Right info rail (Property Assessment) ----- */
-/* A compact floating box on the RIGHT, vertically centred and hugging its content
-   — the mirror of the left control box (.pa-box). Hidden by default; mounts only
-   when exactly one neighbourhood is selected. Holds that nbhd's detail + sparkline
-   (InfoRail.jsx). transform is reserved for the vertical centring, so it fades
-   (not slides) in. */
-.rail {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 248px;
-  max-width: calc(100vw - 24px);
-  max-height: calc(100% - 24px);
-  z-index: 12;
-  background: var(--sidebar-bg);
-  border: 1px solid var(--sidebar-edge);
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(74,60,33,0.16), inset 0 1px 0 rgba(255,255,255,0.6);
-  overflow-y: auto;
-  scrollbar-gutter: stable;
-  overflow-x: hidden;
-  padding: 12px 14px;
-  font-size: 12.5px;
-  line-height: 1.4;
-  color: var(--text);
+/* ----- Single-select detail (Property Assessment) ----- */
+/* Was a floating right rail; now an IN-FLOW block accreted into the left panel
+   below the controls when exactly one neighbourhood is selected. A hairline
+   separates it from the controls above; it fades in. Holds that nbhd's detail +
+   sparkline (InfoRail.jsx). The .rail-* rules below are its content styles. */
+.pa-detail {
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid var(--border);
   animation: rail-fade-in var(--dur-base) var(--ease);
 }
 @keyframes rail-fade-in { from { opacity: 0; } to { opacity: 1; } }
@@ -615,18 +631,14 @@ p  { margin: 0 0 0.75rem; }
 .rail-v-muted { color: var(--text-subtle); font-weight: 500; font-style: italic; }
 .rail-note { font-size: 11px; color: var(--text-muted); line-height: 1.5; margin: 8px 0 0; }
 
-/* ----- Bottom data table (Property Assessment, Felt zone 4) ----- */
-/* Bottom-anchored overlay; collapsed = a CENTRED pill handle, click it (or press
-   T) to raise the full-width panel. The container is pointer-events:none and has
-   no background, so the bottom CORNERS pass through — the map's bottom-right
-   attribution/scale controls stay clickable, and the immersive footer-reveal grip
-   (moved to the bottom-LEFT corner) stays tappable on touch. z-index:96 keeps the
-   pill/panel above the footer reveal (z95) so the chrome reveals BEHIND the map
-   zones (they "stay visible"). Desktop = drawer; narrow = fullscreen (media below). */
+/* ----- Analysis dock (Property Assessment, Felt zone 4) ----- */
+/* The bottom item of the canvas foot (the year slider rides above it). Collapsed =
+   a CENTRED pill handle; click it (or press T) to raise the bounded panel. The
+   container is pointer-events:none with no background, so the bottom CORNERS pass
+   through — the map's attribution/scale controls and the footer-reveal grip stay
+   clickable. Only the pill + panel are interactive. Desktop = drawer; narrow =
+   fullscreen (media below). */
 .dt {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  z-index: 96;
   display: flex;
   flex-direction: column;
   align-items: center;    /* centre the pill handle AND the bounded panel */
@@ -733,34 +745,30 @@ p  { margin: 0 0 0.75rem; }
 .dt-agg-actions { display: flex; align-items: center; gap: 8px; }
 .dt-toolbar .export-menu { margin-left: auto; }   /* push export to the right of the filter */
 
-/* ----- Floating boxes (Property Assessment locked layout) ----- */
-/* Compact cards floating over a full-bleed map. The left control box and the
-   right info rail (.rail, above) are mirrored — same radius/padding/shadow — and
-   each vertically centres on its edge and hugs its content. */
-.pa-box {
-  position: absolute;
-  z-index: 12;
-  width: 248px; max-width: calc(100vw - 24px);
-  max-height: calc(100% - 24px); overflow-y: auto; overflow-x: hidden;
-  scrollbar-gutter: stable;
+/* ----- Left panel (Property Assessment hybrid shell) ----- */
+/* Persistent in-flow glass column on the left of the body. Holds the map controls
+   (or the analyst tools) and — accreted below — the single-select detail. Because
+   it is IN FLOW (not a floating card), the map reflows into the canvas beside it,
+   so the fly-to camera needs no left padding (sidebarLeftPad self-neutralises).
+   The .pa-box-* classes are content styles reused inside it. */
+.pa-panel {
+  flex: 0 0 280px;
+  overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable;
   background: var(--sidebar-bg);
-  border: 1px solid var(--sidebar-edge);
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(74,60,33,0.16), inset 0 1px 0 rgba(255,255,255,0.6);
-  padding: 12px 14px;
+  border-right: 1px solid var(--sidebar-edge);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+  padding: 14px 16px;
   font-size: 12.5px; line-height: 1.4; color: var(--text);
 }
-.pa-box--left { left: 12px; top: 50%; transform: translateY(-50%); }
-.pa-box > *:last-child { margin-bottom: 0; }   /* hug content — no trailing gap */
-.pa-box-title { font-size: 14px; font-weight: 600; color: var(--text); margin: 0 0 2px; }
-.pa-box-sub { font-size: 11px; color: var(--text-muted); margin: 0 0 10px; }
-.pa-box .opt-toggle-gel { margin: 0 0 10px; }
-.pa-box .opt-toggle, .pa-box .seg { margin: 0; }
+.pa-panel > *:last-child { margin-bottom: 0; }   /* hug content — no trailing gap */
+.pa-panel .opt-toggle-gel { margin: 0 0 10px; }
+.pa-panel .opt-toggle, .pa-panel .seg { margin: 0; }
+.pa-hint { font-size: 10.5px; color: var(--text-muted); font-style: italic; margin: 0 0 10px; }
 .pa-box-ref { font-size: 10px; color: var(--text-muted); line-height: 1.45; margin: 10px 0 0; }
 .pa-box-ref a { color: var(--accent); }
 
-/* Analyst area-select tools (left box, analyst view) + the export menu. */
-.pa-tools-row { display: flex; gap: 8px; margin-top: 8px; }
+/* Small button used by the export-menu trigger (was shared with the retired
+   analyst tools box). */
 .pa-tools-btn {
   display: inline-flex; align-items: center; gap: 5px;
   font-family: inherit; font-size: 0.78rem; font-weight: 500;
@@ -804,18 +812,24 @@ p  { margin: 0 0 0.75rem; }
 .export-menu-sub { font-size: 0.68rem; color: var(--text-muted); line-height: 1.3; }
 .export-menu-pair { color: var(--accent-dark); font-weight: 600; white-space: nowrap; }
 
-/* Top-centre search pill. z-index:96 keeps it above the nav reveal (z95). */
-.pa-search {
-  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
-  z-index: 96; width: 250px; max-width: calc(100vw - 24px);
-}
-.pa-search .search-input { border-radius: 999px; box-shadow: 0 4px 14px rgba(74,60,33,0.16); }
+/* (The neighbourhood search moved from a floating top-centre pill into the
+   persistent top context bar — see .pa-topbar-search above.) */
 
-/* Bottom-centre year slider pill (lifted clear of the table in analyst view).
-   z-index:96 so it stays above the raised table when lifted. */
+/* Canvas foot: the year slider stacked above the analysis dock, bottom-anchored.
+   The flex column means the slider's lift tracks the dock's REAL laid-out height
+   (collapsed pill or open panel) — no 42svh magic number. Click-through; only the
+   slider + the dock's pill/panel are interactive. z-index:96 keeps it above the
+   footer reveal (z95). */
+.pa-foot {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 96;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  pointer-events: none;
+}
+
+/* Year slider pill — a static flex item in the foot, centred above the dock. */
 .pa-year {
-  position: absolute; bottom: 46px; left: 50%; transform: translateX(-50%);
-  z-index: 96; display: flex; align-items: center; gap: 10px;
+  pointer-events: auto;
+  display: flex; align-items: center; gap: 10px;
   width: 300px; max-width: calc(100vw - 24px);
   background: var(--sidebar-bg); border: 1px solid var(--sidebar-edge);
   border-radius: 999px; box-shadow: 0 4px 14px rgba(74,60,33,0.16);
@@ -823,8 +837,6 @@ p  { margin: 0 0 0.75rem; }
 }
 .pa-year-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
 .pa-year .sb-year-slider { flex: 1 1 auto; margin: 0; }
-/* Clear the whole table stack: the panel (max 42svh) + the ~30px handle above it. */
-.is-analyst .pa-year { bottom: calc(42svh + 48px); }
 
 /* Bottom-right legend card (default view), lifted above the map's corner controls. */
 .pa-legend {
@@ -1442,20 +1454,19 @@ p  { margin: 0 0 0.75rem; }
   .sb { position:relative; bottom:auto; flex:0 0 auto; width:100%; max-height:45svh;
     border-right:none; border-bottom:0.5px solid rgba(0,0,0,0.10); }
   .canvas-wrap { min-height:55svh; }
-  /* PA floating boxes shrink so the left box + rail fit a narrow screen. */
-  .pa-box, .rail { width: 44vw; padding: 10px 11px; }
-  .pa-search { width: min(72vw, 250px); }
+  /* PA hybrid shell on mobile: stack the left panel above the canvas (IN FLOW —
+     never a fixed overlay, so the camera helper still reads 0). Shrink the top-bar
+     search; the dock stays bounded in the canvas foot (no fullscreen takeover). */
+  .pa-topbar-search { width: min(56vw, 250px); }
+  .pa-body { flex-direction: column; }
+  .pa-panel { flex: 0 0 auto; width: 100%; max-height: 38svh;
+    border-right: none; border-bottom: 0.5px solid var(--sidebar-edge); }
+  .pa-canvas { min-height: 54svh; }
+  .pa-canvas .canvas-wrap { min-height: 0; }   /* fill pa-canvas, not the shared 55svh */
   .pa-year { width: min(84vw, 300px); }
-  /* Bottom-left on mobile so it clears the centred year pill + corner controls. */
+  .dt-panel { width: calc(100vw - 24px); max-height: 48svh; }
+  /* Bottom-left so it clears the centred year pill + corner controls. */
   .pa-legend { width: 42vw; left: 12px; right: auto; bottom: 10px; }
-  /* Bottom table: pin to the viewport bottom and go fullscreen below the header.
-     Reset the desktop bounded module (width/borders/radius) so it's edge-to-edge. */
-  .dt { position: fixed; }
-  .dt.dt--open { top: 50px; }
-  .dt.dt--open .dt-panel {
-    max-height: none; flex: 1 1 auto;
-    width: 100%; border-left: 0; border-right: 0; border-radius: 0;
-  }
   .shell-footer-grid { grid-template-columns:1fr; gap:1.25rem; }
 }
 
