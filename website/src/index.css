@@ -631,18 +631,14 @@ p  { margin: 0 0 0.75rem; }
 .rail-v-muted { color: var(--text-subtle); font-weight: 500; font-style: italic; }
 .rail-note { font-size: 11px; color: var(--text-muted); line-height: 1.5; margin: 8px 0 0; }
 
-/* ----- Bottom data table (Property Assessment, Felt zone 4) ----- */
-/* Bottom-anchored overlay; collapsed = a CENTRED pill handle, click it (or press
-   T) to raise the full-width panel. The container is pointer-events:none and has
-   no background, so the bottom CORNERS pass through — the map's bottom-right
-   attribution/scale controls stay clickable, and the immersive footer-reveal grip
-   (moved to the bottom-LEFT corner) stays tappable on touch. z-index:96 keeps the
-   pill/panel above the footer reveal (z95) so the chrome reveals BEHIND the map
-   zones (they "stay visible"). Desktop = drawer; narrow = fullscreen (media below). */
+/* ----- Analysis dock (Property Assessment, Felt zone 4) ----- */
+/* The bottom item of the canvas foot (the year slider rides above it). Collapsed =
+   a CENTRED pill handle; click it (or press T) to raise the bounded panel. The
+   container is pointer-events:none with no background, so the bottom CORNERS pass
+   through — the map's attribution/scale controls and the footer-reveal grip stay
+   clickable. Only the pill + panel are interactive. Desktop = drawer; narrow =
+   fullscreen (media below). */
 .dt {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  z-index: 96;
   display: flex;
   flex-direction: column;
   align-items: center;    /* centre the pill handle AND the bounded panel */
@@ -820,11 +816,21 @@ p  { margin: 0 0 0.75rem; }
 /* (The neighbourhood search moved from a floating top-centre pill into the
    persistent top context bar — see .pa-topbar-search above.) */
 
-/* Bottom-centre year slider pill (lifted clear of the table in analyst view).
-   z-index:96 so it stays above the raised table when lifted. */
+/* Canvas foot: the year slider stacked above the analysis dock, bottom-anchored.
+   The flex column means the slider's lift tracks the dock's REAL laid-out height
+   (collapsed pill or open panel) — no 42svh magic number. Click-through; only the
+   slider + the dock's pill/panel are interactive. z-index:96 keeps it above the
+   footer reveal (z95). */
+.pa-foot {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 96;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  pointer-events: none;
+}
+
+/* Year slider pill — a static flex item in the foot, centred above the dock. */
 .pa-year {
-  position: absolute; bottom: 46px; left: 50%; transform: translateX(-50%);
-  z-index: 96; display: flex; align-items: center; gap: 10px;
+  pointer-events: auto;
+  display: flex; align-items: center; gap: 10px;
   width: 300px; max-width: calc(100vw - 24px);
   background: var(--sidebar-bg); border: 1px solid var(--sidebar-edge);
   border-radius: 999px; box-shadow: 0 4px 14px rgba(74,60,33,0.16);
@@ -832,8 +838,6 @@ p  { margin: 0 0 0.75rem; }
 }
 .pa-year-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
 .pa-year .sb-year-slider { flex: 1 1 auto; margin: 0; }
-/* Clear the whole table stack: the panel (max 42svh) + the ~30px handle above it. */
-.is-analyst .pa-year { bottom: calc(42svh + 48px); }
 
 /* Bottom-right legend card (default view), lifted above the map's corner controls. */
 .pa-legend {

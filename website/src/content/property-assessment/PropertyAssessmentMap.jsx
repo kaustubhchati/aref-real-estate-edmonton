@@ -886,47 +886,52 @@ export default function PropertyAssessmentMap() {
             </div>
           )}
 
-          {/* YEAR — slim slider bottom-centre; lifted clear of the table in analyst
-              view (CSS keys off .is-analyst on the article). */}
-          {url && year != null && (
-            <div className="pa-year">
-              <span className="pa-year-label">
-                Year <strong className="sb-year-value">{sliderYear ?? year}</strong>
-              </span>
-              <input
-                type="range"
-                className="sb-year-slider"
-                aria-label="Year"
-                min={Math.min(...years)}
-                max={Math.max(...years)}
-                step={1}
-                value={sliderYear ?? year}
-                onChange={(e) => slideYear(Number(e.target.value))}
-              />
-            </div>
-          )}
+          {/* CANVAS FOOT — the year slider rides ABOVE the analysis dock in a
+              bottom-anchored flex column, so the slider's lift tracks the dock's
+              REAL laid-out height (collapsed pill or open panel) with no magic
+              number. pointer-events:none lets map clicks pass between them. */}
+          <div className="pa-foot">
+            {/* YEAR — slim slider, centred above the dock. */}
+            {url && year != null && (
+              <div className="pa-year">
+                <span className="pa-year-label">
+                  Year <strong className="sb-year-value">{sliderYear ?? year}</strong>
+                </span>
+                <input
+                  type="range"
+                  className="sb-year-slider"
+                  aria-label="Year"
+                  min={Math.min(...years)}
+                  max={Math.max(...years)}
+                  step={1}
+                  value={sliderYear ?? year}
+                  onChange={(e) => slideYear(Number(e.target.value))}
+                />
+              </div>
+            )}
 
-          {/* BOTTOM data table — the handle doubles as the analyst-view toggle
-              (open = analystMode). Analytical surface over the resident gjView;
-              rows link both ways to the shared selection. Only with data loaded. */}
-          {url && gjView && (
-            <DataTable
-              rows={tableRows}
-              metric={metric}
-              metricLabel={selectedMetric.label}
-              activeIndex={activeYearIndex}
-              year={year}
-              years={years}
-              selectedIds={selectedIds}
-              onSelectRow={selectNeighbourhood}
-              onHoverRow={setHoveredRowId}
-              aggregate={selectionAggregate}
-              onClearSelection={() => setSelectedIds([])}
-              onExport={handleExport}
-              open={analystMode}
-              onToggle={() => setAnalystMode((a) => !a)}
-            />
-          )}
+            {/* ANALYSIS DOCK — the handle doubles as the analyst-view toggle
+                (open = analystMode). Analytical surface over the resident gjView;
+                rows link both ways to the shared selection. Only with data loaded. */}
+            {url && gjView && (
+              <DataTable
+                rows={tableRows}
+                metric={metric}
+                metricLabel={selectedMetric.label}
+                activeIndex={activeYearIndex}
+                year={year}
+                years={years}
+                selectedIds={selectedIds}
+                onSelectRow={selectNeighbourhood}
+                onHoverRow={setHoveredRowId}
+                aggregate={selectionAggregate}
+                onClearSelection={() => setSelectedIds([])}
+                onExport={handleExport}
+                open={analystMode}
+                onToggle={() => setAnalystMode((a) => !a)}
+              />
+            )}
+          </div>
         </div>
       </div>
     </article>
