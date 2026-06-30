@@ -761,15 +761,14 @@ p  { margin: 0 0 0.75rem; }
   font-size: 12.5px; line-height: 1.4; color: var(--text);
 }
 .pa-panel > *:last-child { margin-bottom: 0; }   /* hug content — no trailing gap */
-.pa-box-title { font-size: 14px; font-weight: 600; color: var(--text); margin: 0 0 2px; }
-.pa-box-sub { font-size: 11px; color: var(--text-muted); margin: 0 0 10px; }
 .pa-panel .opt-toggle-gel { margin: 0 0 10px; }
 .pa-panel .opt-toggle, .pa-panel .seg { margin: 0; }
+.pa-hint { font-size: 10.5px; color: var(--text-muted); font-style: italic; margin: 0 0 10px; }
 .pa-box-ref { font-size: 10px; color: var(--text-muted); line-height: 1.45; margin: 10px 0 0; }
 .pa-box-ref a { color: var(--accent); }
 
-/* Analyst area-select tools (left box, analyst view) + the export menu. */
-.pa-tools-row { display: flex; gap: 8px; margin-top: 8px; }
+/* Small button used by the export-menu trigger (was shared with the retired
+   analyst tools box). */
 .pa-tools-btn {
   display: inline-flex; align-items: center; gap: 5px;
   font-family: inherit; font-size: 0.78rem; font-weight: 500;

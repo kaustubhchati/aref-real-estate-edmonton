@@ -255,10 +255,19 @@ export default function PropertyAssessmentMap() {
   // The neighbourhood whose table row is hovered — mirrored to the map's `hover`
   // feature-state so a row lights up its polygon (and vice-versa). null = none.
   const [hoveredRowId, setHoveredRowId] = useState(null);
-  // Analyst view: the bottom data table is raised. The table handle toggles it;
-  // a box-select enters it. While on, the left control box + search hide and the
-  // area-select tools show — the table becomes the stats surface.
-  const [analystMode, setAnalystMode] = useState(false);
+  // The analysis dock (bottom data table) is RAISED. Two explicit RAISE drivers,
+  // unchanged: a box-select of ≥2 auto-raises it (boxSelect), and the pill / T key
+  // toggle it by hand. The persistent panel + canvas chrome no longer hide when
+  // it's open (they did under the old full-screen "analyst mode").
+  const [dockOpen, setDockOpen] = useState(false);
+
+  // Auto-collapse the dock when the selection empties — the ONE intentional
+  // behaviour change in the layout re-architecture (previously the dock latched
+  // open until toggled). This only LOWERS it on an empty set, so a manual open at
+  // 0 selection still sticks: selectedIds doesn't change on a toggle, so this
+  // effect doesn't re-run and re-close it.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { if (selectedIds.length === 0) setDockOpen(false); }, [selectedIds]);
 
   // Load the manifest once on mount and seed the year in the SAME update (no
   // frame where the manifest is loaded but no year is chosen → no empty-state
@@ -576,8 +585,8 @@ export default function PropertyAssessmentMap() {
       }
     }
     setSelectedIds(ids);
-    // An area select (≥2) is analyst work — raise the table to show the aggregate.
-    if (ids.length >= 2) setAnalystMode(true);
+    // An area select (≥2) is analyst work — raise the dock to show the aggregate.
+    if (ids.length >= 2) setDockOpen(true);
   }
 
   // Scoped export (C4): the selection if any, else ALL features. Built from the
@@ -724,7 +733,7 @@ export default function PropertyAssessmentMap() {
   const empty = url ? null : describeEmpty(manifest, city, year);
 
   return (
-    <article className={`content-map pa-map${analystMode ? " is-analyst" : ""}`}>
+    <article className="content-map pa-map">
       {/* ===== TOP CONTEXT BAR — identity/context + neighbourhood search ===== */}
       <header className="pa-topbar">
         <div className="pa-topbar-context">
@@ -735,10 +744,9 @@ export default function PropertyAssessmentMap() {
             </span>
           )}
         </div>
-        {/* Search — default view only (hidden in analyst view, where all lookup
-            happens in the table). The dropdown is bounded (SearchInput). The
-            analyst-view gate is removed in the state refactor step. */}
-        {url && !analystMode && (
+        {/* Search — persistent in the bar (the dock no longer takes over the
+            screen, so search stays available while analysing). Bounded dropdown. */}
+        {url && (
           <div className="pa-topbar-search">
             <SearchInput
               placeholder="Search neighbourhood…"
@@ -752,56 +760,36 @@ export default function PropertyAssessmentMap() {
       {/* ===== BODY: persistent left panel + map canvas ===== */}
       <div className="pa-body">
         {/* LEFT PANEL — persistent glass column, in flow (the map reflows into the
-            canvas beside it, so it needs no camera padding). Holds the map controls
-            (default) or the area-select tools (analyst view); the single-select
-            detail accretes below in a later step. The city switcher renders even
-            with no data so a user can leave the Calgary empty state. The
-            analyst-view swap is removed in the state-refactor step. */}
-        <aside
-          className="pa-panel"
-          aria-label={analystMode ? "Area selection tools" : "Map controls"}
-        >
-          {!analystMode ? (
-            <>
-              <div className="opt-toggle-gel">
-                <OptionToggle label="City" options={CITIES} value={city} onChange={changeCity} />
-              </div>
-              {/* Single-select — the fill encodes exactly one metric (METRICS source). */}
-              {url && (
-                <SegmentedControl label="Metric" options={METRICS} value={metric} onChange={setMetric} />
-              )}
-              {url && (
-                <p className="pa-box-ref">
-                  <span>Updated {manifest?.last_updated ?? "—"}.</span>{" "}
-                  Some neighbourhoods were renamed (e.g. Oliver → Wîhkwêntôwin, 2025); a
-                  neighbourhood's full history shows under its current name.{" "}
-                  <a
-                    href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Naming Committee
-                  </a>.
-                </p>
-              )}
-            </>
-          ) : (
-            <>
-              <div className="pa-box-title">Area select</div>
-              <p className="pa-box-sub">Shift-drag the map to select neighbourhoods.</p>
-              <div className="pa-tools-row">
-                <button
-                  type="button"
-                  className="pa-tools-btn"
-                  onClick={() => setSelectedIds([])}
-                  disabled={!selectedIds.length}
-                >
-                  Clear{selectedIds.length ? ` (${selectedIds.length})` : ""}
-                </button>
-              </div>
-              {/* Export lives in the table header (reachable on mobile, where the
-                  table is fullscreen and this toolset is behind it). */}
-            </>
+            canvas beside it, so it needs no camera padding). Always holds the map
+            controls; the single-select detail accretes below when one neighbourhood
+            is selected. The city switcher renders even with no data so a user can
+            leave the Calgary empty state. */}
+        <aside className="pa-panel" aria-label="Map controls">
+          <div className="opt-toggle-gel">
+            <OptionToggle label="City" options={CITIES} value={city} onChange={changeCity} />
+          </div>
+          {/* Single-select — the fill encodes exactly one metric (METRICS source). */}
+          {url && (
+            <SegmentedControl label="Metric" options={METRICS} value={metric} onChange={setMetric} />
+          )}
+          {/* Box-select affordance — persistent now that the analyst tools box is
+              gone (its Clear button lives in the dock's aggregate header). */}
+          {url && (
+            <p className="pa-hint">Tip: shift-drag the map to select an area.</p>
+          )}
+          {url && (
+            <p className="pa-box-ref">
+              <span>Updated {manifest?.last_updated ?? "—"}.</span>{" "}
+              Some neighbourhoods were renamed (e.g. Oliver → Wîhkwêntôwin, 2025); a
+              neighbourhood's full history shows under its current name.{" "}
+              <a
+                href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Naming Committee
+              </a>.
+            </p>
           )}
 
           {/* SINGLE-SELECT DETAIL — accretes below the controls when EXACTLY one
@@ -817,7 +805,6 @@ export default function PropertyAssessmentMap() {
               sparkValues={sparkValues}
               activeIndex={activeYearIndex}
               onClear={() => setSelectedIds([])}
-              compact={analystMode}
             />
           )}
         </aside>
@@ -874,8 +861,9 @@ export default function PropertyAssessmentMap() {
             )}
           </div>
 
-          {/* LEGEND — small card bottom-right (default view only). */}
-          {url && !analystMode && (
+          {/* LEGEND — small card bottom-right; persistent (a map needs its legend
+              while a selection is being analysed). */}
+          {url && (
             <div className="pa-legend">
               <Legend
                 title={selectedMetric.label}
@@ -910,9 +898,9 @@ export default function PropertyAssessmentMap() {
               </div>
             )}
 
-            {/* ANALYSIS DOCK — the handle doubles as the analyst-view toggle
-                (open = analystMode). Analytical surface over the resident gjView;
-                rows link both ways to the shared selection. Only with data loaded. */}
+            {/* ANALYSIS DOCK — the handle doubles as the dock toggle (open =
+                dockOpen). Analytical surface over the resident gjView; rows link
+                both ways to the shared selection. Only with data loaded. */}
             {url && gjView && (
               <DataTable
                 rows={tableRows}
@@ -927,8 +915,8 @@ export default function PropertyAssessmentMap() {
                 aggregate={selectionAggregate}
                 onClearSelection={() => setSelectedIds([])}
                 onExport={handleExport}
-                open={analystMode}
-                onToggle={() => setAnalystMode((a) => !a)}
+                open={dockOpen}
+                onToggle={() => setDockOpen((d) => !d)}
               />
             )}
           </div>
