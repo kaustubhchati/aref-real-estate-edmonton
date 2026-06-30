@@ -43,6 +43,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
+  getFacetedMinMaxValues,
   getFacetedRowModel,
   getFacetedUniqueValues,
   getFilteredRowModel,
@@ -82,6 +83,9 @@ const METRIC_COLS = METRICS.map((m) => ({
   label: PRESENTATION[m.key]?.label ?? m.label,
   fmt: PRESENTATION[m.key]?.fmt ?? m.fmt,
 }));
+// The metric column ids — the range facet targets the ACTIVE one; on a metric
+// switch we drop any range filter left on a different metric (units differ).
+const METRIC_KEYS = new Set(METRIC_COLS.map((m) => m.key));
 
 // Categorical facets (D6) — VIEW-only table filters, data-driven from the rows.
 // Each is a HIDDEN column (a faceting/filtering accessor that is never rendered) +
@@ -100,6 +104,16 @@ const FACETS = [
 // An empty/absent set means NO filter (every row passes) — so the default is "all".
 function multiSelectFilter(row, columnId, selected) {
   return !selected?.length || selected.includes(row.getValue(columnId));
+}
+
+// Numeric RANGE filter (D7 metric-range facet) — a row passes when its value is in
+// [lo, hi]. Set on the metric columns; the slider targets the ACTIVE metric's column.
+// A null value (non-reportable polygon) has no value to be in range, so it drops out
+// while the range is active. No filter value = every row passes.
+function rangeFilter(row, columnId, value) {
+  if (!value) return true;
+  const v = row.getValue(columnId);
+  return v != null && v >= value[0] && v <= value[1];
 }
 
 export default function DataTable({
@@ -156,6 +170,7 @@ export default function DataTable({
       },
       sortUndefined: "last",
       enableGlobalFilter: false,
+      filterFn: rangeFilter,   // the metric-range facet targets the ACTIVE metric's column
       meta: { numeric: true, metricKey: m.key },
     })),
     {
@@ -223,6 +238,7 @@ export default function DataTable({
     getFilteredRowModel: getFilteredRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
+    getFacetedMinMaxValues: getFacetedMinMaxValues(),
   });
 
   const viewRows = table.getRowModel().rows;
@@ -241,6 +257,25 @@ export default function DataTable({
       cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]
     );
   }
+  // Metric-RANGE facet (D7) — targets the ACTIVE metric's own column. Bounds come
+  // from getFacetedMinMaxValues (re-derived on metric switch); the value is that
+  // column's [lo, hi] filter (undefined = full range = no filter). A range that
+  // spans the full bounds clears the filter so it doesn't count as active.
+  const activeCol = METRIC_COLS.find((m) => m.key === metric);
+  const rangeBounds = table.getColumn(metric)?.getFacetedMinMaxValues();
+  const rangeValue = table.getColumn(metric)?.getFilterValue();
+  const setRange = ([lo, hi]) => {
+    if (!rangeBounds) return;
+    const full = lo <= rangeBounds[0] && hi >= rangeBounds[1];
+    table.getColumn(metric)?.setFilterValue(full ? undefined : [lo, hi]);
+  };
+  // On a metric switch, drop any range filter left on a DIFFERENT metric (its units
+  // no longer apply). Categorical facets (non-metric ids) are metric-independent and
+  // persist untouched.
+  useEffect(() => {
+    setColumnFilters((prev) => prev.filter((cf) => !METRIC_KEYS.has(cf.id) || cf.id === metric));
+  }, [metric]);
+
   // "Clear filters" resets the FACETS only — distinct from the selection-mode
   // "Clear selection" (which empties the selected set). The two never co-exist
   // (facets show in normal mode; Clear-selection in the AggregateHeader), so the
@@ -322,6 +357,15 @@ export default function DataTable({
                     ? <FacetDropdown key={f.id} {...shared} />
                     : <FacetToggles key={f.id} {...shared} />;
                 })}
+                {/* Metric-range facet — on the active metric; bounds re-derive on
+                    metric switch (refresh-by-design). */}
+                <RangeFacet
+                  label={activeCol?.label ?? metricLabel}
+                  fmt={activeCol?.fmt ?? ((v) => v)}
+                  bounds={rangeBounds}
+                  value={rangeValue}
+                  onChange={setRange}
+                />
                 {anyFacet && (
                   <button type="button" className="dt-facets-clear" onClick={clearFacets}>
                     Clear filters
@@ -503,6 +547,37 @@ function FacetToggles({ label, options, selected, labelOf, onToggle }) {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+// The metric-RANGE facet: a min + a max slider over the active metric's bounds, with
+// a live readout. Two stacked native sliders (legible + robust over an overlapping
+// dual-thumb hack); each clamps against the other so lo never passes hi. `value` is
+// the column's [lo, hi] filter (undefined = full range); `bounds` is [min, max] from
+// getFacetedMinMaxValues — null/degenerate bounds render nothing.
+function RangeFacet({ label, fmt, bounds, value, onChange }) {
+  if (!bounds || bounds[0] === bounds[1]) return null;
+  const [min, max] = bounds;
+  const [lo, hi] = value ?? [min, max];
+  const step = (max - min) / 100;
+  return (
+    <div className="dt-facet-range">
+      <span className="dt-facet-range-cap">
+        {label}: <strong>{fmt(lo)} – {fmt(hi)}</strong>
+      </span>
+      <div className="dt-facet-range-rows">
+        <input
+          type="range" min={min} max={max} step={step} value={lo}
+          aria-label={`${label} minimum`}
+          onChange={(e) => onChange([Math.min(+e.target.value, hi), hi])}
+        />
+        <input
+          type="range" min={min} max={max} step={step} value={hi}
+          aria-label={`${label} maximum`}
+          onChange={(e) => onChange([lo, Math.max(+e.target.value, lo)])}
+        />
+      </div>
     </div>
   );
 }
