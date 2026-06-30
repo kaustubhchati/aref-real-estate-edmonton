@@ -307,6 +307,12 @@ export default function PropertyAssessmentMap() {
   // it's open (they did under the old full-screen "analyst mode").
   const [dockOpen, setDockOpen] = useState(false);
 
+  // The tuning rack's range slot — its DOM node, captured by a ref-callback so
+  // DataTable can PORTAL its metric-range slider into the rack (the slider's
+  // TanStack wiring stays in the dock; only its UI moves). null until the rack
+  // mounts; setting it re-renders so the portal finds its target. [tuning-bay]
+  const [rangeSlot, setRangeSlot] = useState(null);
+
   // Auto-collapse the dock when the selection empties — the ONE intentional
   // behaviour change in the layout re-architecture (previously the dock latched
   // open until toggled). This only LOWERS it on an empty set, so a manual open at
@@ -848,6 +854,7 @@ export default function PropertyAssessmentMap() {
             city={city}
             onCityChange={changeCity}
             year={year}
+            sliderYear={sliderYear}
             metrics={METRICS}
             metric={metric}
             onMetricChange={setMetric}
@@ -955,27 +962,42 @@ export default function PropertyAssessmentMap() {
             </div>
           )}
 
-          {/* CANVAS FOOT — the year slider rides ABOVE the analysis dock in a
-              bottom-anchored flex column, so the slider's lift tracks the dock's
+          {/* CANVAS FOOT — the TUNING RACK rides ABOVE the analysis dock in a
+              bottom-anchored flex column, so the rack's lift tracks the dock's
               REAL laid-out height (collapsed pill or open panel) with no magic
               number. pointer-events:none lets map clicks pass between them. */}
           <div className="pa-foot">
-            {/* YEAR — slim slider, centred above the dock. */}
-            {url && year != null && (
-              <div className="pa-year">
-                <span className="pa-year-label">
-                  Year <strong className="sb-year-value">{sliderYear ?? year}</strong>
-                </span>
-                <input
-                  type="range"
-                  className="sb-year-slider"
-                  aria-label="Year"
-                  min={Math.min(...years)}
-                  max={Math.max(...years)}
-                  step={1}
-                  value={sliderYear ?? year}
-                  onChange={(e) => slideYear(Number(e.target.value))}
-                />
+            {/* TUNING RACK — one slim fixed band holding every slider (year +
+                value-range), replacing the old floating .pa-year pill (the
+                bottom-centre occluder). A proper bottom band, not a floating
+                pill, so it never occludes the map centre. Present in BOTH dock
+                states. */}
+            {url && (
+              <div className="pa-rack" role="group" aria-labelledby="pa-rack-title">
+                <span className="pa-rack-title" id="pa-rack-title">Tuning</span>
+                {/* YEAR — always live; same slideYear/sliderYear throttle wiring. */}
+                {year != null && (
+                  <div className="pa-rack-slot">
+                    <span className="pa-rack-label">Year</span>
+                    <input
+                      type="range"
+                      className="sb-year-slider pa-rack-slider"
+                      aria-label="Year"
+                      min={Math.min(...years)}
+                      max={Math.max(...years)}
+                      step={1}
+                      value={sliderYear ?? year}
+                      onChange={(e) => slideYear(Number(e.target.value))}
+                    />
+                    <strong className="sb-year-value pa-rack-value">{sliderYear ?? year}</strong>
+                  </div>
+                )}
+                {/* RANGE slot — DataTable PORTALS its metric-range slider here
+                    (its TanStack wiring + the VIEW-only brush stay in the dock).
+                    A fixed slot: the range is disabled, not removed, when it
+                    doesn't apply (selection mode). The ref-callback hands the
+                    slot's DOM node down so the portal has a target. */}
+                <div className="pa-rack-slot pa-rack-range-slot" ref={setRangeSlot} />
               </div>
             )}
 
@@ -1000,6 +1022,7 @@ export default function PropertyAssessmentMap() {
                 onBrush={setBrushedIds}
                 open={dockOpen}
                 onToggle={() => setDockOpen((d) => !d)}
+                rangeSlot={rangeSlot}
               />
             )}
           </div>

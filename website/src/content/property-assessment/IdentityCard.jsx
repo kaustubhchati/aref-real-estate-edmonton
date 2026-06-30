@@ -5,10 +5,10 @@
 // panel (.pa-panel). One card, four parts in order:
 //   1. Title   — "Property Assessment" (Title Case house standard) — FIXED.
 //   2. City    — the existing OptionToggle, relocated here unchanged.
-//   3. Year    — a READ-ONLY readout of the COMMITTED year, in green. The year
-//                slider in the canvas foot is still the control; this only
-//                reflects `year` once the slider commits it (so it lags the
-//                live drag readout in the foot by design).
+//   3. Year    — a READ-ONLY readout of the year, in green, tracking the LIVE
+//                slider position (sliderYear ?? year) so it updates as the year
+//                slider in the tuning rack is dragged. The slider is still the
+//                control; this card only mirrors its current value.
 //   4. Metric  — the SegmentedControl, COLLAPSED by default to a chip showing
 //                the active metric; click to expand the full list, pick to
 //                collapse again. Same METRICS / metric / setMetric wiring.
@@ -31,6 +31,7 @@ export default function IdentityCard({
   city,
   onCityChange,
   year,
+  sliderYear,
   metrics,
   metric,
   onMetricChange,
@@ -52,13 +53,14 @@ export default function IdentityCard({
         <OptionToggle label="City" options={cities} value={city} onChange={onCityChange} />
       </div>
 
-      {/* YEAR — read-only green readout of the COMMITTED year. The slider in the
-          foot commits it (on a throttle), so this value is the one dynamic
-          figure on an otherwise fixed card. Hidden until a year exists. */}
+      {/* YEAR — read-only green readout tracking the LIVE slider position
+          (sliderYear ?? year), so it updates as the rack's year slider drags.
+          The one dynamic figure on an otherwise fixed card. Hidden until a
+          year exists. */}
       {hasData && year != null && (
         <div className="pa-id-year">
           <span className="pa-id-cap">Year</span>
-          <span className="pa-id-year-value">{year}</span>
+          <span className="pa-id-year-value">{sliderYear ?? year}</span>
         </div>
       )}
 
