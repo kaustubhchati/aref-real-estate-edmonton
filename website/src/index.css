@@ -832,6 +832,55 @@ p  { margin: 0 0 0.75rem; }
 .pa-box-ref { font-size: 10px; color: var(--text-muted); line-height: 1.45; margin: 10px 0 0; }
 .pa-box-ref a { color: var(--accent); }
 
+/* ----- Identity card (fixed, top of the PA left panel) ----- */
+/* Pinned card holding the section title + city switcher + green committed-year
+   readout + collapsible metric selector. Light idiom: a raised white card with
+   a warm hairline on the panel's glass; the inner controls keep their own
+   styles. Fixed chrome; only the green year value + active metric change. */
+.pa-id-card {
+  display: flex; flex-direction: column; gap: 10px;
+  background: var(--bg-raised);
+  border: 1px solid var(--sidebar-edge);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--gel-bevel), var(--gel-lift);
+  padding: 12px;
+  margin: 0 0 12px;
+}
+.pa-id-card .opt-toggle-gel { margin: 0; }   /* card gap handles spacing */
+.pa-id-title {
+  margin: 0;
+  font-size: 15px; font-weight: 700; letter-spacing: -0.01em;
+  color: var(--text);
+}
+/* Shared cap label — matches .opt-toggle-label / .seg-label so the rows align. */
+.pa-id-cap {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-muted); font-weight: 600; margin: 0;
+}
+.pa-id-metric .pa-id-cap { margin: 0 0 6px; }   /* cap sits above the chip */
+
+/* YEAR — read-only readout; the green value is the one dynamic figure here. */
+.pa-id-year { display: flex; align-items: baseline; gap: 8px; }
+.pa-id-year-value {
+  font-size: 18px; font-weight: 700; color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* METRIC chip (collapsed) — a single gel pill showing the active metric; the
+   caret signals it expands to the full SegmentedControl on click. */
+.pa-id-metric-chip {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 7px 10px; font-family: inherit; font-size: 0.78rem; font-weight: 600;
+  color: var(--accent-dark); text-align: left; cursor: pointer;
+  background: var(--gel-grad); border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--gel-bevel), var(--gel-lift);
+  transition: background 120ms;
+}
+.pa-id-metric-chip:hover { background: var(--gel-grad-gloss); }
+.pa-id-metric-current { flex: 1 1 auto; line-height: 1.2; }
+.pa-id-metric-caret { flex: 0 0 auto; color: var(--text-muted); font-size: 10px; }
+
 /* Small button used by the export-menu trigger (was shared with the retired
    analyst tools box). */
 .pa-tools-btn {
