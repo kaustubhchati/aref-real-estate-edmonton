@@ -154,3 +154,39 @@ the 2023 outputs — that divergence is expected, not a defect.
 ### When-this-changes
 If a new confidential snapshot becomes available, a rule may be **re-scored** — recorded as a new
 versioned scorecard, never a silent retune of a live rule.
+
+---
+
+## D6 — The home camera is a tuned per-city preset, not a data-derived fit
+
+### Decision
+The Property Assessment **home view** is a hand-tuned, per-city camera **preset**
+(`HOME_VIEW` in `choroplethStyle.js`) — a `{ center, zoom, pitch, bearing }` with a
+slight north-up pitch — applied on load, on city switch, and by the reset button when
+no selection is active (`easeTo`; reduced-motion / first-load → `jumpTo`). Everywhere
+else the camera stays **data-derived**: the flat `fitToFeatures(bbox, chrome-aware
+padding)` frames a **selection** (box-select) and is the reset target when a selection
+is active.
+
+### Why
+The landing view is a designed first impression — a cinematic, slightly-pitched framing
+of the city reads better than a flat auto-fit to the raw extent (which floats the city in
+dead basemap and has no depth). Framing is an editorial choice for the home; *analysis*
+framing (selection) stays honest and automatic. The two are deliberately different camera
+concepts, both kept.
+
+### Example
+`HOME_VIEW.Edmonton = { center: [-113.485, 53.515], zoom: 10.5, pitch: 18, bearing: 0 }`
+was captured by framing the live map to the design reference (*Home-View Pitch angle*) and
+reading back `getCenter/getZoom/getPitch/getBearing` — not eyeballed. Selection-fit still
+uses the data bbox, so it reframes automatically as data/boundaries change.
+
+### Rejected
+- **A data-derived fit for home too** — uniform but flat and characterless; loses the
+  designed pitch/zoom of the landing.
+- **One global preset for all cities** — dishonest; Edmonton's framing isn't Calgary's.
+
+### When-this-changes
+Each new city needs its **own** `HOME_VIEW` entry (Calgary when it arrives); without one,
+that city has no tuned home until it is captured. `maxBounds` likewise becomes per-city at
+that point (today it is Edmonton-pinned, harmless because Calgary has no map yet).

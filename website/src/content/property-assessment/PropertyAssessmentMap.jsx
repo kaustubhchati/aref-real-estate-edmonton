@@ -48,6 +48,7 @@ import {
 import {
   BASEMAP_STYLE,
   MAP_VIEW,
+  HOME_VIEW,
   METRICS,
   yoyStopsFromValues,
   stopsFromScale,
@@ -70,6 +71,9 @@ import {
 import {
   useChoroplethInteractions,
   indexNamesForSearch,
+  fitToFeatures,
+  applyCameraPreset,
+  makeResetControl,
 } from "./interactions.js";
 import { DUR_BASE, reduceMotion } from "../../components/motion.js";
 import { useSearchParams } from "react-router-dom";
@@ -660,18 +664,117 @@ export default function PropertyAssessmentMap() {
     const y1 = Math.min(startPos.y, endPos.y);
     const y2 = Math.max(startPos.y, endPos.y);
     const ids = [];
+    const selected = [];
     for (const f of gjView.features) {
       const c = geometryCentroid(f.geometry);
       if (!c) continue;
       const pt = mapInst.project(c);
       if (pt.x >= x1 && pt.x <= x2 && pt.y >= y1 && pt.y <= y2) {
         ids.push(f.properties["Neighbourhood ID"]);
+        selected.push(f);
       }
     }
     setSelectedIds(ids);
-    // An area select (≥2) is analyst work — raise the dock to show the aggregate.
-    if (ids.length >= 2) setDockOpen(true);
+    // Selection-fit: frame the selected area in the clear (non-chrome) map region —
+    // ONCE, on this gesture, then hands-off (later year/metric/sort/dock changes
+    // never refit). ≥2 also raises the dock, so reserve the console's height in the
+    // padding (it's about to open) — deterministic, no waiting on the animation.
+    if (ids.length >= 2) {
+      setDockOpen(true);
+      fitToFeatures(mapInst, selected, { reserveConsole: true });
+    } else if (ids.length === 1) {
+      fitToFeatures(mapInst, selected);
+    }
   }
+
+  // --- Camera: pitched HOME preset + reset (note 15 + amendment) -------------
+  // HOME is a TUNED per-city pitched preset (HOME_VIEW), NOT a data-derived fit —
+  // applied on load + city switch. The flat data-derived fit (fitToFeatures) is
+  // KEPT for selection framing. No control interaction moves the camera: this fires
+  // only on a genuine CITY change (a year/metric paint-swap leaves gj+city alone).
+
+  // Save the live camera so a MapView REMOUNT can restore it. The no-prior-year YoY
+  // excursion (earliest year + YoY) swaps MapView↔EmptyState, remounting the map and
+  // changing the `map` identity; without this, the remount would re-home (a control
+  // interaction moving the camera). Restored below instead.
+  const lastCamRef = useRef(null);
+  useEffect(() => {
+    if (!map) return undefined;
+    const save = () => {
+      lastCamRef.current = {
+        center: map.getCenter(), zoom: map.getZoom(),
+        pitch: map.getPitch(), bearing: map.getBearing(),
+      };
+    };
+    map.on("moveend", save);
+    return () => { try { map.off("moveend", save); } catch { /* gone */ } };
+  }, [map]);
+
+  // Apply HOME, distinguishing the THREE reasons this effect ([map, gj, city]) runs:
+  //   • city changed      → home to the new city's preset (first instant, later eased)
+  //   • same city, NEW map → a remount (e.g. the no-prior-year YoY excursion): RESTORE
+  //                          the saved camera, don't re-home — a remount isn't a switch
+  //   • same city+map, gj  → a data reload (a future second data city's file arrives):
+  //                          leave the camera alone (the city-changed run already homed)
+  // Gating restore on MAP IDENTITY (not just "homedCityRef===city") is what keeps a
+  // genuine A→B city switch from having its second run (B's data load) wrongly restore
+  // A's camera over B. [camera-model]
+  const homedCityRef = useRef(null);
+  const lastMapRef = useRef(null);
+  const firstHomeRef = useRef(true);
+  useEffect(() => {
+    if (!map || !gj) return;
+    if (homedCityRef.current !== city) {
+      homedCityRef.current = city;
+      lastMapRef.current = map;
+      applyCameraPreset(map, HOME_VIEW[city], { ease: !firstHomeRef.current });
+      firstHomeRef.current = false;
+    } else if (lastMapRef.current !== map) {
+      lastMapRef.current = map; // same city but a new map instance = a remount → restore
+      if (lastCamRef.current) { try { map.jumpTo(lastCamRef.current); } catch { /* gone */ } }
+    }
+  }, [map, gj, city]);
+
+  // MapView unmounts whenever we show an empty/error state instead of it (no-prior-
+  // year, fetch error, or no data). Drop mapReady so the SKELETON re-covers the next
+  // remount — url stays set across the no-prior-year excursion, so the fetch effect's
+  // own reset doesn't fire, and without this the remounted map would flash its flat
+  // construction fallback before the camera restore applies. [camera-model]
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { if (!url || fetchError || noPriorYear) setMapReady(false); }, [url, fetchError, noPriorYear]);
+
+  // RESET control: context-aware single button — fit-to-SELECTION (flat) when a
+  // selection exists, else return to the pitched HOME preset. Held in a ref (reads
+  // fresh state) so the control is added to the map ONCE; the ref is rewritten each
+  // render (the live-callback pattern MapView uses for onLoad).
+  const resetRef = useRef(null);
+  // eslint-disable-next-line react-hooks/refs
+  resetRef.current = () => {
+    if (!map) return;
+    if (selectedIds.length >= 1 && gjView) {
+      const set = new Set(selectedIds.map(String));
+      fitToFeatures(map, gjView.features.filter((f) => set.has(String(f.properties["Neighbourhood ID"]))));
+    } else {
+      applyCameraPreset(map, HOME_VIEW[city], { ease: true });
+    }
+  };
+  useEffect(() => {
+    if (!map) return undefined;
+    const ctrl = makeResetControl(() => resetRef.current?.());
+    map.addControl(ctrl, "top-right");
+    return () => { try { map.removeControl(ctrl); } catch { /* map already gone */ } };
+  }, [map]);
+
+  // Dev-only: expose the live map for console debugging (and headless camera
+  // checks). import.meta.env.DEV is statically false in prod, so this is stripped.
+  // Cleared on teardown so a removed instance isn't pinned on window.
+  useEffect(() => {
+    if (import.meta.env.DEV && map) {
+      window.__paMap = map;
+      return () => { try { delete window.__paMap; } catch { /* ignore */ } };
+    }
+    return undefined;
+  }, [map]);
 
   // Honest area aggregate over the SELECTION (C3) — the box-selected set rolled up by
   // aggregateFeatures (the shared parcel-weighted math). Null until ≥2 are selected.

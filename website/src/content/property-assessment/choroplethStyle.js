@@ -22,11 +22,30 @@ import { CITY_BOUNDS } from "../../config/cityBounds.js";
 // (Data URL no longer lives here — single source of truth is dataSources.js,
 // which the page resolves from the (city, year) controls.)
 export const MAP_VIEW = {
-  center: [-113.4956, 53.5356],   // Edmonton area-weighted centroid (centres default + constrained view)
+  // center/zoom are only the CONSTRUCTION FALLBACK (the map must build with some
+  // view before HOME_VIEW is applied). The real HOME view is the tuned pitched
+  // HOME_VIEW preset below — applied on load + city switch; the data-derived
+  // fitToFeatures handles only SELECTION framing (see HOME_VIEW + METHODOLOGY D6).
+  center: [-113.4956, 53.5356],   // Edmonton area-weighted centroid (pre-data placeholder)
   zoom: 10.2,
   minZoom: 7,
   maxZoom: 17,
-  maxBounds: CITY_BOUNDS.Edmonton,   // lock pan to the city extent (per-city config)
+  // Pan limit (NOT the home view). Pinned to Edmonton at mount; per-city maxBounds
+  // is a Calgary-campaign follow-up (Calgary has no map today — url is null there).
+  maxBounds: CITY_BOUNDS.Edmonton,
+};
+
+// HOME_VIEW — the cinematic landing camera per city: a TUNED pitched preset, NOT a
+// data-derived fit. Applied on load, on city-switch, and by the reset button when no
+// selection is active (easeTo; reduced-motion / first-load → jumpTo). The flat
+// data-derived fit (fitToFeatures) is kept for SELECTION framing + reset-with-a-
+// selection — two distinct camera concepts. The Edmonton values were captured by
+// framing the live map to the design reference (Home-View Pitch angle) and reading
+// back getCenter/getZoom/getPitch/getBearing (bearing 0 = north-up; the tilt is
+// pitch only). Per-city by design — Calgary needs its own preset when it arrives.
+// This is the ONE deliberate departure from data-derived framing (see METHODOLOGY).
+export const HOME_VIEW = {
+  Edmonton: { center: [-113.485, 53.515], zoom: 10.5, pitch: 18, bearing: 0 },
 };
 
 // Basemap style is shared + base-resolved; re-exported so consumers here are unchanged.
