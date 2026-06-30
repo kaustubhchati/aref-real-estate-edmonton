@@ -12,8 +12,9 @@
 //   • PNG            — the current map canvas (needs preserveDrawingBuffer)
 //
 // Scope is the caller's chosen feature set (selection, or all when nothing is
-// selected). Filenames + provenance carry the runtime city/year (state, not
-// literals). Both CSVs lead with a #-comment provenance block — see provenanceHeader.
+// selected). Filenames carry the runtime city/year (state, not literals). The CSV
+// bodies are PURE data (a naive read_csv / read.csv parses them with zero ceremony);
+// provenance ships alongside as a sidecar .txt — see buildProvenanceText.
 // =============================================================================
 
 import { PER_YEAR_FIELDS } from "./dataSources.js";
@@ -50,29 +51,33 @@ function cellFor(field, raw) {
   return field === "polygon_state" ? csvCell(raw) : csvCell(num(raw));
 }
 
-// Leading provenance rows, #-prefixed, all from runtime state (no literals).
-// NOTE: "#" is NOT a default comment char in pandas.read_csv / readr::read_csv /
-// read.csv — consumers must pass comment="#" to skip these (flagged for KC).
-function provenanceHeader({ city, metric, scope }, coverage) {
+// Provenance text for the SIDECAR file (its own .txt, NOT comment rows inside the
+// CSV) — so the CSV bodies stay naive-parser-clean for the panel consumer (pandas /
+// readr / read.csv all parse "#" as data by default). Plain text, no "#" prefixes.
+// All from runtime state (no literals). The `file` + `shape` lines keep the sidecar
+// self-explanatory if it ever gets separated from its CSV.
+export function buildProvenanceText({ file, shape, city, metric, scope, coverage }) {
   const date = new Date().toISOString().slice(0, 10);
   return [
-    `# ${siteConfig.org} — ${siteConfig.centre}`,
-    `# dataset: Property Assessment`,
-    `# city: ${city}`,
-    `# coverage: ${coverage}`,
-    `# scope: ${scope}`,
-    `# map view metric: ${metric}`,
-    `# exported: ${date} (read with comment="#")`,
-  ].join("\n");
+    `${siteConfig.org} — ${siteConfig.centre}`,
+    `dataset: Property Assessment`,
+    `file: ${file}`,
+    `shape: ${shape}`,
+    `city: ${city}`,
+    `coverage: ${coverage}`,
+    `scope: ${scope}`,
+    `map view metric: ${metric}`,
+    `exported: ${date}`,
+  ].join("\n") + "\n";
 }
 
 // Current-year SNAPSHOT CSV: wide, single active `year`, BARE column names (no
 // _YYYY suffix) — the human-glance / GIS-join shape. One row per neighbourhood:
 // identity cells, then each PER_YEAR_FIELD pulled for `year` (numeric fields
 // sentinel-guarded → empty when suppressed; polygon_state is a label).
-export function buildSnapshotCsv(features, year, meta) {
+export function buildSnapshotCsv(features, year) {
   const header = [...IDENTITY, ...PER_YEAR_FIELDS];
-  const lines = [provenanceHeader(meta, String(year)), header.join(",")];
+  const lines = [header.join(",")];
   for (const f of features) {
     const p = f.properties;
     lines.push([
@@ -90,10 +95,9 @@ export function buildSnapshotCsv(features, year, meta) {
 // together, oldest→newest, then the next neighbourhood (the plm/Stata xtset
 // convention — do NOT interleave by year). Sentinel/non-finite → empty cell, so the
 // panel is cleanly unbalanced-where-missing.
-export function buildTimeseriesCsv(features, years, meta) {
+export function buildTimeseriesCsv(features, years) {
   const asc = [...years].sort((a, b) => a - b);
-  const span = asc.length ? `${asc[0]}–${asc[asc.length - 1]}` : "";
-  const lines = [provenanceHeader(meta, span), TIMESERIES_HEADER.join(",")];
+  const lines = [TIMESERIES_HEADER.join(",")];
   for (const f of features) {            // entity-major (outer loop = neighbourhood)
     const p = f.properties;
     const idCells = IDENTITY.map((k) => csvCell(p[k]));
@@ -120,6 +124,18 @@ export function downloadText(filename, text, mime) {
   // Defer the revoke off the click tick — revoking synchronously can abort the
   // download in some browsers.
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Deliver a CSV + its provenance sidecar as TWO files. Sequential anchor-clicks
+// (via downloadText) with a small gap so a browser doesn't collapse/throttle the
+// rapid double-download. The sidecar name = the CSV name with .csv -> _provenance.txt,
+// so the pair always sorts adjacent and shares the base (incl. the scoped suffix).
+// (Modern browsers may show a one-time per-origin "download multiple files" prompt —
+// no zip dependency for two tiny text files.)
+export function downloadCsvWithSidecar(csvName, csvText, provText) {
+  downloadText(csvName, csvText, "text/csv;charset=utf-8");
+  const provName = csvName.replace(/\.csv$/, "_provenance.txt");
+  setTimeout(() => downloadText(provName, provText, "text/plain;charset=utf-8"), 150);
 }
 
 // Export the current map view as a PNG. Requires the map to have been created
