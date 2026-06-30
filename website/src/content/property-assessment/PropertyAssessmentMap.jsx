@@ -749,16 +749,20 @@ export default function PropertyAssessmentMap() {
         )}
       </header>
 
-      {/* ===== BODY: (left panel — populated in a later step) + map canvas ===== */}
+      {/* ===== BODY: persistent left panel + map canvas ===== */}
       <div className="pa-body">
-        <div className="pa-canvas">
-          {/* LEFT floating box (vertically centred, hugs content) — relocated into
-              the persistent left panel in a later step.
-              DEFAULT: city switcher + metric selector + compact provenance.
-              ANALYST: area-select tools (clear). The city switcher renders even
-              with no data so a user can leave the Calgary empty state. */}
+        {/* LEFT PANEL — persistent glass column, in flow (the map reflows into the
+            canvas beside it, so it needs no camera padding). Holds the map controls
+            (default) or the area-select tools (analyst view); the single-select
+            detail accretes below in a later step. The city switcher renders even
+            with no data so a user can leave the Calgary empty state. The
+            analyst-view swap is removed in the state-refactor step. */}
+        <aside
+          className="pa-panel"
+          aria-label={analystMode ? "Area selection tools" : "Map controls"}
+        >
           {!analystMode ? (
-            <aside className="pa-box pa-box--left" aria-label="Map controls">
+            <>
               <div className="opt-toggle-gel">
                 <OptionToggle label="City" options={CITIES} value={city} onChange={changeCity} />
               </div>
@@ -780,9 +784,9 @@ export default function PropertyAssessmentMap() {
                   </a>.
                 </p>
               )}
-            </aside>
+            </>
           ) : (
-            <aside className="pa-box pa-box--left pa-tools" aria-label="Area selection tools">
+            <>
               <div className="pa-box-title">Area select</div>
               <p className="pa-box-sub">Shift-drag the map to select neighbourhoods.</p>
               <div className="pa-tools-row">
@@ -797,9 +801,11 @@ export default function PropertyAssessmentMap() {
               </div>
               {/* Export lives in the table header (reachable on mobile, where the
                   table is fullscreen and this toolset is behind it). */}
-            </aside>
+            </>
           )}
+        </aside>
 
+        <div className="pa-canvas">
           <div className="canvas-wrap">
             {fetchError && url ? (
               // The fetch failed for a real URL — a load failure, NOT "no data

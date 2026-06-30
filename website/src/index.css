@@ -767,29 +767,26 @@ p  { margin: 0 0 0.75rem; }
 .dt-agg-actions { display: flex; align-items: center; gap: 8px; }
 .dt-toolbar .export-menu { margin-left: auto; }   /* push export to the right of the filter */
 
-/* ----- Floating boxes (Property Assessment locked layout) ----- */
-/* Compact cards floating over a full-bleed map. The left control box and the
-   right info rail (.rail, above) are mirrored — same radius/padding/shadow — and
-   each vertically centres on its edge and hugs its content. */
-.pa-box {
-  position: absolute;
-  z-index: 12;
-  width: 248px; max-width: calc(100vw - 24px);
-  max-height: calc(100% - 24px); overflow-y: auto; overflow-x: hidden;
-  scrollbar-gutter: stable;
+/* ----- Left panel (Property Assessment hybrid shell) ----- */
+/* Persistent in-flow glass column on the left of the body. Holds the map controls
+   (or the analyst tools) and — accreted below — the single-select detail. Because
+   it is IN FLOW (not a floating card), the map reflows into the canvas beside it,
+   so the fly-to camera needs no left padding (sidebarLeftPad self-neutralises).
+   The .pa-box-* classes are content styles reused inside it. */
+.pa-panel {
+  flex: 0 0 280px;
+  overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable;
   background: var(--sidebar-bg);
-  border: 1px solid var(--sidebar-edge);
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(74,60,33,0.16), inset 0 1px 0 rgba(255,255,255,0.6);
-  padding: 12px 14px;
+  border-right: 1px solid var(--sidebar-edge);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+  padding: 14px 16px;
   font-size: 12.5px; line-height: 1.4; color: var(--text);
 }
-.pa-box--left { left: 12px; top: 50%; transform: translateY(-50%); }
-.pa-box > *:last-child { margin-bottom: 0; }   /* hug content — no trailing gap */
+.pa-panel > *:last-child { margin-bottom: 0; }   /* hug content — no trailing gap */
 .pa-box-title { font-size: 14px; font-weight: 600; color: var(--text); margin: 0 0 2px; }
 .pa-box-sub { font-size: 11px; color: var(--text-muted); margin: 0 0 10px; }
-.pa-box .opt-toggle-gel { margin: 0 0 10px; }
-.pa-box .opt-toggle, .pa-box .seg { margin: 0; }
+.pa-panel .opt-toggle-gel { margin: 0 0 10px; }
+.pa-panel .opt-toggle, .pa-panel .seg { margin: 0; }
 .pa-box-ref { font-size: 10px; color: var(--text-muted); line-height: 1.45; margin: 10px 0 0; }
 .pa-box-ref a { color: var(--accent); }
 
