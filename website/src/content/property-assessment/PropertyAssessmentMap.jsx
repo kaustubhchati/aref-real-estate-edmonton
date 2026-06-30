@@ -39,6 +39,7 @@ import SearchInput from "../../components/SearchInput.jsx";
 import {
   buildSnapshotCsv,
   buildTimeseriesCsv,
+  buildAggregateCsv,
   buildProvenanceText,
   downloadCsvWithSidecar,
   buildGeoJson,
@@ -667,8 +668,35 @@ export default function PropertyAssessmentMap() {
     if (ids.length >= 2) setDockOpen(true);
   }
 
+  // Honest area aggregate over the SELECTION (C3) — the box-selected set rolled up by
+  // aggregateFeatures (the shared parcel-weighted math). Null until ≥2 are selected.
+  // The aggregate reads the SELECTION channel only (selectedIds) — never brushedIds:
+  // brushing stays VIEW-only (D6/D7 fence). nSelected rides alongside for the header.
+  const selectionAggregate = useMemo(() => {
+    if (selectedIds.length <= 1 || !gjView) return null;
+    const set = new Set(selectedIds.map(String));
+    const selected = gjView.features.filter(
+      (f) => set.has(String(f.properties["Neighbourhood ID"]))
+    );
+    return { nSelected: selectedIds.length, ...aggregateFeatures(selected) };
+  }, [selectedIds, gjView]);
+
+  // City baseline (D8 item 8): the SAME honest parcel-weighted aggregate over EVERY
+  // polygon, so each selection figure can be read against the whole city. Derived once
+  // per loaded year (gjView is the active-year projection) — so it re-derives on a year
+  // switch with the selection, never a literal. NOT a naive average of neighbourhood
+  // medians: the median is a median over ALL neighbourhood medians and the mean is
+  // parcel-exact, identical in basis to the selection so the delta is apples-to-apples.
+  const cityBaseline = useMemo(
+    () => (gjView ? aggregateFeatures(gjView.features) : null),
+    [gjView]
+  );
+
   // Scoped export (C4): the selection if any, else ALL features. Built from the
   // resident combined `gj` (every year on the feature) — pure client-side blobs.
+  // Declared AFTER selectionAggregate/cityBaseline so its csv-aggregate branch reads
+  // them as ordinary backward references (keeps the React Compiler's manual-memo
+  // analysis happy — a forward ref into a useMemo trips preserve-manual-memoization).
   function handleExport(format) {
     if (!gj) return;
     const set = selectedIds.length ? new Set(selectedIds.map(String)) : null;
@@ -695,36 +723,22 @@ export default function PropertyAssessmentMap() {
       downloadCsvWithSidecar(csvName, buildTimeseriesCsv(scoped, years),
         buildProvenanceText({ ...meta, file: csvName, coverage: span,
           shape: `long panel — one row per neighbourhood × year, ${span}` }));
+    } else if (format === "csv-aggregate") {
+      // Selection SUMMARY (item 7): the honest aggregate + city comparison (the
+      // item-8 figures), NOT the per-neighbourhood rows. Reads selectionAggregate /
+      // cityBaseline — the SELECTION channel — never brushedIds. Only meaningful with
+      // an aggregate (≥2 selected); the menu only offers it then, this guards anyway.
+      if (!selectionAggregate) return;
+      const csvName = `${base}_${year}_summary.csv`;
+      downloadCsvWithSidecar(csvName, buildAggregateCsv(selectionAggregate, cityBaseline),
+        buildProvenanceText({ ...meta, file: csvName, coverage: String(year),
+          shape: "selection summary — one row per measure; selection figure vs city baseline" }));
     } else if (format === "geojson") {
       downloadText(`${base}.geojson`, buildGeoJson(scoped), "application/geo+json");
     } else if (format === "png" && map) {
       exportPng(map, `property-assessment_${city}_${year}.png`);
     }
   }
-
-  // Honest area aggregate over the SELECTION (C3) — the box-selected set rolled up by
-  // aggregateFeatures (the shared parcel-weighted math). Null until ≥2 are selected.
-  // The aggregate reads the SELECTION channel only (selectedIds) — never brushedIds:
-  // brushing stays VIEW-only (D6/D7 fence). nSelected rides alongside for the header.
-  const selectionAggregate = useMemo(() => {
-    if (selectedIds.length <= 1 || !gjView) return null;
-    const set = new Set(selectedIds.map(String));
-    const selected = gjView.features.filter(
-      (f) => set.has(String(f.properties["Neighbourhood ID"]))
-    );
-    return { nSelected: selectedIds.length, ...aggregateFeatures(selected) };
-  }, [selectedIds, gjView]);
-
-  // City baseline (D8 item 8): the SAME honest parcel-weighted aggregate over EVERY
-  // polygon, so each selection figure can be read against the whole city. Derived once
-  // per loaded year (gjView is the active-year projection) — so it re-derives on a year
-  // switch with the selection, never a literal. NOT a naive average of neighbourhood
-  // medians: the median is a median over ALL neighbourhood medians and the mean is
-  // parcel-exact, identical in basis to the selection so the delta is apples-to-apples.
-  const cityBaseline = useMemo(
-    () => (gjView ? aggregateFeatures(gjView.features) : null),
-    [gjView]
-  );
 
   // Sum n_properties across every polygon that has a finite count. This includes
   // aggregated + suppressed_low_n polygons and naturally excludes non_residential
