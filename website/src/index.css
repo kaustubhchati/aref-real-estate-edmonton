@@ -724,6 +724,13 @@ p  { margin: 0 0 0.75rem; }
 }
 .dt-facet-chip:hover { background: var(--bg); }
 .dt-facet-chip.is-on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); }
+/* Reset the facets (distinct from "Clear selection") — pushed to the row's end. */
+.dt-facets-clear {
+  margin-left: auto; font-family: inherit; font-size: 0.72rem; font-weight: 600;
+  color: var(--accent-dark); background: transparent; border: 0; cursor: pointer;
+  text-decoration: underline; padding: 3px 4px;
+}
+.dt-facets-clear:hover { color: var(--text); }
 
 .dt-scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; }
 .dt-table { width: 100%; border-collapse: collapse; font-size: 12px; }

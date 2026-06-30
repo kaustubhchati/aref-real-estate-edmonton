@@ -241,6 +241,12 @@ export default function DataTable({
       cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]
     );
   }
+  // "Clear filters" resets the FACETS only — distinct from the selection-mode
+  // "Clear selection" (which empties the selected set). The two never co-exist
+  // (facets show in normal mode; Clear-selection in the AggregateHeader), so the
+  // labels keep them unambiguous.
+  const anyFacet = columnFilters.length > 0;
+  const clearFacets = () => setColumnFilters([]);
 
   // Keyboard shortcut: T toggles the table (ignored while typing in a field).
   useEffect(() => {
@@ -297,7 +303,11 @@ export default function DataTable({
                   onChange={(e) => setGlobalFilter(e.target.value)}
                   aria-label="Filter neighbourhoods by name"
                 />
-                <span className="dt-count">{viewRows.length} of {rows.length}</span>
+                <span className="dt-count">
+                  {viewRows.length === rows.length
+                    ? `${rows.length} neighbourhoods`
+                    : `${viewRows.length} of ${rows.length} neighbourhoods`}
+                </span>
                 <ExportMenu onExport={onExport} year={year} years={years} selectedCount={selectedIds.length} />
               </div>
               {/* Categorical facets (D6) — VIEW-only display filters over the table,
@@ -316,6 +326,11 @@ export default function DataTable({
                     ? <FacetDropdown key={f.id} {...shared} />
                     : <FacetToggles key={f.id} {...shared} />;
                 })}
+                {anyFacet && (
+                  <button type="button" className="dt-facets-clear" onClick={clearFacets}>
+                    Clear filters
+                  </button>
+                )}
               </div>
             </>
           )}
