@@ -770,17 +770,39 @@ p  { margin: 0 0 0.75rem; }
 .pa-tools-btn:hover:not(:disabled) { background: var(--bg); }
 .pa-tools-btn:disabled { opacity: 0.5; cursor: default; }
 .export-menu { position: relative; }
+/* Floated gel callout — same glossy recipe as the other PA popups/dropdowns. */
 .export-menu-list {
-  position: absolute; top: calc(100% + 6px); left: 0; min-width: 170px;
-  display: flex; flex-direction: column;
-  background: var(--bg); border: 1px solid var(--border-soft);
-  border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 4px; z-index: 5;
+  position: absolute; top: calc(100% + 6px); left: 0; min-width: 232px;
+  display: flex; flex-direction: column; padding: 5px; z-index: 5;
+  background: var(--gel-grad-gloss);
+  box-shadow: var(--gel-lift-float), var(--gel-bevel);
+  border: var(--gel-border); border-radius: var(--radius-md);
 }
-.export-menu-list button {
-  font-family: inherit; font-size: 0.8rem; text-align: left; color: var(--text);
-  background: transparent; border: 0; border-radius: var(--radius-sm); padding: 7px 10px; cursor: pointer;
+/* Two labelled groups (Data / Map); a hairline divides them. */
+.export-menu-group + .export-menu-group {
+  margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--border-soft);
 }
-.export-menu-list button:hover { background: var(--accent-soft); color: var(--accent-dark); }
+.export-menu-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  padding: 4px 8px 2px;
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-muted);
+}
+/* Scope cue — text, never colour-only (so it survives a greyscale / SR pass). */
+.export-menu-scope {
+  font-size: 0.6rem; font-weight: 600; letter-spacing: 0.02em; text-transform: none;
+  color: var(--accent-dark); background: var(--accent-soft); padding: 1px 6px; border-radius: 999px;
+}
+.export-menu-item {
+  display: flex; flex-direction: column; gap: 1px; width: 100%;
+  font-family: inherit; text-align: left; color: var(--text);
+  background: transparent; border: 0; border-radius: var(--radius-sm); padding: 6px 8px; cursor: pointer;
+}
+.export-menu-item:hover { background: var(--accent-soft); }
+.export-menu-item:hover .export-menu-title { color: var(--accent-dark); }
+.export-menu-title { font-size: 0.82rem; font-weight: 600; }
+.export-menu-sub { font-size: 0.68rem; color: var(--text-muted); line-height: 1.3; }
+.export-menu-pair { color: var(--accent-dark); font-weight: 600; white-space: nowrap; }
 
 /* Top-centre search pill. z-index:96 keeps it above the nav reveal (z95). */
 .pa-search {

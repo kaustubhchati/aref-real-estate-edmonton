@@ -86,6 +86,8 @@ export default function DataTable({
   metric,
   metricLabel,
   activeIndex,
+  year,
+  years,
   selectedIds,
   onSelectRow,
   onHoverRow,
@@ -226,7 +228,7 @@ export default function DataTable({
       {open && (
         <div className="dt-panel">
           {selectionMode ? (
-            <AggregateHeader aggregate={aggregate} onClear={onClearSelection} onExport={onExport} />
+            <AggregateHeader aggregate={aggregate} onClear={onClearSelection} onExport={onExport} year={year} years={years} />
           ) : (
             <div className="dt-toolbar">
               <input
@@ -238,7 +240,7 @@ export default function DataTable({
                 aria-label="Filter neighbourhoods by name"
               />
               <span className="dt-count">{viewRows.length} of {rows.length}</span>
-              <ExportMenu onExport={onExport} />
+              <ExportMenu onExport={onExport} year={year} years={years} selectedCount={selectedIds.length} />
             </div>
           )}
 
@@ -332,14 +334,14 @@ export default function DataTable({
 // make the rolled-up numbers auditable. NOTE: deliberately NOT a TanStack
 // aggregationFn — a parcel-weighted mean must weight by n_properties, which the
 // built-in (unweighted) mean can't do; the honest math lives in selectionAggregate.
-function AggregateHeader({ aggregate: a, onClear, onExport }) {
+function AggregateHeader({ aggregate: a, onClear, onExport, year, years }) {
   return (
     <div className="dt-agg">
       <div className="dt-agg-bar">
         <strong className="dt-agg-title">{a.nSelected} neighbourhoods selected</strong>
         <div className="dt-agg-actions">
           <button type="button" className="dt-agg-clear" onClick={onClear}>Clear selection</button>
-          <ExportMenu onExport={onExport} />
+          <ExportMenu onExport={onExport} year={year} years={years} selectedCount={a.nSelected} />
         </div>
       </div>
       <div className="dt-agg-cards">

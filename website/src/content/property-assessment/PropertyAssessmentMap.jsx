@@ -886,6 +886,8 @@ export default function PropertyAssessmentMap() {
           metric={metric}
           metricLabel={selectedMetric.label}
           activeIndex={activeYearIndex}
+          year={year}
+          years={years}
           selectedIds={selectedIds}
           onSelectRow={selectNeighbourhood}
           onHoverRow={setHoveredRowId}
