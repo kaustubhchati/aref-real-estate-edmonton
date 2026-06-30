@@ -108,26 +108,6 @@ export function buildTimeseriesCsv(features, years, meta) {
   return lines.join("\n");
 }
 
-// Wide-by-year CSV: identity columns + <field>_<year> for every field × year.
-// [LEGACY — superseded by buildSnapshotCsv + buildTimeseriesCsv; removed once
-// handleExport no longer calls it.]
-export function buildCsv(features, years) {
-  const header = [
-    ...IDENTITY,
-    ...years.flatMap((y) => PER_YEAR_FIELDS.map((f) => `${f}_${y}`)),
-  ];
-  const lines = [header.join(",")];
-  for (const f of features) {
-    const p = f.properties;
-    const row = [
-      ...IDENTITY.map((k) => csvCell(p[k])),
-      ...years.flatMap((y) => PER_YEAR_FIELDS.map((fld) => csvCell(p[`${fld}_${y}`]))),
-    ];
-    lines.push(row.join(","));
-  }
-  return lines.join("\n");
-}
-
 // A GeoJSON FeatureCollection of exactly the chosen features (full properties).
 export function buildGeoJson(features) {
   return JSON.stringify({ type: "FeatureCollection", features });
