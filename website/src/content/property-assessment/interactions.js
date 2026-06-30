@@ -26,6 +26,7 @@
 // =============================================================================
 
 import { useEffect, useRef, useCallback } from "react";
+import { DUR_SLOW, reduceMotion } from "../../components/motion.js";
 
 const SOURCE_ID = "nbhd";
 const FILL_LAYER_ID = "nbhd-fill";
@@ -147,17 +148,132 @@ export function installChoroplethInteractions(map, gj, onSelect) {
   return { flyAndPinByName, cleanup };
 }
 
+// ---- Camera (flat data-derived fits + the pitched home preset) -------------
+// Two mechanisms: (1) the FLAT data-derived fit (map.fitBounds → selection-fit,
+// search/dblclick, reset-with-a-selection) whose target is a feature subset's bbox
+// (no literal center/zoom, pitch 0); (2) the tuned pitched HOME preset
+// (applyCameraPreset → easeTo/jumpTo HOME_VIEW's literal center/zoom/pitch).
+
+// Padding that keeps a fit inside the VISIBLE map — clear of the bottom chrome.
+// .pa-foot stacks the tuning rack + the console (when open) ABSOLUTELY over the
+// map's bottom, so its live height is exactly the bottom inset to reserve. The
+// left panel is IN FLOW (the map's viewport already starts to its right), so only
+// a small uniform margin is needed on the other edges. Deterministic because the
+// fixed-grid work made those zones real, measurable elements. [camera-model]
+const CONSOLE_SVH_DESKTOP = 0.42; // .dt-panel max-height (desktop)
+const CONSOLE_SVH_MOBILE = 0.56;  // .dt-panel max-height under the ≤680px breakpoint
+const MOBILE_BP = 680;
+function chromePadding(map, { reserveConsole = false } = {}) {
+  const root = map.getContainer().closest(".content-map") || map.getContainer();
+  const rack = root.querySelector(".pa-rack");
+  const rackH = rack ? Math.round(rack.getBoundingClientRect().height) : 0;
+  // The console is shown when it's already open (a .dt-panel exists) OR about to open
+  // (reserveConsole — set by box-select≥2 before React has mounted .dt-panel). Reserve
+  // its TARGET height (svh), NEVER the live rect — reading it mid-rise under-reserves
+  // and the target lands under the opening console.
+  const consoleShown = reserveConsole || !!root.querySelector(".dt-panel");
+  const svh = (window.innerWidth || 1200) <= MOBILE_BP ? CONSOLE_SVH_MOBILE : CONSOLE_SVH_DESKTOP;
+  const consoleH = consoleShown ? Math.round((window.innerHeight || 800) * svh) : 0;
+  const M = 40; // breathing margin on the clear edges
+  // Clamp so top+bottom never swallow the map height (else fitBounds clamps to an
+  // extreme zoom or yields NaN on a short window). Keep ≥120px of clear band.
+  const mapH = Math.round(map.getContainer().getBoundingClientRect().height);
+  const bottom = Math.min(M + rackH + consoleH, Math.max(0, mapH - M - 120));
+  return { top: M, right: M, left: M, bottom };
+}
+
+// Union bbox over many features — the full-city extent or a selected subset.
+// [[minLng,minLat],[maxLng,maxLat]] | null when empty.
+export function bboxOfFeatures(features) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const f of features) {
+    if (!f?.geometry) continue;
+    const [[aX, aY], [bX, bY]] = bboxOfGeom(f.geometry);
+    if (aX < minX) minX = aX;
+    if (aY < minY) minY = aY;
+    if (bX > maxX) maxX = bX;
+    if (bY > maxY) maxY = bY;
+  }
+  return Number.isFinite(minX) ? [[minX, minY], [maxX, maxY]] : null;
+}
+
+// Fit the camera to a SET of features' combined extent with chrome-aware padding —
+// the shared primitive for the home view (all features), selection-fit (the
+// selected subset), and reset. Gentle ease; snaps under reduced motion. Guarded so
+// a fit against a mid-teardown map is a no-op.
+export function fitToFeatures(map, features, { ease = true, reserveConsole = false } = {}) {
+  if (!map || !features || !features.length) return;
+  const bbox = bboxOfFeatures(features);
+  if (!bbox) return;
+  try {
+    map.fitBounds(bbox, {
+      padding: chromePadding(map, { reserveConsole }),
+      duration: ease && !reduceMotion() ? DUR_SLOW : 0,
+      maxZoom: 14,
+      pitch: 0, bearing: 0, // the FLAT data-derived fit — HOME is the only pitched view
+    });
+  } catch {
+    /* map removed mid-flight — ignore */
+  }
+}
+
+// Apply a tuned camera PRESET (HOME_VIEW) — center/zoom/pitch/bearing. easeTo for a
+// gentle landing; jumpTo when reduced-motion is on or a snap is asked for (ease:false,
+// e.g. the first load under the skeleton). Guarded against a mid-teardown map.
+export function applyCameraPreset(map, preset, { ease = true } = {}) {
+  if (!map || !preset) return;
+  try {
+    if (ease && !reduceMotion()) map.easeTo({ ...preset, duration: DUR_SLOW });
+    else map.jumpTo(preset);
+  } catch {
+    /* map removed mid-flight — ignore */
+  }
+}
+
+// A small MapLibre control (a crosshair button) that sits WITH the zoom controls
+// and re-runs the home / selection fit. Kept here so MapView stays section-agnostic
+// — PA adds it to its map and supplies the click handler (which reads fresh state).
+export function makeResetControl(onClick, label = "Reset view") {
+  return {
+    onAdd() {
+      const wrap = document.createElement("div");
+      wrap.className = "maplibregl-ctrl maplibregl-ctrl-group";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.title = label;
+      btn.setAttribute("aria-label", label);
+      btn.innerHTML =
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ' +
+        'style="display:block;margin:auto"><circle cx="12" cy="12" r="7"/>' +
+        '<line x1="12" y1="1" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="23"/>' +
+        '<line x1="1" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="23" y2="12"/></svg>';
+      btn.addEventListener("click", onClick);
+      this._btn = btn;
+      this._wrap = wrap;
+      wrap.appendChild(btn);
+      return wrap;
+    },
+    onRemove() {
+      this._btn?.removeEventListener("click", onClick);
+      this._wrap?.remove();
+    },
+  };
+}
+
 // ---- Helpers --------------------------------------------------------------
 
 function flyToFeature(map, feat, opts = {}) {
+  const { duration = 900, ...rest } = opts;
   map.fitBounds(bboxOfGeom(feat.geometry), {
-    // Plain edge margins: the controls + detail live in an IN-FLOW left panel (the
-    // map reflows into the canvas beside it), so there is no over-map overlay to
-    // compensate for — the map's own viewport already excludes the panel.
-    padding: { top: 80, bottom: 80, left: 60, right: 60 },
-    duration: 900,
+    // Chrome-aware padding so a flown-to neighbourhood frames in the clear map
+    // region (above the rack / open console), same as the selection fit. Flat
+    // (pitch/bearing 0) — a focus is a data-derived fit, not the pitched home.
+    padding: chromePadding(map),
     maxZoom: 14,
-    ...opts,
+    duration: reduceMotion() ? 0 : duration,
+    pitch: 0, bearing: 0,
+    ...rest,
   });
 }
 
