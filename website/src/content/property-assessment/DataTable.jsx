@@ -303,11 +303,7 @@ export default function DataTable({
                   onChange={(e) => setGlobalFilter(e.target.value)}
                   aria-label="Filter neighbourhoods by name"
                 />
-                <span className="dt-count">
-                  {viewRows.length === rows.length
-                    ? `${rows.length} neighbourhoods`
-                    : `${viewRows.length} of ${rows.length} neighbourhoods`}
-                </span>
+                <span className="dt-count">{viewRows.length} of {rows.length}</span>
                 <ExportMenu onExport={onExport} year={year} years={years} selectedCount={selectedIds.length} />
               </div>
               {/* Categorical facets (D6) — VIEW-only display filters over the table,
