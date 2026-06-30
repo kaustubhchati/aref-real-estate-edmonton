@@ -803,6 +803,23 @@ export default function PropertyAssessmentMap() {
                   table is fullscreen and this toolset is behind it). */}
             </>
           )}
+
+          {/* SINGLE-SELECT DETAIL — accretes below the controls when EXACTLY one
+              neighbourhood is selected (was the floating right rail). Coexists with
+              the analysis dock when both are present. Empty/multi select → not
+              rendered (multi aggregates land in the dock). */}
+          {url && selectedFeature && (
+            <InfoRail
+              feature={selectedFeature}
+              year={year}
+              metric={metric}
+              years={years}
+              sparkValues={sparkValues}
+              activeIndex={activeYearIndex}
+              onClear={() => setSelectedIds([])}
+              compact={analystMode}
+            />
+          )}
         </aside>
 
         <div className="pa-canvas">
@@ -856,23 +873,6 @@ export default function PropertyAssessmentMap() {
               <EmptyState title={empty.title} body={empty.body} />
             )}
           </div>
-
-          {/* RIGHT info rail (Felt zone 3) — hidden by default; mounts (and slides
-              in) only when EXACTLY one neighbourhood is selected. Relocated into
-              the left panel in a later step. Empty/multi select → not rendered
-              (multi aggregates land in the bottom table). */}
-          {url && selectedFeature && (
-            <InfoRail
-              feature={selectedFeature}
-              year={year}
-              metric={metric}
-              years={years}
-              sparkValues={sparkValues}
-              activeIndex={activeYearIndex}
-              onClear={() => setSelectedIds([])}
-              compact={analystMode}
-            />
-          )}
 
           {/* LEGEND — small card bottom-right (default view only). */}
           {url && !analystMode && (

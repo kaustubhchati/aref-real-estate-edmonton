@@ -60,8 +60,10 @@ export default function InfoRail({
 
   return (
     // aria-live so a screen reader announces the neighbourhood when a click or
-    // search changes the selection (the rail is the detail surface now).
-    <aside className="rail" aria-label="Neighbourhood detail" aria-live="polite">
+    // search changes the selection. Now an in-flow block accreted into the left
+    // panel below the controls (.pa-detail), no longer a floating right rail; the
+    // .rail-* content classes are unchanged.
+    <div className="pa-detail" aria-label="Neighbourhood detail" aria-live="polite">
       <div className="rail-inner">
         <section className="rail-detail">
           <header className="rail-detail-head">
@@ -138,6 +140,6 @@ export default function InfoRail({
           )}
         </section>
       </div>
-    </aside>
+    </div>
   );
 }

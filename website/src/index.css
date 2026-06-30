@@ -567,32 +567,14 @@ p  { margin: 0 0 0.75rem; }
   font-family: ui-monospace, Menlo, Consolas, monospace;
 }
 
-/* ----- Right info rail (Property Assessment) ----- */
-/* A compact floating box on the RIGHT, vertically centred and hugging its content
-   — the mirror of the left control box (.pa-box). Hidden by default; mounts only
-   when exactly one neighbourhood is selected. Holds that nbhd's detail + sparkline
-   (InfoRail.jsx). transform is reserved for the vertical centring, so it fades
-   (not slides) in. */
-.rail {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 248px;
-  max-width: calc(100vw - 24px);
-  max-height: calc(100% - 24px);
-  z-index: 12;
-  background: var(--sidebar-bg);
-  border: 1px solid var(--sidebar-edge);
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(74,60,33,0.16), inset 0 1px 0 rgba(255,255,255,0.6);
-  overflow-y: auto;
-  scrollbar-gutter: stable;
-  overflow-x: hidden;
-  padding: 12px 14px;
-  font-size: 12.5px;
-  line-height: 1.4;
-  color: var(--text);
+/* ----- Single-select detail (Property Assessment) ----- */
+/* Was a floating right rail; now an IN-FLOW block accreted into the left panel
+   below the controls when exactly one neighbourhood is selected. A hairline
+   separates it from the controls above; it fades in. Holds that nbhd's detail +
+   sparkline (InfoRail.jsx). The .rail-* rules below are its content styles. */
+.pa-detail {
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid var(--border);
   animation: rail-fade-in var(--dur-base) var(--ease);
 }
 @keyframes rail-fade-in { from { opacity: 0; } to { opacity: 1; } }
