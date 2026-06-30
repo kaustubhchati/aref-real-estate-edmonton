@@ -296,13 +296,29 @@ export default function DataTable({
     [brushActive, viewRows]
   );
   // Report only on a real CONTENT change (a sorted signature ignores re-sorts and
-  // the row model's per-render identity churn — so this can't loop the parent).
+  // the row model's per-render identity churn — so this can't loop the parent), and
+  // THROTTLE it: a range-slider drag changes the brush many times a second, and each
+  // report repaints ~376 map polygons (the dim). Pacing to ~10/s with a trailing
+  // call keeps the map from thrashing while the table + thumb stay live. (The dim is
+  // a feature-state opacity change, which MapLibre applies instantly — it snaps, so
+  // reduced-motion is honoured with no transition to gate.)
   const lastBrushSig = useRef("");
+  const lastBrushAt = useRef(0);
+  const brushTrailing = useRef(null);
+  useEffect(() => () => clearTimeout(brushTrailing.current), []);
   useEffect(() => {
     const sig = brushedIds ? [...brushedIds].map(String).sort().join(",") : "";
     if (sig === lastBrushSig.current) return;
-    lastBrushSig.current = sig;
-    onBrush?.(brushedIds);
+    const fire = () => {
+      lastBrushSig.current = sig;
+      lastBrushAt.current = performance.now();
+      onBrush?.(brushedIds);
+    };
+    clearTimeout(brushTrailing.current);
+    const BRUSH_GAP = 100; // ms — pacing window for the expensive map repaint
+    const since = performance.now() - lastBrushAt.current;
+    if (since >= BRUSH_GAP) fire();
+    else brushTrailing.current = setTimeout(fire, BRUSH_GAP - since);
   }, [brushedIds, onBrush]);
 
   // Keyboard shortcut: T toggles the table (ignored while typing in a field).
