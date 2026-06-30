@@ -541,6 +541,7 @@ export default function PropertyAssessmentMap() {
         id: p["Neighbourhood ID"],
         name: p.display_name,
         state: p.polygon_state,
+        district: p.district,   // year-invariant; carried for the table's district facet (D6)
         // Every metric value for the active year — the analyst table shows the
         // FULL set (the same fields the rail lists), not just the active column.
         // gjView is already projected to bare names for the active year.

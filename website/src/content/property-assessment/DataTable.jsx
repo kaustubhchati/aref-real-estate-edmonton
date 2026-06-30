@@ -43,13 +43,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
   getFilteredRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import Sparkline from "../../components/Sparkline.jsx";
 import ExportMenu from "./ExportMenu.jsx";
-import { METRICS } from "./choroplethStyle.js";
+import { METRICS, STATE_STYLE } from "./choroplethStyle.js";
 import {
   fmtArea,
   fmtCurrency,
@@ -81,6 +83,25 @@ const METRIC_COLS = METRICS.map((m) => ({
   fmt: PRESENTATION[m.key]?.fmt ?? m.fmt,
 }));
 
+// Categorical facets (D6) — VIEW-only table filters, data-driven from the rows.
+// Each is a HIDDEN column (a faceting/filtering accessor that is never rendered) +
+// a control in the dock header, declared once here and mapped in a loop. `labelOf`
+// maps a raw value to its display label: district shows as-is; polygon_state uses
+// the existing STATE_STYLE contract (compact form, no hardcoded state list).
+const FACETS = [
+  { id: "district", label: "District", control: "dropdown", labelOf: (v) => v },
+  {
+    id: "state", label: "State", control: "toggles",
+    labelOf: (v) => STATE_STYLE[v]?.label.split(" (")[0] ?? v,
+  },
+];
+
+// A multi-select column filter: a row passes when its value is in the selected set.
+// An empty/absent set means NO filter (every row passes) — so the default is "all".
+function multiSelectFilter(row, columnId, selected) {
+  return !selected?.length || selected.includes(row.getValue(columnId));
+}
+
 export default function DataTable({
   rows,
   metric,
@@ -99,6 +120,7 @@ export default function DataTable({
 }) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState([{ id: "name", desc: false }]);
+  const [columnFilters, setColumnFilters] = useState([]); // categorical facets (D6)
   const scrollRef = useRef(null);
 
   // Selection mode = a multi-neighbourhood box-select is active (aggregate set):
@@ -164,6 +186,16 @@ export default function DataTable({
       enableGlobalFilter: false,
       meta: { numeric: true },
     },
+    // Hidden facet columns (D6) — accessor + multi-select filter only, never
+    // rendered (hidden via initialState.columnVisibility), so the VISIBLE table is
+    // unchanged. getFacetedUniqueValues reads these to populate the facet controls.
+    ...FACETS.map((f) => ({
+      id: f.id,
+      accessorFn: (r) => r[f.id],
+      filterFn: multiSelectFilter,
+      enableSorting: false,
+      enableGlobalFilter: false,
+    })),
   ], [activeIndex, metricLabel]);
 
   // React Compiler can't memoize a component that calls useReactTable (TanStack
@@ -172,18 +204,49 @@ export default function DataTable({
   const table = useReactTable({
     data,
     columns,
-    // Filtering applies to name only (the lone string column); suppress it in
-    // selection mode so every constituent row stays visible under the aggregate.
-    state: { sorting, globalFilter: selectionMode ? "" : globalFilter },
+    // Name filter + categorical facets both suppress in selection mode, so every
+    // constituent row stays visible under the aggregate (the facets are VIEW-only,
+    // so they never desync from the selection aggregate — D6 recon #4).
+    state: {
+      sorting,
+      globalFilter: selectionMode ? "" : globalFilter,
+      columnFilters: selectionMode ? [] : columnFilters,
+    },
+    // The facet columns exist only to drive faceting/filtering — keep them hidden.
+    initialState: { columnVisibility: Object.fromEntries(FACETS.map((f) => [f.id, false])) },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
+    onColumnFiltersChange: setColumnFilters,
     globalFilterFn: "includesString",
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
   });
 
   const viewRows = table.getRowModel().rows;
+
+  // --- Categorical facets (D6) — VIEW-only; the controls live in the dock header
+  // and read/write the hidden facet columns through TanStack. Each helper is generic
+  // over a facet id, so the two facets share one code path (no copy-pasted blocks). --
+  const facetValue = (id) => table.getColumn(id)?.getFilterValue() ?? [];
+  const facetOptions = (id) =>
+    Array.from(table.getColumn(id)?.getFacetedUniqueValues()?.keys() ?? [])
+      .filter((v) => v != null)
+      .sort();
+  function toggleFacet(id, v) {
+    const cur = facetValue(id);
+    table.getColumn(id)?.setFilterValue(
+      cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]
+    );
+  }
+  // "Clear filters" resets the FACETS only — distinct from the selection-mode
+  // "Clear selection" (which empties the selected set). The two never co-exist
+  // (facets show in normal mode; Clear-selection in the AggregateHeader), so the
+  // labels keep them unambiguous.
+  const anyFacet = columnFilters.length > 0;
+  const clearFacets = () => setColumnFilters([]);
 
   // Keyboard shortcut: T toggles the table (ignored while typing in a field).
   useEffect(() => {
@@ -230,18 +293,42 @@ export default function DataTable({
           {selectionMode ? (
             <AggregateHeader aggregate={aggregate} onClear={onClearSelection} onExport={onExport} year={year} years={years} />
           ) : (
-            <div className="dt-toolbar">
-              <input
-                type="text"
-                className="dt-filter search-input"
-                placeholder="Filter by name…"
-                value={globalFilter}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                aria-label="Filter neighbourhoods by name"
-              />
-              <span className="dt-count">{viewRows.length} of {rows.length}</span>
-              <ExportMenu onExport={onExport} year={year} years={years} selectedCount={selectedIds.length} />
-            </div>
+            <>
+              <div className="dt-toolbar">
+                <input
+                  type="text"
+                  className="dt-filter search-input"
+                  placeholder="Filter by name…"
+                  value={globalFilter}
+                  onChange={(e) => setGlobalFilter(e.target.value)}
+                  aria-label="Filter neighbourhoods by name"
+                />
+                <span className="dt-count">{viewRows.length} of {rows.length}</span>
+                <ExportMenu onExport={onExport} year={year} years={years} selectedCount={selectedIds.length} />
+              </div>
+              {/* Categorical facets (D6) — VIEW-only display filters over the table,
+                  rendered from the FACETS config: a dropdown or toggle chips per the
+                  facet's `control` (one path, no copy-pasted blocks). */}
+              <div className="dt-facets" role="group" aria-label="Filter the table">
+                {FACETS.map((f) => {
+                  const shared = {
+                    label: f.label,
+                    options: facetOptions(f.id),
+                    selected: facetValue(f.id),
+                    labelOf: f.labelOf,
+                    onToggle: (v) => toggleFacet(f.id, v),
+                  };
+                  return f.control === "dropdown"
+                    ? <FacetDropdown key={f.id} {...shared} />
+                    : <FacetToggles key={f.id} {...shared} />;
+                })}
+                {anyFacet && (
+                  <button type="button" className="dt-facets-clear" onClick={clearFacets}>
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            </>
           )}
 
           <div className="dt-scroll" ref={scrollRef}>
@@ -284,7 +371,7 @@ export default function DataTable({
               <tbody>
                 {viewRows.length === 0 ? (
                   <tr>
-                    <td colSpan={columns.length} className="dt-empty">
+                    <td colSpan={table.getVisibleLeafColumns().length} className="dt-empty">
                       No neighbourhoods match “{globalFilter}”.
                     </td>
                   </tr>
@@ -366,6 +453,56 @@ function AggCard({ label, value, tag, approx = false }) {
       <span className="dt-card-label">{label}</span>
       <span className="dt-card-value">{value}</span>
       <span className="dt-card-tag">{tag}</span>
+    </div>
+  );
+}
+
+// ---- Facet controls (D6) ---------------------------------------------------
+// A multi-select facet dropdown built on a native <details> disclosure — legible
+// and accessible with no custom open/close state. Options are data-driven; ticking
+// one toggles it in/out of the column filter. Selected count shows on the summary.
+function FacetDropdown({ label, options, selected, labelOf, onToggle }) {
+  return (
+    <details className="dt-facet-dd">
+      <summary className="dt-facet-summary">
+        {label}{selected.length ? ` · ${selected.length}` : ""}
+      </summary>
+      <div className="dt-facet-list">
+        {options.map((v) => (
+          <label key={v} className="dt-facet-opt">
+            <input
+              type="checkbox"
+              checked={selected.includes(v)}
+              onChange={() => onToggle(v)}
+            />
+            <span>{labelOf(v)}</span>
+          </label>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+// A multi-select facet rendered as toggle CHIPS (one per option) — for a small,
+// stable option set (the polygon states). aria-pressed reflects each chip's on/off;
+// clicking toggles it in the column filter. Default (nothing pressed) = all shown.
+function FacetToggles({ label, options, selected, labelOf, onToggle }) {
+  return (
+    <div className="dt-facet-toggles" role="group" aria-label={`Filter by ${label.toLowerCase()}`}>
+      {options.map((v) => {
+        const on = selected.includes(v);
+        return (
+          <button
+            key={v}
+            type="button"
+            className={`dt-facet-chip${on ? " is-on" : ""}`}
+            aria-pressed={on}
+            onClick={() => onToggle(v)}
+          >
+            {labelOf(v)}
+          </button>
+        );
+      })}
     </div>
   );
 }
