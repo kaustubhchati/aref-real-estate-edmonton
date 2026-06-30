@@ -53,6 +53,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import Sparkline from "../../components/Sparkline.jsx";
+import DistributionStrip from "./DistributionStrip.jsx";
 import ExportMenu from "./ExportMenu.jsx";
 import { METRICS, STATE_STYLE } from "./choroplethStyle.js";
 import {
@@ -152,6 +153,17 @@ export default function DataTable({
     if (!selectionMode) return rows;
     return rows.filter((r) => selectedSet.has(String(r.id)));
   }, [rows, selectionMode, selectedSet]);
+
+  // The selected set's ACTIVE-metric values, for the distribution strip (item 9).
+  // Read off the constituent rows (every metric value rides on the row), reportable
+  // only (null = suppressed / non-residential, no value). Re-derives on selection
+  // change (data) AND metric switch (metric) — refresh-by-design, no literals. The
+  // strip reads the SELECTION channel only (data is the selected constituents) —
+  // never brushedIds (the VIEW-only fence).
+  const distValues = useMemo(
+    () => (selectionMode ? data.map((r) => r[metric]).filter((v) => v != null) : []),
+    [selectionMode, data, metric]
+  );
 
   // Column defs (data-driven). accessorFn maps null → undefined so TanStack's
   // sortUndefined keeps blanks last in BOTH directions; the cell renders "—".
@@ -367,7 +379,17 @@ export default function DataTable({
       {open && (
         <div className="dt-panel">
           {selectionMode ? (
-            <AggregateHeader aggregate={aggregate} cityBaseline={cityBaseline} onClear={onClearSelection} onExport={onExport} year={year} years={years} />
+            <AggregateHeader
+              aggregate={aggregate}
+              cityBaseline={cityBaseline}
+              distValues={distValues}
+              distLabel={activeCol?.label ?? metricLabel}
+              distFmt={activeCol?.fmt ?? ((v) => v)}
+              onClear={onClearSelection}
+              onExport={onExport}
+              year={year}
+              years={years}
+            />
           ) : (
             <>
               <div className="dt-toolbar">
@@ -530,7 +552,7 @@ function fmtSharePct(frac) {              // frac = sel/city → "8% of city" / 
 // rolled-up numbers auditable. NOTE: deliberately NOT a TanStack aggregationFn —
 // a parcel-weighted mean must weight by n_properties, which the built-in
 // (unweighted) mean can't do; the honest math lives in aggregateFeatures.
-function AggregateHeader({ aggregate: a, cityBaseline: cb, onClear, onExport, year, years }) {
+function AggregateHeader({ aggregate: a, cityBaseline: cb, distValues, distLabel, distFmt, onClear, onExport, year, years }) {
   // Build a card's "city <value> · <delta>" line, honest per metric kind. A null
   // baseline (data still loading) or null figure yields no line — the cards then
   // render exactly as they did before item 8.
@@ -566,6 +588,9 @@ function AggregateHeader({ aggregate: a, cityBaseline: cb, onClear, onExport, ye
         <AggCard label="YoY change" value={fmtPct(a.areaYoY)} tag="≈ parcel-weighted" approx
                  compare={cmpRate(a.areaYoY, cb?.areaYoY, fmtPct)} />
       </div>
+      {/* Distribution of the selection on the ACTIVE metric (item 9) — the spread/
+          shape around the central figures above. Self-guards below 2 values. */}
+      <DistributionStrip values={distValues} label={distLabel} fmt={distFmt} />
       <p className="dt-agg-note">
         {a.nReportable} reportable · {a.nSuppressed} suppressed · {a.nExcluded} non-residential / no-data
         (excluded from values). Mean is parcel-exact; the median is a median of neighbourhood medians

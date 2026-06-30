@@ -796,6 +796,16 @@ p  { margin: 0 0 0.75rem; }
 .dt-card-cmp { font-size: 10.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .dt-card-tag { font-size: 9.5px; color: var(--text-subtle); }
 .dt-card.is-approx .dt-card-tag { color: var(--accent-dark); font-style: italic; }
+/* Distribution strip (D8 item 9): the selection's spread on the active metric,
+   sitting between the aggregate cards and the methodology note. Calm, single
+   accent — the ticks + median anchor are drawn in DistributionStrip.jsx. */
+.dt-dist { margin: 10px 0 0; }
+.dt-dist-cap { display: flex; justify-content: space-between; font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 0 0 2px; }
+.dt-dist-n { font-variant-numeric: tabular-nums; }
+.dt-dist-svg { display: block; width: 100%; }
+.dt-dist-ends { display: flex; justify-content: space-between; font-size: 10px;
+  color: var(--text-subtle); font-variant-numeric: tabular-nums; margin: 2px 0 0; }
 .dt-agg-note { font-size: 10.5px; color: var(--text-muted); line-height: 1.5; margin: 8px 0 0; }
 .dt-agg-actions { display: flex; align-items: center; gap: 8px; }
 .dt-toolbar .export-menu { margin-left: auto; }   /* push export to the right of the filter */
