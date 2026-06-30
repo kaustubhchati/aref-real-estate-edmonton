@@ -84,9 +84,46 @@ function useCountUp(target, duration = 900) {
   return val;
 }
 
-// Mean-of-all-vertices centroid of a (Multi)Polygon — a representative point for
-// "is this neighbourhood's centroid inside the box?" (C3 box-select).
+// Area-weighted (shoelace) centroid of a (Multi)Polygon — the polygon's centre of
+// mass, used as its representative point for "is this neighbourhood inside the
+// shift-drag box?" (C3 box-select). The previous version averaged ALL vertices,
+// which biases the point toward wherever vertices are dense (the gap widens for
+// elongated / concave shapes) — so it could put the wrong neighbourhoods into the
+// selection, and thus into the aggregate. Each ring's signed-area centroid:
+//   A = ½Σ(xᵢyᵢ₊₁ − xᵢ₊₁yᵢ);  C = 1/(6A)·Σ(pᵢ + pᵢ₊₁)(xᵢyᵢ₊₁ − xᵢ₊₁yᵢ)
+// MultiPolygon parts are combined as the AREA-WEIGHTED average of their part
+// centroids (not a naive mean of part centroids). [standard shoelace centroid]
 function geometryCentroid(geom) {
+  // Outer ring of each part: Polygon -> [outer]; MultiPolygon -> [outer per part].
+  const rings = geom.type === "MultiPolygon"
+    ? geom.coordinates.map((poly) => poly[0])
+    : [geom.coordinates[0]];
+
+  let areaSum = 0, cx = 0, cy = 0;
+  for (const ring of rings) {
+    let A = 0, sx = 0, sy = 0;
+    for (let i = 0, n = ring.length; i < n; i++) {
+      const [x0, y0] = ring[i];
+      const [x1, y1] = ring[(i + 1) % n]; // ring is closed; the wrap edge is zero-length
+      const cross = x0 * y1 - x1 * y0;
+      A  += cross;
+      sx += (x0 + x1) * cross;
+      sy += (y0 + y1) * cross;
+    }
+    A *= 0.5;
+    if (A === 0) continue;                // collinear / empty ring contributes nothing
+    const w = Math.abs(A);                // weight each part by its area magnitude
+    cx += (sx / (6 * A)) * w;
+    cy += (sy / (6 * A)) * w;
+    areaSum += w;
+  }
+  if (areaSum > 0) return [cx / areaSum, cy / areaSum];
+  return meanOfVertices(geom);            // degenerate (~zero area) → vertex-mean fallback
+}
+
+// Mean of every vertex — the previous centroid, kept ONLY as the degenerate
+// fallback above (a zero-area ring shouldn't occur on a real neighbourhood).
+function meanOfVertices(geom) {
   let sx = 0, sy = 0, n = 0;
   (function walk(c) {
     if (typeof c[0] === "number") { sx += c[0]; sy += c[1]; n += 1; }
