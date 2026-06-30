@@ -36,7 +36,15 @@ import MapSkeleton from "../../components/MapSkeleton.jsx";
 import InfoRail from "./InfoRail.jsx";
 import DataTable from "./DataTable.jsx";
 import SearchInput from "../../components/SearchInput.jsx";
-import { buildSnapshotCsv, buildTimeseriesCsv, buildGeoJson, downloadText, exportPng } from "./exportData.js";
+import {
+  buildSnapshotCsv,
+  buildTimeseriesCsv,
+  buildProvenanceText,
+  downloadCsvWithSidecar,
+  buildGeoJson,
+  downloadText,
+  exportPng,
+} from "./exportData.js";
 import {
   BASEMAP_STYLE,
   MAP_VIEW,
@@ -581,16 +589,25 @@ export default function PropertyAssessmentMap() {
       ? gj.features.filter((f) => set.has(String(f.properties["Neighbourhood ID"])))
       : gj.features;
     const base = `property-assessment_${city}_${selectedIds.length ? `${scoped.length}-selected` : "all"}`;
-    // Provenance context for the CSVs — all from state, no literals.
+    // Provenance context for the CSV sidecars — all from state, no literals. The
+    // CSV bodies are pure data; provenance rides alongside as a _provenance.txt.
     const meta = {
       city,
       metric,
       scope: selectedIds.length ? `${scoped.length} selected neighbourhoods` : "all neighbourhoods",
     };
     if (format === "csv-current") {
-      downloadText(`${base}_${year}.csv`, buildSnapshotCsv(scoped, year, meta), "text/csv;charset=utf-8");
+      const csvName = `${base}_${year}.csv`;
+      downloadCsvWithSidecar(csvName, buildSnapshotCsv(scoped, year),
+        buildProvenanceText({ ...meta, file: csvName, coverage: String(year),
+          shape: `wide — one row per neighbourhood, single year ${year}` }));
     } else if (format === "csv-timeseries") {
-      downloadText(`${base}_timeseries.csv`, buildTimeseriesCsv(scoped, years, meta), "text/csv;charset=utf-8");
+      const csvName = `${base}_timeseries.csv`;
+      const asc = [...years].sort((a, b) => a - b);
+      const span = asc.length ? `${asc[0]}–${asc[asc.length - 1]}` : "";
+      downloadCsvWithSidecar(csvName, buildTimeseriesCsv(scoped, years),
+        buildProvenanceText({ ...meta, file: csvName, coverage: span,
+          shape: `long panel — one row per neighbourhood × year, ${span}` }));
     } else if (format === "geojson") {
       downloadText(`${base}.geojson`, buildGeoJson(scoped), "application/geo+json");
     } else if (format === "png" && map) {
