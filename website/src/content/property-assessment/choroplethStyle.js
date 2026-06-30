@@ -450,6 +450,10 @@ export function choroplethFillColor(metricKey = "median_assessvalue", year, stop
 // FILTERS / colour matches / count label — all read polygon_state (or
 // n_properties) for `year`. Factored out so choroplethLayers (initial mount) and
 // applyYearMetric (year/metric change) build them from ONE source of truth.
+// Brushed-OUT fill opacity for an aggregated polygon (D7): faded so the in-filter
+// polygons read as the live set. Feature-state-driven, so MapLibre applies it
+// instantly (no transition) — the dim snaps, honouring reduced-motion by construction.
+const DIM_OPACITY = 0.12;
 function fillOpacityExpr(year) {
   const state = yget("polygon_state", year);
   return [
@@ -457,8 +461,11 @@ function fillOpacityExpr(year) {
     ["==", state, "aggregated"],
       [
         "case",
+        // Hover + pinned (selection) stay DOMINANT over the dim — checked first.
         ["boolean", ["feature-state", "hover"], false], 0.88,
         ["boolean", ["feature-state", "pinned"], false], 0.88,
+        // Third channel: dimmed = not in the current table-filter brush set (D7).
+        ["boolean", ["feature-state", "dimmed"], false], DIM_OPACITY,
         0.74,
       ],
     ["boolean", ["feature-state", "hover"], false], 0.15,

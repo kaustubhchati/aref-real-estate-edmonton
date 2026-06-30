@@ -724,6 +724,12 @@ p  { margin: 0 0 0.75rem; }
 }
 .dt-facet-chip:hover { background: var(--bg); }
 .dt-facet-chip.is-on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); }
+/* Metric-range facet — a min + max slider on the active metric, with a readout. */
+.dt-facet-range { display: flex; flex-direction: column; gap: 2px; min-width: 150px; }
+.dt-facet-range-cap { font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; }
+.dt-facet-range-cap strong { color: var(--text); font-variant-numeric: tabular-nums; }
+.dt-facet-range-rows { display: flex; flex-direction: column; gap: 1px; }
+.dt-facet-range-rows input[type="range"] { width: 150px; height: 14px; margin: 0; accent-color: var(--accent); }
 /* Reset the facets (distinct from "Clear selection") — pushed to the row's end. */
 .dt-facets-clear {
   margin-left: auto; font-family: inherit; font-size: 0.72rem; font-weight: 600;
