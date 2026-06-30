@@ -74,13 +74,28 @@ import {
 // Per-metric PRESENTATION for the dense table: a compact column label + compact
 // formatter (e.g. $1.41M) that differ from the map's full label / formatter.
 // Keyed by metric key; a metric with no entry falls back to its METRICS label/fmt.
+//   header  — the column heading; carries the unit (e.g. "Lot size (m²)") so the
+//             CELLS don't repeat it (minimal ink). Defaults to `label`.
+//   fmt     — the FULL formatter (with units). The range facet + the aggregate
+//             header's distribution strip read this, so they KEEP their units.
+//   cellFmt — the BARE table-cell formatter (the unit lives in the header).
+//             Defaults to `fmt`, so a metric whose unit stays in-cell (e.g. the
+//             "$" currency prefix) needs no cellFmt.
 const PRESENTATION = {
   median_assessvalue: { label: "Median value", fmt: fmtCurrencyShort },
   avall_public:       { label: "Mean value",   fmt: fmtCurrencyShort },
-  avg_lotsize:        { label: "Lot size",     fmt: fmtArea },
+  avg_lotsize:        { label: "Lot size", header: "Lot size (m²)", fmt: fmtArea,
+                        cellFmt: fmtNumber },                  // bare — "m²" is in the header
   median_yearbuilt:   { label: "Year built",   fmt: fmtYear },
-  yoy_pct_change:     { label: "YoY %",        fmt: fmtPct },
+  yoy_pct_change:     { label: "YoY %",        fmt: fmtPct,
+                        cellFmt: (v) => (v == null || isNaN(+v) ? "—" : (+v).toFixed(1)) }, // bare — "%" is in the header
 };
+
+// Fixed-chassis column widths (table-layout: fixed) — proportions by column ROLE,
+// so the column SET is a deliberate constant and the table never reflows when
+// values change. The 5 metric columns share one width; sum ≈ 100%. The <colgroup>
+// renders these in column order. [console-chassis]
+const COL_WIDTH = { name: "20%", metric: "11%", trend: "17%", rank: "8%" };
 
 // The fixed metric columns, DERIVED from the map's canonical METRICS (one source
 // of truth) in the same order — so a new map metric automatically gets a table
@@ -89,8 +104,10 @@ const PRESENTATION = {
 // vanishes.
 const METRIC_COLS = METRICS.map((m) => ({
   key: m.key,
-  label: PRESENTATION[m.key]?.label ?? m.label,
-  fmt: PRESENTATION[m.key]?.fmt ?? m.fmt,
+  label:   PRESENTATION[m.key]?.label ?? m.label,                                  // range facet + dist strip
+  header:  PRESENTATION[m.key]?.header ?? PRESENTATION[m.key]?.label ?? m.label,   // table heading (carries the unit)
+  fmt:     PRESENTATION[m.key]?.fmt ?? m.fmt,                                      // FULL (units) — range + dist
+  cellFmt: PRESENTATION[m.key]?.cellFmt ?? PRESENTATION[m.key]?.fmt ?? m.fmt,      // BARE — table cell
 }));
 // The metric column ids — the range facet targets the ACTIVE one; on a metric
 // switch we drop any range filter left on a different metric (units differ).
@@ -227,21 +244,22 @@ export default function DataTable({
     {
       accessorKey: "name",
       header: "Neighbourhood",
-      cell: (info) => info.getValue(),
-      meta: { className: "dt-name" },
+      // title so a name truncated by the fixed-width column stays readable on hover.
+      cell: (info) => <span title={info.getValue()}>{info.getValue()}</span>,
+      meta: { className: "dt-name", width: COL_WIDTH.name },
     },
     ...METRIC_COLS.map((m) => ({
       id: m.key,
       accessorFn: (r) => r[m.key] ?? undefined,
-      header: m.label,
+      header: m.header,                         // unit-bearing heading (e.g. "Lot size (m²)")
       cell: (info) => {
         const v = info.getValue();
-        return v == null ? "—" : m.fmt(v);
+        return v == null ? "—" : m.cellFmt(v);  // bare number; the unit is in the header
       },
       sortUndefined: "last",
       enableGlobalFilter: false,
       filterFn: rangeFilter,   // the metric-range facet targets the ACTIVE metric's column
-      meta: { numeric: true, metricKey: m.key },
+      meta: { numeric: true, metricKey: m.key, width: COL_WIDTH.metric },
     })),
     {
       id: "trend",
@@ -257,7 +275,7 @@ export default function DataTable({
           ariaLabel={`${row.original.name} ${metricLabel} trend`}
         />
       ),
-      meta: { className: "dt-spark" },
+      meta: { className: "dt-spark", width: COL_WIDTH.trend },
     },
     {
       id: "rank",
@@ -269,7 +287,7 @@ export default function DataTable({
       },
       sortUndefined: "last",
       enableGlobalFilter: false,
-      meta: { numeric: true },
+      meta: { numeric: true, width: COL_WIDTH.rank },
     },
     // Hidden facet columns (D6) — accessor + multi-select filter only, never
     // rendered (hidden via initialState.columnVisibility), so the VISIBLE table is
@@ -491,6 +509,14 @@ export default function DataTable({
 
           <div className="dt-scroll" ref={scrollRef}>
             <table className="dt-table">
+              {/* Fixed chassis: explicit per-column widths (meta.width) in column
+                  order, so table-layout:fixed gives a constant grid — columns
+                  never reflow when values change or rows re-sort. [console-chassis] */}
+              <colgroup>
+                {table.getVisibleLeafColumns().map((col) => (
+                  <col key={col.id} style={{ width: col.columnDef.meta?.width }} />
+                ))}
+              </colgroup>
               <thead>
                 {table.getHeaderGroups().map((hg) => (
                   <tr key={hg.id}>
