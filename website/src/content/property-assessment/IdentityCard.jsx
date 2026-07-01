@@ -1,8 +1,8 @@
 // =============================================================================
 // IdentityCard.jsx
 //
-// The fixed identity card pinned to the TOP of the Property Assessment left
-// panel (.pa-panel). One card, four parts in order:
+// The identity card at the TOP of the floating control cluster (.pa-float) that
+// overlays the full-bleed map (D1). One card, four parts in order:
 //   1. Title   — "Property Assessment" (Title Case house standard) — FIXED.
 //   2. City    — the existing OptionToggle, relocated here unchanged.
 //   3. Year    — a READ-ONLY readout of the year, in green, tracking the LIVE

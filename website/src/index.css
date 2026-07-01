@@ -416,13 +416,13 @@ p  { margin: 0 0 0.75rem; }
   background: var(--bg);
 }
 
-/* ===== Property Assessment hybrid shell (academic-glass) ==================== */
-/* The PA route restructures the shared full-bleed .content-map into a vertical
-   shell: a persistent TOP CONTEXT BAR over a BODY that splits into the left glass
-   PANEL (populated step-by-step) and the map CANVAS. (.pa-map was an unstyled free
-   hook; it now drives this column layout — .content-map is a flex ROW by default.)
-   The map's floating overlays (controls, legend, year, dock) live inside .pa-canvas
-   and position against it, so the body's panel/canvas split contains them. */
+/* ===== Property Assessment shell (full-bleed map + floating chrome) ========= */
+/* The PA route makes .content-map a vertical shell: a TOP CONTEXT BAR over a
+   FULL-BLEED map canvas (.pa-canvas — the sole body child since D1 removed the
+   in-flow left panel). (.pa-map drives the column layout — .content-map is a flex
+   ROW by default.) All chrome — the floating control cluster (.pa-float), legend,
+   tuning rack, and dock — overlays the map inside .pa-canvas and positions against
+   it (.pa-canvas is the relative containing block). */
 .pa-map { flex-direction: column; }
 
 .pa-topbar {
@@ -434,7 +434,6 @@ p  { margin: 0 0 0.75rem; }
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
 }
 .pa-topbar-context { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
-.pa-topbar-title { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; }
 .pa-topbar-sub {
   font-size: 11px; color: var(--text-muted); white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis;
@@ -444,7 +443,9 @@ p  { margin: 0 0 0.75rem; }
   border-radius: 999px; box-shadow: 0 4px 14px rgba(74,60,33,0.16);
 }
 
-.pa-body { flex: 1 1 auto; display: flex; min-height: 0; }
+/* The map canvas is now the SOLE body child (D1 removed the in-flow .pa-panel), so
+   it fills the whole area below the top bar — the map is full-bleed. The floating
+   controls (.pa-float) overlay it and position against it (position:relative). */
 .pa-canvas {
   position: relative;   /* containing block for the floating map overlays */
   flex: 1 1 auto; min-width: 0; display: flex;
@@ -868,33 +869,54 @@ p  { margin: 0 0 0.75rem; }
 .dt-agg-actions { display: flex; align-items: center; gap: 8px; }
 .dt-toolbar .export-menu { margin-left: auto; }   /* push export to the right of the filter */
 
-/* ----- Left panel (Property Assessment hybrid shell) ----- */
-/* Persistent in-flow glass column on the left of the body. Holds the map controls
-   (or the analyst tools) and — accreted below — the single-select detail. Because
-   it is IN FLOW (not a floating card), the map reflows into the canvas beside it,
-   so the fly-to camera needs no left padding (sidebarLeftPad self-neutralises).
-   The .pa-box-* classes are content styles reused inside it. */
-.pa-panel {
-  flex: 0 0 280px;
-  overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable;
-  background: var(--sidebar-bg);
-  border-right: 1px solid var(--sidebar-edge);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
-  padding: 14px 16px;
-  font-size: 12.5px; line-height: 1.4; color: var(--text);
+/* ----- Floating top-left chrome (D1) ----- */
+/* The in-flow left panel is GONE — its contents float over the full-bleed map as a
+   top-left cluster that overlays (does not reserve width). A bounded vertical stack:
+   the identity card, then the single-select detail (dock-down), then the About&tips
+   popover. Scrolls internally if the stack outgrows the available height, and stops
+   above the bottom chrome (rack/console) so it never collides with it. */
+.pa-float {
+  position: absolute; top: 12px; left: 12px; z-index: 15;
+  width: min(288px, calc(100vw - 24px));
+  max-height: calc(100% - 120px);          /* leave the bottom for the rack/console */
+  overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column; gap: 10px;
+  /* Wrapper is CLICK-THROUGH so map clicks / shift-drag box-selects pass through the
+     transparent gaps; only the cards/controls below re-enable pointer events. */
+  pointer-events: none;
 }
-.pa-panel > *:last-child { margin-bottom: 0; }   /* hug content — no trailing gap */
-.pa-panel .opt-toggle-gel { margin: 0 0 10px; }
-.pa-panel .opt-toggle, .pa-panel .seg { margin: 0; }
-.pa-hint { font-size: 10.5px; color: var(--text-muted); font-style: italic; margin: 0 0 10px; }
-.pa-box-ref { font-size: 10px; color: var(--text-muted); line-height: 1.45; margin: 10px 0 0; }
+.pa-float > * { pointer-events: auto; }
+/* Card control margins scoped to the CARD (was .pa-panel) so they hold in the float. */
+.pa-id-card .opt-toggle, .pa-id-card .seg { margin: 0; }
+
+/* About&tips popover — the box-select tip + provenance/naming note, rehomed off the
+   dead panel. A small trigger + an in-flow expansion (so the float's scroll contains
+   it — no clipped absolute popover). */
+/* align-self:flex-start so the .pa-info box HUGS the button/popover — the empty
+   area beside the collapsed button stays click-through to the map. */
+.pa-info { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; align-self: flex-start; }
+.pa-info-btn {
+  font-family: inherit; font-size: 10.5px; color: var(--text-muted);
+  background: var(--bg-raised); border: 1px solid var(--sidebar-edge);
+  border-radius: 999px; padding: 3px 10px; cursor: pointer;
+  box-shadow: var(--gel-bevel), var(--gel-lift);
+}
+.pa-info-btn::before { content: "ⓘ "; }
+.pa-info-btn:hover { color: var(--text); }
+.pa-info-pop {
+  background: var(--bg-raised); border: 1px solid var(--sidebar-edge);
+  border-radius: var(--radius-md); box-shadow: var(--gel-bevel), var(--gel-lift);
+  padding: 10px 12px; max-width: 288px;
+}
+.pa-hint { font-size: 10.5px; color: var(--text-muted); font-style: italic; margin: 0; }
+.pa-box-ref { font-size: 10px; color: var(--text-muted); line-height: 1.45; margin: 8px 0 0; }
 .pa-box-ref a { color: var(--accent); }
 
-/* ----- Identity card (fixed, top of the PA left panel) ----- */
-/* Pinned card holding the section title + city switcher + green committed-year
-   readout + collapsible metric selector. Light idiom: a raised white card with
-   a warm hairline on the panel's glass; the inner controls keep their own
-   styles. Fixed chrome; only the green year value + active metric change. */
+/* ----- Identity card (top of the floating .pa-float cluster) ----- */
+/* Floating card holding the section title + city switcher + green year readout +
+   collapsible metric selector. Light idiom (dark skin lands in D8): a raised white
+   card with a warm hairline, floating over the map; the inner controls keep their
+   own styles. Fixed chrome; only the green year value + active metric change. */
 .pa-id-card {
   display: flex; flex-direction: column; gap: 10px;
   background: var(--bg-raised);
@@ -1640,15 +1662,14 @@ p  { margin: 0 0 0.75rem; }
   .sb { position:relative; bottom:auto; flex:0 0 auto; width:100%; max-height:45svh;
     border-right:none; border-bottom:0.5px solid rgba(0,0,0,0.10); }
   .canvas-wrap { min-height:55svh; }
-  /* PA hybrid shell on mobile: stack the left panel above the canvas (IN FLOW —
-     never a fixed overlay, so the camera helper still reads 0). Shrink the top-bar
-     search; the dock stays bounded in the canvas foot (no fullscreen takeover). */
+  /* PA on mobile: full-bleed map with the floating cluster narrowed to the phone
+     width. Shrink the top-bar search; the dock stays bounded in the canvas foot. */
   .pa-topbar-search { width: min(56vw, 250px); }
-  .pa-body { flex-direction: column; }
-  .pa-panel { flex: 0 0 auto; width: 100%; max-height: 38svh;
-    border-right: none; border-bottom: 0.5px solid var(--sidebar-edge); }
-  .pa-canvas { min-height: 54svh; }
-  .pa-canvas .canvas-wrap { min-height: 0; }   /* fill pa-canvas, not the shared 55svh */
+  /* Cap the float shorter on mobile so a tall stack (card + single-select detail)
+     stops well ABOVE the bottom-left legend (which moves left on mobile) — the
+     reserve clears the ~210px legend + a margin; the float scrolls if it must. */
+  .pa-float { width: min(70vw, 288px); max-height: calc(100% - 250px); }
+  .pa-canvas .canvas-wrap { min-height: 0; }
   .pa-rack { width: calc(100vw - 24px); }
   /* The summary | table split is too narrow side-by-side on a phone — STACK it
      (summary on top, table below), like the old header layout, both full width. */
