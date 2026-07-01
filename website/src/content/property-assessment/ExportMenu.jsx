@@ -22,23 +22,51 @@
 // =============================================================================
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 const ICON_EXPORT = "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3";
 
 export default function ExportMenu({ onExport, year, years = [], selectedCount = 0 }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState(null); // fixed-position anchor for the PORTALED menu
   const wrapRef = useRef(null);
   const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+
+  // Open ABOVE or BELOW the trigger by available room. The menu is PORTALED to
+  // <body> (not nested in the toolbar) so the console's overflow:hidden can't clip
+  // it — the D3 console is short, so a downward menu would otherwise be cut off.
+  function openMenu() {
+    const r = triggerRef.current?.getBoundingClientRect();
+    if (r) {
+      const flipUp = window.innerHeight - r.bottom < 260; // not enough room below
+      setPos(
+        flipUp
+          ? { left: r.left, bottom: window.innerHeight - r.top + 6 }
+          : { left: r.left, top: r.bottom + 6 }
+      );
+    }
+    setOpen(true);
+  }
 
   useEffect(() => {
     if (!open) return undefined;
-    const onDown = (e) => { if (!wrapRef.current?.contains(e.target)) setOpen(false); };
+    // The menu is portaled, so an outside-click test must check BOTH the trigger
+    // wrapper and the (detached) menu node.
+    const onDown = (e) => {
+      if (!wrapRef.current?.contains(e.target) && !menuRef.current?.contains(e.target)) setOpen(false);
+    };
     const onEsc = (e) => { if (e.key === "Escape") { setOpen(false); triggerRef.current?.focus(); } };
+    const onScroll = () => setOpen(false); // fixed menu doesn't track scroll — close instead of drift
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onEsc);
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onScroll);
     return () => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onEsc);
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onScroll);
     };
   }, [open]);
 
@@ -92,7 +120,7 @@ export default function ExportMenu({ onExport, year, years = [], selectedCount =
         ref={triggerRef}
         type="button"
         className="pa-tools-btn"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (open ? setOpen(false) : openMenu())}
         disabled={!onExport}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -104,8 +132,8 @@ export default function ExportMenu({ onExport, year, years = [], selectedCount =
         </svg>
         <span>Export</span>
       </button>
-      {open && (
-        <div className="export-menu-list" role="menu">
+      {open && pos && createPortal(
+        <div className="export-menu-list" role="menu" ref={menuRef} style={{ position: "fixed", ...pos }}>
           {GROUPS.map((g) => (
             <div
               className="export-menu-group"
@@ -135,7 +163,8 @@ export default function ExportMenu({ onExport, year, years = [], selectedCount =
               ))}
             </div>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

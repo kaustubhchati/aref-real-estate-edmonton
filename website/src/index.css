@@ -673,55 +673,95 @@ p  { margin: 0 0 0.75rem; }
 }
 .dt-panel-wrap.is-open { grid-template-rows: 1fr; }
 
-/* The bounded, centred console box — a horizontal split: summary segment | table.
-   overflow:hidden + min-height:0 let the grid row collapse it to 0. The width
-   GROWS when a summary is present (has-summary) so the TABLE area stays a constant
-   width (no chassis reflow on select) — the console just grows leftward; width
-   eases for a clean grow. The map stays visible above it (.dt is pointer-events:none). */
+/* The FULL-WIDTH, height-capped console (D3): a wide, shallow instrument panel that
+   rises from the bottom. overflow:hidden + min-height:0 let the grid-rows transition
+   collapse it to 0. The height CAP is anchored so the assembly (tuning bay + console)
+   top lands at the old "District button" line (~63svh, screenshot-validated) —
+   encoded viewport-relative (not a fixed px), so the map CENTRE always stays visible
+   above the band. rack≈70 + gap≈8 + handle≈28 sit above the panel, hence −106px. */
 .dt-panel {
   overflow: hidden; min-height: 0;
-  display: flex; flex-direction: row;
-  /* Width is bounded to the CANVAS (viewport − the persistent 280px left panel −
-     a 24px margin), NOT the raw viewport, so the console never overflows the canvas
-     or paints over the panel on a narrow desktop. NO width transition: the console
-     grows instantly when a summary appears, so the table area stays a constant width
-     (a width ease would transiently squeeze it — a chassis reflow we don't want). */
-  width: min(620px, calc(100vw - 280px - 24px));
-  max-height: 42svh;
+  width: calc(100vw - 16px);
+  max-height: calc(37svh - 106px);
   background: var(--sidebar-bg);
   border: 1px solid var(--sidebar-edge); border-bottom: 0;
   border-radius: 12px 12px 0 0;
   box-shadow: 0 -4px 14px rgba(74,60,33,0.12);
 }
-.dt-panel.has-summary { width: min(850px, calc(100vw - 280px - 24px)); }
 
-/* LEFT SEGMENT — the summary (single-select detail OR the selection aggregate),
-   bounded to the console height (note 9): it scrolls internally, never grows the
-   console. Fixed 230px so the table area to its right stays constant. */
-.dt-summary {
-  flex: 0 0 230px; min-width: 0;
-  overflow-y: auto; overflow-x: hidden;
-  border-right: 1px solid var(--border-soft);
+/* FOUR FIXED GRID SLOTS — spine (left, spans all rows) + three stacked wide-shallow
+   gauges (timeseries · distribution · vs-city). The frames are INVARIANT to
+   selection; only their interiors change. The 1px gap over a soft background paints
+   the hairline seams between frames. */
+.dt-grid {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(340px, 1.15fr) minmax(300px, 1fr);
+  grid-template-rows: 1fr 1fr 1.3fr;   /* vs-city gets a touch more room for its four figures */
+  grid-template-areas:
+    "spine timeseries"
+    "spine distribution"
+    "spine vscity";
+  gap: 1px;
+  background: var(--border-soft);
 }
-.dt-summary .dt-agg { border-bottom: 0; padding: 12px; }     /* aggregate as a left column, not a header */
-.dt-summary .dt-agg-bar { flex-wrap: wrap; }                  /* title + clear + export wrap in the narrow column */
-.dt-summary .dt-agg-cards { flex-direction: column; }        /* cards stack vertically, not a wide row */
-.dt-summary .pa-detail { margin-top: 0; padding: 12px; border-top: 0; } /* same inset as the aggregate */
+.dt-slot {
+  background: var(--sidebar-bg);
+  min-width: 0; min-height: 0;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.dt-slot--spine { grid-area: spine; }
+.dt-slot--ts    { grid-area: timeseries; }
+.dt-slot--dist  { grid-area: distribution; }
+.dt-slot--vs    { grid-area: vscity; }
 
-/* RIGHT SEGMENT — toolbar/facets (normal mode) + the table; column flex so the
-   table scroll-area fills the remaining height. */
-.dt-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.dt-toolbar {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 16px; flex: 0 0 auto;
+/* A gauge slot's constant labelled frame: label bar (never changes) + a body whose
+   interior swaps with the selection. */
+.dt-slot-label {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 4px 10px; font-size: 9.5px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted);
+  border-bottom: 1px solid var(--border-soft); white-space: nowrap; overflow: hidden;
 }
-.dt-filter { max-width: 260px; }
-.dt-count { font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+/* justify-content:flex-start (NOT center) so an overflowing gauge's TOP stays
+   reachable; overflow:hidden because the charts SHRINK to fit (below), they don't
+   scroll — only the vs-city list scrolls (it overrides to overflow-y:auto). */
+.dt-slot-body {
+  flex: 1 1 auto; min-height: 0; overflow: hidden;
+  padding: 6px 10px; display: flex; flex-direction: column; justify-content: flex-start;
+}
+
+/* SPINE header — the metric selector (lifted from the identity card), the name
+   filter/count/export, and the categorical facets. Compact so the table below keeps
+   the most room in the shallow band. */
+/* flex:0 1 auto + a max-height cap so a tall head (wrapped metric chips + facets on
+   a narrow column) NEVER starves the table below its floor — the head scrolls
+   internally past the cap; the .dt-scroll table keeps ≥40% of the spine. */
+.dt-spine-head {
+  /* natural height, but RESERVE ≥84px for the table below (thead + ~2 rows) so the
+     head never crushes it; past that the head scrolls internally. flex:0 0 auto so
+     the 407-row table's overflow can't crush the head either. */
+  flex: 0 0 auto; max-height: calc(100% - 84px); overflow-y: auto;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 5px 10px; border-bottom: 1px solid var(--border-soft);
+}
+/* The console carries the metric SegmentedControl (D3) — laid out COMPACT + HORIZONTAL
+   (the vertical card form would crush the table in the shallow band): a small inline
+   "Metric" label + the short-labelled options wrapping across one/two rows. */
+.dt-metric { display: flex; align-items: baseline; gap: 8px; }
+.dt-metric .seg { margin: 0; display: flex; align-items: baseline; gap: 8px; flex: 1 1 auto; min-width: 0; }
+.dt-metric .seg-label { font-size: 10px; white-space: nowrap; }
+.dt-metric .seg-options { flex-direction: row; flex-wrap: wrap; gap: 4px; }
+.dt-metric .seg-btn { width: auto; padding: 2px 8px; font-size: 11px; gap: 0; }  /* was width:100% → chips, not a stacked list */
+.dt-metric .seg-icon { display: none; }
+.dt-toolbar { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.dt-filter { max-width: 200px; flex: 1 1 auto; }
+.dt-count { font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* ----- Categorical facets (D6) — VIEW-only filters under the toolbar ----- */
 .dt-facets {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
-  padding: 0 16px 8px; flex: 0 0 auto;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  flex: 0 0 auto;
 }
 /* District multi-select — native <details> dropdown in the small-button idiom. */
 .dt-facet-dd { position: relative; }
@@ -783,7 +823,7 @@ p  { margin: 0 0 0.75rem; }
    scrolls horizontally rather than letting columns shrink + clip (the 80px
    sparkline and right-aligned numbers fit at >=600px). The desktop dock is wider,
    so it never triggers. */
-.dt-table { table-layout: fixed; width: 100%; min-width: 600px; border-collapse: collapse; font-size: 12px; }
+.dt-table { table-layout: fixed; width: 100%; min-width: 440px; border-collapse: collapse; font-size: 11.5px; }
 .dt-table thead th {
   position: sticky; top: 0; z-index: 1;
   background: var(--sidebar-bg);
@@ -819,47 +859,54 @@ p  { margin: 0 0 0.75rem; }
 .dt-row:hover { background: var(--bg-soft); }
 .dt-row.is-selected { background: var(--accent-soft); }
 .dt-name { font-weight: 500; color: var(--text); text-overflow: ellipsis; }
-.dt-spark { padding: 2px 8px; }
 .dt-empty { padding: 16px; text-align: center; color: var(--text-muted); }
-
-/* Selection-mode aggregate header (C3). Exact cards plain; approximate cards
-   dashed + tagged. */
-.dt-agg { padding: 10px 16px; border-bottom: 1px solid var(--border-soft); flex: 0 0 auto; }
-.dt-agg-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 8px; }
-.dt-agg-title { font-size: 13px; color: var(--text); }
-.dt-agg-clear {
-  font-family: inherit; font-size: 11px; color: var(--accent-dark);
-  background: var(--bg-soft); border: 1px solid var(--border); border-radius: 6px;
-  padding: 3px 9px; cursor: pointer;
-}
-.dt-agg-clear:hover { background: var(--bg); }
-.dt-agg-cards { display: flex; flex-wrap: wrap; gap: 8px; }
-.dt-card {
-  flex: 1 1 130px; min-width: 120px;
-  background: var(--bg-soft); border: 1px solid var(--border); border-radius: 8px;
-  padding: 7px 10px; display: flex; flex-direction: column; gap: 1px;
-}
-.dt-card.is-approx { border-style: dashed; }
-.dt-card-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
-.dt-card-value { font-size: 16px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
-/* vs-city comparison line (D8 item 8): the selection figure against the city
-   baseline — quieter than the value, but above the methodology tag. */
-.dt-card-cmp { font-size: 10.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
-.dt-card-tag { font-size: 9.5px; color: var(--text-subtle); }
-.dt-card.is-approx .dt-card-tag { color: var(--accent-dark); font-style: italic; }
-/* Distribution strip (D8 item 9): the selection's spread on the active metric,
-   sitting between the aggregate cards and the methodology note. Calm, single
-   accent — the ticks + median anchor are drawn in DistributionStrip.jsx. */
-.dt-dist { margin: 10px 0 0; }
-.dt-dist-cap { display: flex; justify-content: space-between; font-size: 10px;
-  text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 0 0 2px; }
-.dt-dist-n { font-variant-numeric: tabular-nums; }
-.dt-dist-svg { display: block; width: 100%; }
-.dt-dist-ends { display: flex; justify-content: space-between; font-size: 10px;
-  color: var(--text-subtle); font-variant-numeric: tabular-nums; margin: 2px 0 0; }
-.dt-agg-note { font-size: 10.5px; color: var(--text-muted); line-height: 1.5; margin: 8px 0 0; }
-.dt-agg-actions { display: flex; align-items: center; gap: 8px; }
 .dt-toolbar .export-menu { margin-left: auto; }   /* push export to the right of the filter */
+
+/* ===== Gauge slots (D3): wide-but-shallow shape readers ===================== */
+/* The charts FLEX to fill their slot body (the SVG shrinks with the band via
+   flex:1 1 0 + a small min-height floor; preserveAspectRatio="none" scales the
+   viewBox to whatever height results), so a short viewport shows a shorter chart
+   rather than an overflowing/scrolling one. The value-range axis stays fixed. */
+/* TIMESERIES — the active-metric trajectory as a real line chart (TrendChart.jsx). */
+.dt-trend { display: flex; flex-direction: column; gap: 3px; width: 100%; flex: 1 1 auto; min-height: 0; }
+.dt-trend-svg { display: block; width: 100%; flex: 1 1 0; min-height: 18px; max-height: 56px; }
+.dt-trend-ax {
+  flex: 0 0 auto; display: flex; justify-content: space-between; gap: 8px;
+  font-size: 9.5px; color: var(--text-subtle); font-variant-numeric: tabular-nums;
+}
+.dt-trend-years { color: var(--text-muted); }
+.dt-trend--empty { font-size: 11px; color: var(--text-muted); font-style: italic; }
+
+/* DISTRIBUTION — the citywide histogram with the selection marked (DistributionStrip.jsx). */
+.dt-hist { display: flex; flex-direction: column; gap: 3px; width: 100%; flex: 1 1 auto; min-height: 0; }
+.dt-hist-svg { display: block; width: 100%; flex: 1 1 0; min-height: 16px; max-height: 52px; }
+.dt-hist-ends {
+  flex: 0 0 auto; display: flex; justify-content: space-between; gap: 8px;
+  font-size: 9.5px; color: var(--text-subtle); font-variant-numeric: tabular-nums;
+}
+.dt-hist--empty { font-size: 11px; color: var(--text-muted); font-style: italic; }
+
+/* VS-CITY — a dense figure list (label · value · vs-city), one line each so all four
+   fit the shallow band. Approx figures marked "≈" (method in a tooltip). */
+.dt-vs-body { overflow-y: auto; }   /* the four figures + note can exceed a shallow slot → scroll from the top */
+.dt-vs-list { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+.dt-vs-row {
+  display: grid; grid-template-columns: auto auto 1fr; align-items: baseline;
+  gap: 4px 8px; padding: 1px 0; border-bottom: 0.5px solid rgba(0,0,0,0.05);
+}
+.dt-vs-k { font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+.dt-vs-v { font-size: 12.5px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dt-vs-cmp {
+  font-size: 9.5px; color: var(--text-subtle); font-variant-numeric: tabular-nums;
+  text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dt-vs-row.is-approx .dt-vs-v { color: var(--accent-dark); }
+.dt-vs-note { font-size: 9.5px; color: var(--text-muted); line-height: 1.4; margin: 4px 0 0; }
+.dt-vs-clear {
+  font-family: inherit; font-size: 10px; font-weight: 600; color: var(--accent-dark);
+  background: transparent; border: 0; cursor: pointer; text-decoration: underline; padding: 0;
+}
+.dt-vs-clear:hover { color: var(--text); }
 
 /* ----- Floating top-left chrome (D1) ----- */
 /* The in-flow left panel is GONE — its contents float over the full-bleed map as a
@@ -964,10 +1011,12 @@ p  { margin: 0 0 0.75rem; }
 .pa-tools-btn:hover:not(:disabled) { background: var(--bg); }
 .pa-tools-btn:disabled { opacity: 0.5; cursor: default; }
 .export-menu { position: relative; }
-/* Floated gel callout — same glossy recipe as the other PA popups/dropdowns. */
+/* Floated gel callout — same glossy recipe as the other PA popups/dropdowns.
+   PORTALED to <body> with fixed left/top (or bottom) set inline by ExportMenu, so
+   the short D3 console's overflow:hidden can't clip it; bounded + scrollable. */
 .export-menu-list {
-  position: absolute; top: calc(100% + 6px); left: 0; min-width: 232px;
-  display: flex; flex-direction: column; padding: 5px; z-index: 5;
+  min-width: 232px; max-height: min(320px, 60svh); overflow-y: auto;
+  display: flex; flex-direction: column; padding: 5px; z-index: 40;
   background: var(--gel-grad-gloss);
   box-shadow: var(--gel-lift-float), var(--gel-bevel);
   border: var(--gel-border); border-radius: var(--radius-md);
@@ -1716,11 +1765,16 @@ p  { margin: 0 0 0.75rem; }
   .pa-float { width: min(70vw, 288px); max-height: calc(100% - 250px); }
   .pa-canvas .canvas-wrap { min-height: 0; }
   .pa-rack { width: calc(100vw - 24px); }
-  /* The summary | table split is too narrow side-by-side on a phone — STACK it
-     (summary on top, table below), like the old header layout, both full width. */
-  .dt-panel, .dt-panel.has-summary { width: calc(100vw - 24px); max-height: 56svh; flex-direction: column; }
-  .dt-summary { flex: 0 0 auto; max-height: 30svh; border-right: 0;
-    border-bottom: 1px solid var(--border-soft); }
+  /* The four-slot grid is too tight side-by-side on a phone — STACK it into one
+     column (spine, then the three gauges), the whole console scrolling. Taller cap
+     on mobile since it no longer has to share width. */
+  .dt-panel { width: calc(100vw - 16px); max-height: 62svh; }
+  .dt-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(200px, 2fr) 1fr 1fr 1.2fr;
+    grid-template-areas: "spine" "timeseries" "distribution" "vscity";
+    overflow-y: auto;
+  }
   /* Bottom-left so it clears the centred tuning rack + corner controls. */
   .pa-legend { width: 42vw; left: 12px; right: auto; bottom: 10px; }
   .shell-footer-grid { grid-template-columns:1fr; gap:1.25rem; }

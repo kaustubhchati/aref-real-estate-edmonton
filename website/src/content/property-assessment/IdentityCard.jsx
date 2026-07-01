@@ -36,6 +36,7 @@ export default function IdentityCard({
   metric,
   onMetricChange,
   hasData,
+  showMetric = true,   // false when the console is up — the console carries the metric selector (D3)
 }) {
   // The card's ONLY state: is the metric selector collapsed (a chip) or
   // expanded (the full SegmentedControl list)? Default collapsed.
@@ -66,8 +67,10 @@ export default function IdentityCard({
 
       {/* METRIC — collapsed chip (active metric + caret) → expanded
           SegmentedControl. Default collapsed; picking a metric collapses it
-          again. Same METRICS source and setMetric handler as before. */}
-      {hasData && (
+          again. Same METRICS source and setMetric handler as before. HIDDEN when
+          the console is up (showMetric=false) — the console's spine header then
+          carries the metric selector, so the buttons don't live in two places. */}
+      {hasData && showMetric && (
         <div className="pa-id-metric">
           {metricOpen ? (
             <SegmentedControl

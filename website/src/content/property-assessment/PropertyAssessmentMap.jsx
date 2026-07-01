@@ -643,7 +643,8 @@ export default function PropertyAssessmentMap() {
         avg_lotsize:        num(p.avg_lotsize),
         median_yearbuilt:   num(p.median_yearbuilt),
         yoy_pct_change:     num(p.yoy_pct_change),
-        // Trend = the ACTIVE metric across every year (per-row sparkline).
+        n_properties:       num(p.n_properties),   // parcels — for the console's vs-city slot (D3)
+        // The ACTIVE metric across every year — drives the console's timeseries slot (D3).
         series: years.map((y) => num(gp[`${metric}_${y}`])),
         rank: null,
       };
@@ -1039,6 +1040,9 @@ export default function PropertyAssessmentMap() {
               metric={metric}
               onMetricChange={setMetric}
               hasData={!!url}
+              /* Metric buttons lift away when the console rises — the console's own
+                 spine header then carries the metric selector (D3). */
+              showMetric={!dockOpen}
             />
 
             {url && !dockOpen && detailRail}
@@ -1135,6 +1139,8 @@ export default function PropertyAssessmentMap() {
                 rows={tableRows}
                 metric={metric}
                 metricLabel={selectedMetric.label}
+                metrics={METRICS}
+                onMetricChange={setMetric}
                 activeIndex={activeYearIndex}
                 year={year}
                 years={years}
@@ -1149,7 +1155,6 @@ export default function PropertyAssessmentMap() {
                 open={dockOpen}
                 onToggle={() => setDockOpen((d) => !d)}
                 rangeSlot={rangeSlot}
-                detail={dockOpen ? detailRail : null}
               />
             )}
           </div>
