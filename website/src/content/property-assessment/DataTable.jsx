@@ -44,11 +44,16 @@
 //                the rack with the year slider; its TanStack wiring (faceted
 //                bounds + setRange + the VIEW-only brush) stays in THIS
 //                component — only the UI moves. [tuning-bay]
-//   detail       the single-select InfoRail ELEMENT (or null) — rendered in the
-//                console's LEFT segment when exactly one nbhd is selected and the
-//                dock is up (the re-home, notes 7/8). The parent builds it (same
-//                component as the panel uses) and decides the container by dock
-//                state; this component just slots it in. [console-takeover]
+//   metrics / onMetricChange  METRICS + the active-metric setter — the console's
+//                spine header carries the metric selector while the console is up
+//                (it lifts out of the identity card, D3).
+//
+// LAYOUT (D3): a full-width, height-capped panel with FOUR fixed labelled grid slots
+// — the compact table SPINE (left, spans all rows) + three wide-shallow gauges
+// (TIMESERIES · DISTRIBUTION · VS-CITY). The frames never move; only their interiors
+// change with the selection count (N=0 city / N=1 neighbourhood / N≥2 aggregate). The
+// single-select detail that used to re-home between panel and console is consolidated
+// into these slots (no more `detail` prop).
 // =============================================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -63,9 +68,10 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import Sparkline from "../../components/Sparkline.jsx";
 import DistributionStrip from "./DistributionStrip.jsx";
+import TrendChart from "./TrendChart.jsx";
 import ExportMenu from "./ExportMenu.jsx";
+import SegmentedControl from "../../components/SegmentedControl.jsx";
 import { DUR_BASE, reduceMotion } from "../../components/motion.js";
 import { METRICS, STATE_STYLE } from "./choroplethStyle.js";
 import {
@@ -100,8 +106,10 @@ const PRESENTATION = {
 // Fixed-chassis column widths (table-layout: fixed) — proportions by column ROLE,
 // so the column SET is a deliberate constant and the table never reflows when
 // values change. The 5 metric columns share one width; sum ≈ 100%. The <colgroup>
-// renders these in column order. [console-chassis]
-const COL_WIDTH = { name: "20%", metric: "11%", trend: "17%", rank: "8%" };
+// renders these in column order. The per-row Trend sparkline is GONE (D3) — the full
+// trajectory is now the console's wide TIMESERIES slot — so the columns tighten to
+// free horizontal width for the visual slots. [console-chassis]
+const COL_WIDTH = { name: "24%", metric: "13%", rank: "11%" };
 
 // The fixed metric columns, DERIVED from the map's canonical METRICS (one source
 // of truth) in the same order — so a new map metric automatically gets a table
@@ -198,6 +206,8 @@ export default function DataTable({
   rows,
   metric,
   metricLabel,
+  metrics,          // METRICS — the console's spine header carries the metric selector (D3)
+  onMetricChange,   // set the active metric from the console
   activeIndex,
   year,
   years,
@@ -212,7 +222,6 @@ export default function DataTable({
   open,
   onToggle,
   rangeSlot,
-  detail,
 }) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState([{ id: "name", desc: false }]);
@@ -254,21 +263,53 @@ export default function DataTable({
     return rows.filter((r) => selectedSet.has(String(r.id)));
   }, [rows, selectionMode, selectedSet]);
 
-  // The selected set's ACTIVE-metric values, for the distribution strip (item 9).
-  // Read off the constituent rows (every metric value rides on the row), reportable
-  // only (null = suppressed / non-residential, no value). Re-derives on selection
-  // change (data) AND metric switch (metric) — refresh-by-design, no literals. The
-  // strip reads the SELECTION channel only (data is the selected constituents) —
-  // never brushedIds (the VIEW-only fence).
-  const distValues = useMemo(
-    () => (selectionMode ? data.map((r) => r[metric]).filter((v) => v != null) : []),
-    [selectionMode, data, metric]
+  // ---- Console visual-slot data (D3) -----------------------------------------
+  // The four slots read the SELECTION channel only (singleRow / data / rows) — never
+  // brushedIds (the VIEW-only fence). Everything re-derives on selection AND metric
+  // switch, so the slots refresh by design (no literals).
+  //
+  // The single-selected row (N=1) — the slots show THIS neighbourhood.
+  const singleRow = useMemo(
+    () => (selectedIds.length === 1 ? rows.find((r) => String(r.id) === String(selectedIds[0])) : null),
+    [selectedIds, rows]
   );
 
-  // Column defs (data-driven). accessorFn maps null → undefined so TanStack's
+  // TIMESERIES: the active-metric trajectory to plot — the single row's series (N=1),
+  // else the per-year MEAN across the scope rows (selection mean at N≥2, city mean at
+  // N=0). `series` already carries the ACTIVE metric across every year.
+  const plotSeries = useMemo(() => {
+    if (!years.length) return [];
+    if (singleRow) return singleRow.series ?? [];
+    const src = selectionMode ? data : rows;
+    return years.map((_, i) => {
+      const vals = src.map((r) => r.series?.[i]).filter((v) => v != null);
+      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    });
+  }, [singleRow, selectionMode, data, rows, years]);
+
+  // DISTRIBUTION: the CITY values (all reportable) as the histogram; the SELECTION's
+  // values as the marker(s) within it (none at N=0 → the city histogram alone).
+  const cityValues = useMemo(
+    () => rows.map((r) => r[metric]).filter((v) => v != null),
+    [rows, metric]
+  );
+  const selMarkers = useMemo(() => {
+    if (singleRow) return singleRow[metric] != null ? [singleRow[metric]] : [];
+    if (selectionMode) return data.map((r) => r[metric]).filter((v) => v != null);
+    return [];
+  }, [singleRow, selectionMode, data, metric]);
+
+  // TIMESERIES scope label — the entity the trend/distribution describe.
+  const scopeLabel = singleRow
+    ? singleRow.name
+    : selectionMode
+    ? `${aggregate.nSelected} selected · mean`
+    : "city · mean";
+
+  // Column defs (data-driven, STATIC). accessorFn maps null → undefined so TanStack's
   // sortUndefined keeps blanks last in BOTH directions; the cell renders "—".
-  // `meta.metricKey` lets the renderer highlight the active metric's column.
-  // Depends on activeIndex so the per-row Trend dots track the year slider.
+  // `meta.metricKey` lets the renderer highlight the active metric's column. The
+  // per-row Trend sparkline is gone (D3) — its full trajectory is the timeseries slot.
   const columns = useMemo(() => [
     {
       accessorKey: "name",
@@ -291,22 +332,6 @@ export default function DataTable({
       meta: { numeric: true, metricKey: m.key, width: COL_WIDTH.metric },
     })),
     {
-      id: "trend",
-      header: "Trend",
-      enableSorting: false,
-      enableGlobalFilter: false,
-      cell: ({ row }) => (
-        <Sparkline
-          values={row.original.series}
-          activeIndex={activeIndex}
-          width={80}
-          height={20}
-          ariaLabel={`${row.original.name} ${metricLabel} trend`}
-        />
-      ),
-      meta: { className: "dt-spark", width: COL_WIDTH.trend },
-    },
-    {
       id: "rank",
       accessorFn: (r) => r.rank ?? undefined,
       header: "Rank",
@@ -328,7 +353,9 @@ export default function DataTable({
       enableSorting: false,
       enableGlobalFilter: false,
     })),
-  ], [activeIndex, metricLabel]);
+    // Static column set (the active-metric highlight is applied in the render, not
+    // the def; the Trend sparkline that needed activeIndex is gone — D3).
+  ], []);
 
   // React Compiler can't memoize a component that calls useReactTable (TanStack
   // returns fresh functions each call); it safely skips this one — fine at 407 rows.
@@ -489,77 +516,74 @@ export default function DataTable({
           while open or mid-collapse (panelMounted, unmounted by the effect's timeout). */}
       <div className={`dt-panel-wrap${panelExpanded ? " is-open" : ""}`}>
         {panelMounted && (
-          <div className={`dt-panel${selectionMode || detail ? " has-summary" : ""}`}>
-            {/* LEFT SEGMENT — the summary: aggregate (N≥2) or single-select detail
-                (N=1). One segment, two contents by selection count (notes 7, 8);
-                bounded to the console height (note 9) via overflow-y. Absent at
-                N=0, so the table fills the console. */}
-            {(selectionMode || detail) && (
-              <div className="dt-summary">
-                {selectionMode ? (
-                  <AggregateHeader
-                    aggregate={aggregate}
-                    cityBaseline={cityBaseline}
-                    distValues={distValues}
-                    distLabel={activeCol?.label ?? metricLabel}
-                    distFmt={activeCol?.fmt ?? ((v) => v)}
-                    onClear={onClearSelection}
-                    onExport={onExport}
-                    year={year}
-                    years={years}
-                  />
-                ) : (
-                  detail /* the single-select InfoRail, re-homed from the left panel */
-                )}
-              </div>
-            )}
+          <div className="dt-panel">
+            {/* FOUR FIXED GRID SLOTS (D3) — spine · timeseries · distribution ·
+                vs-city. The frames are INVARIANT to selection: they never move,
+                resize, or relabel. Only their interiors change with N (0 = city,
+                1 = the neighbourhood, ≥2 = the selection aggregate). */}
+            <div className="dt-grid">
 
-            {/* RIGHT SEGMENT — the table; its toolbar + facets ride on top in normal
-                mode (suppressed in selection mode, where the rows ARE the selection). */}
-            <div className="dt-main">
-              {!selectionMode && (
-                <>
+              {/* ===== SPINE — the compact table + its controls. The metric selector
+                  lives here while the console is up (it lifts out of the identity
+                  card, D3), so "the table carries the metrics". ===== */}
+              <div className="dt-slot dt-slot--spine">
+                <div className="dt-spine-head">
+                  {metrics && onMetricChange && (
+                    <div className="dt-metric">
+                      <SegmentedControl
+                        label="Metric"
+                        /* compact short labels (no icon) — the console band is shallow;
+                           the horizontal wrapped chips keep the table its room (D3). */
+                        options={metrics.map((m) => ({
+                          key: m.key,
+                          label: METRIC_COLS.find((c) => c.key === m.key)?.label ?? m.label,
+                        }))}
+                        value={metric}
+                        onChange={onMetricChange}
+                      />
+                    </div>
+                  )}
                   <div className="dt-toolbar">
-                    <input
-                      type="text"
-                      className="dt-filter search-input"
-                      placeholder="Filter by name…"
-                      value={globalFilter}
-                      onChange={(e) => setGlobalFilter(e.target.value)}
-                      aria-label="Filter neighbourhoods by name"
-                    />
-                    <span className="dt-count">{viewRows.length} of {rows.length}</span>
+                    {!selectionMode && (
+                      <input
+                        type="text"
+                        className="dt-filter search-input"
+                        placeholder="Filter by name…"
+                        value={globalFilter}
+                        onChange={(e) => setGlobalFilter(e.target.value)}
+                        aria-label="Filter neighbourhoods by name"
+                      />
+                    )}
+                    <span className="dt-count">
+                      {selectionMode ? `${aggregate.nSelected} selected` : `${viewRows.length} of ${rows.length}`}
+                    </span>
                     <ExportMenu onExport={onExport} year={year} years={years} selectedCount={selectedIds.length} />
                   </div>
-                  {/* Categorical facets (D6) — VIEW-only display filters over the table,
-                      rendered from the FACETS config: a dropdown or toggle chips per the
-                      facet's `control` (one path, no copy-pasted blocks). */}
-                  <div className="dt-facets" role="group" aria-label="Filter the table">
-                    {FACETS.map((f) => {
-                      const shared = {
-                        label: f.label,
-                        options: facetOptions(f.id),
-                        selected: facetValue(f.id),
-                        labelOf: f.labelOf,
-                        onToggle: (v) => toggleFacet(f.id, v),
-                      };
-                      return f.control === "dropdown"
-                        ? <FacetDropdown key={f.id} {...shared} />
-                        : <FacetToggles key={f.id} {...shared} />;
-                    })}
-                    {/* The metric-range slider moved OUT of here into the tuning rack
-                        (portaled — see below). District/State (dropdown/toggles) stay
-                        in the dock; the rack is for SLIDERS specifically. */}
-                    {anyFacet && (
-                      <button type="button" className="dt-facets-clear" onClick={clearFacets}>
-                        Clear filters
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
-
-              <div className="dt-scroll" ref={scrollRef}>
+                  {/* Categorical facets (D6) — VIEW-only filters over the table
+                      (normal mode only; in selection mode the rows ARE the selection). */}
+                  {!selectionMode && (
+                    <div className="dt-facets" role="group" aria-label="Filter the table">
+                      {FACETS.map((f) => {
+                        const shared = {
+                          label: f.label,
+                          options: facetOptions(f.id),
+                          selected: facetValue(f.id),
+                          labelOf: f.labelOf,
+                          onToggle: (v) => toggleFacet(f.id, v),
+                        };
+                        return f.control === "dropdown"
+                          ? <FacetDropdown key={f.id} {...shared} />
+                          : <FacetToggles key={f.id} {...shared} />;
+                      })}
+                      {anyFacet && (
+                        <button type="button" className="dt-facets-clear" onClick={clearFacets}>
+                          Clear filters
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="dt-scroll" ref={scrollRef}>
             <table className="dt-table">
               {/* Fixed chassis: explicit per-column widths (meta.width) in column
                   order, so table-layout:fixed gives a constant grid — columns
@@ -643,7 +667,62 @@ export default function DataTable({
                 )}
               </tbody>
             </table>
+                </div>
               </div>
+
+              {/* ===== TIMESERIES SLOT — the scope's active-metric trajectory over
+                  the full year series (replaces the per-row sparkline). ===== */}
+              <div className="dt-slot dt-slot--ts">
+                <div className="dt-slot-label">
+                  Trend · {activeCol?.label ?? metricLabel} · {scopeLabel}
+                </div>
+                <div className="dt-slot-body">
+                  <TrendChart
+                    series={plotSeries}
+                    years={years}
+                    activeIndex={activeIndex}
+                    fmt={activeCol?.fmt ?? ((v) => v)}
+                    ariaLabel={`${activeCol?.label ?? metricLabel} trend, ${scopeLabel}`}
+                  />
+                </div>
+              </div>
+
+              {/* ===== DISTRIBUTION SLOT — the citywide histogram with the selection
+                  marked within it. ===== */}
+              <div className="dt-slot dt-slot--dist">
+                <div className="dt-slot-label">Distribution · {activeCol?.label ?? metricLabel}</div>
+                <div className="dt-slot-body">
+                  <DistributionStrip
+                    values={cityValues}
+                    markers={selMarkers}
+                    label={activeCol?.label ?? metricLabel}
+                    fmt={activeCol?.fmt ?? ((v) => v)}
+                  />
+                </div>
+              </div>
+
+              {/* ===== VS-CITY SLOT — value / city-baseline / delta at full weight.
+                  N≥2 → the selection aggregate; N=1 → this neighbourhood; N=0 → the
+                  city baseline itself. The exact/approx honesty tags are preserved. */}
+              <div className="dt-slot dt-slot--vs">
+                <div className="dt-slot-label">
+                  <span>vs City</span>
+                  {(selectionMode || singleRow) && (
+                    <button type="button" className="dt-vs-clear" onClick={onClearSelection}>
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <div className="dt-slot-body dt-vs-body">
+                  <VsCitySlot
+                    selectionMode={selectionMode}
+                    aggregate={aggregate}
+                    singleRow={singleRow}
+                    cityBaseline={cityBaseline}
+                  />
+                </div>
+              </div>
+
             </div>
           </div>
         )}
@@ -694,73 +773,77 @@ function fmtSharePct(frac) {              // frac = sel/city → "8% of city" / 
   return `${s}% of city`;
 }
 
-// ---- Selection-mode aggregate header (C3 + D8 item 8) ----------------------
-// Honest area summary: the EXACT cards (count, total parcels, parcel-weighted
-// mean) are unlabelled; the APPROXIMATE ones (median, YoY) carry a "≈" tag and
-// the note explains why (no parcel data in-browser). Each value card now also
-// carries a "vs city" line — the same figure against the city-wide baseline, on
-// the SAME parcel-weighted basis (item 8). The constituent rows below make the
-// rolled-up numbers auditable. NOTE: deliberately NOT a TanStack aggregationFn —
-// a parcel-weighted mean must weight by n_properties, which the built-in
-// (unweighted) mean can't do; the honest math lives in aggregateFeatures.
-function AggregateHeader({ aggregate: a, cityBaseline: cb, distValues, distLabel, distFmt, onClear, onExport, year, years }) {
-  // Build a card's "city <value> · <delta>" line, honest per metric kind. A null
-  // baseline (data still loading) or null figure yields no line — the cards then
-  // render exactly as they did before item 8.
-  const cmpLevel = (sel, cityVal, fmt) =>
+// ---- VS-CITY slot (D3; carries C3 + D8 item 8) -----------------------------
+// The four figures (parcels / mean / median / YoY) at full weight, each read against
+// the CITY baseline on the same honest parcel-weighted basis. Selection-responsive:
+//   N≥2 → the selection aggregate (exact mean, ≈ median-of-medians, ≈ parcel-weighted
+//         YoY) with deltas vs city; N=1 → THIS neighbourhood's own figures vs city;
+//   N=0 → the city baseline itself (no delta — it IS the baseline).
+// The EXACT/APPROX honesty tags are preserved (aggregate approximations carry "≈").
+// NOTE: still NOT a TanStack aggregationFn — a parcel-weighted mean must weight by
+// n_properties (the built-in unweighted mean can't), so the math stays in
+// aggregateFeatures; this only re-lays-out the figures. Reads the SELECTION channel
+// only — never brushedIds (the VIEW-only fence).
+function VsCitySlot({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb }) {
+  // "city <value> · <delta>" per metric kind (level = relative %, rate = pp, share =
+  // % of city). A null baseline/figure yields no delta line.
+  const lvl = (sel, cityVal, fmt) =>
     cb && sel != null && cityVal != null && cityVal !== 0
       ? `city ${fmt(cityVal)} · ${fmtSignedPct((sel - cityVal) / cityVal)}`
       : null;
-  const cmpRate = (sel, cityVal, fmt) =>
-    cb && sel != null && cityVal != null
-      ? `city ${fmt(cityVal)} · ${fmtSignedPp(sel - cityVal)}`
-      : null;
-  const cmpShare = (sel, cityVal) =>
-    cb && sel != null && cityVal != null && cityVal !== 0
-      ? fmtSharePct(sel / cityVal)
-      : null;
+  const rate = (sel, cityVal, fmt) =>
+    cb && sel != null && cityVal != null ? `city ${fmt(cityVal)} · ${fmtSignedPp(sel - cityVal)}` : null;
+  const share = (sel, cityVal) =>
+    cb && sel != null && cityVal != null && cityVal !== 0 ? fmtSharePct(sel / cityVal) : null;
 
-  return (
-    <div className="dt-agg">
-      <div className="dt-agg-bar">
-        <strong className="dt-agg-title">{a.nSelected} neighbourhoods selected</strong>
-        <div className="dt-agg-actions">
-          <button type="button" className="dt-agg-clear" onClick={onClear}>Clear selection</button>
-          <ExportMenu onExport={onExport} year={year} years={years} selectedCount={a.nSelected} />
-        </div>
-      </div>
-      <div className="dt-agg-cards">
-        <AggCard label="Total parcels" value={fmtNumber(a.totalParcels)} tag="exact"
-                 compare={cmpShare(a.totalParcels, cb?.totalParcels)} />
-        <AggCard label="Mean assessed" value={fmtCurrency(a.parcelMean)} tag="parcel-weighted · exact"
-                 compare={cmpLevel(a.parcelMean, cb?.parcelMean, fmtCurrency)} />
-        <AggCard label="Median assessed" value={fmtCurrency(a.medianOfMedians)} tag="≈ median of medians" approx
-                 compare={cmpLevel(a.medianOfMedians, cb?.medianOfMedians, fmtCurrency)} />
-        <AggCard label="YoY change" value={fmtPct(a.areaYoY)} tag="≈ parcel-weighted" approx
-                 compare={cmpRate(a.areaYoY, cb?.areaYoY, fmtPct)} />
-      </div>
-      {/* Distribution of the selection on the ACTIVE metric (item 9) — the spread/
-          shape around the central figures above. Self-guards below 2 values. */}
-      <DistributionStrip values={distValues} label={distLabel} fmt={distFmt} />
-      <p className="dt-agg-note">
-        {a.nReportable} reportable · {a.nSuppressed} suppressed · {a.nExcluded} non-residential / no-data
-        (excluded from values). Mean is parcel-exact; the median is a median of neighbourhood medians
-        and YoY is parcel-weighted across neighbourhoods — both are approximations (no parcel-level
-        data in the browser). Each figure is shown against the city-wide baseline on the same
-        parcel-weighted basis — level deltas are relative, YoY is in percentage points (pp).
-      </p>
-    </div>
-  );
-}
+  let cards, note;
+  if (selectionMode && a) {
+    cards = [
+      { label: "Total parcels", value: fmtNumber(a.totalParcels), tag: "exact", compare: share(a.totalParcels, cb?.totalParcels) },
+      { label: "Mean assessed", value: fmtCurrency(a.parcelMean), tag: "parcel-weighted · exact", compare: lvl(a.parcelMean, cb?.parcelMean, fmtCurrency) },
+      { label: "Median assessed", value: fmtCurrency(a.medianOfMedians), tag: "≈ median of medians", approx: true, compare: lvl(a.medianOfMedians, cb?.medianOfMedians, fmtCurrency) },
+      { label: "YoY change", value: fmtPct(a.areaYoY), tag: "≈ parcel-weighted", approx: true, compare: rate(a.areaYoY, cb?.areaYoY, fmtPct) },
+    ];
+    note = `${a.nReportable} reportable · ${a.nSuppressed} suppressed · ${a.nExcluded} excluded. Mean is parcel-exact; median (of medians) & YoY are parcel-weighted approximations (no parcel data in-browser). Deltas: level relative, YoY in pp.`;
+  } else if (r) {
+    cards = [
+      { label: "Parcels", value: r.n_properties != null ? fmtNumber(r.n_properties) : "—", tag: "this area", compare: share(r.n_properties, cb?.totalParcels) },
+      { label: "Mean assessed", value: r.avall_public != null ? fmtCurrency(r.avall_public) : "—", tag: "this area", compare: lvl(r.avall_public, cb?.parcelMean, fmtCurrency) },
+      { label: "Median assessed", value: r.median_assessvalue != null ? fmtCurrency(r.median_assessvalue) : "—", tag: "this area", compare: lvl(r.median_assessvalue, cb?.medianOfMedians, fmtCurrency) },
+      { label: "YoY change", value: r.yoy_pct_change != null ? fmtPct(r.yoy_pct_change) : "—", tag: "this area", compare: rate(r.yoy_pct_change, cb?.areaYoY, fmtPct) },
+    ];
+    // A non-aggregated neighbourhood (suppressed / non-residential / …) has no values;
+    // surface WHY so the em-dashes read as intentional, not missing data.
+    note = r.state && r.state !== "aggregated" ? (STATE_STYLE[r.state]?.label ?? null) : null;
+  } else if (cb) {
+    cards = [
+      { label: "Total parcels", value: fmtNumber(cb.totalParcels), tag: "city" },
+      { label: "Mean assessed", value: fmtCurrency(cb.parcelMean), tag: "city · parcel-weighted" },
+      { label: "Median assessed", value: fmtCurrency(cb.medianOfMedians), tag: "city · ≈ median", approx: true },
+      { label: "YoY change", value: fmtPct(cb.areaYoY), tag: "city · ≈ weighted", approx: true },
+    ];
+    note = "Citywide baseline — select neighbourhoods to compare.";
+  } else {
+    return <p className="dt-vs-note">No data.</p>;
+  }
 
-function AggCard({ label, value, tag, compare = null, approx = false }) {
+  // One dense row per figure (label · value · vs-city) so all four fit the shallow
+  // band. An approximate figure is marked "≈" (with the method as a tooltip), so the
+  // exact/approx honesty stays visible. The compare column falls back to the tag when
+  // there's no delta (N=0 baseline).
   return (
-    <div className={`dt-card${approx ? " is-approx" : ""}`}>
-      <span className="dt-card-label">{label}</span>
-      <span className="dt-card-value">{value}</span>
-      {compare && <span className="dt-card-cmp">{compare}</span>}
-      <span className="dt-card-tag">{tag}</span>
-    </div>
+    <>
+      <div className="dt-vs-list">
+        {cards.map((c) => (
+          <div key={c.label} className={`dt-vs-row${c.approx ? " is-approx" : ""}`}>
+            <span className="dt-vs-k">{c.label}</span>
+            <span className="dt-vs-v" title={c.tag}>{c.approx ? "≈ " : ""}{c.value}</span>
+            <span className="dt-vs-cmp">{c.compare ?? c.tag}</span>
+          </div>
+        ))}
+      </div>
+      {note && <p className="dt-vs-note">{note}</p>}
+    </>
   );
 }
 
@@ -814,39 +897,59 @@ function FacetToggles({ label, options, selected, labelOf, onToggle }) {
   );
 }
 
-// The metric-RANGE facet: a min + a max slider over the active metric's bounds, with
-// a live readout. Two stacked native sliders (legible + robust over an overlapping
-// dual-thumb hack); each clamps against the other so lo never passes hi. `value` is
-// the column's [lo, hi] filter (undefined = full range); `bounds` is [min, max] from
-// getFacetedMinMaxValues.
+// The metric-RANGE facet: a min + a max thumb over the active metric's bounds, with
+// a live readout. One track, two thumbs overlaid (D2) — each thumb clamps against the
+// other so lo never passes hi, and z-index is position-aware so a coincident pair
+// stays grabbable (see the render).
+// `value` is the column's [lo, hi] filter (undefined = full range); `bounds` is
+// [min, max] from getFacetedMinMaxValues.
 //
-// Now lives in the TUNING RACK (portaled there from the dock — see the createPortal
-// call in DataTable), so it must hold a FIXED slot: when there's no filterable view
-// (`disabled`, i.e. selection mode) or the bounds are null/degenerate, it renders an
-// INERT placeholder rather than null — the slot never appears/disappears. [tuning-bay]
+// FORM (D2): a ONE-LINE control matching the year slider — [label · one track with
+// two thumbs · min–max value] — laid out with the tuning-rack's own classes
+// (.pa-rack-slot/-label/-value) + the shared .pa-slider look, so year + range read
+// as the same instrument. The dual handle is two range inputs OVERLAID on one track
+// (.pa-dual): each input's native track is transparent and only its thumb catches
+// pointer events, so both thumbs sit on the single .pa-dual-track with a green
+// .pa-dual-fill segment between them.
+//
+// Lives in the TUNING RACK (portaled there from the dock — see createPortal below),
+// so it holds a FIXED slot: when there's no filterable view (`disabled`, i.e.
+// selection mode) or bounds are null/degenerate, it renders an INERT (dimmed)
+// placeholder rather than null — the slot never appears/disappears. The TanStack
+// wiring (onChange → setFilterValue → brush) is unchanged from the stacked version.
 function RangeFacet({ label, fmt, bounds, value, onChange, disabled = false }) {
   const usable = bounds && bounds[0] !== bounds[1];
   const off = disabled || !usable;
   const [min, max] = usable ? bounds : [0, 1];
   const [lo, hi] = usable && value ? value : [min, max];
   const step = (max - min) / 100 || 1;
+  const pct = (v) => `${((v - min) / (max - min || 1)) * 100}%`;
   return (
-    <div className={`dt-facet-range${off ? " is-disabled" : ""}`}>
-      <span className="dt-facet-range-cap">
-        {label}: <strong>{off ? "—" : `${fmt(lo)} – ${fmt(hi)}`}</strong>
-      </span>
-      <div className="dt-facet-range-rows">
+    <div className={`pa-rack-slot pa-range-slot${off ? " is-off" : ""}`}>
+      <span className="pa-rack-label">{label}</span>
+      <div className="pa-dual" style={{ "--lo": pct(lo), "--hi": pct(hi) }}>
+        <div className="pa-dual-track" />
+        <div className="pa-dual-fill" />
+        {/* When the thumbs COINCIDE, only the top one is grabbable, so raise whichever
+            must move to separate them: `lo` clamps to ≤ hi (can only go DOWN), `hi`
+            clamps to ≥ lo (can only go UP). So raise lo in the upper half (recovers a
+            stuck [max,max]) and leave hi on top otherwise (recovers [min,min]). */}
         <input
-          type="range" min={min} max={max} step={step} value={lo} disabled={off}
+          type="range" className="pa-slider pa-dual-input"
+          min={min} max={max} step={step} value={lo} disabled={off}
+          style={{ zIndex: lo > (min + max) / 2 ? 3 : 1 }}
           aria-label={`${label} minimum`}
           onChange={(e) => onChange([Math.min(+e.target.value, hi), hi])}
         />
         <input
-          type="range" min={min} max={max} step={step} value={hi} disabled={off}
+          type="range" className="pa-slider pa-dual-input"
+          min={min} max={max} step={step} value={hi} disabled={off}
+          style={{ zIndex: 2 }}
           aria-label={`${label} maximum`}
           onChange={(e) => onChange([lo, Math.max(+e.target.value, lo)])}
         />
       </div>
+      <strong className="pa-rack-value sb-year-value">{off ? "—" : `${fmt(lo)} – ${fmt(hi)}`}</strong>
     </div>
   );
 }

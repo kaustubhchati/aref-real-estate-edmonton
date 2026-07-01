@@ -1,31 +1,28 @@
 // =============================================================================
 // DistributionStrip.jsx
 //
-// A hand-rolled SVG strip plot — the SPREAD/SHAPE of a set of values on one axis,
-// not just their centre. Used by the PA selection aggregate (D8 item 9): one tick
-// per selected neighbourhood's ACTIVE-metric value, so a glance shows whether the
-// selection is tight or wide, clustered or split, and where the outliers sit. The
-// aggregate cards give the central figures; this gives the shape around them.
+// The console's DISTRIBUTION slot (D3): a real HISTOGRAM of the CITYWIDE spread of
+// the active metric, with a marker showing where the SELECTION sits within it — so a
+// glance places the selected neighbourhood(s) against the whole city (low / typical /
+// high, in the tail or the mode). Promoted from the earlier faint selection-only
+// strip: the bars are the city; the marker(s) are the selection.
 //
-// Strip plot, not a histogram: one value per neighbourhood and a box-select can be
-// small (n≥2), where binning few values misleads — a strip is honest at any n and
-// mirrors the Sparkline idiom (thin SVG marks over a value range). Overlapping
-// ticks build density via low opacity; the median is marked as an anchor.
+//   • bars    — the city distribution, binned (√n bins, clamped) over [min, max]
+//   • markers — the selection's active-metric value(s): one line at N=1, a tick per
+//               neighbourhood at N≥2 (low opacity = density) + a bold median anchor.
+//               None at N=0 (the city histogram alone).
 //
-// No dependency, no animation — calm, single accent — matching the shipped chrome.
-// Reduced-motion is honoured BY CONSTRUCTION (nothing here animates or transitions).
-// Renders nothing below 2 values (no spread to show; the cards already carry the
-// central figures) — the same self-guarding pattern as Sparkline.
+// Wide-but-shallow shape reader (the accepted consequence of the shallow band): hand-
+// rolled SVG, no dependency, nothing animates (reduced-motion honoured by construction).
+// Self-guards below 2 city values (no distribution to show).
 //
 // Props:
-//   values — finite numbers (already filtered to reportable; nulls excluded)
-//   label  — active-metric label (caption + accessible name)
-//   fmt    — the metric's formatter (end labels + a11y readout)
-//   width/height — SVG box in px (viewBox units; the svg itself scales to 100%)
+//   values  — the CITYWIDE active-metric values (nulls already excluded upstream ok)
+//   markers — the SELECTION's active-metric values (0 → city only; 1 → single; ≥2 → set)
+//   label   — active-metric label (accessible name)
+//   fmt     — the metric's formatter (end labels + a11y readout)
 // =============================================================================
 
-// Median of the shown values — the strip's own honest summary (a median of the
-// per-neighbourhood values on the active metric; no parcel weighting is claimed).
 function medianOf(arr) {
   const s = [...arr].sort((a, b) => a - b);
   const m = Math.floor(s.length / 2);
@@ -34,58 +31,82 @@ function medianOf(arr) {
 
 export default function DistributionStrip({
   values,
+  markers = [],
   label = "Value",
   fmt = (v) => v,
-  width = 280,
-  height = 28,
 }) {
-  const finite = (values ?? []).filter((v) => v != null && Number.isFinite(+v)).map(Number);
-  if (finite.length < 2) return null; // no spread to show
+  const city = (values ?? []).filter((v) => v != null && Number.isFinite(+v)).map(Number);
+  if (city.length < 2) return <div className="dt-hist dt-hist--empty">No distribution</div>;
 
-  const min = Math.min(...finite);
-  const max = Math.max(...finite);
-  const PAD = 3;
-  // All-equal selection (e.g. tied year-built) has no range — centre every tick
-  // rather than pile them at the left edge (mirrors Sparkline's single-point case).
-  const xAt = (v) =>
-    max === min ? width / 2 : PAD + ((v - min) / (max - min)) * (width - 2 * PAD);
-  const med = medianOf(finite);
+  const min = Math.min(...city);
+  const max = Math.max(...city);
+  const span = max - min || 1;
 
-  // The strip stretches to the container width (preserveAspectRatio="none"); the
-  // non-scaling-stroke keeps every tick a crisp 1.5px regardless of that x-scale.
-  const a11y = `${label} distribution across ${finite.length} neighbourhoods, ${fmt(min)} to ${fmt(max)}, median ${fmt(med)}`;
+  // √n bins (a standard rule), clamped to a legible range for the shallow slot.
+  const nb = Math.min(24, Math.max(6, Math.round(Math.sqrt(city.length))));
+  const counts = new Array(nb).fill(0);
+  city.forEach((v) => {
+    let b = Math.floor(((v - min) / span) * nb);
+    if (b >= nb) b = nb - 1;
+    if (b < 0) b = 0;
+    counts[b] += 1;
+  });
+  const maxC = Math.max(...counts) || 1;
 
+  const W = 280, H = 48, PAD = 2;
+  const xAt = (v) => PAD + ((v - min) / span) * (W - 2 * PAD);
+
+  const mk = (markers ?? []).filter((v) => v != null && Number.isFinite(+v)).map(Number);
+  const med = mk.length ? medianOf(mk) : null;
+
+  const a11y =
+    `${label} distribution across ${city.length} neighbourhoods, ${fmt(min)} to ${fmt(max)}` +
+    (mk.length ? `; selection of ${mk.length}, median ${fmt(med)}` : "");
+
+  const binW = (W - 2 * PAD) / nb;
   return (
-    <div className="dt-dist">
-      <div className="dt-dist-cap">
-        <span>{label} spread</span>
-        <span className="dt-dist-n">{finite.length} shown</span>
-      </div>
+    <div className="dt-hist">
       <svg
-        className="dt-dist-svg"
-        height={height}
-        viewBox={`0 0 ${width} ${height}`}
+        className="dt-hist-svg"
+        viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
         role="img"
         aria-label={a11y}
       >
-        {/* baseline axis */}
-        <line x1={PAD} y1={height - 5} x2={width - PAD} y2={height - 5}
-              stroke="var(--border)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-        {/* one tick per value — low opacity so overlaps read as density */}
-        {finite.map((v, i) => {
-          const x = xAt(v);
+        {/* city bars */}
+        {counts.map((c, i) => {
+          const bh = (c / maxC) * (H - 3);
           return (
-            <line key={i} x1={x} y1={4} x2={x} y2={height - 5}
-                  stroke="var(--accent)" strokeWidth="1.5" strokeOpacity="0.45"
-                  vectorEffect="non-scaling-stroke" />
+            <rect
+              key={i}
+              x={PAD + i * binW + 0.4}
+              y={H - bh}
+              width={Math.max(0.5, binW - 0.8)}
+              height={bh}
+              fill="var(--border)"
+            />
           );
         })}
-        {/* median anchor — the selection's middle within the spread (drawn last = on top) */}
-        <line x1={xAt(med)} y1={2} x2={xAt(med)} y2={height - 3}
-              stroke="var(--accent-dark)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+        {/* selection marker(s): a line per selected value (density via opacity) */}
+        {mk.map((v, i) => (
+          <line
+            key={i}
+            x1={xAt(v)} y1={0} x2={xAt(v)} y2={H}
+            stroke="var(--accent)" strokeWidth="1.5"
+            strokeOpacity={mk.length > 8 ? 0.4 : 0.85}
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+        {/* selection median anchor (bold) when there's a set to summarise */}
+        {mk.length >= 2 && (
+          <line
+            x1={xAt(med)} y1={0} x2={xAt(med)} y2={H}
+            stroke="var(--accent-dark)" strokeWidth="2"
+            vectorEffect="non-scaling-stroke"
+          />
+        )}
       </svg>
-      <div className="dt-dist-ends">
+      <div className="dt-hist-ends">
         <span>{fmt(min)}</span>
         <span>{fmt(max)}</span>
       </div>

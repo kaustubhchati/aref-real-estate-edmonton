@@ -157,9 +157,10 @@ export function installChoroplethInteractions(map, gj, onSelect) {
 // Padding that keeps a fit inside the VISIBLE map — clear of the bottom chrome.
 // .pa-foot stacks the tuning rack + the console (when open) ABSOLUTELY over the
 // map's bottom, so its live height is exactly the bottom inset to reserve. The
-// left panel is IN FLOW (the map's viewport already starts to its right), so only
-// a small uniform margin is needed on the other edges. Deterministic because the
-// fixed-grid work made those zones real, measurable elements. [camera-model]
+// bottom reserves the rack + console; LEFT reserves the floating control card
+// (.pa-float, D1) which now OVERLAYS the map's left edge — the reverse of the old
+// in-flow panel, which needed no left padding. Deterministic because the fixed-grid
+// work made those zones real, measurable elements. [camera-model]
 const CONSOLE_SVH_DESKTOP = 0.42; // .dt-panel max-height (desktop)
 const CONSOLE_SVH_MOBILE = 0.56;  // .dt-panel max-height under the ≤680px breakpoint
 const MOBILE_BP = 680;
@@ -174,12 +175,17 @@ function chromePadding(map, { reserveConsole = false } = {}) {
   const consoleShown = reserveConsole || !!root.querySelector(".dt-panel");
   const svh = (window.innerWidth || 1200) <= MOBILE_BP ? CONSOLE_SVH_MOBILE : CONSOLE_SVH_DESKTOP;
   const consoleH = consoleShown ? Math.round((window.innerHeight || 800) * svh) : 0;
+  // The floating control card overlays the map's LEFT edge — reserve its live width so
+  // fits frame clear of it (0 when absent, e.g. the pre-manifest shell).
+  const floatEl = root.querySelector(".pa-float");
+  const floatW = floatEl ? Math.round(floatEl.getBoundingClientRect().width) : 0;
   const M = 40; // breathing margin on the clear edges
-  // Clamp so top+bottom never swallow the map height (else fitBounds clamps to an
-  // extreme zoom or yields NaN on a short window). Keep ≥120px of clear band.
-  const mapH = Math.round(map.getContainer().getBoundingClientRect().height);
-  const bottom = Math.min(M + rackH + consoleH, Math.max(0, mapH - M - 120));
-  return { top: M, right: M, left: M, bottom };
+  // Clamp so the reserves never swallow the map (else fitBounds clamps to an extreme
+  // zoom or yields NaN on a short/narrow window). Keep ≥120px of clear band each axis.
+  const rect = map.getContainer().getBoundingClientRect();
+  const bottom = Math.min(M + rackH + consoleH, Math.max(0, Math.round(rect.height) - M - 120));
+  const left = Math.min(M + floatW, Math.max(0, Math.round(rect.width) - M - 120));
+  return { top: M, right: M, left, bottom };
 }
 
 // Union bbox over many features — the full-city extent or a selected subset.

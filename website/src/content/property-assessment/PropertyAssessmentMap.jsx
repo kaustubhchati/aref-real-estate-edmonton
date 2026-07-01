@@ -1,20 +1,22 @@
 // =============================================================================
 // PropertyAssessmentMap.jsx
 //
-// The Property Assessment route. Layout mirrors
-// pipeline/yeg/property-assessment/scripts/09_build_choropleth.html (09).
+// The Property Assessment route. FULL-BLEED map with floating chrome (D1 removed
+// the in-flow left panel):
 //
-//   ┌──── .content-map (flex row, full-bleed within shell-main) ────┐
-//   │ ┌─ .sb (300px) ─┐ ┌────── .canvas-wrap (flex 1) ──────────┐ │
-//   │ │  Title       │ │  ≡  (toggle, overlays top-left)         │ │
-//   │ │  Subtitle    │ │                                          │ │
-//   │ │  ░ City      │ │   MapView (when url resolves)            │ │
-//   │ │  ░ Year      │ │      OR                                   │ │
-//   │ │  ░ Search    │ │   EmptyState (when url is null)          │ │
-//   │ │  ░ Legend    │ │                                          │ │
-//   │ │  Ref note    │ │                                          │ │
-//   │ └──────────────┘ └──────────────────────────────────────────┘ │
-//   └────────────────────────────────────────────────────────────────┘
+//   ┌──── .content-map (flex column) ──────────────────────────────┐
+//   │  .pa-topbar  (property count · search)                        │
+//   │ ┌──── .pa-canvas (flex 1, full-bleed) ──────────────────────┐ │
+//   │ │ ┌ .pa-float ┐        MapView (or EmptyState)              │ │
+//   │ │ │ id card   │                                              │ │
+//   │ │ │ (detail)  │                              .pa-legend ▟    │ │
+//   │ │ │ ⓘ about   │                                              │ │
+//   │ │ └───────────┘   .pa-foot: .pa-rack + DataTable (dock)     │ │
+//   │ └────────────────────────────────────────────────────────────┘ │
+//   └──────────────────────────────────────────────────────────────┘
+//   The floating cluster overlays the map (absolute); the console/dock can now
+//   span the full width. The single-select detail lives in .pa-float when the dock
+//   is down and in the console when it's up.
 //
 // Data source seam: city + year drive a single URL via dataSources.js.
 // The available years come from /manifest.json (loaded once on mount), never
@@ -316,6 +318,10 @@ export default function PropertyAssessmentMap() {
   // TanStack wiring stays in the dock; only its UI moves). null until the rack
   // mounts; setting it re-renders so the portal finds its target. [tuning-bay]
   const [rangeSlot, setRangeSlot] = useState(null);
+
+  // The floating "About & tips" popover (open/closed). Holds the box-select tip +
+  // the provenance/naming note — rehomed here from the removed left panel. [D1]
+  const [infoOpen, setInfoOpen] = useState(false);
 
   // Auto-collapse the dock when the selection empties — the ONE intentional
   // behaviour change in the layout re-architecture (previously the dock latched
@@ -637,7 +643,8 @@ export default function PropertyAssessmentMap() {
         avg_lotsize:        num(p.avg_lotsize),
         median_yearbuilt:   num(p.median_yearbuilt),
         yoy_pct_change:     num(p.yoy_pct_change),
-        // Trend = the ACTIVE metric across every year (per-row sparkline).
+        n_properties:       num(p.n_properties),   // parcels — for the console's vs-city slot (D3)
+        // The ACTIVE metric across every year — drives the console's timeseries slot (D3).
         series: years.map((y) => num(gp[`${metric}_${y}`])),
         rank: null,
       };
@@ -876,21 +883,19 @@ export default function PropertyAssessmentMap() {
 
   // All hooks above run every render; only now do we branch the output, so the
   // loading/error short-circuits never change hook order.
-  // Pre-manifest shells render the new hybrid frame (.pa-map shell → body →
-  // canvas) so the surrounding chrome doesn't reflow when the manifest resolves.
-  // There is no context to show yet (no city/year/data), so the top bar + left
-  // panel are omitted and the message centres in the canvas.
+  // Pre-manifest shells render the bare frame (.pa-map → .pa-canvas → .canvas-wrap)
+  // so the chrome doesn't reflow when the manifest resolves. No context yet (no
+  // city/year/data), so the top bar + floating cluster are omitted and the message
+  // centres in the canvas.
   if (manifestError) {
     return (
       <article className="content-map pa-map">
-        <div className="pa-body">
-          <div className="pa-canvas">
-            <div className="canvas-wrap">
-              <EmptyState
-                title="Could not load the data catalogue."
-                body={manifestError}
-              />
-            </div>
+        <div className="pa-canvas">
+          <div className="canvas-wrap">
+            <EmptyState
+              title="Could not load the data catalogue."
+              body={manifestError}
+            />
           </div>
         </div>
       </article>
@@ -900,11 +905,9 @@ export default function PropertyAssessmentMap() {
   if (!manifest) {
     return (
       <article className="content-map pa-map">
-        <div className="pa-body">
-          <div className="pa-canvas">
-            <div className="canvas-wrap">
-              <p className="map-loading">Loading data catalogue…</p>
-            </div>
+        <div className="pa-canvas">
+          <div className="canvas-wrap">
+            <p className="map-loading">Loading data catalogue…</p>
           </div>
         </div>
       </article>
@@ -912,6 +915,13 @@ export default function PropertyAssessmentMap() {
   }
 
   const empty = url ? null : describeEmpty(manifest, city, year);
+
+  // Year-slider fill %, for the shared .pa-slider gradient track (green up to the
+  // thumb) — mirrors how the dual-handle range fills between its thumbs, so the two
+  // sliders read as one instrument. [D2]
+  const yMin = years.length ? Math.min(...years) : 0;
+  const yMax = years.length ? Math.max(...years) : 1;
+  const yearPct = `${(((sliderYear ?? year ?? yMin) - yMin) / ((yMax - yMin) || 1)) * 100}%`;
 
   // The single-select detail, built ONCE so it can render in EITHER home: the left
   // panel (dock down) or the console's left segment (dock up). Same component +
@@ -956,58 +966,10 @@ export default function PropertyAssessmentMap() {
         )}
       </header>
 
-      {/* ===== BODY: persistent left panel + map canvas ===== */}
-      <div className="pa-body">
-        {/* LEFT PANEL — persistent glass column, in flow (the map reflows into the
-            canvas beside it, so it needs no camera padding). Always holds the map
-            controls; the single-select detail accretes below when one neighbourhood
-            is selected. The city switcher renders even with no data so a user can
-            leave the Calgary empty state. */}
-        <aside className="pa-panel" aria-label="Map controls">
-          {/* FIXED IDENTITY CARD — section title + city switcher + green
-              committed-year readout + collapsible metric selector. The city and
-              metric controls were relocated here (same handlers: changeCity /
-              setMetric); the year is a read-only readout — the slider in the
-              foot stays the control. */}
-          <IdentityCard
-            cities={CITIES}
-            city={city}
-            onCityChange={changeCity}
-            year={year}
-            sliderYear={sliderYear}
-            metrics={METRICS}
-            metric={metric}
-            onMetricChange={setMetric}
-            hasData={!!url}
-          />
-          {/* Box-select affordance — persistent now that the analyst tools box is
-              gone (its Clear button lives in the dock's aggregate header). */}
-          {url && (
-            <p className="pa-hint">Tip: shift-drag the map to select an area.</p>
-          )}
-          {url && (
-            <p className="pa-box-ref">
-              <span>Updated {manifest?.last_updated ?? "—"}.</span>{" "}
-              Some neighbourhoods were renamed (e.g. Oliver → Wîhkwêntôwin, 2025); a
-              neighbourhood's full history shows under its current name.{" "}
-              <a
-                href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Naming Committee
-              </a>.
-            </p>
-          )}
-
-          {/* SINGLE-SELECT DETAIL — in the panel when the dock is DOWN. When the
-              dock is UP it re-homes into the console's left segment (passed as the
-              `detail` prop below), so it isn't shown twice. The identity card above
-              stays visible either way. */}
-          {!dockOpen && detailRail}
-        </aside>
-
-        <div className="pa-canvas">
+      {/* ===== BODY: full-bleed map canvas — NO reserved side column. The controls
+           float over the map as a top-left cluster (.pa-float); the console below
+           can now span the full width. ===== */}
+      <div className="pa-canvas">
           <div className="canvas-wrap">
             {fetchError && url ? (
               // The fetch failed for a real URL — a load failure, NOT "no data
@@ -1059,6 +1021,63 @@ export default function PropertyAssessmentMap() {
             )}
           </div>
 
+          {/* ===== FLOATING TOP-LEFT CHROME ===== overlays the map, does not
+              reserve width. Holds: the identity card (title/city/year/metric) —
+              ALWAYS rendered so the city switcher stays reachable even in the
+              Calgary no-data state; the single-select detail when the dock is DOWN
+              (it re-homes into the console when the dock is UP, via the `detail`
+              prop below — never shown twice); and an "About & tips" popover holding
+              the box-select tip + the provenance/naming note (rehomed from the
+              removed left panel). */}
+          <div className="pa-float">
+            <IdentityCard
+              cities={CITIES}
+              city={city}
+              onCityChange={changeCity}
+              year={year}
+              sliderYear={sliderYear}
+              metrics={METRICS}
+              metric={metric}
+              onMetricChange={setMetric}
+              hasData={!!url}
+              /* Metric buttons lift away when the console rises — the console's own
+                 spine header then carries the metric selector (D3). */
+              showMetric={!dockOpen}
+            />
+
+            {url && !dockOpen && detailRail}
+
+            {url && (
+              <div className="pa-info">
+                <button
+                  type="button"
+                  className="pa-info-btn"
+                  aria-expanded={infoOpen}
+                  onClick={() => setInfoOpen((o) => !o)}
+                >
+                  About &amp; tips
+                </button>
+                {infoOpen && (
+                  <div className="pa-info-pop" role="group" aria-label="About and tips">
+                    <p className="pa-hint">Tip: shift-drag the map to select an area.</p>
+                    <p className="pa-box-ref">
+                      <span>Updated {manifest?.last_updated ?? "—"}.</span>{" "}
+                      Some neighbourhoods were renamed (e.g. Oliver → Wîhkwêntôwin, 2025); a
+                      neighbourhood's full history shows under its current name.{" "}
+                      <a
+                        href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Naming Committee
+                      </a>.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* LEGEND — small card bottom-right; persistent (a map needs its legend
               while a selection is being analysed). */}
           {url && (
@@ -1091,12 +1110,13 @@ export default function PropertyAssessmentMap() {
                     <span className="pa-rack-label">Year</span>
                     <input
                       type="range"
-                      className="sb-year-slider pa-rack-slider"
+                      className="pa-slider pa-year-slider pa-rack-slider"
                       aria-label="Year"
-                      min={Math.min(...years)}
-                      max={Math.max(...years)}
+                      min={yMin}
+                      max={yMax}
                       step={1}
                       value={sliderYear ?? year}
+                      style={{ "--pct": yearPct }}
                       onChange={(e) => slideYear(Number(e.target.value))}
                     />
                     <strong className="sb-year-value pa-rack-value">{sliderYear ?? year}</strong>
@@ -1107,7 +1127,7 @@ export default function PropertyAssessmentMap() {
                     A fixed slot: the range is disabled, not removed, when it
                     doesn't apply (selection mode). The ref-callback hands the
                     slot's DOM node down so the portal has a target. */}
-                <div className="pa-rack-slot pa-rack-range-slot" ref={setRangeSlot} />
+                <div className="pa-rack-range-slot" ref={setRangeSlot} />
               </div>
             )}
 
@@ -1119,6 +1139,8 @@ export default function PropertyAssessmentMap() {
                 rows={tableRows}
                 metric={metric}
                 metricLabel={selectedMetric.label}
+                metrics={METRICS}
+                onMetricChange={setMetric}
                 activeIndex={activeYearIndex}
                 year={year}
                 years={years}
@@ -1133,12 +1155,10 @@ export default function PropertyAssessmentMap() {
                 open={dockOpen}
                 onToggle={() => setDockOpen((d) => !d)}
                 rangeSlot={rangeSlot}
-                detail={dockOpen ? detailRail : null}
               />
             )}
           </div>
         </div>
-      </div>
     </article>
   );
 }
