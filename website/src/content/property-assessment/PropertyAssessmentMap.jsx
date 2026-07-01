@@ -36,7 +36,7 @@ import MapSkeleton from "../../components/MapSkeleton.jsx";
 import IdentityCard from "./IdentityCard.jsx";
 import InfoRail from "./InfoRail.jsx";
 import DataTable from "./DataTable.jsx";
-import SearchInput from "../../components/SearchInput.jsx";
+import SearchPeek from "./SearchPeek.jsx";
 import {
   buildSnapshotCsv,
   buildTimeseriesCsv,
@@ -293,10 +293,21 @@ export default function PropertyAssessmentMap() {
   // Exactly-one-selected id — drives the single-neighbourhood rail; null in the
   // empty or multi-select cases.
   const singleSelectedId = selectedIds.length === 1 ? selectedIds[0] : null;
+
+  // The ONE unified search value (D5) — lifted here (single source of truth) so the
+  // SearchPeek by the zoom stack drives BOTH the map (flyAndPinByName) and the table
+  // (DataTable's controlled globalFilter, and SearchInput's controlled value — so the
+  // box and the filter never desync). CLEARED by any NON-search selection (map click /
+  // box-select / row click) and by a city switch, so a persisted name filter never
+  // hides a subsequently-selected neighbourhood (D5 review). A search re-sets it.
+  const [searchQuery, setSearchQuery] = useState("");
+
   // Click/search reports an id (or null to clear) → a length-1 (or empty)
-  // selection. Box-select (C3) will call setSelectedIds with the whole set.
+  // selection. Box-select (C3) will call setSelectedIds with the whole set. Clearing
+  // searchQuery here means a fresh selection always shows in the (now-unfiltered)
+  // table; the search's own onSelect re-sets it right after (batched).
   const selectNeighbourhood = useCallback(
-    (id) => setSelectedIds(id == null ? [] : [id]),
+    (id) => { setSelectedIds(id == null ? [] : [id]); setSearchQuery(""); },
     []
   );
   // The neighbourhood whose table row is hovered — mirrored to the map's `hover`
@@ -430,6 +441,7 @@ export default function PropertyAssessmentMap() {
     setCity(nextCity);
     setYear(getDefaultYear(manifest, nextCity));
     setSelectedIds([]); // neighbourhood ids are city-specific — drop the selection
+    setSearchQuery(""); // and the name filter (else a no-data round-trip leaves a stale filter, D5 review)
   }
 
   // --- Year slider: live thumb, paced paint swap ------------------------------
@@ -683,6 +695,7 @@ export default function PropertyAssessmentMap() {
       }
     }
     setSelectedIds(ids);
+    setSearchQuery(""); // a fresh box-select supersedes any name filter (D5 review — so it can't reassert on Clear)
     // Selection-fit: frame the selected area in the clear (non-chrome) map region —
     // ONCE, on this gesture, then hands-off (later year/metric/sort/dock changes
     // never refit). ≥2 also raises the dock, so reserve the console's height in the
@@ -943,9 +956,9 @@ export default function PropertyAssessmentMap() {
 
   return (
     <article className="content-map pa-map">
-      {/* ===== TOP CONTEXT BAR — property count + neighbourhood search =====
-          The section title ({city} — {year}) moved to the left-panel identity
-          card; the bar keeps the live property-count line (for now) + search. */}
+      {/* ===== TOP CONTEXT BAR — property count only. The name search moved OUT of
+          here (D5): it's now the ONE unified SearchPeek by the map's zoom stack,
+          driving both the map fly-to AND the table filter. */}
       <header className="pa-topbar">
         <div className="pa-topbar-context">
           {url && (
@@ -954,17 +967,6 @@ export default function PropertyAssessmentMap() {
             </span>
           )}
         </div>
-        {/* Search — persistent in the bar (the dock no longer takes over the
-            screen, so search stays available while analysing). Bounded dropdown. */}
-        {url && (
-          <div className="pa-topbar-search">
-            <SearchInput
-              placeholder="Search neighbourhood…"
-              names={names}
-              onSelect={flyAndPinByName}
-            />
-          </div>
-        )}
       </header>
 
       {/* ===== BODY: full-bleed map canvas — NO reserved side column. The controls
@@ -1079,6 +1081,20 @@ export default function PropertyAssessmentMap() {
             )}
           </div>
 
+          {/* UNIFIED SEARCH (D5) — the ONE search control: a magnifier peek sitting
+              with the map's zoom stack (top-right). Typing filters the table live
+              (setSearchQuery → DataTable's controlled globalFilter); selecting flies
+              + pins the map (flyAndPinByName) and sets the exact filter. One input,
+              both surfaces — coordinated views, not a brush. */}
+          {url && (
+            <SearchPeek
+              names={names}
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+              onSelect={(name) => { flyAndPinByName(name); setSearchQuery(name); }}
+            />
+          )}
+
           {/* LEGEND — small card bottom-right; persistent (a map needs its legend
               while a selection is being analysed). */}
           {url && (
@@ -1156,6 +1172,8 @@ export default function PropertyAssessmentMap() {
                 open={dockOpen}
                 onToggle={() => setDockOpen((d) => !d)}
                 rangeSlot={rangeSlot}
+                globalFilter={searchQuery}                 /* controlled by the unified SearchPeek (D5) */
+                onGlobalFilterChange={setSearchQuery}
               />
             )}
           </div>
