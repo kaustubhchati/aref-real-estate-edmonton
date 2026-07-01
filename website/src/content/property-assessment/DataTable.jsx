@@ -814,39 +814,59 @@ function FacetToggles({ label, options, selected, labelOf, onToggle }) {
   );
 }
 
-// The metric-RANGE facet: a min + a max slider over the active metric's bounds, with
-// a live readout. Two stacked native sliders (legible + robust over an overlapping
-// dual-thumb hack); each clamps against the other so lo never passes hi. `value` is
-// the column's [lo, hi] filter (undefined = full range); `bounds` is [min, max] from
-// getFacetedMinMaxValues.
+// The metric-RANGE facet: a min + a max thumb over the active metric's bounds, with
+// a live readout. One track, two thumbs overlaid (D2) — each thumb clamps against the
+// other so lo never passes hi, and z-index is position-aware so a coincident pair
+// stays grabbable (see the render).
+// `value` is the column's [lo, hi] filter (undefined = full range); `bounds` is
+// [min, max] from getFacetedMinMaxValues.
 //
-// Now lives in the TUNING RACK (portaled there from the dock — see the createPortal
-// call in DataTable), so it must hold a FIXED slot: when there's no filterable view
-// (`disabled`, i.e. selection mode) or the bounds are null/degenerate, it renders an
-// INERT placeholder rather than null — the slot never appears/disappears. [tuning-bay]
+// FORM (D2): a ONE-LINE control matching the year slider — [label · one track with
+// two thumbs · min–max value] — laid out with the tuning-rack's own classes
+// (.pa-rack-slot/-label/-value) + the shared .pa-slider look, so year + range read
+// as the same instrument. The dual handle is two range inputs OVERLAID on one track
+// (.pa-dual): each input's native track is transparent and only its thumb catches
+// pointer events, so both thumbs sit on the single .pa-dual-track with a green
+// .pa-dual-fill segment between them.
+//
+// Lives in the TUNING RACK (portaled there from the dock — see createPortal below),
+// so it holds a FIXED slot: when there's no filterable view (`disabled`, i.e.
+// selection mode) or bounds are null/degenerate, it renders an INERT (dimmed)
+// placeholder rather than null — the slot never appears/disappears. The TanStack
+// wiring (onChange → setFilterValue → brush) is unchanged from the stacked version.
 function RangeFacet({ label, fmt, bounds, value, onChange, disabled = false }) {
   const usable = bounds && bounds[0] !== bounds[1];
   const off = disabled || !usable;
   const [min, max] = usable ? bounds : [0, 1];
   const [lo, hi] = usable && value ? value : [min, max];
   const step = (max - min) / 100 || 1;
+  const pct = (v) => `${((v - min) / (max - min || 1)) * 100}%`;
   return (
-    <div className={`dt-facet-range${off ? " is-disabled" : ""}`}>
-      <span className="dt-facet-range-cap">
-        {label}: <strong>{off ? "—" : `${fmt(lo)} – ${fmt(hi)}`}</strong>
-      </span>
-      <div className="dt-facet-range-rows">
+    <div className={`pa-rack-slot pa-range-slot${off ? " is-off" : ""}`}>
+      <span className="pa-rack-label">{label}</span>
+      <div className="pa-dual" style={{ "--lo": pct(lo), "--hi": pct(hi) }}>
+        <div className="pa-dual-track" />
+        <div className="pa-dual-fill" />
+        {/* When the thumbs COINCIDE, only the top one is grabbable, so raise whichever
+            must move to separate them: `lo` clamps to ≤ hi (can only go DOWN), `hi`
+            clamps to ≥ lo (can only go UP). So raise lo in the upper half (recovers a
+            stuck [max,max]) and leave hi on top otherwise (recovers [min,min]). */}
         <input
-          type="range" min={min} max={max} step={step} value={lo} disabled={off}
+          type="range" className="pa-slider pa-dual-input"
+          min={min} max={max} step={step} value={lo} disabled={off}
+          style={{ zIndex: lo > (min + max) / 2 ? 3 : 1 }}
           aria-label={`${label} minimum`}
           onChange={(e) => onChange([Math.min(+e.target.value, hi), hi])}
         />
         <input
-          type="range" min={min} max={max} step={step} value={hi} disabled={off}
+          type="range" className="pa-slider pa-dual-input"
+          min={min} max={max} step={step} value={hi} disabled={off}
+          style={{ zIndex: 2 }}
           aria-label={`${label} maximum`}
           onChange={(e) => onChange([lo, Math.max(+e.target.value, lo)])}
         />
       </div>
+      <strong className="pa-rack-value sb-year-value">{off ? "—" : `${fmt(lo)} – ${fmt(hi)}`}</strong>
     </div>
   );
 }

@@ -759,16 +759,8 @@ p  { margin: 0 0 0.75rem; }
 }
 .dt-facet-chip:hover { background: var(--bg); }
 .dt-facet-chip.is-on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); }
-/* Metric-range facet — a min + max slider on the active metric, with a readout. */
-.dt-facet-range { display: flex; flex-direction: column; gap: 2px; min-width: 150px; }
-.dt-facet-range-cap { font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; }
-.dt-facet-range-cap strong { color: var(--text); font-variant-numeric: tabular-nums; }
-.dt-facet-range-rows { display: flex; flex-direction: column; gap: 1px; }
-.dt-facet-range-rows input[type="range"] { width: 150px; height: 14px; margin: 0; accent-color: var(--accent); }
-/* Inert state — shown (not removed) when the range doesn't apply (selection mode)
-   or has no usable bounds, so the rack's range slot stays fixed. [tuning-bay] */
-.dt-facet-range.is-disabled { opacity: 0.45; }
-.dt-facet-range.is-disabled input[type="range"] { cursor: not-allowed; }
+/* The metric-range facet now renders as a one-line dual-handle in the tuning rack
+   (RangeFacet → .pa-range-slot / .pa-dual, styled near the rack CSS below). */
 /* Reset the facets (distinct from "Clear selection") — pushed to the row's end. */
 .dt-facets-clear {
   margin-left: auto; font-family: inherit; font-size: 0.72rem; font-weight: 600;
@@ -1038,13 +1030,64 @@ p  { margin: 0 0 0.75rem; }
 }
 .pa-rack-slot { display: flex; align-items: center; gap: 10px; }
 .pa-rack-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
-/* Scoped (0,2,0) so it beats the later, equal-specificity .sb-year-slider base
-   (width:100%; margin:8px 0 0) — otherwise the year slider stretches + gains a
-   stray top margin and the rack wraps off its slim single row. */
 .pa-rack-slot .pa-rack-slider { flex: 0 0 auto; width: 150px; margin: 0; }
 .pa-rack-value { white-space: nowrap; }   /* green readout (sb-year-value) */
-/* The portaled metric-range slider: compact, sits in its own slot. */
-.pa-rack-range-slot .dt-facet-range { gap: 1px; min-width: 160px; }
+/* The portaled range control is a flex item in the rack, aligned like the year slot. */
+.pa-rack-range-slot { display: flex; align-items: center; }
+
+/* ---- Shared instrument slider (year + range dual-handle) [D2] -------------
+   ONE custom look so the year and range read as the same instrument: a 4px rounded
+   track + a green circular thumb. Custom (appearance:none) is required for the
+   dual-handle overlay, so the year adopts it too (behaviour unchanged). */
+.pa-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 16px; margin: 0; background: transparent; cursor: pointer;
+}
+.pa-slider::-webkit-slider-runnable-track { height: 4px; border-radius: 999px; background: var(--border); }
+.pa-slider::-moz-range-track { height: 4px; border-radius: 999px; background: var(--border); }
+.pa-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 13px; height: 13px; margin-top: -4.5px;
+  border-radius: 50%; background: var(--accent); border: 2px solid #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+}
+.pa-slider::-moz-range-thumb {
+  width: 13px; height: 13px; border-radius: 50%; background: var(--accent);
+  border: 2px solid #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+}
+.pa-slider:focus { outline: none; }
+.pa-slider:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+/* YEAR: green fill up to the thumb via --pct (matches the dual's fill segment). */
+.pa-year-slider::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, var(--accent) var(--pct, 0%), var(--border) var(--pct, 0%));
+}
+.pa-year-slider::-moz-range-track {
+  background: linear-gradient(to right, var(--accent) var(--pct, 0%), var(--border) var(--pct, 0%));
+}
+
+/* ---- Dual-handle range: two thumbs on ONE track (matches the year slider) --- */
+.pa-range-slot { min-width: 0; }
+.pa-dual { position: relative; flex: 0 0 auto; width: 150px; height: 16px; }
+.pa-dual-track {
+  position: absolute; top: 50%; left: 0; right: 0; height: 4px; margin-top: -2px;
+  border-radius: 999px; background: var(--border);
+}
+.pa-dual-fill {
+  position: absolute; top: 50%; height: 4px; margin-top: -2px; border-radius: 999px;
+  background: var(--accent); left: var(--lo, 0%); right: calc(100% - var(--hi, 100%));
+}
+/* Both inputs overlay the same track; the track is transparent (the .pa-dual-track
+   div shows through) and only the THUMB catches pointer events so both are grabbable. */
+.pa-dual-input { position: absolute; top: 0; left: 0; }
+.pa-dual-input.pa-slider { pointer-events: none; }
+.pa-dual-input.pa-slider::-webkit-slider-runnable-track { background: transparent; }
+.pa-dual-input.pa-slider::-moz-range-track { background: transparent; }
+.pa-dual-input.pa-slider::-webkit-slider-thumb { pointer-events: auto; }
+.pa-dual-input.pa-slider::-moz-range-thumb { pointer-events: auto; }
+
+/* Inert state — shown (not removed) when the range doesn't apply (selection mode) or
+   bounds are degenerate, so the rack slot stays fixed. [tuning-bay] */
+.pa-range-slot.is-off { opacity: 0.45; }
+.pa-range-slot.is-off .pa-slider { cursor: not-allowed; }
 
 /* Bottom-right legend card (default view), lifted above the map's corner controls. */
 .pa-legend {
@@ -1199,6 +1242,8 @@ p  { margin: 0 0 0.75rem; }
    (no -webkit pseudo-elements needed — keeps it legible). The current year reads
    out bold next to the "Year" label. */
 .sb-year-value { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Building Permits' year slider still uses this native look; PA's now uses the
+   shared .pa-slider (dual-handle-compatible) look — see [D2] above. */
 .sb-year-slider {
   width: 100%;
   margin: 8px 0 0;

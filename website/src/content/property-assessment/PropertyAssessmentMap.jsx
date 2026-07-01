@@ -915,6 +915,13 @@ export default function PropertyAssessmentMap() {
 
   const empty = url ? null : describeEmpty(manifest, city, year);
 
+  // Year-slider fill %, for the shared .pa-slider gradient track (green up to the
+  // thumb) — mirrors how the dual-handle range fills between its thumbs, so the two
+  // sliders read as one instrument. [D2]
+  const yMin = years.length ? Math.min(...years) : 0;
+  const yMax = years.length ? Math.max(...years) : 1;
+  const yearPct = `${(((sliderYear ?? year ?? yMin) - yMin) / ((yMax - yMin) || 1)) * 100}%`;
+
   // The single-select detail, built ONCE so it can render in EITHER home: the left
   // panel (dock down) or the console's left segment (dock up). Same component +
   // props — only the container is conditional (notes 7/8). null unless exactly one
@@ -1099,12 +1106,13 @@ export default function PropertyAssessmentMap() {
                     <span className="pa-rack-label">Year</span>
                     <input
                       type="range"
-                      className="sb-year-slider pa-rack-slider"
+                      className="pa-slider pa-year-slider pa-rack-slider"
                       aria-label="Year"
-                      min={Math.min(...years)}
-                      max={Math.max(...years)}
+                      min={yMin}
+                      max={yMax}
                       step={1}
                       value={sliderYear ?? year}
+                      style={{ "--pct": yearPct }}
                       onChange={(e) => slideYear(Number(e.target.value))}
                     />
                     <strong className="sb-year-value pa-rack-value">{sliderYear ?? year}</strong>
@@ -1115,7 +1123,7 @@ export default function PropertyAssessmentMap() {
                     A fixed slot: the range is disabled, not removed, when it
                     doesn't apply (selection mode). The ref-callback hands the
                     slot's DOM node down so the portal has a target. */}
-                <div className="pa-rack-slot pa-rack-range-slot" ref={setRangeSlot} />
+                <div className="pa-rack-range-slot" ref={setRangeSlot} />
               </div>
             )}
 
