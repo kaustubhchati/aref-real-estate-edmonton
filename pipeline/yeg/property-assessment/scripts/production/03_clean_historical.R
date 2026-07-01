@@ -96,14 +96,19 @@ n_raw <- nrow(raw)
 
 # ============================================================
 # 3. Select columns
-#    Keep only the 11 fields used downstream. Dropping unused
+#    Keep only the 12 fields used downstream. Dropping unused
 #    columns now keeps memory manageable on 5M+ row frames.
+#    `Legal Description` is carried for Layer 2 pct_with_unit
+#    (condo detection in 04) — it is INLINE in the historical
+#    assessment file (Plan/Block/Lot vs Plan/Unit), so no
+#    Property-Information join is needed as in the current-year path.
 # ============================================================
 
 pa_hist <- raw |>
   select(
     `Account Number`,
     `Assessment Year`,
+    `Legal Description`,
     Latitude,
     Longitude,
     `Point Location`,
