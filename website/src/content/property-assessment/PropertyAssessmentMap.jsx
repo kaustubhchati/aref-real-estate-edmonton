@@ -644,6 +644,7 @@ export default function PropertyAssessmentMap() {
         median_yearbuilt:   num(p.median_yearbuilt),
         yoy_pct_change:     num(p.yoy_pct_change),
         n_properties:       num(p.n_properties),   // parcels — for the console's vs-city slot (D3)
+        pct_with_unit:      num(p.pct_with_unit),  // condo share 0–100 — the spine's % Condo column (D4); real all years post D-BE1
         // The ACTIVE metric across every year — drives the console's timeseries slot (D3).
         series: years.map((y) => num(gp[`${metric}_${y}`])),
         rank: null,

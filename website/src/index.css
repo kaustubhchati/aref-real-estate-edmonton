@@ -851,13 +851,20 @@ p  { margin: 0 0 0.75rem; }
 .dt-th-btn:hover { color: var(--text); }
 .dt-sort { color: var(--text-subtle); font-size: 0.85em; margin-left: 4px; }
 .dt-sort.active { color: var(--accent); }
-.dt-row { cursor: pointer; }
+/* scroll-margin-top so the auto-scroll (scrollIntoView block:"start", D4 note 27)
+   top-aligns the selected row JUST BELOW the sticky ~2-line thead instead of tucking
+   it behind the opaque header. Sized to clear the tallest (2-line) header. */
+.dt-row { cursor: pointer; scroll-margin-top: 44px; }
 /* nowrap + overflow:hidden guarantee a FIXED row height under table-layout:fixed
    (a too-long value clips instead of wrapping to a second line). */
 .dt-row td { padding: 5px 8px; border-bottom: 0.5px solid rgba(0,0,0,0.05);
   white-space: nowrap; overflow: hidden; }
 .dt-row:hover { background: var(--bg-soft); }
-.dt-row.is-selected { background: var(--accent-soft); }
+/* Selected row (D4, note 26): a DARK outline matching the map's selection highlight
+   (nbhd-highlight is a fixed near-black, chosen to read on any choropleth fill), so
+   table + map read as ONE selection. Background stays NEUTRAL — no accent wash behind
+   the text (legibility). outline-offset:-2px insets it so it never shifts the layout. */
+.dt-row.is-selected { background: var(--bg-soft); outline: 2px solid var(--text); outline-offset: -2px; }
 .dt-name { font-weight: 500; color: var(--text); text-overflow: ellipsis; }
 .dt-empty { padding: 16px; text-align: center; color: var(--text-muted); }
 .dt-toolbar .export-menu { margin-left: auto; }   /* push export to the right of the filter */

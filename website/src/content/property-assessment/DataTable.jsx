@@ -105,11 +105,11 @@ const PRESENTATION = {
 
 // Fixed-chassis column widths (table-layout: fixed) — proportions by column ROLE,
 // so the column SET is a deliberate constant and the table never reflows when
-// values change. The 5 metric columns share one width; sum ≈ 100%. The <colgroup>
-// renders these in column order. The per-row Trend sparkline is GONE (D3) — the full
-// trajectory is now the console's wide TIMESERIES slot — so the columns tighten to
-// free horizontal width for the visual slots. [console-chassis]
-const COL_WIDTH = { name: "24%", metric: "13%", rank: "11%" };
+// values change. The 6 share-width columns (5 map metrics + the % Condo column, D4)
+// share one `metric` width; sum ≈ 100%. The <colgroup> renders these in column
+// order. The per-row Trend sparkline is GONE (D3) — the full trajectory is the
+// console's wide TIMESERIES slot. [console-chassis]
+const COL_WIDTH = { name: "24%", metric: "11%", rank: "10%" };
 
 // The fixed metric columns, DERIVED from the map's canonical METRICS (one source
 // of truth) in the same order — so a new map metric automatically gets a table
@@ -130,14 +130,13 @@ const METRIC_KEYS = new Set(METRIC_COLS.map((m) => m.key));
 // Categorical facets (D6) — VIEW-only table filters, data-driven from the rows.
 // Each is a HIDDEN column (a faceting/filtering accessor that is never rendered) +
 // a control in the dock header, declared once here and mapped in a loop. `labelOf`
-// maps a raw value to its display label: district shows as-is; polygon_state uses
-// the existing STATE_STYLE contract (compact form, no hardcoded state list).
+// maps a raw value to its display label.
+// D4 removed the State (polygon_state) filter CHIPS — filter UI only. The map's
+// state COLOURING (STATE_STYLE + polygon_state in choroplethStyle.js) is untouched,
+// and the shared brush is unaffected (District + the metric-range still populate
+// columnFilters → the VIEW-only dim; the fence is intact).
 const FACETS = [
   { id: "district", label: "District", control: "dropdown", labelOf: (v) => v },
-  {
-    id: "state", label: "State", control: "toggles",
-    labelOf: (v) => STATE_STYLE[v]?.label.split(" (")[0] ?? v,
-  },
 ];
 
 // LOAD-BEARING, NOT STYLISTIC — do NOT inline this back into a `[]` literal.
@@ -332,6 +331,24 @@ export default function DataTable({
       meta: { numeric: true, metricKey: m.key, width: COL_WIDTH.metric },
     })),
     {
+      // % Condo (D4) — share of individually-titled CONDOMINIUM parcels (Plan/Unit
+      // land-titles registration; incl. single-unit bare-land condos). NOT "%
+      // apartments" / "% multi-family": rental blocks register as one Plan/Block/Lot
+      // title and correctly count as non-condo. A TABLE column (not a map metric — no
+      // colour scale), reading the active-year pct_with_unit (real all years post
+      // D-BE1). null (suppressed / non-reportable) → "—", never a false 0.
+      id: "pct_with_unit",
+      accessorFn: (r) => r.pct_with_unit ?? undefined,
+      header: "% Condo",
+      cell: (info) => {
+        const v = info.getValue();
+        return v == null ? "—" : `${Math.round(v)}%`;
+      },
+      sortUndefined: "last",
+      enableGlobalFilter: false,
+      meta: { numeric: true, width: COL_WIDTH.metric },
+    },
+    {
       id: "rank",
       accessorFn: (r) => r.rank ?? undefined,
       header: "Rank",
@@ -491,7 +508,7 @@ export default function DataTable({
   useEffect(() => {
     if (!open || selectedIds.length !== 1 || !scrollRef.current) return;
     const row = scrollRef.current.querySelector(`[data-id="${CSS.escape(String(selectedIds[0]))}"]`);
-    row?.scrollIntoView({ block: "nearest" });
+    row?.scrollIntoView({ block: "start" });   // top-align the selected row (D4, note 27) — was "nearest"
   }, [selectedIds, open, sorting, globalFilter, data, panelMounted]);
 
   return (
