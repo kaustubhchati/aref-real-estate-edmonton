@@ -72,29 +72,47 @@ cat("Years present: ",
     paste(sort(unique(pa_clean$`Assessment Year`)), collapse = ", "), "\n\n")
 
 # ============================================================
-# 3. Derive unit_present from Neighbourhood column
-#    WHY: The historical file does not have legal_description
-#    (not in the 11-column select from prop_asses_hist).
-#    Neighbourhood name alone cannot detect condos reliably.
-#    We set unit_present = FALSE for all rows — this means
-#    pct_with_unit will be 0% for all historical years, and
-#    avg_assessvalue_without_unit = avall_public.
-#    This is documented and honest: the historical file does
-#    not carry the PI join columns needed for condo detection.
-#    The 2026 current-year pipeline has legal_description via
-#    the Property Information join — historical does not.
+# 3. Derive unit_present from Legal Description
+#    The historical assessment file carries `Legal Description`
+#    INLINE (03 now imports it) — Plan/Block/Lot for subdivided
+#    land vs Plan/Unit for condominiums — so NO Property-Information
+#    join is needed (unlike the current-year path). A `unit:` token
+#    marks an individually-titled condominium parcel (incl. a single
+#    Plan/Unit "bare land condominium", legally still a condo);
+#    purpose-built rental stock registers as one Plan/Block/Lot title
+#    with no `unit:` token, so this cleanly separates condos from
+#    rental even when buildings look identical (the distinction lives
+#    in land-titles registration, which the legal description reflects).
+#    => pct_with_unit is the share of individually-titled condo parcels
+#    in a neighbourhood — NOT "share of units in multi-family buildings".
 #
-#    TODO: if a future refresh includes legal_description in
-#    the historical download, replace this with the full
-#    str_detect("unit:") logic from script 05.
+#    Detection ported byte-for-byte from script 05 (the canonical
+#    Stata3 port): squish -> lower -> drop space-before-colon ->
+#    str_detect("unit:"). Only the source column name differs —
+#    historical raw uses title-case `Legal Description`; 05 uses the
+#    PI-joined snake_case legal_description. The two intermediate
+#    character columns are dropped straight after so the 5M-row frame
+#    stays lean through the crosswalk + matched-yoy steps below.
 # ============================================================
 
 pa_clean <- pa_clean |>
-  mutate(unit_present = FALSE)
+  mutate(
+    legal_description_norm = `Legal Description` |>
+      str_squish() |>                    # collapse internal whitespace + trim
+      str_to_lower() |>                  # lowercase
+      str_replace_all("plan\\s*:",  "plan:") |>
+      str_replace_all("block\\s*:", "block:") |>
+      str_replace_all("lot\\s*:",   "lot:") |>
+      str_replace_all("unit\\s*:",  "unit:"),
+    unit_present = str_detect(legal_description_norm, "unit:") &
+      !is.na(legal_description_norm)
+  ) |>
+  select(-`Legal Description`, -legal_description_norm)
 
-cat("Note: unit_present = FALSE for all historical rows.\n")
-cat("      pct_with_unit will be 0 in all historical aggregates.\n")
-cat("      See script header for rationale.\n\n")
+cat(sprintf("Unit-present (condo) rows: %s of %s (%s)\n\n",
+            format(sum(pa_clean$unit_present, na.rm = TRUE), big.mark = ","),
+            format(nrow(pa_clean), big.mark = ","),
+            percent(mean(pa_clean$unit_present, na.rm = TRUE), accuracy = 0.1)))
 
 # ============================================================
 # 3b. Resolve names/ids to canonical BEFORE aggregating
