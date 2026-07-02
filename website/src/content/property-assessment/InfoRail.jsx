@@ -33,6 +33,12 @@ const STATE_NOTE = {
     "No assessment data for this boundary. Area may be unregistered, recently annexed, or a planning placeholder.",
 };
 
+// The metrics the console SPINE already lists (the 5 map metrics + %Condo, D4) —
+// dropped from this detail to avoid duplication (note 21/23). POPUP_ROWS fields NOT
+// in this set (SD assessed, Mean non-unit) STAY: the detail is their only on-screen
+// home in either dock state. Derived from METRICS so it tracks a metric change.
+const TABLE_METRIC_KEYS = new Set([...METRICS.map((m) => m.key), "pct_with_unit"]);
+
 export default function InfoRail({
   feature,      // projected (bare-named) properties of the selected nbhd, active year
   year,         // active assessment year — labels the detail so numbers are in context
@@ -103,15 +109,17 @@ export default function InfoRail({
           )}
 
           {state === "aggregated" ? (
+            // Sparkline (above) + the ACTIVE metric headline + only the fields the
+            // spine table does NOT already show (SD assessed, Mean non-unit). The
+            // table-duplicated raw metrics are dropped (D4, note 21; No-Duplication
+            // note 23 — the sparkline↔value pair is the exempt complementary
+            // representation, duplicated raw metrics are not).
             <dl className="rail-rows">
-              {/* Active (colour-encoded) metric first, then the rest of the
-                  contract minus a duplicate of it. */}
               <div className="rail-row headline">
                 <dt className="rail-k">{activeMetric.label}</dt>
                 <dd className="rail-v">{activeMetric.fmt(activeVal)}</dd>
               </div>
-              {/* Full stat list (every field minus a duplicate of the active one). */}
-              {POPUP_ROWS.filter(([key]) => key !== activeMetric.key).map(([key, label, fmt]) => (
+              {POPUP_ROWS.filter(([key]) => !TABLE_METRIC_KEYS.has(key)).map(([key, label, fmt]) => (
                 <div key={key} className="rail-row">
                   <dt className="rail-k">{label}</dt>
                   <dd className="rail-v">{fmt(feature[key])}</dd>
