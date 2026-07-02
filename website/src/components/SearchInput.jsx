@@ -19,11 +19,17 @@ const MAX_RESULTS = 50; // hard cap on rendered rows; the panel scrolls within m
 export default function SearchInput({
   names,
   onSelect,
+  onValueChange,   // reports the LIVE typed value (D5 — drives the coordinated table filter)
+  value: valueProp, // OPTIONAL controlled value (D5). Provided → the parent owns the
+                    //   value (SearchPeek: searchQuery); absent → self-controlled (BP/BC).
   placeholder = "Type a name…",
   hint,
   label,
+  autoFocus = false,
 }) {
-  const [value, setValue] = useState("");
+  const [internalValue, setInternalValue] = useState("");
+  const value = valueProp !== undefined ? valueProp : internalValue;
+  const commitValue = (v) => { if (valueProp === undefined) setInternalValue(v); }; // no-op when controlled
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const wrapRef = useRef(null);
@@ -52,13 +58,14 @@ export default function SearchInput({
 
   function choose(name) {
     onSelect?.(name);
-    setValue(name);
+    commitValue(name);   // controlled: the parent sets the value via onSelect
     setOpen(false);
     setActive(-1);
   }
 
   function onChange(e) {
-    setValue(e.target.value);
+    commitValue(e.target.value);
+    onValueChange?.(e.target.value);   // live value up (coordinated table filter, D5)
     setOpen(true);
     setActive(-1);
   }
@@ -96,6 +103,7 @@ export default function SearchInput({
         aria-activedescendant={active >= 0 ? `${id}-opt-${active}` : undefined}
         aria-autocomplete="list"
         autoComplete="off"
+        autoFocus={autoFocus}
         placeholder={placeholder}
         value={value}
         onChange={onChange}

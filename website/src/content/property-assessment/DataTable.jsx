@@ -221,8 +221,9 @@ export default function DataTable({
   open,
   onToggle,
   rangeSlot,
+  globalFilter,          // CONTROLLED by the parent's unified SearchPeek (D5) — the
+  onGlobalFilterChange,  // dock's own .dt-filter input is gone; this is the sole driver
 }) {
-  const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState([{ id: "name", desc: false }]);
   const [columnFilters, setColumnFilters] = useState([]); // categorical facets (D6)
   const scrollRef = useRef(null);
@@ -394,7 +395,7 @@ export default function DataTable({
     // The facet columns exist only to drive faceting/filtering — keep them hidden.
     initialState: { columnVisibility: Object.fromEntries(FACETS.map((f) => [f.id, false])) },
     onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
+    onGlobalFilterChange: onGlobalFilterChange,   // controlled up to the unified search (D5)
     onColumnFiltersChange: setColumnFilters,
     globalFilterFn: "includesString",
     getCoreRowModel: getCoreRowModel(),
@@ -560,17 +561,10 @@ export default function DataTable({
                       />
                     </div>
                   )}
+                  {/* The dock's name filter is GONE (D5) — the unified SearchPeek by
+                      the zoom stack is the sole search, driving this table's filter.
+                      "N of M" signals an active filter; clear it from the peek. */}
                   <div className="dt-toolbar">
-                    {!selectionMode && (
-                      <input
-                        type="text"
-                        className="dt-filter search-input"
-                        placeholder="Filter by name…"
-                        value={globalFilter}
-                        onChange={(e) => setGlobalFilter(e.target.value)}
-                        aria-label="Filter neighbourhoods by name"
-                      />
-                    )}
                     <span className="dt-count">
                       {selectionMode ? `${aggregate.nSelected} selected` : `${viewRows.length} of ${rows.length}`}
                     </span>
