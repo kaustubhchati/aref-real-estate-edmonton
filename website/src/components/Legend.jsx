@@ -13,7 +13,11 @@
 //                     (the band's colour + range), matching the map's `step` fill
 //   • format        — function applied to each stop's value for the row label
 //                     (gradient mode only; discrete rows use the band's own label)
-//   • discrete      — true → render stops as discrete class swatches (e.g. YoY)
+//   • discrete      — true → render stops as discrete class swatches
+//   • horizontal    — (PA, D6) true → a horizontal ramp bar with min/max end labels
+//                     only (BC/BP omit it → the vertical quantile-tick bar)
+//   • diverging     — (PA YoY, D6) true → space the horizontal stops by value (so the
+//                     flat yellow plateau shows at true width) + a centre ±1% tag
 //   • greyTitle     — heading above the categorical block
 //   • greyStates    — [{ label, fillColor, pattern, outlineColor, outlineDash }]
 //
@@ -25,7 +29,11 @@ export default function Legend({
   title,
   stops,
   format,
-  discrete = false,   // true → render stops as discrete class swatches (e.g. YoY), not a gradient
+  discrete = false,   // true → render stops as discrete class swatches, not a gradient
+  horizontal = false, // (PA, D6) → a HORIZONTAL ramp bar with end labels only, instead
+                      //   of the vertical quantile-tick bar (BC/BP keep the vertical form)
+  diverging = false,  // (PA YoY, D6) → position the horizontal stops by VALUE so the flat
+                      //   yellow plateau shows at its true width (legend = map) + a centre label
   greyTitle = null,
   greyStates = null,
 }) {
@@ -43,16 +51,31 @@ export default function Legend({
     );
   }
 
+  // Horizontal ramp geometry (PA, D6) — only when `horizontal`. Sequential: an EVEN
+  // min→max gradient (index-spaced). Diverging (YoY): stops spaced by VALUE, so the
+  // flat yellow plateau renders at its true (narrow) width — legend = map.
+  let hGradient = null, hMin, hMax;
+  if (horizontal) {
+    hMin = stops[0].v;
+    hMax = stops[stops.length - 1].v;
+    const span = (hMax - hMin) || 1;
+    hGradient = `linear-gradient(to right, ${stops
+      .map((s, i) => {
+        const pos = diverging ? ((s.v - hMin) / span) * 100 : (i / (stops.length - 1)) * 100;
+        return `${s.c} ${pos.toFixed(1)}%`;
+      })
+      .join(", ")})`;
+  }
+
   return (
     <aside className="legend">
       <h2 className="legend-title">{title}</h2>
 
-      {/* The colour scale. A CLASSED metric (discrete=true, e.g. YoY) shows one
-          swatch per band — exact colours that match the map's `step` fill, so
-          equal-coloured polygons are equal-class. A continuous metric shows a
-          vertical gradient bar with tick labels. Both read top = most positive.
-          WHY vertical gradient: a horizontal bar in a 264px sidebar crams 5
-          values into ~52px each — they collide; vertical gives each its own line. */}
+      {/* The colour scale. discrete=true → one swatch per band (exact `step`
+          colours). horizontal=true (PA, D6) → a wide gradient bar with min/max
+          end labels only. Otherwise (BC/BP) → a vertical gradient bar with a tick
+          label per stop — vertical because a horizontal bar in a 264px sidebar
+          would cram 5 quantile values into ~52px each and they collide. */}
       {discrete ? (
         <ul className="legend-list" style={{ marginBottom: 8 }}>
           {/* Most-positive band at top (mirrors the gradient's high=top). Labels
@@ -72,6 +95,32 @@ export default function Legend({
             </li>
           ))}
         </ul>
+      ) : horizontal ? (
+        // HORIZONTAL ramp (PA, D6): one wide gradient bar with END labels only
+        // (min → max), uniform across sequential metrics. Diverging (YoY) adds a
+        // centre "±1%" tag marking the flat yellow neutral plateau, and the stops
+        // are spaced by value (hGradient) so the plateau shows at its true width —
+        // legend = map. Left = min / most decline, right = max / most growth.
+        <div style={{ marginBottom: 8 }}>
+          <div style={{
+            height: 12,
+            borderRadius: 4,
+            background: hGradient,
+            border: "1px solid var(--border)",
+          }} />
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginTop: 4,
+            fontSize: "0.70rem",
+            fontVariantNumeric: "tabular-nums",
+            color: "var(--text)",
+          }}>
+            <span>{format(hMin)}</span>
+            {diverging && <span style={{ color: "var(--text-subtle)" }}>±1%</span>}
+            <span>{format(hMax)}</span>
+          </div>
+        </div>
       ) : (
       <div style={{
         display: "flex",
