@@ -470,21 +470,34 @@ export function choroplethFillColor(metricKey = "median_assessvalue", year, stop
 const DIM_OPACITY = 0.12;
 function fillOpacityExpr(year) {
   const state = yget("polygon_state", year);
-  return [
+  // The per-state opacity at a given aggregated-fade factor k. Only the AGGREGATED branch
+  // scales by k (KC: existing_state_opacity × zoom_factor); the glass / suppressed states
+  // (0.04–0.15) are already faint and NEVER fade — fading them would erase their honesty
+  // encoding. hover/pinned/dimmed stay proportional (all inside the scaled branch).
+  const stateCase = (k) => [
     "case",
     ["==", state, "aggregated"],
       [
         "case",
         // Hover + pinned (selection) stay DOMINANT over the dim — checked first.
-        ["boolean", ["feature-state", "hover"], false], 0.88,
-        ["boolean", ["feature-state", "pinned"], false], 0.88,
+        ["boolean", ["feature-state", "hover"], false], 0.88 * k,
+        ["boolean", ["feature-state", "pinned"], false], 0.88 * k,
         // Third channel: dimmed = not in the current table-filter brush set (D7).
-        ["boolean", ["feature-state", "dimmed"], false], DIM_OPACITY,
-        0.74,
+        ["boolean", ["feature-state", "dimmed"], false], DIM_OPACITY * k,
+        0.74 * k,
       ],
     ["boolean", ["feature-state", "hover"], false], 0.15,
     ["boolean", ["feature-state", "pinned"], false], 0.15,
     0.04,
+  ];
+  // F4 — high-zoom fade. ZOOM must be the OUTERMOST expression (MapLibre forbids a nested
+  // zoom), so interpolate between two pre-scaled state-cases: hold as-built to z14, ease
+  // the aggregated fills to k=0.68 by z16.5 (0.74 base → ≈0.50) so streets, buildings, and
+  // the labels read through at parcel scale.
+  return [
+    "interpolate", ["linear"], ["zoom"],
+    14, stateCase(1),
+    16.5, stateCase(0.68),
   ];
 }
 const stateEqFilter = (year, state) => ["==", yget("polygon_state", year), state];
