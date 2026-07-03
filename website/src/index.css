@@ -984,7 +984,9 @@ p  { margin: 0 0 0.75rem; }
 
 /* DISTRIBUTION — the citywide histogram with the selection marked (DistributionStrip.jsx). */
 .dt-hist { display: flex; flex-direction: column; gap: 3px; width: 100%; flex: 1 1 auto; min-height: 0; }
-.dt-hist-svg { display: block; width: 100%; flex: 1 1 0; min-height: 10px; max-height: 52px; }
+/* A5 — taller histogram: A4's compact condo tiles freed rail height, so the distribution
+   gets real bars (was a clipped sliver). Shrink-fit SVG, floor 12 → 72px cap. */
+.dt-hist-svg { display: block; width: 100%; flex: 1 1 0; min-height: 12px; max-height: 72px; }
 .dt-hist-ends {
   flex: 0 0 auto; display: flex; justify-content: space-between; gap: 8px;
   font-size: 9.5px; color: var(--text-subtle); font-variant-numeric: tabular-nums;
@@ -1123,8 +1125,9 @@ p  { margin: 0 0 0.75rem; }
 .dt-kv { display: flex; justify-content: space-between; font-size: var(--t-2xs); margin-top: 1px; }
 .dt-kv-k { color: var(--tx-mut); }
 .dt-kv-v { color: var(--tx); font-variant-numeric: tabular-nums; }
-/* Distribution card — a full-width tile with a floor so the histogram never clips (A3). */
-.dt-card--dist { min-height: 60px; display: flex; flex-direction: column; }
+/* Distribution card — a full-width tile with a taller floor (A5) so the histogram reads as
+   a real distribution; never clips (A3). */
+.dt-card--dist { min-height: 96px; display: flex; flex-direction: column; }
 /* A3 — the histogram body carries NO extra padding (the card already pads); the doubled
    card+body padding was eating the floor and clipping the SVG. With padding:0 + the
    svg's 10px shrink floor, the full histogram (bars + end labels) fits the min-height by
