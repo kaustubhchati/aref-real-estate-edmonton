@@ -1176,7 +1176,9 @@ export default function PropertyAssessmentMap() {
   // sliders read as one instrument. [D2]
   const yMin = years.length ? Math.min(...years) : 0;
   const yMax = years.length ? Math.max(...years) : 1;
-  const yearPct = `${(((sliderYear ?? year ?? yMin) - yMin) / ((yMax - yMin) || 1)) * 100}%`;
+  // C1 — UNITLESS 0–100 (not a "%" string) so the track fill can be thumb-width-aware in
+  // CSS (calc), keeping the fill's right edge at the thumb centre instead of overshooting.
+  const yearPct = ((sliderYear ?? year ?? yMin) - yMin) / ((yMax - yMin) || 1) * 100;
 
   // The S-b single-select DETAIL instrument (contract §4/C9): the right-side float,
   // shown only when the console is DOWN and exactly one neighbourhood is selected.

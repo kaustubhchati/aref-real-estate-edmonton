@@ -1232,11 +1232,18 @@ p  { margin: 0 0 0.75rem; }
 .pa-tune-year { font-size: 11px; font-weight: 600; color: var(--pa-up); font-variant-numeric: tabular-nums; flex: 0 0 auto; min-width: 34px; text-align: right; }
 .pa-column .pa-slider::-webkit-slider-runnable-track { background: var(--pa-hair); }
 .pa-column .pa-slider::-moz-range-track { background: var(--pa-hair); }
+/* C1 — thumb-width-aware fill: the fill's right edge tracks the 13px thumb's CENTRE
+   (6.5px + pct·(track − thumb)) instead of the raw pct%, so it never overshoots the thumb
+   at the extremes. --pct is unitless 0–100 (set by the JSX). */
 .pa-column .pa-year-slider::-webkit-slider-runnable-track {
-  background: linear-gradient(to right, var(--pa-up) var(--pct, 0%), var(--pa-hair) var(--pct, 0%));
+  background: linear-gradient(to right,
+    var(--pa-up) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
+    var(--pa-hair) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100));
 }
 .pa-column .pa-year-slider::-moz-range-track {
-  background: linear-gradient(to right, var(--pa-up) var(--pct, 0%), var(--pa-hair) var(--pct, 0%));
+  background: linear-gradient(to right,
+    var(--pa-up) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
+    var(--pa-hair) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100));
 }
 .pa-column .pa-slider::-webkit-slider-thumb { background: var(--pa-up); border-color: var(--pa-shell); }
 .pa-column .pa-slider::-moz-range-thumb { background: var(--pa-up); border-color: var(--pa-shell); }
@@ -1474,12 +1481,17 @@ p  { margin: 0 0 0.75rem; }
 .pa-column .seg-btn:focus-visible,
 .pa-column .opt-toggle-btn:focus-visible,
 .dt-panel .seg-btn:focus-visible { outline-color: var(--pa-dn); }
-/* YEAR: green fill up to the thumb via --pct (matches the dual's fill segment). */
+/* YEAR: green fill to the thumb CENTRE via unitless --pct + a thumb-width-aware calc (C1),
+   so the fill never overshoots the 13px thumb at the extremes. */
 .pa-year-slider::-webkit-slider-runnable-track {
-  background: linear-gradient(to right, var(--accent) var(--pct, 0%), var(--border) var(--pct, 0%));
+  background: linear-gradient(to right,
+    var(--accent) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
+    var(--border) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100));
 }
 .pa-year-slider::-moz-range-track {
-  background: linear-gradient(to right, var(--accent) var(--pct, 0%), var(--border) var(--pct, 0%));
+  background: linear-gradient(to right,
+    var(--accent) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
+    var(--border) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100));
 }
 
 /* ---- Dual-handle range: two thumbs on ONE track (matches the year slider) --- */
