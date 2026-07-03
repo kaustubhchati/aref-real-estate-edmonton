@@ -213,24 +213,32 @@ function pointInGeom(pt, geom) {
 // symbol-sort-key so the bigger neighbourhood wins a collision. Returns a GeoJSON
 // FeatureCollection ready for map.addSource.
 function buildCentroidPoints(gj) {
-  const features = [];
+  const pts = [];
   for (const f of gj.features) {
     const c = geometryCentroid(f.geometry);
     if (!c) continue;
     const g = f.geometry;
     const polys = g.type === "MultiPolygon" ? g.coordinates : [g.coordinates];
     const area = polys.reduce((max, poly) => Math.max(max, ringArea(poly[0])), 0);
-    features.push({
-      type: "Feature",
-      geometry: { type: "Point", coordinates: c },
-      properties: {
-        "Neighbourhood ID": f.properties["Neighbourhood ID"],
-        display_name: f.properties.display_name,
-        area,
-      },
-    });
+    pts.push({ c, area, id: f.properties["Neighbourhood ID"], name: f.properties.display_name });
   }
-  return { type: "FeatureCollection", features };
+  // D-P2 F2 F3 D-P3 B3 — assign a zoom-density TIER by area rank so the overview breathes:
+  // the largest neighbourhoods (tier 1) label from the wide view, mid ones (tier 2) appear
+  // ~z12.5, the rest (tier 3) only at neighbourhood zoom ~z14. The label layer's text-size
+  // step reads this tier; the table always holds the exhaustive list.
+  const byArea = [...pts].sort((a, b) => b.area - a.area);
+  const n = byArea.length;
+  const t1 = Math.round(n * 0.08);  // top ~8% = major
+  const t2 = Math.round(n * 0.33);  // next ~25% = mid
+  byArea.forEach((p, i) => { p.tier = i < t1 ? 1 : i < t2 ? 2 : 3; });
+  return {
+    type: "FeatureCollection",
+    features: pts.map((p) => ({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: p.c },
+      properties: { "Neighbourhood ID": p.id, display_name: p.name, area: p.area, tier: p.tier },
+    })),
+  };
 }
 
 // Plain median of a numeric array (used for the labelled "median of medians"

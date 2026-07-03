@@ -684,15 +684,22 @@ export function centroidNameLayer() {
   return {
     id: "nbhd-labels",
     type: "symbol",
-    minzoom: 10,
+    minzoom: 9,
     layout: {
       "text-field": ["get", "display_name"],
       // Priority: bigger neighbourhoods win placement. symbol-sort-key gives LOWER keys
       // priority, so negate the (year-invariant) area → largest area = lowest key.
       "symbol-sort-key": ["-", 0, ["get", "area"]],
-      // Graduated size: small when zoomed out (keeps the city view calm), larger at
-      // neighbourhood scale.
-      "text-size": ["interpolate", ["linear"], ["zoom"], 10, 11, 15, 16],
+      // B3 — zoom-density tiers via a step on ZOOM (the only valid place for [zoom]); each
+      // step output is a per-feature `tier` case, and text-size 0 hides a tier (0 size = no
+      // collision box, so it also frees space). tier 1 (major) labels from the overview,
+      // tier 2 (mid) from ~z12.5, tier 3 (all) from ~z14. The overview breathes.
+      "text-size": [
+        "step", ["zoom"],
+        ["case", ["==", ["get", "tier"], 1], 11, 0],       // < z12.5: major only
+        12.5, ["case", ["<=", ["get", "tier"], 2], 12, 0], // z12.5–14: major + mid
+        14, 13,                                            // ≥ z14: all
+      ],
       "text-font": ["Noto Sans Regular"],
       "text-max-width": 8,
       // B2 — allow-overlap:false so this layer joins the basemap's ONE collision index
