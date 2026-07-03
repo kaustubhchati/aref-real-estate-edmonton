@@ -1292,7 +1292,8 @@ export default function PropertyAssessmentMap() {
                     VIEW-only brush stay in the dock. Fixed slot: the range is
                     disabled (not removed) in selection mode. */}
                 <div className="pa-col-mod pa-col-tuning" role="group" aria-label="Tuning">
-                  <span className="pa-col-lab">⚙ Tuning</span>
+                  {/* C2 — the "⚙ Tuning" module label is removed (the sliders are
+                      self-evident); the group keeps its aria-label for a11y. */}
                   {year != null && (
                     <div className="pa-tune-row">
                       <span className="pa-tune-name">Year</span>
