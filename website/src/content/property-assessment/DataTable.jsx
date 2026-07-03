@@ -73,10 +73,9 @@ import TrendChart from "./TrendChart.jsx";
 import ExportMenu from "./ExportMenu.jsx";
 import SegmentedControl from "../../components/SegmentedControl.jsx";
 import { DUR_BASE, reduceMotion } from "../../components/motion.js";
-import { METRICS, STATE_STYLE } from "./choroplethStyle.js";
+import { METRICS } from "./choroplethStyle.js";
 import {
   fmtArea,
-  fmtCurrency,
   fmtCurrencyShort,
   fmtNumber,
   fmtPct,
@@ -545,25 +544,19 @@ export default function DataTable({
                   MEDIAN / MEAN·YOY / CONDO cards; C4 seats the existing vs-city
                   figures + the distribution histogram in the rail frame. ===== */}
               <div className="dt-slot dt-slot--rail">
-                <div className="dt-rail-figures dt-vs-body">
-                  <VsCitySlot
-                    selectionMode={selectionMode}
-                    aggregate={aggregate}
-                    singleRow={singleRow}
-                    cityBaseline={cityBaseline}
-                  />
-                </div>
-                <div className="dt-rail-dist">
-                  <div className="dt-slot-label">Distribution · {activeCol?.label ?? metricLabel}</div>
-                  <div className="dt-slot-body">
-                    <DistributionStrip
-                      values={cityValues}
-                      markers={selMarkers}
-                      label={activeCol?.label ?? metricLabel}
-                      fmt={activeCol?.fmt ?? ((v) => v)}
-                    />
-                  </div>
-                </div>
+                <KpiRail
+                  selectionMode={selectionMode}
+                  aggregate={aggregate}
+                  singleRow={singleRow}
+                  cityBaseline={cityBaseline}
+                  metric={metric}
+                  dist={{
+                    values: cityValues,
+                    markers: selMarkers,
+                    label: activeCol?.label ?? metricLabel,
+                    fmt: activeCol?.fmt ?? ((v) => v),
+                  }}
+                />
               </div>
 
               {/* ===== TABLE — the compact spine table (centre column). Its head
@@ -778,83 +771,123 @@ function fmtSignedPct(ratio) {            // ratio is a fraction (0.064 → "+6.
 function fmtSignedPp(diff) {              // diff already in percentage points (0–100 scale)
   return (diff >= 0 ? "+" : "") + diff.toFixed(1) + "pp";
 }
-function fmtSharePct(frac) {              // frac = sel/city → "8% of city" / "<1%" / "0%"
-  const pct = frac * 100;
-  const s = pct === 0 ? "0" : pct < 1 ? "<1" : String(Math.round(pct));
-  return `${s}% of city`;
-}
+// ---- KPI RAIL (contract §4/§7) ---------------------------------------------
+// The rail's four cards in FIXED order: MEDIAN → (MEAN or YOY) → CONDO → DISTRIBUTION.
+// Card anatomy: small-caps label (+ inline honesty tag) · city baseline top-right ·
+// big value · coloured delta. The CONDO card carries a secondary block (Mean excl.
+// condo / Lot non-condo). Interiors by scope: N=0 city baselines (NO delta — the card
+// IS the baseline); N=1 this neighbourhood vs city; N≥2 the parcel-weighted aggregate
+// (§7) with honesty tags. Deltas: level metrics relative %, YoY & condo in pp. Reads
+// the SELECTION channel only — never brushedIds (the VIEW-only fence).
+function signCls(n) { return n > 0 ? "dt-up" : n < 0 ? "dt-dn" : ""; }
 
-// ---- VS-CITY slot (D3; carries C3 + D8 item 8) -----------------------------
-// The four figures (parcels / mean / median / YoY) at full weight, each read against
-// the CITY baseline on the same honest parcel-weighted basis. Selection-responsive:
-//   N≥2 → the selection aggregate (exact mean, ≈ median-of-medians, ≈ parcel-weighted
-//         YoY) with deltas vs city; N=1 → THIS neighbourhood's own figures vs city;
-//   N=0 → the city baseline itself (no delta — it IS the baseline).
-// The EXACT/APPROX honesty tags are preserved (aggregate approximations carry "≈").
-// NOTE: still NOT a TanStack aggregationFn — a parcel-weighted mean must weight by
-// n_properties (the built-in unweighted mean can't), so the math stays in
-// aggregateFeatures; this only re-lays-out the figures. Reads the SELECTION channel
-// only — never brushedIds (the VIEW-only fence).
-function VsCitySlot({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb }) {
-  // "city <value> · <delta>" per metric kind (level = relative %, rate = pp, share =
-  // % of city). A null baseline/figure yields no delta line.
-  const lvl = (sel, cityVal, fmt) =>
-    cb && sel != null && cityVal != null && cityVal !== 0
-      ? `city ${fmt(cityVal)} · ${fmtSignedPct((sel - cityVal) / cityVal)}`
-      : null;
-  const rate = (sel, cityVal, fmt) =>
-    cb && sel != null && cityVal != null ? `city ${fmt(cityVal)} · ${fmtSignedPp(sel - cityVal)}` : null;
-  const share = (sel, cityVal) =>
-    cb && sel != null && cityVal != null && cityVal !== 0 ? fmtSharePct(sel / cityVal) : null;
+function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, metric, dist }) {
+  const num = (v) => (v == null || !Number.isFinite(+v) || +v === -999 ? null : +v);
+  const pctText = (x) => (x == null ? "—" : `${Math.round(x)}%`);
 
-  let cards, note;
+  // Resolve the scope's figures + per-figure honesty tags (N≥2 aggregate / N=1
+  // this-nbhd / N=0 city baseline).
+  let s;
   if (selectionMode && a) {
-    cards = [
-      { label: "Total parcels", value: fmtNumber(a.totalParcels), tag: "exact", compare: share(a.totalParcels, cb?.totalParcels) },
-      { label: "Mean assessed", value: fmtCurrency(a.parcelMean), tag: "parcel-weighted · exact", compare: lvl(a.parcelMean, cb?.parcelMean, fmtCurrency) },
-      { label: "Median assessed", value: fmtCurrency(a.medianOfMedians), tag: "≈ median of medians", approx: true, compare: lvl(a.medianOfMedians, cb?.medianOfMedians, fmtCurrency) },
-      { label: "YoY change", value: fmtPct(a.areaYoY), tag: "≈ parcel-weighted", approx: true, compare: rate(a.areaYoY, cb?.areaYoY, fmtPct) },
-    ];
-    note = `${a.nReportable} reportable · ${a.nSuppressed} suppressed · ${a.nExcluded} excluded. Mean is parcel-exact; median (of medians) & YoY are parcel-weighted approximations (no parcel data in-browser). Deltas: level relative, YoY in pp.`;
+    s = { isCity: false,
+          median: a.medianOfMedians, mean: a.parcelMean, yoy: a.areaYoY,
+          condo: a.condoShare, mexcl: a.meanExclCondo, lot: a.lotNonCondo,
+          tags: { median: "≈ of medians", mean: "parcel-weighted · exact", yoy: "≈ weighted", condo: "weighted" } };
   } else if (r) {
-    cards = [
-      { label: "Parcels", value: r.n_properties != null ? fmtNumber(r.n_properties) : "—", tag: "this area", compare: share(r.n_properties, cb?.totalParcels) },
-      { label: "Mean assessed", value: r.avall_public != null ? fmtCurrency(r.avall_public) : "—", tag: "this area", compare: lvl(r.avall_public, cb?.parcelMean, fmtCurrency) },
-      { label: "Median assessed", value: r.median_assessvalue != null ? fmtCurrency(r.median_assessvalue) : "—", tag: "this area", compare: lvl(r.median_assessvalue, cb?.medianOfMedians, fmtCurrency) },
-      { label: "YoY change", value: r.yoy_pct_change != null ? fmtPct(r.yoy_pct_change) : "—", tag: "this area", compare: rate(r.yoy_pct_change, cb?.areaYoY, fmtPct) },
-    ];
-    // A non-aggregated neighbourhood (suppressed / non-residential / …) has no values;
-    // surface WHY so the em-dashes read as intentional, not missing data.
-    note = r.state && r.state !== "aggregated" ? (STATE_STYLE[r.state]?.label ?? null) : null;
+    s = { isCity: false,
+          median: num(r.median_assessvalue), mean: num(r.avall_public), yoy: num(r.yoy_pct_change),
+          condo: num(r.pct_with_unit), mexcl: num(r.avg_assessvalue_without_unit), lot: num(r.avg_lotsize), tags: {} };
   } else if (cb) {
-    cards = [
-      { label: "Total parcels", value: fmtNumber(cb.totalParcels), tag: "city" },
-      { label: "Mean assessed", value: fmtCurrency(cb.parcelMean), tag: "city · parcel-weighted" },
-      { label: "Median assessed", value: fmtCurrency(cb.medianOfMedians), tag: "city · ≈ median", approx: true },
-      { label: "YoY change", value: fmtPct(cb.areaYoY), tag: "city · ≈ weighted", approx: true },
-    ];
-    note = "Citywide baseline — select neighbourhoods to compare.";
+    s = { isCity: true,
+          median: cb.medianOfMedians, mean: cb.parcelMean, yoy: cb.areaYoY,
+          condo: cb.condoShare, mexcl: cb.meanExclCondo, lot: cb.lotNonCondo, tags: {} };
   } else {
     return <p className="dt-vs-note">No data.</p>;
   }
 
-  // One dense row per figure (label · value · vs-city) so all four fit the shallow
-  // band. An approximate figure is marked "≈" (with the method as a tooltip), so the
-  // exact/approx honesty stays visible. The compare column falls back to the tag when
-  // there's no delta (N=0 baseline).
+  const city = cb || {};
+  // Second card: the aggregate scope surfaces the EXACT parcel-weighted MEAN; browse /
+  // single surfaces YOY (growth) — unless the ACTIVE metric is itself mean or yoy.
+  const secondKey = metric === "yoy_pct_change" ? "yoy"
+    : metric === "avall_public" ? "mean"
+    : selectionMode ? "mean" : "yoy";
+
+  // Deltas — null at city scope (the card IS the baseline). Level metrics: relative
+  // %; YoY & condo share: percentage-point difference.
+  const rel = (sel, c) => (!s.isCity && sel != null && c != null && c !== 0)
+    ? { txt: fmtSignedPct((sel - c) / c), cls: signCls(sel - c) } : null;
+  const pp = (sel, c) => (!s.isCity && sel != null && c != null)
+    ? { txt: fmtSignedPp(sel - c), cls: signCls(sel - c) } : null;
+  const cityTxt = (v, fmt) => (s.isCity || v == null ? null : `city ${fmt(v)}`);
+
+  const cards = [];
+  cards.push({
+    key: "median", label: "Median", tag: s.tags.median, cityScope: s.isCity,
+    city: cityTxt(city.medianOfMedians, fmtCurrencyShort),
+    value: s.median != null ? fmtCurrencyShort(s.median) : "—",
+    delta: rel(s.median, city.medianOfMedians),
+  });
+  cards.push(secondKey === "mean"
+    ? { key: "mean", label: "Mean", tag: s.tags.mean, cityScope: s.isCity,
+        city: cityTxt(city.parcelMean, fmtCurrencyShort),
+        value: s.mean != null ? fmtCurrencyShort(s.mean) : "—",
+        delta: rel(s.mean, city.parcelMean) }
+    : { key: "yoy", label: "YoY", tag: s.tags.yoy, cityScope: s.isCity,
+        city: cityTxt(city.areaYoY, fmtPct),
+        value: s.yoy != null ? fmtPct(s.yoy) : "—", valueCls: signCls(s.yoy),
+        delta: pp(s.yoy, city.areaYoY) });
+  cards.push({
+    key: "condo", label: "Condo", tag: s.tags.condo, cityScope: s.isCity, condo: true,
+    city: s.isCity ? null : (city.condoShare != null ? `city ${pctText(city.condoShare)}` : null),
+    value: pctText(s.condo), delta: pp(s.condo, city.condoShare),
+    mexcl: s.mexcl, lot: s.lot,
+  });
+
   return (
-    <>
-      <div className="dt-vs-list">
-        {cards.map((c) => (
-          <div key={c.label} className={`dt-vs-row${c.approx ? " is-approx" : ""}`}>
-            <span className="dt-vs-k">{c.label}</span>
-            <span className="dt-vs-v" title={c.tag}>{c.approx ? "≈ " : ""}{c.value}</span>
-            <span className="dt-vs-cmp">{c.compare ?? c.tag}</span>
+    <div className="dt-cards">
+      {cards.map((c) => <KpiCard key={c.key} {...c} />)}
+      {/* DISTRIBUTION — the 4th card: the citywide histogram with the selection marked. */}
+      <div className="dt-card dt-card--dist">
+        <div className="dt-card-hd">
+          <span className="dt-card-l">Distribution{dist ? ` · ${dist.label}` : ""}</span>
+        </div>
+        <div className="dt-slot-body">
+          {dist && (
+            <DistributionStrip values={dist.values} markers={dist.markers} label={dist.label} fmt={dist.fmt} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// One KPI card: label (+ honesty tag) · city baseline · value · coloured delta, plus
+// the CONDO card's secondary block (Mean excl. condo / Lot non-condo). At city scope
+// the card shows "· City" and no delta (it IS the baseline). Honest em-dashes when a
+// figure is null (suppressed / all-condo).
+function KpiCard({ label, tag, city, value, valueCls, delta, cityScope, condo, mexcl, lot }) {
+  return (
+    <div className="dt-card">
+      <div className="dt-card-hd">
+        <span className="dt-card-l">
+          {label}{cityScope ? " · City" : ""}
+          {tag && <span className="dt-card-tag"> {tag}</span>}
+        </span>
+        {city && <span className="dt-card-c">{city}</span>}
+      </div>
+      <div className="dt-card-bd">
+        <span className={`dt-card-v${valueCls ? " " + valueCls : ""}`}>{value}</span>
+        {delta && <span className={`dt-card-d ${delta.cls}`}>{delta.txt}</span>}
+      </div>
+      {condo && (cityScope
+        ? (mexcl != null && <div className="dt-card-note">excl. mean {fmtCurrencyShort(mexcl)}</div>)
+        : (
+          <div className="dt-card-sub">
+            <div className="dt-kv"><span className="dt-kv-k">Mean excl. condo</span><span className="dt-kv-v">{mexcl != null ? fmtCurrencyShort(mexcl) : "—"}</span></div>
+            <div className="dt-kv"><span className="dt-kv-k">Lot (non-condo)</span><span className="dt-kv-v">{lot != null ? `${Math.round(lot)} m²` : "—"}</span></div>
           </div>
         ))}
-      </div>
-      {note && <p className="dt-vs-note">{note}</p>}
-    </>
+    </div>
   );
 }
 

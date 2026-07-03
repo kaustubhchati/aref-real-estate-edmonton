@@ -1035,6 +1035,27 @@ p  { margin: 0 0 0.75rem; }
 .dt-panel .dt-vs-clear { color: var(--pa-mut); }
 .dt-panel .dt-vs-clear:hover { color: var(--pa-ink); }
 
+/* ---- KPI cards (C5, contract §4/§7) — the rail's fixed card stack ----------- */
+.dt-cards { display: flex; flex-direction: column; gap: 6px; height: 100%; overflow-y: auto; }
+.dt-card { background: var(--pa-card); border-radius: 9px; padding: 8px 11px; flex: 0 0 auto; }
+.dt-card-hd { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+.dt-card-l { font-size: 8px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut); }
+.dt-card-tag { color: var(--pa-dim); text-transform: none; letter-spacing: 0; }
+.dt-card-c { font-size: 9px; color: var(--pa-mut); white-space: nowrap; }
+.dt-card-bd { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 1px; }
+.dt-card-v { font-size: 16px; font-weight: 500; color: var(--pa-ink); font-variant-numeric: tabular-nums; }
+.dt-card-d { font-size: 10px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dt-up { color: var(--pa-up); }
+.dt-dn { color: var(--pa-dn); }
+.dt-card-note { font-size: 9px; color: var(--pa-mut); margin-top: 2px; }
+.dt-card-sub { border-top: 1px solid var(--pa-hair); margin-top: 5px; padding-top: 4px; }
+.dt-kv { display: flex; justify-content: space-between; font-size: 9px; margin-top: 1px; }
+.dt-kv-k { color: var(--pa-mut); }
+.dt-kv-v { color: #c7cacd; font-variant-numeric: tabular-nums; }
+/* The distribution card takes the remaining rail height for its histogram. */
+.dt-card--dist { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.dt-card--dist .dt-slot-body { flex: 1 1 auto; min-height: 0; margin-top: 3px; }
+
 /* ============================================================================
    PA INSTRUMENT COLUMN (contract §3.1/§4) — ONE dark chassis on the left of the
    full-bleed map: identity → metric → tuning → legend → footer, hairline-

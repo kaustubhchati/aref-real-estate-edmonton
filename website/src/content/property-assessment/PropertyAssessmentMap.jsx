@@ -222,6 +222,13 @@ function aggregateFeatures(features) {
   const num = (v) => (v == null || !Number.isFinite(+v) || +v === -999 ? null : +v);
   let nReportable = 0, nSuppressed = 0, nExcluded = 0;
   let totalParcels = 0, sumNV = 0, sumN = 0, sumNYoY = 0, sumNYoYW = 0;
+  // §7 condo math: condo SHARE is parcel-weighted (Σ n·pct / Σ n, exact); the
+  // excl-condo MEAN and LOT are NON-CONDO-parcel-weighted (Σ nc·x / Σ nc, exact,
+  // where nc = n·(1−pct/100)), each summed only over members with a finite figure.
+  // An all-condo selection (Σ nc = 0) yields an honest null → "—", never a false 0.
+  let sumNPct = 0, sumNPctW = 0;            // condo share
+  let sumNcMexcl = 0, sumNcMexclW = 0;      // mean excl. condo
+  let sumNcLot = 0, sumNcLotW = 0;          // lot (non-condo)
   const medians = [];
   for (const f of features) {
     const p = f.properties;
@@ -235,6 +242,15 @@ function aggregateFeatures(features) {
       if (med != null) medians.push(med);
       const yoy = num(p.yoy_pct_change);
       if (yoy != null && n != null) { sumNYoY += n * yoy; sumNYoYW += n; }
+      const pct = num(p.pct_with_unit);       // % of parcels that are titled condo units
+      if (pct != null && n != null) {
+        sumNPct += n * pct; sumNPctW += n;
+        const nc = n * (1 - pct / 100);        // non-condo parcels in this nbhd
+        const mexcl = num(p.avg_assessvalue_without_unit);
+        if (mexcl != null) { sumNcMexcl += nc * mexcl; sumNcMexclW += nc; }
+        const lot = num(p.avg_lotsize);
+        if (lot != null) { sumNcLot += nc * lot; sumNcLotW += nc; }
+      }
     } else if (p.polygon_state === "suppressed_low_n") {
       nSuppressed++;
       if (n != null) totalParcels += n;
@@ -247,6 +263,9 @@ function aggregateFeatures(features) {
     parcelMean: sumN > 0 ? sumNV / sumN : null,            // EXACT (n-weighted)
     medianOfMedians: medians.length ? medianOf(medians) : null, // APPROX
     areaYoY: sumNYoYW > 0 ? sumNYoY / sumNYoYW : null,     // APPROX (n-weighted)
+    condoShare: sumNPctW > 0 ? sumNPct / sumNPctW : null,          // % parcel-weighted, EXACT
+    meanExclCondo: sumNcMexclW > 0 ? sumNcMexcl / sumNcMexclW : null, // $ non-condo-weighted, EXACT; null if all-condo
+    lotNonCondo: sumNcLotW > 0 ? sumNcLot / sumNcLotW : null,      // m² non-condo-weighted, EXACT; null if all-condo
   };
 }
 
