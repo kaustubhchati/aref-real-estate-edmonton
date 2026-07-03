@@ -689,6 +689,10 @@ export default function PropertyAssessmentMap() {
         median_assessvalue: num(p.median_assessvalue),
         avall_public:       num(p.avall_public),
         avg_lotsize:        num(p.avg_lotsize),
+        // Mean excl. condo — carried on the row so the single-select KPI card's CONDO
+        // secondary block shows the real value (was absent → a false "—", A4). At 0%
+        // condo it equals the overall mean; null ONLY at 100% condo (no non-condo).
+        avg_assessvalue_without_unit: num(p.avg_assessvalue_without_unit),
         median_yearbuilt:   num(p.median_yearbuilt),
         yoy_pct_change:     num(p.yoy_pct_change),
         n_properties:       num(p.n_properties),   // parcels — for the console's vs-city slot (D3)
