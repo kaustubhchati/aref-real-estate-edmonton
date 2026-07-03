@@ -541,10 +541,35 @@ export default function DataTable({
                 1 = the neighbourhood, ≥2 = the selection aggregate). */}
             <div className="dt-grid">
 
-              {/* ===== SPINE — the compact table + its controls. The metric selector
-                  lives here while the console is up (it lifts out of the identity
-                  card, D3), so "the table carries the metrics". ===== */}
-              <div className="dt-slot dt-slot--spine">
+              {/* ===== RAIL — the KPI stack (contract §4). C5 turns these into the
+                  MEDIAN / MEAN·YOY / CONDO cards; C4 seats the existing vs-city
+                  figures + the distribution histogram in the rail frame. ===== */}
+              <div className="dt-slot dt-slot--rail">
+                <div className="dt-rail-figures dt-vs-body">
+                  <VsCitySlot
+                    selectionMode={selectionMode}
+                    aggregate={aggregate}
+                    singleRow={singleRow}
+                    cityBaseline={cityBaseline}
+                  />
+                </div>
+                <div className="dt-rail-dist">
+                  <div className="dt-slot-label">Distribution · {activeCol?.label ?? metricLabel}</div>
+                  <div className="dt-slot-body">
+                    <DistributionStrip
+                      values={cityValues}
+                      markers={selMarkers}
+                      label={activeCol?.label ?? metricLabel}
+                      fmt={activeCol?.fmt ?? ((v) => v)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ===== TABLE — the compact spine table (centre column). Its head
+                  (metric · count · export · facets) stays here for now; C6 extracts
+                  it to the console header bar. ===== */}
+              <div className="dt-slot dt-slot--table">
                 <div className="dt-spine-head">
                   {metrics && onMetricChange && (
                     <div className="dt-metric">
@@ -568,6 +593,12 @@ export default function DataTable({
                     <span className="dt-count">
                       {selectionMode ? `${aggregate.nSelected} selected` : `${viewRows.length} of ${rows.length}`}
                     </span>
+                    {(selectionMode || singleRow) && (
+                      /* Interim clear — C6 relocates × Clear into the console header. */
+                      <button type="button" className="dt-vs-clear" onClick={onClearSelection}>
+                        × Clear
+                      </button>
+                    )}
                     <ExportMenu onExport={onExport} year={year} years={years} selectedCount={selectedIds.length} />
                   </div>
                   {/* Categorical facets (D6) — VIEW-only filters over the table
@@ -681,9 +712,10 @@ export default function DataTable({
                 </div>
               </div>
 
-              {/* ===== TIMESERIES SLOT — the scope's active-metric trajectory over
-                  the full year series (replaces the per-row sparkline). ===== */}
-              <div className="dt-slot dt-slot--ts">
+              {/* ===== TREND — the scope's active-metric trajectory (C8 builds the
+                  full trend instrument: min–max envelope + dashed city baseline +
+                  year cursor + labelled endpoints + YoY strip). ===== */}
+              <div className="dt-slot dt-slot--trend">
                 <div className="dt-slot-label">
                   Trend · {activeCol?.label ?? metricLabel} · {scopeLabel}
                 </div>
@@ -698,41 +730,9 @@ export default function DataTable({
                 </div>
               </div>
 
-              {/* ===== DISTRIBUTION SLOT — the citywide histogram with the selection
-                  marked within it. ===== */}
-              <div className="dt-slot dt-slot--dist">
-                <div className="dt-slot-label">Distribution · {activeCol?.label ?? metricLabel}</div>
-                <div className="dt-slot-body">
-                  <DistributionStrip
-                    values={cityValues}
-                    markers={selMarkers}
-                    label={activeCol?.label ?? metricLabel}
-                    fmt={activeCol?.fmt ?? ((v) => v)}
-                  />
-                </div>
-              </div>
-
-              {/* ===== VS-CITY SLOT — value / city-baseline / delta at full weight.
-                  N≥2 → the selection aggregate; N=1 → this neighbourhood; N=0 → the
-                  city baseline itself. The exact/approx honesty tags are preserved. */}
-              <div className="dt-slot dt-slot--vs">
-                <div className="dt-slot-label">
-                  <span>vs City</span>
-                  {(selectionMode || singleRow) && (
-                    <button type="button" className="dt-vs-clear" onClick={onClearSelection}>
-                      Clear
-                    </button>
-                  )}
-                </div>
-                <div className="dt-slot-body dt-vs-body">
-                  <VsCitySlot
-                    selectionMode={selectionMode}
-                    aggregate={aggregate}
-                    singleRow={singleRow}
-                    cityBaseline={cityBaseline}
-                  />
-                </div>
-              </div>
+              {/* ===== MARGIN — residual width, deliberately empty (the honest
+                  gutter; a full-width shell ≠ full-width content, §3.2/§4). ===== */}
+              <div className="dt-slot dt-slot--margin" aria-hidden="true">margin</div>
 
             </div>
           </div>
