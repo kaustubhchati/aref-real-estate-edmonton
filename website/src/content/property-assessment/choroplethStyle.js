@@ -673,9 +673,9 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
 // The name labels render from a dedicated CLIENT-DERIVED centroid point source
 // (buildCentroidPoints in PropertyAssessmentMap): ONE point per neighbourhood, so
 // MapLibre never places the per-tile duplicates a polygon source produced. The page
-// adds these ABOVE everything (no beforeId), so names clear the fills AND the basemap's
-// own labels. The source is year-invariant (geometry only) — applyYearMetric never
-// touches it.
+// anchors the base name layer ADJACENT to the basemap symbols (B2 — shared collision
+// index), and the focus layer ABOVE everything. The source is year-invariant (geometry
+// only) — applyYearMetric never touches it.
 export const CENTROID_SOURCE = "nbhd-centroids";
 
 // F2 — the base name-label layer. Zoom-graduated size + area-priority collision so the
@@ -695,7 +695,11 @@ export function centroidNameLayer() {
       "text-size": ["interpolate", ["linear"], ["zoom"], 10, 11, 15, 16],
       "text-font": ["Noto Sans Regular"],
       "text-max-width": 8,
-      // Try centred first, then nudge to an offset anchor instead of DROPPING a label.
+      // B2 — allow-overlap:false so this layer joins the basemap's ONE collision index
+      // (the page inserts it adjacent to the basemap symbols); our names and the basemap
+      // labels mutually collide-test and never overprint. Try centred first, then nudge to
+      // an offset anchor instead of DROPPING a label outright.
+      "text-allow-overlap": false,
       "text-variable-anchor": ["center", "top", "bottom", "left", "right"],
       "text-radial-offset": 0.6,
       "text-justify": "auto",

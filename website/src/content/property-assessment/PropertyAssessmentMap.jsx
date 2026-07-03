@@ -29,7 +29,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import polylabel from "polylabel";
 
-import MapView from "../../components/MapView.jsx";
+import MapView, { findFirstSymbolLayerId } from "../../components/MapView.jsx";
 import Legend from "../../components/Legend.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
@@ -701,9 +701,15 @@ export default function PropertyAssessmentMap() {
         data: points,
         promoteId: "Neighbourhood ID", // so the focus layer (F3) reads feature-state by id
       });
-      // No beforeId → appended to the TOP of the stack, above the basemap symbols.
-      map.addLayer({ ...centroidNameLayer(), source: CENTROID_SOURCE });
-      // F3 — the hover/selected guarantee layer sits above the base labels.
+      // B2 (DESIGN_SYSTEM §5) — anchor the base name layer ADJACENT to the basemap's
+      // symbol layers (insert before the first one) so it joins their ONE collision
+      // index: with allow-overlap:false, our names and the basemap's own labels mutually
+      // collide-test and never overprint. Inserted first among the symbols → our names
+      // win placement (basemap street/place labels yield in the gaps).
+      const symbolAnchor = findFirstSymbolLayerId(map);
+      map.addLayer({ ...centroidNameLayer(), source: CENTROID_SOURCE }, symbolAnchor);
+      // F3 — the hover/selected guarantee stays ON TOP (allow-overlap:true, the ONE
+      // exception): the pointed-at neighbourhood always names itself, above everything.
       map.addLayer({ ...centroidFocusLayer(), source: CENTROID_SOURCE });
     } catch {
       /* map mid-teardown — the next mounted map re-adds via this effect */

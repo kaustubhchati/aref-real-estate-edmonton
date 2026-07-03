@@ -227,7 +227,9 @@ export default function MapView({
   return <div ref={containerRef} className={`mapview ${className}`} />;
 }
 
-function findFirstSymbolLayerId(map) {
+// Exported so a section can anchor its OWN symbol layers into the basemap's collision
+// index (PA's centroid labels — D-P3 B2) rather than stacking them above everything.
+export function findFirstSymbolLayerId(map) {
   const layers = map.getStyle()?.layers ?? [];
   for (const l of layers) if (l.type === "symbol") return l.id;
   return undefined;
