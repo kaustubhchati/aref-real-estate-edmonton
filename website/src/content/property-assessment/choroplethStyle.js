@@ -118,18 +118,6 @@ const RAMP_YEAR = [
   { key: "max",    c: "#fef0d9", label: "newest" },
 ];
 
-// ── Purples (ColorBrewer) — the SHARE ramp for %Condo (D-P3 D1). Its OWN hue (violet),
-// distinct from the orange value ramp and the diverging YoY, so "share" never reads as
-// "dollars". Light = few condos, dark = condo-dominated. Runs on a FIXED 0–100 scale
-// (SHARE_STOPS), not data quantiles — the colour means the same thing every year.
-const RAMP_SHARE = [
-  { key: "min",    c: "#f2f0f7", label: "0%"   },
-  { key: "q25",    c: "#cbc9e2", label: "25%"  },
-  { key: "median", c: "#9e9ac8", label: "50%"  },
-  { key: "q75",    c: "#756bb1", label: "75%"  },
-  { key: "max",    c: "#54278f", label: "100%" },
-];
-
 // Map each metric key to its ramp.
 // WHY a lookup table: metricStops() and stopsFromScale() both
 // need to know which ramp to use. Single source of truth here.
@@ -138,7 +126,10 @@ const METRIC_RAMP = {
   avall_public:       RAMP_ASSESSED,
   avg_lotsize:        RAMP_AREA,
   median_yearbuilt:   RAMP_YEAR,   // kept (table 'Built' column) though no longer a MAP metric
-  pct_with_unit:      RAMP_SHARE,
+  // %Condo reuses the WARM sequential ramp (A3 — DESIGN_SYSTEM §1.4; the D1 purple is
+  // retired) so a share reads visually consistent with the level metrics; it is CLASSED by
+  // the actual condo-share quantiles (condoStops) rather than an even 0–100 ramp that read flat.
+  pct_with_unit:      RAMP_ASSESSED,
   // yoy_pct_change is not a sequential ramp — it uses the continuous diverging scale
   // built by yoyDivergingStops (flat yellow plateau + potent blue/red), not this table.
 };
@@ -169,12 +160,14 @@ export const STOPS = buildStops({
   min: 103500, q25: 352625, median: 425125, q75: 496188, max: 1226000,
 }, RAMP_ASSESSED);
 
-// %Condo is a SHARE (0–100), not a data-quantile distribution — paint it on a FIXED
-// 0→100 scale so the colour means the same thing every year and selection (D1). The
-// legend derives its 0%→100% end labels from these stops + the metric's fmtPct.
-export const SHARE_STOPS = buildStops(
-  { min: 0, q25: 25, median: 50, q75: 75, max: 100 }, RAMP_SHARE,
-);
+// %Condo stops (A3) — the WARM ramp CLASSIFIED by the actual condo-share quantiles, so the
+// map reveals the real spatial pattern (an even 0–100 ramp reads flat). Reuses metricStops
+// (the same quantile path the dollar/level metrics use) with a WARM even-0–100 fallback for
+// a degenerate distribution — never the dollar STOPS. Legend shows the quantile break %s.
+export function condoStops(gj) {
+  return metricStops(gj, "pct_with_unit",
+    buildStops({ min: 0, q25: 25, median: 50, q75: 75, max: 100 }, RAMP_ASSESSED));
+}
 
 // Per-year stops from a manifest colourScaleByYear[year] entry, falling back to
 // the locked STOPS when that year's scale is missing or unusable.
@@ -191,7 +184,7 @@ export function stopsFromScale(scale, metricKey = "median_assessvalue") {
 // too little data,
 // and drops any stop not strictly greater than the previous one so MapLibre's
 // interpolate (which requires ascending inputs) never throws on ties.
-export function metricStops(gj, metricKey) {
+export function metricStops(gj, metricKey, fallback = STOPS) {
   const ramp = METRIC_RAMP[metricKey] ?? RAMP_DEFAULT;
   const vals = [];
   for (const f of gj?.features ?? []) {
@@ -200,7 +193,7 @@ export function metricStops(gj, metricKey) {
     const v = Number(p[metricKey]);
     if (Number.isFinite(v)) vals.push(v);
   }
-  if (vals.length < 2) return STOPS;
+  if (vals.length < 2) return fallback;
   vals.sort((a, b) => a - b);
 
   // Build a {min,q25,median,q75,max} scale from the data quantiles, then run it
@@ -215,7 +208,7 @@ export function metricStops(gj, metricKey) {
     q75:    quantile(vals, 0.75),
     max:    quantile(vals, 1),
   };
-  return buildStops(q, ramp) ?? STOPS;
+  return buildStops(q, ramp) ?? fallback;
 }
 
 // Linear-interpolated quantile of an ascending-sorted array (p in [0, 1]).
