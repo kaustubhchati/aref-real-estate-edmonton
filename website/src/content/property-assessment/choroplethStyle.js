@@ -118,6 +118,18 @@ const RAMP_YEAR = [
   { key: "max",    c: "#fef0d9", label: "newest" },
 ];
 
+// ── Purples (ColorBrewer) — the SHARE ramp for %Condo (D-P3 D1). Its OWN hue (violet),
+// distinct from the orange value ramp and the diverging YoY, so "share" never reads as
+// "dollars". Light = few condos, dark = condo-dominated. Runs on a FIXED 0–100 scale
+// (SHARE_STOPS), not data quantiles — the colour means the same thing every year.
+const RAMP_SHARE = [
+  { key: "min",    c: "#f2f0f7", label: "0%"   },
+  { key: "q25",    c: "#cbc9e2", label: "25%"  },
+  { key: "median", c: "#9e9ac8", label: "50%"  },
+  { key: "q75",    c: "#756bb1", label: "75%"  },
+  { key: "max",    c: "#54278f", label: "100%" },
+];
+
 // Map each metric key to its ramp.
 // WHY a lookup table: metricStops() and stopsFromScale() both
 // need to know which ramp to use. Single source of truth here.
@@ -125,7 +137,8 @@ const METRIC_RAMP = {
   median_assessvalue: RAMP_ASSESSED,
   avall_public:       RAMP_ASSESSED,
   avg_lotsize:        RAMP_AREA,
-  median_yearbuilt:   RAMP_YEAR,
+  median_yearbuilt:   RAMP_YEAR,   // kept (table 'Built' column) though no longer a MAP metric
+  pct_with_unit:      RAMP_SHARE,
   // yoy_pct_change is not a sequential ramp — it uses the continuous diverging scale
   // built by yoyDivergingStops (flat yellow plateau + potent blue/red), not this table.
 };
@@ -155,6 +168,13 @@ function buildStops(scale, ramp = RAMP_DEFAULT) {
 export const STOPS = buildStops({
   min: 103500, q25: 352625, median: 425125, q75: 496188, max: 1226000,
 }, RAMP_ASSESSED);
+
+// %Condo is a SHARE (0–100), not a data-quantile distribution — paint it on a FIXED
+// 0→100 scale so the colour means the same thing every year and selection (D1). The
+// legend derives its 0%→100% end labels from these stops + the metric's fmtPct.
+export const SHARE_STOPS = buildStops(
+  { min: 0, q25: 25, median: 50, q75: 75, max: 100 }, RAMP_SHARE,
+);
 
 // Per-year stops from a manifest colourScaleByYear[year] entry, falling back to
 // the locked STOPS when that year's scale is missing or unusable.
@@ -283,8 +303,12 @@ const METRICS = [
     icon: "M3 3v18h18 M8 17V9 M13 17V5 M18 17v-7" },                                  // distribution / mean
   { key: "avg_lotsize",        label: "Mean lot size",           fmt: fmtArea,
     icon: "M15 3h6v6 M9 21H3v-6 M21 3l-7 7 M3 21l7-7" },                              // area / extent
-  { key: "median_yearbuilt",   label: "Median year built",       fmt: fmtYear,
-    icon: "M8 2v4 M16 2v4 M3 10h18 M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" }, // calendar
+  // D1 — %Condo promoted to a MAP metric (varies spatially, informative) on its own
+  // 0–100 share ramp; Year built demoted from the metric row (near-flat, uninformative
+  // choropleth) but KEPT as a table column. %Condo = share of individually-titled
+  // condominium parcels (Plan/Unit); label "% Condo", never "% apartments".
+  { key: "pct_with_unit",      label: "% Condo",                 fmt: fmtPct,
+    icon: "M3 21h18 M5 21V7l7-4 7 4v14 M9 9h.01 M9 13h.01 M9 17h.01 M15 9h.01 M15 13h.01 M15 17h.01" }, // building / units
   { key: "yoy_pct_change",     label: "Year-over-year change %", fmt: fmtPct,
     icon: "M3 17l6-6 4 4 8-8 M21 7v6 M21 7h-6" },                                     // trending up
 ];

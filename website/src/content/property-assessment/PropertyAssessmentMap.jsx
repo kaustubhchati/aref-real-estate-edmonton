@@ -57,6 +57,7 @@ import {
   yoyStopsFromValues,
   stopsFromScale,
   metricStops,
+  SHARE_STOPS,
   applyYearMetric,
   choroplethLayers,
   choroplethImages,
@@ -496,6 +497,7 @@ export default function PropertyAssessmentMap() {
 
   const stops = useMemo(() => {
     if (metric === "yoy_pct_change") return yoyStopsFromValues(yoyAllValues);
+    if (metric === "pct_with_unit") return SHARE_STOPS;          // fixed 0–100 share ramp (D1)
     return metric === "median_assessvalue"
       ? stopsFromScale(getColourScale(manifest, city, year), metric)
       : metricStops(gjView, metric);

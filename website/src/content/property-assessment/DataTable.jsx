@@ -122,6 +122,8 @@ const PRESENTATION = {
   avg_lotsize:        { label: "Lot size", header: "Lot m²", fmt: fmtArea,
                         cellFmt: fmtNumber },                  // bare — "m²" is in the header
   median_yearbuilt:   { label: "Year built",   header: "Built", fmt: fmtYear },
+  pct_with_unit:      { label: "% Condo",      header: "% Condo", fmt: fmtPct,
+                        cellFmt: (v) => (v == null || isNaN(+v) ? "—" : `${Math.round(+v)}%`) },  // D1 — also a map metric now
   yoy_pct_change:     { label: "YoY %",        header: "YoY",   fmt: fmtPct,
                         cellFmt: (v) => (v == null || isNaN(+v) ? "—" : (+v).toFixed(1)) }, // bare — "%" is in the header
 };
@@ -139,16 +141,29 @@ const COL_WIDTH = { name: "24%", metric: "11%", trend: "10%" };
 // column. PRESENTATION supplies the compact label/formatter; anything unlisted
 // falls back to the metric's own label + formatter, so the column never silently
 // vanishes.
-const METRIC_COLS = METRICS.map((m) => ({
-  key: m.key,
-  label:   PRESENTATION[m.key]?.label ?? m.label,                                  // range facet + dist strip
-  header:  PRESENTATION[m.key]?.header ?? PRESENTATION[m.key]?.label ?? m.label,   // table heading (carries the unit)
-  fmt:     PRESENTATION[m.key]?.fmt ?? m.fmt,                                      // FULL (units) — range + dist
-  cellFmt: PRESENTATION[m.key]?.cellFmt ?? PRESENTATION[m.key]?.fmt ?? m.fmt,      // BARE — table cell
-}));
-// The metric column ids — the range facet targets the ACTIVE one; on a metric
-// switch we drop any range filter left on a different metric (units differ).
-const METRIC_KEYS = new Set(METRIC_COLS.map((m) => m.key));
+// A column descriptor for any metric key — PRESENTATION supplies the compact
+// label/header/formatter; the map metric's own label/fmt is the fallback.
+const colFor = (key) => {
+  const m = METRICS.find((mm) => mm.key === key);
+  return {
+    key,
+    label:   PRESENTATION[key]?.label ?? m?.label ?? key,                              // range facet + dist strip
+    header:  PRESENTATION[key]?.header ?? PRESENTATION[key]?.label ?? m?.label ?? key, // table heading (carries the unit)
+    fmt:     PRESENTATION[key]?.fmt ?? m?.fmt,                                          // FULL (units) — range + dist
+    cellFmt: PRESENTATION[key]?.cellFmt ?? PRESENTATION[key]?.fmt ?? m?.fmt,            // BARE — table cell
+  };
+};
+// The table BODY's plain metric columns, in order (median · mean · lot · built).
+// DECOUPLED from the map METRICS (D1): Year built stays a table column though it left
+// the metric row; %Condo (condoCol) + YoY (yoyCol) are built specially below.
+const METRIC_COLS = ["median_assessvalue", "avall_public", "avg_lotsize", "median_yearbuilt"].map(colFor);
+// Every metric that can be the ACTIVE map metric OR a range-filtered column — resolves
+// activeCol (trend/KPI label + fmt) and the range facet, which targets the active metric.
+// On a metric switch we drop any range filter left on a different metric (units differ).
+const COLS_BY_KEY = Object.fromEntries(
+  ["median_assessvalue", "avall_public", "avg_lotsize", "median_yearbuilt", "pct_with_unit", "yoy_pct_change"].map((k) => [k, colFor(k)]),
+);
+const METRIC_KEYS = new Set(Object.keys(COLS_BY_KEY));
 
 // Categorical facets (D6) — VIEW-only table filters, data-driven from the rows.
 // Each is a HIDDEN column (a faceting/filtering accessor that is never rendered) +
@@ -378,10 +393,12 @@ export default function DataTable({
       filterFn: rangeFilter,   // the metric-range facet targets the ACTIVE metric's column
       meta: { numeric: true, metricKey: m.key, width: COL_WIDTH.metric },
     });
-    // % Condo (D4) — share of individually-titled CONDOMINIUM parcels (Plan/Unit
+    // % Condo (D4/D1) — share of individually-titled CONDOMINIUM parcels (Plan/Unit
     // land-titles registration; incl. single-unit bare-land condos). NOT "% apartments"
     // / "% multi-family": rental blocks register as one Plan/Block/Lot title and count
-    // as non-condo. A TABLE column (not a map metric — no colour scale). null → "—".
+    // as non-condo. Now ALSO a map metric (D1, on its own 0–100 share ramp), so it carries
+    // metricKey + the range filterFn — the active-metric highlight + range facet target it
+    // like any metric column. null → "—".
     const condoCol = {
       id: "pct_with_unit",
       accessorFn: (r) => r.pct_with_unit ?? undefined,
@@ -392,7 +409,8 @@ export default function DataTable({
       },
       sortUndefined: "last",
       enableGlobalFilter: false,
-      meta: { numeric: true, width: COL_WIDTH.metric },
+      filterFn: rangeFilter,   // the metric-range facet targets %Condo when it's active
+      meta: { numeric: true, metricKey: "pct_with_unit", width: COL_WIDTH.metric },
     };
     // TREND (C7) — the active-metric trajectory as a per-row sparkline. Rendered by the
     // React.memo'd TrendSparkCell; the active metric comes from table.options.meta so
@@ -518,7 +536,7 @@ export default function DataTable({
   // from getFacetedMinMaxValues (re-derived on metric switch); the value is that
   // column's [lo, hi] filter (undefined = full range = no filter). A range that
   // spans the full bounds clears the filter so it doesn't count as active.
-  const activeCol = METRIC_COLS.find((m) => m.key === metric);
+  const activeCol = COLS_BY_KEY[metric];   // resolves any active metric (incl. %Condo / YoY)
   const rangeBounds = table.getColumn(metric)?.getFacetedMinMaxValues();
   const rangeValue = table.getColumn(metric)?.getFilterValue();
   const setRange = ([lo, hi]) => {
@@ -641,7 +659,7 @@ export default function DataTable({
                       label="Metric"
                       options={metrics.map((m) => ({
                         key: m.key,
-                        label: METRIC_COLS.find((c) => c.key === m.key)?.label ?? m.label,
+                        label: COLS_BY_KEY[m.key]?.label ?? m.label,
                       }))}
                       value={metric}
                       onChange={onMetricChange}
