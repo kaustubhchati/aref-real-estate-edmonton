@@ -107,6 +107,27 @@
   --dur-base: 250ms;   /* appear/disappear, paint tweens */
   --dur-slow: 400ms;   /* crossfades */
 
+  /* ---- PA analyst dark palette (PA_MODE_CONTRACT §9) --------------------
+     The dark instrument chassis of the Property Assessment map: the left
+     instrument column, the analysis console, the KPI cards, the detail
+     float. Namespaced --pa-* so they never collide with the light-theme
+     semantic tokens above (--text is slate-900; --pa-ink is text ON dark).
+     Gloss belongs on CHROME (column/console/cards); DATA stays flat.
+     One source of truth — every PA dark surface reads these, no re-literals.
+       shell = deepest ground · card = raised panel · hair = 1px divider
+       ink   = primary text   · mut  = labels/muted · dim = faintest text
+       up    = positive/accent green · dn = negative/declining coral
+       sel   = selection outline coral (distinct from dn — a hair warmer) */
+  --pa-shell: #0d0e10;
+  --pa-card:  #1a1c1f;
+  --pa-hair:  #2a2d31;
+  --pa-ink:   #f5f6f7;
+  --pa-mut:   #8b8f94;
+  --pa-dim:   #6b7076;
+  --pa-up:    #4ade80;
+  --pa-dn:    #f88b6b;
+  --pa-sel:   #e8734a;
+
   font: 16px/1.5 var(--font-sans);
   color: var(--text);
   background: var(--bg);
