@@ -775,6 +775,23 @@ export default function PropertyAssessmentMap() {
     return () => { map.off("mousemove", "nbhd-fill", onMove); map.off("mouseleave", "nbhd-fill", onLeave); };
   }, [map]);
 
+  // D-P2 F5 — suppress the basemap's OWN neighbourhood labels for the PA view. Carto's
+  // place_hamlet (class=neighbourhood) and place_suburbs (class=suburb) label Edmonton
+  // neighbourhoods from z12, which DOUBLES our centroid labels (at Carto's point, offset
+  // from our interior centroid). Ours are the authoritative set — all 403, reconciled
+  // names incl. Wîhkwêntôwin — so hide theirs. PA-scoped (this map only); guarded, so a
+  // basemap without these layers is a no-op.
+  useEffect(() => {
+    if (!map) return;
+    try {
+      for (const id of ["place_hamlet", "place_suburbs"]) {
+        if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", "none");
+      }
+    } catch {
+      /* map mid-teardown */
+    }
+  }, [map]);
+
   // Active-metric series across every year for the single-selected nbhd — the
   // rail sparkline. All years are on the resident combined feature (gj), so this
   // is free. null unless exactly one nbhd is selected; -999 (the YoY no-prior
