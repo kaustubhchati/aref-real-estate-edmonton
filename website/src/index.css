@@ -1098,9 +1098,13 @@ p  { margin: 0 0 0.75rem; }
 .dt-card--dist { grid-column: 1 / -1; }   /* the distribution is the one full-width tile */
 .dt-tile-foot { color: var(--tx-mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dt-tile-l {
+  /* E1 — the label may carry an honesty TAG (e.g. "Parcel-Weighted · Exact"); let it flow
+     to its own wrapping line (below) rather than clip with an ellipsis in the half-width
+     square — §6: honesty labels are always shown, never hidden. */
   font-size: var(--t-2xs); letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--tx-mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--tx-mut); white-space: normal; overflow: visible; line-height: 1.2;
 }
+.dt-card-tag { display: block; white-space: normal; }
 .dt-tile-v {
   font-size: var(--t-lg); font-weight: 500; color: var(--tx);
   font-variant-numeric: tabular-nums; line-height: 1.15; margin: 1px 0;
