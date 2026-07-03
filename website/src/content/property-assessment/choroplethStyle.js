@@ -514,7 +514,16 @@ const suppressedCountText = (year) => [
 
 // ---- Layer specs handed to MapView ----------------------------------------
 // One function so the consumer file is short. Layers are in z-order
-// (first = bottom). MapView inserts them all below the basemap's labels.
+// (first = bottom).
+//
+// LAYER-ORDER CONTRACT (D-P2 F1) — two deliberate anchors:
+//   • These choropleth layers (fill / outline / pattern / suppressed-count) are
+//     inserted by MapView BELOW the basemap's first symbol layer (findFirstSymbolLayerId
+//     + beforeId), so ALL basemap labels — streets, places — render ABOVE our fills.
+//   • The neighbourhood NAME labels are NOT here: they mount ABOVE everything (basemap
+//     symbols included) from a client-derived centroid source, added by the page after
+//     MapView's batch — see centroidNameLayer() / centroidFocusLayer() below.
+//
 // `stops` selects the colour ramp and `metricKey` the column to colour by;
 // both default to the locked median scale when a caller doesn't pass them.
 export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue", year) {
@@ -637,31 +646,12 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
         ],
       },
     },
-    // 7. Neighbourhood name labels. Last in the array so they render above the
-    //    fills and outlines. Only from zoom 11 in, so the city-wide view stays
-    //    uncluttered and labels appear as the user zooms to a neighbourhood.
-    {
-      id: "nbhd-labels",
-      type: "symbol",
-      minzoom: 11,
-      layout: {
-        "text-field": ["get", "display_name"],
-        "text-size": 11,
-        "text-font": ["Noto Sans Regular"],
-        "text-max-width": 8,
-        // Collision avoidance: try centred first (keeps the current on-centroid
-        // look), then nudge to an offset anchor instead of DROPPING the label
-        // when labels crowd at zoom 11+.
-        "text-variable-anchor": ["center", "top", "bottom", "left", "right"],
-        "text-radial-offset": 0.6,
-        "text-justify": "auto",
-      },
-      paint: {
-        "text-color": "#3c3728",
-        "text-halo-color": "#ffffff",
-        "text-halo-width": 1.5,
-      },
-    },
+    // 7. (Neighbourhood NAME labels moved OUT of this array — D-P2 F1/F2.) They now
+    //    live on a dedicated client-derived CENTROID point source (one point per
+    //    neighbourhood, so no per-tile duplicates) and are added ABOVE everything by
+    //    the page (centroidNameLayer / centroidFocusLayer, mounted in
+    //    PropertyAssessmentMap's label effect — NOT via MapView's beforeId batch). See
+    //    the layer-order note in the header comment above.
     // 8. N-count label on suppressed (N < 100) polygons. These carry no value
     //    on the ramp, so showing the count makes the suppression legible rather
     //    than just grey. Zoom 11+ like the name labels, to keep the wide view
@@ -691,13 +681,54 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
   ];
 }
 
+// ---- Neighbourhood NAME labels (D-P2 F1/F2) -------------------------------
+// The name labels render from a dedicated CLIENT-DERIVED centroid point source
+// (buildCentroidPoints in PropertyAssessmentMap): ONE point per neighbourhood, so
+// MapLibre never places the per-tile duplicates a polygon source produced. The page
+// adds these ABOVE everything (no beforeId), so names clear the fills AND the basemap's
+// own labels. The source is year-invariant (geometry only) — applyYearMetric never
+// touches it.
+export const CENTROID_SOURCE = "nbhd-centroids";
+
+// F2 — the base name-label layer. Zoom-graduated size + area-priority collision so the
+// major neighbourhoods win when labels crowd; cream halo reads over the reddest fill.
+export function centroidNameLayer() {
+  return {
+    id: "nbhd-labels",
+    type: "symbol",
+    minzoom: 10,
+    layout: {
+      "text-field": ["get", "display_name"],
+      // Priority: bigger neighbourhoods win placement. symbol-sort-key gives LOWER keys
+      // priority, so negate the (year-invariant) area → largest area = lowest key.
+      "symbol-sort-key": ["-", 0, ["get", "area"]],
+      // Graduated size: small when zoomed out (keeps the city view calm), larger at
+      // neighbourhood scale.
+      "text-size": ["interpolate", ["linear"], ["zoom"], 10, 11, 15, 16],
+      "text-font": ["Noto Sans Regular"],
+      "text-max-width": 8,
+      // Try centred first, then nudge to an offset anchor instead of DROPPING a label.
+      "text-variable-anchor": ["center", "top", "bottom", "left", "right"],
+      "text-radial-offset": 0.6,
+      "text-justify": "auto",
+    },
+    paint: {
+      "text-color": "#3c3728",        // dark warm grey (basemap label family, not pure black)
+      "text-halo-color": "#f7f1df",   // basemap cream — legible over deep red / buildings / water
+      "text-halo-width": 1.4,
+      "text-halo-blur": 0.4,
+    },
+  };
+}
+
 // Reapply every YEAR/METRIC-dependent map expression on a persistent map — the
 // paint-swap that replaces the old per-year setData. Called by the page on a
 // year OR metric change; the source (combined all-years file) is never reloaded,
 // so geometry stays put and nbhd-fill's fill-color-transition tweens the colour.
 // Mirrors choroplethLayers exactly (same builders), updating only the layers
 // whose expressions read a per-year field — nbhd-highlight (feature-state only)
-// and nbhd-labels (display_name) are year-invariant and untouched. Guarded:
+// and the centroid NAME labels (display_name, a separate year-invariant source)
+// are untouched. Guarded:
 // the map can be mid-teardown (getLayer throws on a removed map).
 export function applyYearMetric(map, metricKey, year, stops) {
   if (!map || !map.getLayer("nbhd-fill")) return;

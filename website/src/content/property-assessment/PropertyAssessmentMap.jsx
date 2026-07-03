@@ -60,6 +60,8 @@ import {
   applyYearMetric,
   choroplethLayers,
   choroplethImages,
+  CENTROID_SOURCE,
+  centroidNameLayer,
 } from "./choroplethStyle.js";
 import {
   CITIES,
@@ -200,6 +202,34 @@ function pointInGeom(pt, geom) {
   return geom.type === "MultiPolygon"
     ? geom.coordinates.some(inPoly)
     : inPoly(geom.coordinates);
+}
+
+// D-P2 F2 — client-derived neighbourhood centroid POINTS for the name-label layer.
+// One Point per neighbourhood (the combined source is already one feature per nbhd,
+// so no dedup is needed), placed at the guaranteed-interior centroid — reusing the
+// SAME geometryCentroid the box-select uses (shoelace, polylabel fallback). `area` is
+// the largest ring's |area|, year-invariant, handed to the label layer's
+// symbol-sort-key so the bigger neighbourhood wins a collision. Returns a GeoJSON
+// FeatureCollection ready for map.addSource.
+function buildCentroidPoints(gj) {
+  const features = [];
+  for (const f of gj.features) {
+    const c = geometryCentroid(f.geometry);
+    if (!c) continue;
+    const g = f.geometry;
+    const polys = g.type === "MultiPolygon" ? g.coordinates : [g.coordinates];
+    const area = polys.reduce((max, poly) => Math.max(max, ringArea(poly[0])), 0);
+    features.push({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: c },
+      properties: {
+        "Neighbourhood ID": f.properties["Neighbourhood ID"],
+        display_name: f.properties.display_name,
+        area,
+      },
+    });
+  }
+  return { type: "FeatureCollection", features };
 }
 
 // Plain median of a numeric array (used for the labelled "median of medians"
@@ -650,6 +680,32 @@ export default function PropertyAssessmentMap() {
       /* map mid-teardown — the next mounted map re-applies via this effect */
     }
   }, [map, gj, brushedIds, selectedIds, dockOpen]);
+
+  // D-P2 F1/F2 — mount the neighbourhood NAME labels on a client-derived centroid
+  // point source, ABOVE everything (no beforeId), so names clear the choropleth fills
+  // AND the basemap's own labels. Runs once the map + data are ready; re-derives on a
+  // city switch (gj changes). The source is year-invariant, so the year slider never
+  // touches it (applyYearMetric leaves it alone).
+  useEffect(() => {
+    if (!map || !gj) return;
+    const points = buildCentroidPoints(gj);
+    try {
+      const src = map.getSource(CENTROID_SOURCE);
+      if (src) {
+        src.setData(points);   // city switch — same layers, new points
+        return;
+      }
+      map.addSource(CENTROID_SOURCE, {
+        type: "geojson",
+        data: points,
+        promoteId: "Neighbourhood ID", // so the focus layer (F3) reads feature-state by id
+      });
+      // No beforeId → appended to the TOP of the stack, above the basemap symbols.
+      map.addLayer({ ...centroidNameLayer(), source: CENTROID_SOURCE });
+    } catch {
+      /* map mid-teardown — the next mounted map re-adds via this effect */
+    }
+  }, [map, gj]);
 
   // Active-metric series across every year for the single-selected nbhd — the
   // rail sparkline. All years are on the resident combined feature (gj), so this
