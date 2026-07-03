@@ -1951,6 +1951,11 @@ p  { margin: 0 0 0.75rem; }
   box-shadow: var(--gel-bevel), var(--gel-lift);
   border-radius: 50% !important;
 }
+/* C7 — deliberate bottom-right placement on the PA map: stack the attribution + scale
+   flush in the corner with a small gap, so nothing floats loose mid-edge. */
+.pa-canvas .maplibregl-ctrl-bottom-right {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px; margin: 0 4px 4px 0;
+}
 
 /* Scale bar — minor convex consistency (subtle lift; stays legible). */
 .maplibregl-ctrl-scale {
