@@ -854,33 +854,33 @@ p  { margin: 0 0 0.75rem; }
   display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
   flex: 0 0 auto;
 }
-/* District multi-select — native <details> dropdown in the small-button idiom. */
-.dt-facet-dd { position: relative; }
+/* District multi-select (A1) — a dark BUTTON trigger + a PORTALED menu. The menu is
+   position:fixed (set inline from the trigger rect) on <body>, so the console's
+   overflow:hidden never clips it, and it flips upward when there's no room below. */
+.dt-facet-dd { position: relative; display: inline-flex; }
 .dt-facet-summary {
   display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
-  font-family: inherit; font-size: 0.78rem; font-weight: 500;
-  padding: 4px 9px; border-radius: 7px; white-space: nowrap; list-style: none;
-  background: var(--bg-soft); border: 1px solid var(--border); color: var(--text);
+  font-family: inherit; font-size: var(--t-sm); font-weight: 500;
+  padding: 4px 10px; border-radius: var(--r-md); white-space: nowrap;
+  background: var(--card); border: 1px solid var(--hair); color: var(--tx);
 }
-.dt-facet-summary::-webkit-details-marker { display: none; }
-.dt-facet-summary::after { content: "▾"; color: var(--text-muted); font-size: 0.9em; }
-.dt-facet-dd[open] .dt-facet-summary { background: var(--accent-soft); color: var(--accent-dark); }
+.dt-facet-summary:hover { border-color: var(--tx-mut); }
+.dt-facet-summary.is-open { border-color: var(--sel); }
+.dt-facet-caret { color: var(--tx-mut); font-size: 0.9em; }
+/* Portaled menu (role=menu on <body>) — its OWN dark surface (no longer a .dt-panel
+   descendant), elevated above the console. */
 .dt-facet-list {
-  position: absolute; top: calc(100% + 4px); left: 0; z-index: 5;
-  /* svh-capped so the dropdown stays WITHIN the console (which now clips via
-     overflow:hidden for the height transition) on short viewports — it scrolls
-     internally rather than being cut off at the panel edge. */
-  min-width: 180px; max-height: min(240px, 28svh); overflow-y: auto;
-  display: flex; flex-direction: column; gap: 1px; padding: 5px;
-  background: var(--gel-grad-gloss); box-shadow: var(--gel-lift-float), var(--gel-bevel);
-  border: var(--gel-border); border-radius: var(--radius-md);
+  z-index: 200; min-width: 180px; max-height: min(340px, 62svh); overflow-y: auto;
+  display: flex; flex-direction: column; gap: 1px; padding: var(--s2);
+  background: var(--panel); border: 1px solid var(--hair); border-radius: var(--r-md);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
 }
 .dt-facet-opt {
   display: flex; align-items: center; gap: 7px; cursor: pointer;
-  font-size: 0.8rem; padding: 4px 7px; border-radius: var(--radius-sm); color: var(--text);
+  font-size: var(--t-xs); padding: 5px 7px; border-radius: var(--r-sm); color: var(--tx);
 }
-.dt-facet-opt:hover { background: var(--accent-soft); }
-.dt-facet-opt input { accent-color: var(--accent); }
+.dt-facet-opt:hover { background: var(--shell); }
+.dt-facet-opt input { accent-color: var(--sel); }
 /* Polygon-state multi-select — toggle chips (one per state); pressed = included. */
 .dt-facet-toggles { display: flex; flex-wrap: wrap; gap: 5px; }
 .dt-facet-chip {
@@ -1038,11 +1038,9 @@ p  { margin: 0 0 0.75rem; }
 }
 .dt-panel .dt-metric .seg-btn:hover:not(.active) { background: var(--pa-card); color: var(--pa-ink); }
 
-/* Facets — dark. */
-.dt-panel .dt-facet-summary { color: var(--pa-mut); background: var(--pa-card); border-color: var(--pa-hair); }
-.dt-panel .dt-facet-dd[open] .dt-facet-summary { background: var(--pa-card); color: var(--pa-up); }
-.dt-panel .dt-facet-list { background: var(--pa-card); border-color: var(--pa-hair); color: var(--pa-mut); }
-.dt-panel .dt-facet-opt:hover { background: var(--pa-shell); }
+/* Facets — dark. (A1: the District dropdown trigger + portaled menu now carry their own
+   dark styling above; the summary/list/opt overrides here are retired — the menu is on
+   <body>, no longer a .dt-panel descendant.) */
 .dt-panel .dt-facet-chip { background: var(--pa-card); border-color: var(--pa-hair); color: #c7cacd; }
 .dt-panel .dt-facet-chip.is-on { background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); }
 .dt-panel .dt-facets-clear { color: var(--pa-mut); }

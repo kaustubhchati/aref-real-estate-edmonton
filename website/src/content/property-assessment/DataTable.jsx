@@ -1006,24 +1006,74 @@ function KpiCard({ label, tag, city, value, valueCls, delta, cityScope, cityName
 // and accessible with no custom open/close state. Options are data-driven; ticking
 // one toggles it in/out of the column filter. Selected count shows on the summary.
 function FacetDropdown({ label, options, selected, labelOf, onToggle }) {
+  // A1 — a PORTALED dark menu (was a native <details> trapped in the console's
+  // overflow:hidden with invisible light-shell option text). Mirrors ExportMenu: the
+  // menu is portaled to <body> as position:fixed, anchored under the trigger and
+  // flipping UP when the short console leaves no room below.
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState(null);
+  const wrapRef = useRef(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+
+  function openMenu() {
+    const r = triggerRef.current?.getBoundingClientRect();
+    if (r) {
+      // Flip UP when a full-height menu would overflow the console bottom (the trigger
+      // sits in the shallow console header). Opening upward puts the menu over the map,
+      // clear of the console's stacking context, so it always reads.
+      const flipUp = window.innerHeight - r.bottom < 340;
+      setPos(flipUp
+        ? { left: r.left, bottom: window.innerHeight - r.top + 6 }
+        : { left: r.left, top: r.bottom + 6 });
+    }
+    setOpen(true);
+  }
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (e) => {
+      if (!wrapRef.current?.contains(e.target) && !menuRef.current?.contains(e.target)) setOpen(false);
+    };
+    const onEsc = (e) => { if (e.key === "Escape") { setOpen(false); triggerRef.current?.focus(); } };
+    const onScroll = () => setOpen(false);   // the fixed menu doesn't track scroll — close instead of drift
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onEsc);
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onScroll);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onEsc);
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [open]);
+
   return (
-    <details className="dt-facet-dd">
-      <summary className="dt-facet-summary">
+    <div className="dt-facet-dd" ref={wrapRef}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className={`dt-facet-summary${open ? " is-open" : ""}`}
+        onClick={() => (open ? setOpen(false) : openMenu())}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
         {label}{selected.length ? ` · ${selected.length}` : ""}
-      </summary>
-      <div className="dt-facet-list">
-        {options.map((v) => (
-          <label key={v} className="dt-facet-opt">
-            <input
-              type="checkbox"
-              checked={selected.includes(v)}
-              onChange={() => onToggle(v)}
-            />
-            <span>{labelOf(v)}</span>
-          </label>
-        ))}
-      </div>
-    </details>
+        <span className="dt-facet-caret" aria-hidden="true">▾</span>
+      </button>
+      {open && pos && createPortal(
+        <div className="dt-facet-list" role="menu" ref={menuRef} style={{ position: "fixed", ...pos }}>
+          {options.map((v) => (
+            <label key={v} className="dt-facet-opt">
+              <input type="checkbox" checked={selected.includes(v)} onChange={() => onToggle(v)} />
+              <span>{labelOf(v)}</span>
+            </label>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </div>
   );
 }
 
