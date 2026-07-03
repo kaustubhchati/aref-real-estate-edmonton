@@ -14,7 +14,7 @@
 // =============================================================================
 
 import { fmtCurrency, fmtNumber, fmtPct, fmtYear, fmtArea } from "../../utils/format.js";
-import { polyOutline, rampFloor, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
+import { polyOutline, rampFloor, RAMP_FLOOR, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
 import { paintTransition, DUR_BASE } from "../../components/motion.js";
 import { CITY_BOUNDS } from "../../config/cityBounds.js";
 
@@ -120,7 +120,8 @@ const METRIC_RAMP = {
   avall_public:       RAMP_ASSESSED,
   avg_lotsize:        RAMP_AREA,
   median_yearbuilt:   RAMP_YEAR,
-  // yoy_pct_change uses the discrete yoyBands / YOY_BAND_COLOURS scale — not this table.
+  // yoy_pct_change is not a sequential ramp — it uses the continuous diverging scale
+  // built by yoyDivergingStops (flat yellow plateau + potent blue/red), not this table.
 };
 
 // Default ramp for fallback (used when metric key is unknown).
@@ -199,75 +200,65 @@ function quantile(sorted, p) {
   return lo === hi ? sorted[lo] : sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
 }
 
-// ---- Year-over-year diverging scale (DISCRETE classes) ---------------------
-// yoy_pct_change is a signed % (unlike the sequential $ metrics), painted on a
-// DISCRETE diverging scale: similar neighbourhoods share an EXACT colour, so the
-// map reads as patches, not per-polygon confetti (continuous shading over 400+
-// polygons is noise). Six classes on a zero-centred symmetric structure: 0 is
-// the central break, the arms clamp at ±E where E = p98(|yoy|) across ALL
-// neighbourhood-years (data-derived, no year literal — refresh-by-design). Inner
-// breaks at ±E/3. blue = decline, warm = growth.
+// ---- Year-over-year DIVERGING ramp (continuous, flat yellow plateau) --------
+// yoy_pct_change is a signed % painted on a CONTINUOUS diverging ramp (D6): a FLAT
+// YELLOW PLATEAU at the neutral centre [-1%, +1%] with potent outer shades. Yellow =
+// "no real change / base canvas"; movement is highlighted as it grows — deepening to
+// potent BLUE below -1% and potent RED above +1%. The washed near-zero shades of the
+// old discrete scale (light-salmon #f4a582 / whitish-blue #92c5de) are REMOVED: the
+// neutral zone collapses to the single held yellow; the outer stops carry the signal.
 //
-// COLOURS — ColorBrewer RdBu family (diverging, colourblind-safe), lightness-
-// ordered cool→warm, with the inner two nudged to RdBu-5 tones so the pale
-// near-zero bands still read on the cream basemap. The MOST-POSITIVE band binds
-// to MEDIAN_RED (the level metrics' hottest red) — a coherence requirement: the
-// YoY top class is the SAME red the median map uses, read from RAMP_ASSESSED so
-// it can never drift. Only the warm extreme is shared; the rest of the ramp is
-// built colourblind-safe and balanced around it.
-// The COOL extreme is deepened to ColorBrewer Blues #08519c (higher chroma than
-// RdBu's #2166ac) to chroma-balance the high-chroma MEDIAN_RED warm arm — so
-// equal-magnitude decline reads about as emphatic as equal-magnitude growth
-// (KC's call: raise the cool side, never desaturate the bound red).
-const YOY_BAND_COLOURS = [
-  "#08519c", // ≤ -E      deep blue      (strong decline) — chroma-matched to #cc0000
-  "#4393c3", // [-E,-E/3) medium blue
-  "#92c5de", // [-E/3,0)  light blue     (mild decline)
-  "#f4a582", // [0,+E/3)  light salmon   (mild growth)
-  "#d6604d", // [+E/3,+E) medium red
-  MEDIAN_RED, // ≥ +E     median red      (strong growth) — bound, not re-typed
-];
+// SCALE (preserved strategy, restructured only as the plateau requires): the outer
+// clamp E = p98(|yoy|) over all neighbourhood-years stays (data-derived, refresh-by-
+// design). The plateau is pinned at ±1% (KC's neutral band); the intermediate
+// deepening stop sits at the ARM MIDPOINT (E+1)/2 — always between the plateau edge
+// and E, so a small-E refresh can't collide with the fixed plateau (option A). blue =
+// decline, red = growth; the top red binds to MEDIAN_RED so it can never drift from
+// the level maps' hottest red. The plateau yellow reuses RAMP_FLOOR (the sequential
+// ramps' shared soft-yellow floor) — no new hex.
+const YOY_YELLOW    = RAMP_FLOOR;   // #fbe3a0 — the held plateau (base canvas)
+const YOY_DEEP_BLUE = "#08519c";    // potent decline extreme (chroma-matched to MEDIAN_RED)
+const YOY_MED_BLUE  = "#4393c3";    // mid decline
+const YOY_MED_RED   = "#d6604d";    // mid growth
+// (removed: "#92c5de" light blue + "#f4a582" light salmon — the washed near-zero shades.)
 
-// Build the six YoY classes for a clamp endpoint E. Each class is a band:
-//   from / to — its value range (±Infinity at the clamped ends)
-//   c         — its colour      label — its range, shown in the legend
-// The fill expression turns the band edges into a MapLibre `step`; the Legend
-// renders one swatch per band. Breaks: -E, -E/3, 0, +E/3, +E (0 central).
-function yoyBands(E) {
-  const r = (x) => Math.round(x);
-  const pct = (x) => `${x > 0 ? "+" : ""}${r(x)}%`; // signed, rounded label
+// Build the CONTINUOUS diverging stops for a clamp endpoint E (> 1). Each stop is
+//   v — its value       c — its colour
+// The fill INTERPOLATES over v; the Legend's horizontal diverging bar positions the
+// same stops by v (so the plateau shows at its true narrow width) and derives its end
+// labels from format(±E) + a fixed ±1% plateau tag — the stops carry no label. The two
+// yellow stops at ±1 hold the plateau FLAT between them. Ascending v (-E < -(E+1)/2 <
+// -1 < 1 < (E+1)/2 < E for E>1) — required by MapLibre interpolate.
+function yoyDivergingStops(E) {
+  const mid = (E + 1) / 2;   // arm midpoint (option A) — always between 1 and E for E>1
   return [
-    { from: -Infinity, to: -E,       c: YOY_BAND_COLOURS[0], label: `≤ ${pct(-E)}` },
-    { from: -E,        to: -E / 3,   c: YOY_BAND_COLOURS[1], label: `${pct(-E)} to ${pct(-E / 3)}` },
-    { from: -E / 3,    to: 0,        c: YOY_BAND_COLOURS[2], label: `${pct(-E / 3)} to 0%` },
-    { from: 0,         to: E / 3,    c: YOY_BAND_COLOURS[3], label: `0% to ${pct(E / 3)}` },
-    { from: E / 3,     to: E,        c: YOY_BAND_COLOURS[4], label: `${pct(E / 3)} to ${pct(E)}` },
-    { from: E,         to: Infinity, c: YOY_BAND_COLOURS[5], label: `≥ ${pct(E)}` },
+    { v: -E,   c: YOY_DEEP_BLUE },
+    { v: -mid, c: YOY_MED_BLUE  },
+    { v: -1,   c: YOY_YELLOW    },
+    { v:  1,   c: YOY_YELLOW    },
+    { v:  mid, c: YOY_MED_RED   },
+    { v:  E,   c: MEDIAN_RED    },
   ];
 }
 
 // Locked fallback E (the 2026 actual p98|yoy|≈15.5), used until enough data has
-// loaded to derive E. Keeps the discrete scheme valid on first paint.
+// loaded to derive E. Keeps the ramp valid on first paint.
 const YOY_FALLBACK_E = 15.5;
 
-// Data-derived discrete YoY classes (refresh-by-design — no baked endpoint). E =
-// p98 of |yoy| across every neighbourhood-year passed in; the long tail clamps
-// at ±E. 0 stays the central break, NOT recentred off the +2% median (most
-// neighbourhoods genuinely rose — that warm lean is real signal). Sentinel/NA
-// are excluded upstream (Number.isFinite). Falls back to YOY_FALLBACK_E until
-// ≥20 values have loaded.
+// Data-derived diverging YoY stops (refresh-by-design — no baked endpoint). E = p98
+// of |yoy| across every neighbourhood-year passed in; the arms clamp at ±E. Sentinel/
+// NA are excluded upstream (Number.isFinite). Falls back to YOY_FALLBACK_E until ≥20
+// values have loaded OR when p98 ≤ 1 (a near-flat distribution where the ±1 plateau
+// would swallow the whole range / the stops would go non-ascending — the plateau
+// needs E > 1, the analogue of the old strictly-ascending guard).
 export function yoyStopsFromValues(values) {
   const mags = (values ?? [])
     .filter((v) => Number.isFinite(v))
     .map(Math.abs)
     .sort((a, b) => a - b);
-  // E must be > 0 or the band breaks (±E, ±E/3) collapse to a single value and
-  // MapLibre's `step` throws on non-ascending inputs. Too few values, or a
-  // degenerate all-near-zero distribution (p98 == 0), fall back to the locked
-  // endpoint — the YoY analogue of the sequential ramps' strictly-ascending guard.
   const p98 = quantile(mags, 0.98);
-  const E = mags.length < 20 || !(p98 > 0) ? YOY_FALLBACK_E : p98;
-  return yoyBands(E);
+  const E = mags.length < 20 || !(p98 > 1) ? YOY_FALLBACK_E : p98;
+  return yoyDivergingStops(E);
 }
 
 // ---- Choropleth metrics ----------------------------------------------------
@@ -424,17 +415,15 @@ function buildFillColourExpression(metricKey, year, stops) {
 
   let aggregatedFill;
   if (isYoy) {
-    // yoy paints DISCRETE classes: a `step` over the band edges (stops = yoyBands)
-    // so same-band neighbourhoods share an exact colour (patches, not confetti).
-    // stops[0].c is the colour BELOW the first break (the ≤ -E clamp); each later
-    // band starts at its `from`. A missing prior-year value (MISSING sentinel,
+    // yoy INTERPOLATES over the diverging stops' VALUES (flat yellow plateau at ±1%,
+    // deepening to potent blue/red at ±E) — same continuous colour space as the
+    // sequential metrics (D6). A missing prior-year value (MISSING sentinel = -999,
     // which sorts below -E) is caught FIRST and painted no_data grey — never the
-    // clamp blue. Hard-edged across polygons within a year; year-changes SNAP
-    // class→class (applyYearMetric zeroes the tween for yoy) so a polygon never
-    // shows an off-class blended colour.
-    const step = ["step", value, stops[0].c];
-    for (let i = 1; i < stops.length; i++) step.push(stops[i].from, stops[i].c);
-    aggregatedFill = ["case", ["==", value, MISSING], STATE_STYLE.no_data.fillColor, step];
+    // clamp blue. applyYearMetric still zeroes the tween for yoy, so a year change
+    // SNAPS to the new colour rather than sweeping through the ramp.
+    const interp = ["interpolate", ["linear"], value];
+    for (const s of stops) interp.push(s.v, s.c);
+    aggregatedFill = ["case", ["==", value, MISSING], STATE_STYLE.no_data.fillColor, interp];
   } else {
     // Every aggregated sequential metric INTERPOLATES over its per-year quantile
     // stop VALUES (min/q25/median/q75/max) — a CONTINUOUS colour space (so the
@@ -685,10 +674,10 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
 // the map can be mid-teardown (getLayer throws on a removed map).
 export function applyYearMetric(map, metricKey, year, stops) {
   if (!map || !map.getLayer("nbhd-fill")) return;
-  // Discrete YoY classes SNAP on a year/metric change (duration 0) — a classed
-  // map never animates through off-class colours; the continuous $ metrics keep
-  // their reduced-motion-aware cross-fade. Set the transition BEFORE the colour so
-  // the colour change honours the new duration.
+  // YoY SNAPs on a year/metric change (duration 0) — even now that it's a continuous
+  // diverging ramp (D6), a year change jumps straight to the new colour rather than
+  // sweeping the ramp; the sequential $ metrics keep their reduced-motion-aware
+  // cross-fade. Set the transition BEFORE the colour so it honours the new duration.
   map.setPaintProperty(
     "nbhd-fill", "fill-color-transition",
     metricKey === "yoy_pct_change" ? { duration: 0, delay: 0 } : paintTransition(DUR_BASE)

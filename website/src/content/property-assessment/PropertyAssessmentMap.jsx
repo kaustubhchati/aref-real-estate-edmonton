@@ -1103,7 +1103,8 @@ export default function PropertyAssessmentMap() {
                 title={selectedMetric.label}
                 stops={stops}
                 format={selectedMetric.fmt}
-                discrete={isYoy}
+                horizontal
+                diverging={isYoy}
               />
             </div>
           )}
