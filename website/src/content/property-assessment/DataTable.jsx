@@ -74,7 +74,7 @@ import ExportMenu from "./ExportMenu.jsx";
 import SegmentedControl from "../../components/SegmentedControl.jsx";
 import Sparkline from "../../components/Sparkline.jsx";
 import { DUR_BASE, reduceMotion } from "../../components/motion.js";
-import { METRICS, STATE_STYLE } from "./choroplethStyle.js";
+import { METRICS, STATE_STYLE, COLOUR_LEVEL_DELTAS } from "./choroplethStyle.js";
 import {
   fmtArea,
   fmtCurrencyShort,
@@ -895,7 +895,7 @@ function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, 
   // Deltas — null at city scope (the card IS the baseline). Level metrics: relative
   // %; YoY & condo share: percentage-point difference.
   const rel = (sel, c) => (!s.isCity && sel != null && c != null && c !== 0)
-    ? { txt: fmtSignedPct((sel - c) / c), cls: signCls(sel - c) } : null;
+    ? { txt: fmtSignedPct((sel - c) / c), cls: COLOUR_LEVEL_DELTAS ? signCls(sel - c) : "" } : null;
   const pp = (sel, c) => (!s.isCity && sel != null && c != null)
     ? { txt: fmtSignedPp(sel - c), cls: signCls(sel - c) } : null;
   const cityTxt = (v, fmt) => (s.isCity || v == null ? null : `city ${fmt(v)}`);

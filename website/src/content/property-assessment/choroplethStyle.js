@@ -21,6 +21,12 @@ import { CITY_BOUNDS } from "../../config/cityBounds.js";
 // ---- Map view defaults (Edmonton, matches 09_build_choropleth.html) --------
 // (Data URL no longer lives here — single source of truth is dataSources.js,
 // which the page resolves from the (city, year) controls.)
+// C10 (optional; KC to veto in review) — colour policy for LEVEL-metric ($ / lot /
+// year) deltas. true = coloured green/coral (the annex default, no visual change);
+// false = neutral white, reserving colour for the signed RATE deltas (YoY / pp). ONE
+// switch, read by both the console KPI cards (DataTable) and the detail float (InfoRail).
+export const COLOUR_LEVEL_DELTAS = false;
+
 export const MAP_VIEW = {
   // center/zoom are only the CONSTRUCTION FALLBACK (the map must build with some
   // view before HOME_VIEW is applied). The real HOME view is the tuned pitched

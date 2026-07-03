@@ -16,7 +16,7 @@
 // =============================================================================
 
 import Sparkline from "../../components/Sparkline.jsx";
-import { METRICS, STATE_STYLE } from "./choroplethStyle.js";
+import { METRICS, STATE_STYLE, COLOUR_LEVEL_DELTAS } from "./choroplethStyle.js";
 import { fmtNumber, fmtCurrencyShort } from "../../utils/format.js";
 
 // Plain-language reason for a non-aggregated polygon, keyed by polygon_state.
@@ -81,7 +81,7 @@ export default function InfoRail({
   let delta = null;
   if (cityVal != null && activeVal != null) {
     if (metric === "yoy_pct_change") delta = { txt: signedPp(activeVal - cityVal), cls: signCls(activeVal - cityVal) };
-    else if (cityVal !== 0) delta = { txt: signedPct((activeVal - cityVal) / cityVal), cls: signCls(activeVal - cityVal) };
+    else if (cityVal !== 0) delta = { txt: signedPct((activeVal - cityVal) / cityVal), cls: COLOUR_LEVEL_DELTAS ? signCls(activeVal - cityVal) : "" };
   }
   const cityText = cityVal == null ? "—" : (APPROX.has(metric) ? "≈" : "") + chromeFmt(cityVal);
 
