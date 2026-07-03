@@ -94,6 +94,10 @@ export default function TrendInstrument({
   const firstI = m.findIndex((v) => v != null);
   const lastI = m.length - 1 - [...m].reverse().findIndex((v) => v != null);
 
+  // C6 — suppress the header readout when it would only DUPLICATE the right endpoint
+  // (no hover, and the active/tuning year IS the last year already labelled below).
+  const showReadout = hoverI >= 0 || (activeOk && activeIndex !== lastI);
+
   // YoY strip geometry — bars centred on a zero line, scaled to the max |YoY|.
   const y = clean(yoy);
   const yFinite = y.filter((v) => v != null).map((v) => Math.abs(v));
@@ -111,7 +115,7 @@ export default function TrendInstrument({
     <div className="dt-trend" onMouseLeave={() => setHoverI(-1)}>
       <div className="dt-trend-head">
         <span className="dt-trend-label">{label}</span>
-        <span className="dt-trend-readout">{readoutYear} · {fmt(readoutV)}</span>
+        {showReadout && <span className="dt-trend-readout">{readoutYear} · {fmt(readoutV)}</span>}
       </div>
 
       <svg
