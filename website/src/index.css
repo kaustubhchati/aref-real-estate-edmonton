@@ -2037,16 +2037,18 @@ p  { margin: 0 0 0.75rem; }
   .pa-float { width: 150px; padding: 9px 10px; max-height: none; }
   .pa-canvas .canvas-wrap { min-height: 0; }
   .pa-rack { width: calc(100vw - 24px); }
-  /* The four-slot grid is too tight side-by-side on a phone — STACK it into one
-     column (spine, then the three gauges), the whole console scrolling. Taller cap
-     on mobile since it no longer has to share width. */
+  /* The four-frame grid is too tight side-by-side on a phone — STACK it into one
+     column and scroll the console. Per §6 degradation: the table dominates (never
+     collapses), the rail cards + trend fold below it, the margin gutter collapses. */
   .dt-panel { width: calc(100vw - 16px); max-height: 62svh; }
   .dt-grid {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(200px, 2fr) 1fr 1fr 1.2fr;
-    grid-template-areas: "spine" "timeseries" "distribution" "vscity";
+    grid-template-rows: minmax(240px, 3fr) auto auto;
+    grid-template-areas: "table" "rail" "trend";
+    gap: 8px;
     overflow-y: auto;
   }
+  .dt-slot--margin { display: none; }   /* the honest gutter collapses first on a phone */
   /* Bottom-left so it clears the centred tuning rack + corner controls. */
   .pa-legend { width: 42vw; left: 12px; right: auto; bottom: 10px; }
   .shell-footer-grid { grid-template-columns:1fr; gap:1.25rem; }
