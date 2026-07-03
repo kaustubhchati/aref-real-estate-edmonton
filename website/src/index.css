@@ -1185,8 +1185,10 @@ p  { margin: 0 0 0.75rem; }
    overridden here by the more-specific .pa-column selectors. */
 .pa-col-mod { border-top: 1px solid var(--pa-hair); margin-top: 9px; padding-top: 8px; }
 .pa-col-lab {
+  /* C2 — module labels at the --t-xs floor (was 10px, below the DESIGN_SYSTEM §1.5 min);
+     --pa-mut now resolves to the raised --tx-mut, clearing 4.5:1 on --shell. */
   display: block; margin: 0 0 5px;
-  font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut);
+  font-size: var(--t-xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--pa-mut);
 }
 
 /* IDENTITY module — flatten the old light card into the column. */
@@ -1195,7 +1197,7 @@ p  { margin: 0 0 0.75rem; }
   padding: 0; margin: 0; gap: 8px;
 }
 .pa-column .pa-id-title { font-size: 14px; font-weight: 600; letter-spacing: 0; color: var(--pa-ink); }
-.pa-column .pa-id-cap { font-size: 10px; font-weight: 500; letter-spacing: 0.09em; color: var(--pa-mut); }
+.pa-column .pa-id-cap { font-size: var(--t-xs); font-weight: 500; letter-spacing: 0.08em; color: var(--pa-mut); }
 .pa-column .pa-id-year { align-items: baseline; gap: 6px; }
 .pa-column .pa-id-year-value { font-size: 14px; font-weight: 600; color: var(--pa-up); }
 /* City switcher → dark chips (active = green border), matching the annex. */
@@ -1250,8 +1252,10 @@ p  { margin: 0 0 0.75rem; }
 
 /* LEGEND module — flat dark (strip the gel frame; Legend.jsx internals untouched). */
 .pa-col-legend .legend { background: transparent; border: 0; box-shadow: none; border-radius: 0; padding: 0; }
-.pa-col-legend .legend-title { color: var(--pa-mut); }
-.pa-col-legend .legend-lab, .pa-col-legend .legend-lab small { color: var(--pa-mut); }
+.pa-col-legend .legend-title { color: var(--pa-mut); font-size: var(--t-xs); }
+/* C2 — the ramp min/max end labels lift to the raised --tx-mut at the --t-2xs floor so
+   they clear 4.5:1 on --shell (were failing at the old muted grey). */
+.pa-col-legend .legend-lab, .pa-col-legend .legend-lab small { color: var(--pa-mut); font-size: var(--t-2xs); }
 
 /* FOOTER module — About & tips + parcel count on one line; the popover is
    IN-FLOW below (an absolute popover would be clipped by the column's overflow;
