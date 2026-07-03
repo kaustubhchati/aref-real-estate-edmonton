@@ -128,6 +128,7 @@
   --pa-dn:    #f88b6b;
   --pa-sel:   #e8734a;
   --pa-track-w: 150px;   /* the tuning sliders' track width — one source of truth (B1) */
+  --city:     #60a5fa;   /* the semantic CITY-baseline colour — one token, every city datum (B4) */
 
   font: 16px/1.5 var(--font-sans);
   color: var(--text);
@@ -625,6 +626,7 @@ p  { margin: 0 0 0.75rem; }
 .pa-trip-l { font-size: 8px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pa-mut); }
 .pa-trip-v { font-size: 12px; font-weight: 500; color: var(--pa-ink); font-variant-numeric: tabular-nums; }
 .pa-trip-muted { color: var(--pa-dim); }
+.pa-trip-city { color: var(--city); }   /* the CITY triplet value = blue (B4) */
 .pa-detail-condo { border-top: 1px solid var(--pa-hair); margin-top: 8px; padding-top: 6px; }
 .pa-detail .pa-kv { display: flex; justify-content: space-between; font-size: 10px; margin-top: 2px; }
 .pa-kv-k { color: var(--pa-mut); }
@@ -1056,7 +1058,7 @@ p  { margin: 0 0 0.75rem; }
 .dt-card-hd { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
 .dt-card-l { font-size: 8px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut); }
 .dt-card-tag { color: var(--pa-dim); text-transform: none; letter-spacing: 0; }
-.dt-card-c { font-size: 9px; color: var(--pa-mut); white-space: nowrap; }
+.dt-card-c { font-size: 9px; color: var(--city); white-space: nowrap; }   /* city baseline = blue (B4) */
 .dt-card-bd { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 1px; }
 .dt-card-v { font-size: 16px; font-weight: 500; color: var(--pa-ink); font-variant-numeric: tabular-nums; }
 .dt-card-d { font-size: 10px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }

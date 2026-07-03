@@ -112,7 +112,7 @@ export default function InfoRail({
         </div>
         <div>
           <div className="pa-trip-l">City</div>
-          <div className="pa-trip-v">{cityText}</div>
+          <div className="pa-trip-v pa-trip-city">{cityText}</div>
         </div>
         <div>
           <div className="pa-trip-l">Delta</div>
