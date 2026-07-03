@@ -1132,6 +1132,7 @@ export default function PropertyAssessmentMap() {
         sparkValues={sparkValues}
         activeIndex={activeYearIndex}
         cityBaseline={cityBaseline}
+        cityName={city}
         rank={tableRows.find((r) => String(r.id) === String(singleSelectedId))?.rank ?? null}
         onClear={() => setSelectedIds([])}
       />
@@ -1335,6 +1336,7 @@ export default function PropertyAssessmentMap() {
                 rows={tableRows}
                 metric={metric}
                 metricLabel={selectedMetric.label}
+                cityName={city}
                 metrics={METRICS}
                 onMetricChange={setMetric}
                 activeIndex={activeYearIndex}

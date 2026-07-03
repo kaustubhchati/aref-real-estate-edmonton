@@ -228,6 +228,7 @@ export default function DataTable({
   rows,
   metric,
   metricLabel,
+  cityName,         // active city name (e.g. "Edmonton") — labels every city baseline (C3)
   metrics,          // METRICS — the console's spine header carries the metric selector (D3)
   onMetricChange,   // set the active metric from the console
   activeIndex,
@@ -695,6 +696,7 @@ export default function DataTable({
                   singleRow={singleRow}
                   cityBaseline={cityBaseline}
                   metric={metric}
+                  cityName={cityName}
                   dist={{
                     values: cityValues,
                     markers: selMarkers,
@@ -808,7 +810,8 @@ export default function DataTable({
                   years={years}
                   activeIndex={activeIndex}
                   fmt={activeCol?.fmt ?? ((v) => v)}
-                  scopeName={singleRow ? singleRow.name : selectionMode ? "selection mean" : "city"}
+                  scopeName={singleRow ? singleRow.name : selectionMode ? "selection mean" : cityName}
+                  cityName={cityName}
                 />
               </div>
 
@@ -866,7 +869,7 @@ function fmtSignedPp(diff) {              // diff already in percentage points (
 // the SELECTION channel only — never brushedIds (the VIEW-only fence).
 function signCls(n) { return n > 0 ? "dt-up" : n < 0 ? "dt-dn" : ""; }
 
-function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, metric, dist }) {
+function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, metric, cityName, dist }) {
   const num = (v) => (v == null || !Number.isFinite(+v) || +v === -999 ? null : +v);
   const pctText = (x) => (x == null ? "—" : `${Math.round(x)}%`);
 
@@ -903,7 +906,7 @@ function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, 
     ? { txt: fmtSignedPct((sel - c) / c), cls: COLOUR_LEVEL_DELTAS ? signCls(sel - c) : "" } : null;
   const pp = (sel, c) => (!s.isCity && sel != null && c != null)
     ? { txt: fmtSignedPp(sel - c), cls: signCls(sel - c) } : null;
-  const cityTxt = (v, fmt) => (s.isCity || v == null ? null : `city ${fmt(v)}`);
+  const cityTxt = (v, fmt) => (s.isCity || v == null ? null : `${cityName ?? "city"} ${fmt(v)}`);
 
   const cards = [];
   cards.push({

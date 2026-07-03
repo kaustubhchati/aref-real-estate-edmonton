@@ -49,6 +49,7 @@ export default function InfoRail({
   sparkValues,  // active metric across the years for this nbhd (null = gap)
   activeIndex,  // index of the active year (dots the sparkline)
   cityBaseline, // the shared parcel-weighted city aggregate (for the triplet's city + delta)
+  cityName,     // active city name (e.g. "Edmonton") — labels the CITY triplet cell (C3)
   rank,         // this nbhd's city rank by the active metric (from the table rows)
   onClear,      // () => void — clear the selection
 }) {
@@ -117,7 +118,7 @@ export default function InfoRail({
           </div>
         </div>
         <div>
-          <div className="pa-trip-l">City</div>
+          <div className="pa-trip-l">{cityName ?? "City"}</div>
           <div className="pa-trip-v pa-trip-city">{cityText}</div>
         </div>
         <div>
