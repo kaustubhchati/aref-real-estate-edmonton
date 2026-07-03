@@ -590,15 +590,36 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
         "line-dasharray": STATE_STYLE.no_data.outlineDash,
       },
     },
-    // 6. Highlight outline — invisible by default, darkens on hover, darker
-    //    + thicker when pinned. Sits below the basemap labels via beforeId.
+    // 5b. Selection CASING — a light cream under-stroke drawn BENEATH the coral
+    //     highlight (this layer precedes nbhd-highlight, so it renders below it),
+    //     so the selected outline stays legible over deep-red / plateau-yellow
+    //     fills (A5). Pinned only; transparent otherwise.
+    {
+      id: "nbhd-highlight-casing",
+      type: "line",
+      paint: {
+        "line-color": [
+          "case",
+          ["boolean", ["feature-state", "pinned"], false], "#fff4e0",
+          "rgba(0,0,0,0)",
+        ],
+        "line-width": [
+          "case",
+          ["boolean", ["feature-state", "pinned"], false], 4.4,
+          0,
+        ],
+      },
+    },
+    // 6. Highlight outline — invisible by default, darkens on hover, and turns
+    //    the selection CORAL (--pa-sel, one selection colour across every surface,
+    //    A5) + thicker when pinned. Sits below the basemap labels via beforeId.
     {
       id: "nbhd-highlight",
       type: "line",
       paint: {
         "line-color": [
           "case",
-          ["boolean", ["feature-state", "pinned"], false], "#0f0f12",
+          ["boolean", ["feature-state", "pinned"], false], "#e8734a",  /* mirrors --pa-sel */
           ["boolean", ["feature-state", "hover"],  false], "#2a2a30",
           "rgba(0,0,0,0)",
         ],
