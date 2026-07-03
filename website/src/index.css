@@ -118,17 +118,43 @@
        ink   = primary text   · mut  = labels/muted · dim = faintest text
        up    = positive/accent green · dn = negative/declining coral
        sel   = selection outline coral (distinct from dn — a hair warmer) */
-  --pa-shell: #0d0e10;
-  --pa-card:  #1a1c1f;
-  --pa-hair:  #2a2d31;
-  --pa-ink:   #f5f6f7;
-  --pa-mut:   #8b8f94;
-  --pa-dim:   #6b7076;
-  --pa-up:    #4ade80;
-  --pa-dn:    #f88b6b;
-  --pa-sel:   #e8734a;
+  /* ===== DESIGN_SYSTEM.md §1 — canonical tokens (single source of truth; components
+     read THESE, never raw hex/px). The --pa-* names below are retained as ALIASES so the
+     as-built PA chrome keeps working while new work cites the DESIGN_SYSTEM names. ===== */
+  /* §1.1 surfaces (dark chrome) */
+  --shell: #0d0e10;   /* console / column chassis */
+  --card:  #16181b;   /* KPI / detail tiles — one step DARKER than panel, so tiles read raised */
+  --panel: #1a1c1f;   /* inner panel surfaces (table frame, trend frame) */
+  --hair:  #2a2d31;   /* hairline borders / dividers */
+  /* §1.2 text (all clear the §4 ≥4.5:1 floor on their surface) */
+  --tx:     #f5f6f7;  /* primary text / values */
+  --tx-mut: #9ba1a8;  /* secondary / labels — RAISED from #8b8f94 to clear 4.5:1 on --shell */
+  --tx-dim: #6b7076;  /* tertiary / suppressed ONLY — never for text that must be read */
+  /* §1.3 semantic data roles (the ONLY places colour carries meaning) */
+  --data-up:   #4ade80;  /* growth / increase (YoY +, pp +) */
+  --data-down: #f88b6b;  /* decline / decrease (YoY −, pp −) */
+  --city:      #60a5fa;  /* comparison-baseline (active-city) datum EVERYWHERE — dashed+blue, colour-blind-safe */
+  --sel:       #e8734a;  /* selection, EVERY surface (map outline + table outline + rail) */
+  /* §1.4 map / cartography */
+  --map-cream: #f7f1df;  /* basemap ground = the label halo colour */
+  --label-ink: #2a2621;  /* map label text — dark warm grey, ~13:1 on cream */
+  /* §1.5 type scale (named steps; no ad-hoc sizes) */
+  --t-2xs: 10px;  --t-xs: 12px;  --t-sm: 13px;  --t-md: 15px;  --t-lg: 17px;  --t-xl: 22px;
+  /* §1.6 space (4px base) + radius */
+  --s1: 4px;  --s2: 8px;  --s3: 12px;  --s4: 16px;  --s5: 20px;  --s6: 24px;
+  --r-sm: 6px;  --r-md: 9px;  --r-lg: 12px;
+
+  /* --pa-* aliases → canonical (as-built chrome keeps working; migrate on touch) */
+  --pa-shell: var(--shell);
+  --pa-card:  var(--panel);   /* was #1a1c1f = --panel; NEW tiles use --card (a step darker) */
+  --pa-hair:  var(--hair);
+  --pa-ink:   var(--tx);
+  --pa-mut:   var(--tx-mut);  /* raised for contrast (§1.2 / §4) — lifts as-built muted text too */
+  --pa-dim:   var(--tx-dim);
+  --pa-up:    var(--data-up);
+  --pa-dn:    var(--data-down);
+  --pa-sel:   var(--sel);
   --pa-track-w: 150px;   /* the tuning sliders' track width — one source of truth (B1) */
-  --city:     #60a5fa;   /* the semantic CITY-baseline colour — one token, every city datum (B4) */
 
   font: 16px/1.5 var(--font-sans);
   color: var(--text);
