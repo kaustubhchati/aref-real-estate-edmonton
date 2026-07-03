@@ -701,9 +701,9 @@ export function centroidNameLayer() {
       "text-justify": "auto",
     },
     paint: {
-      "text-color": "#3c3728",        // dark warm grey (basemap label family, not pure black)
-      "text-halo-color": "#f7f1df",   // basemap cream — legible over deep red / buildings / water
-      "text-halo-width": 1.4,
+      "text-color": "#2a2621",        // mirrors --label-ink (dark warm grey, ~13:1 on cream) — DESIGN_SYSTEM §5
+      "text-halo-color": "#f7f1df",   // mirrors --map-cream — the halo IS the label's effective background
+      "text-halo-width": 1.5,         // as narrow as stays legible ("effective but invisible")
       "text-halo-blur": 0.4,
       // Yield to the focus layer (F3): when a neighbourhood is hovered/selected its name
       // is drawn by centroidFocusLayer instead, so hide the base copy here — otherwise the
@@ -736,9 +736,9 @@ export function centroidFocusLayer() {
       "text-ignore-placement": true,
     },
     paint: {
-      "text-color": "#26221a",         // slightly darker than the base labels, for emphasis
-      "text-halo-color": "#f7f1df",
-      "text-halo-width": 2.2,          // stronger halo so it reads on top of the base label
+      "text-color": "#2a2621",         // mirrors --label-ink — same ink as the base label (DESIGN_SYSTEM §5)
+      "text-halo-color": "#f7f1df",    // mirrors --map-cream
+      "text-halo-width": 2.2,          // stronger halo so the focus label reads on top of the base label
       "text-halo-blur": 0.3,
       "text-opacity": [
         "case",
