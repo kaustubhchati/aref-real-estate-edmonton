@@ -60,7 +60,7 @@ export default function Sparkline({
         points={pts.join(" ")}
         fill="none"
         stroke={stroke}
-        strokeWidth="1.5"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />

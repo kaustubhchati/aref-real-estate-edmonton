@@ -129,10 +129,10 @@ export default function TrendInstrument({
         <line x1={PADX} y1={H - PADB} x2={W - PADX} y2={H - PADB} stroke="var(--pa-hair)" vectorEffect="non-scaling-stroke" />
         {envPoly && <polygon points={envPoly} fill="var(--pa-up)" opacity="0.12" />}
         {c && (
-          <polyline points={linePts(c)} fill="none" stroke="var(--city)" strokeWidth="1.3"
+          <polyline points={linePts(c)} fill="none" stroke="var(--city)" strokeWidth="2"
                     strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
         )}
-        <polyline points={linePts(m)} fill="none" stroke="var(--pa-up)" strokeWidth="2"
+        <polyline points={linePts(m)} fill="none" stroke="var(--pa-up)" strokeWidth="2.5"
                   strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         {activeOk && (
           <line x1={xAt(activeIndex)} y1={PADT} x2={xAt(activeIndex)} y2={H - PADB}
