@@ -117,11 +117,11 @@ const TrendSparkCell = memo(function TrendSparkCell({ series, metric }) {
 //             Defaults to `fmt`, so a metric whose unit stays in-cell (e.g. the
 //             "$" currency prefix) needs no cellFmt.
 const PRESENTATION = {
-  median_assessvalue: { label: "Median value", header: "Median", fmt: fmtCurrencyShort },
-  avall_public:       { label: "Mean value",   header: "Mean",   fmt: fmtCurrencyShort },
-  avg_lotsize:        { label: "Lot size", header: "Lot m²", fmt: fmtArea,
+  median_assessvalue: { label: "Median Value", header: "Median", fmt: fmtCurrencyShort },
+  avall_public:       { label: "Mean Value",   header: "Mean",   fmt: fmtCurrencyShort },
+  avg_lotsize:        { label: "Lot Size", header: "Lot m²", fmt: fmtArea,
                         cellFmt: fmtNumber },                  // bare — "m²" is in the header
-  median_yearbuilt:   { label: "Year built",   header: "Built", fmt: fmtYear },
+  median_yearbuilt:   { label: "Year Built",   header: "Built", fmt: fmtYear },
   pct_with_unit:      { label: "% Condo",      header: "% Condo", fmt: fmtPct,
                         cellFmt: (v) => (v == null || isNaN(+v) ? "—" : `${Math.round(+v)}%`) },  // D1 — also a map metric now
   yoy_pct_change:     { label: "YoY %",        header: "YoY",   fmt: fmtPct,
@@ -370,8 +370,8 @@ export default function DataTable({
   const scopeLabel = singleRow
     ? singleRow.name
     : selectionMode
-    ? `${aggregate.nSelected} selected · mean`
-    : "city · mean";
+    ? `${aggregate.nSelected} Selected · Mean`
+    : "City · Mean";
 
   // Column defs (data-driven, STATIC). accessorFn maps null → undefined so TanStack's
   // sortUndefined keeps blanks last in BOTH directions; the cell renders "—".
@@ -508,12 +508,12 @@ export default function DataTable({
   //   N≥2 → "N neighbourhoods selected"
   const stateWord = (st) => (st === "aggregated" ? "reportable" : STATE_STYLE[st]?.label ?? st);
   const scopeTitle = selectionMode
-    ? `${aggregate.nSelected} neighbourhoods selected`
+    ? `${aggregate.nSelected} Neighbourhoods Selected`
     : singleRow
     ? singleRow.name
     : viewRows.length < rows.length
-    ? `${viewRows.length} of ${rows.length} neighbourhoods`
-    : `All ${rows.length} neighbourhoods`;
+    ? `${viewRows.length} Of ${rows.length} Neighbourhoods`
+    : `All ${rows.length} Neighbourhoods`;
   const scopeSub = !selectionMode && singleRow
     ? `rank ${singleRow.rank ?? "—"} · ${singleRow.n_properties != null ? fmtNumber(singleRow.n_properties) : "—"} parcels · ${stateWord(singleRow.state)}`
     : null;
@@ -630,11 +630,11 @@ export default function DataTable({
         onClick={onToggle}
         aria-expanded={open}
       >
-        <span className="dt-handle-title">Data table</span>
+        <span className="dt-handle-title">Data Table</span>
         <span className={`dt-handle-meta${selectionMode ? " dt-handle-sel" : ""}`}>
           {selectionMode
             ? `${aggregate.nSelected} selected`
-            : `${rows.length} · ${open ? "Analyst view" : "Analyst view · press T"}`}
+            : `${rows.length} · ${open ? "Analyst View" : "Analyst View · Press T"}`}
         </span>
         <span className="dt-handle-caret" aria-hidden="true">{open ? "▾" : "▴"}</span>
       </button>
@@ -828,7 +828,7 @@ export default function DataTable({
                   years={years}
                   activeIndex={activeIndex}
                   fmt={activeCol?.fmt ?? ((v) => v)}
-                  scopeName={singleRow ? singleRow.name : selectionMode ? "selection mean" : cityName}
+                  scopeName={singleRow ? singleRow.name : selectionMode ? "Selection Mean" : cityName}
                   cityName={cityName}
                 />
               </div>
@@ -898,7 +898,7 @@ function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, 
     s = { isCity: false,
           median: a.medianOfMedians, mean: a.parcelMean, yoy: a.areaYoY,
           condo: a.condoShare, mexcl: a.meanExclCondo, lot: a.lotNonCondo,
-          tags: { median: "≈ of medians", mean: "parcel-weighted · exact", yoy: "≈ weighted", condo: "weighted" } };
+          tags: { median: "≈ Of Medians", mean: "Parcel-Weighted · Exact", yoy: "≈ Weighted", condo: "Weighted" } };
   } else if (r) {
     s = { isCity: false,
           median: num(r.median_assessvalue), mean: num(r.avall_public), yoy: num(r.yoy_pct_change),

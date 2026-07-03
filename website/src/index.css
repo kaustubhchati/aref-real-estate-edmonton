@@ -1259,6 +1259,23 @@ p  { margin: 0 0 0.75rem; }
 .pa-column .pa-rack-value { color: var(--pa-ink); font-weight: 600; font-size: 11px; white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
 .pa-column .pa-rack-label { color: var(--pa-mut); }
 
+/* D1 (DESIGN_SYSTEM §2) — Title Case, NOT ALL-CAPS: the PA chrome LABEL roles were rendering
+   their Title-cased strings uppercased by text-transform + wide tracking. Retire that so the
+   labels read as authored (table headers, KPI labels, section labels, triplet, trend labels).
+   Placed after the label rules + scoped to match their specificity so it governs. */
+.dt-table thead th,
+.dt-tile-l, .dt-card-l, .dt-sub-lens,
+.dt-trend-label, .dt-trend-sub,
+.pa-trip-l,
+.pa-column .pa-col-lab,
+.pa-col-metric .seg-label, .dt-metric .seg-label,
+.pa-column .pa-rack-label,
+.pa-col-legend .legend-title,
+.pa-id-cap {
+  text-transform: none;
+  letter-spacing: 0.01em;
+}
+
 /* LEGEND module — flat dark (strip the gel frame; Legend.jsx internals untouched). */
 .pa-col-legend .legend { background: transparent; border: 0; box-shadow: none; border-radius: 0; padding: 0; }
 .pa-col-legend .legend-title { color: var(--pa-mut); font-size: var(--t-xs); }
