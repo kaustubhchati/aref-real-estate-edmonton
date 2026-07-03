@@ -88,6 +88,11 @@ import {
 // lot/built → neutral), with GAPS (never zero-bridged) at suppressed / -999 years.
 // React.memo'd on (series, metric) so a re-sort / hover / selection never recomputes
 // 400 rows — the per-row render-storm guard. < 2 finite points → an honest em-dash.
+// C8 measured (403 visible rows, live PA analyst view): metric switch = 403 renders
+// (one per row — the series shown IS metric-dependent, so this is the necessary minimum,
+// not a storm; observed 806 in dev = 2× only from StrictMode's double-invoke). A re-sort
+// and a row hover each = 0 re-renders — the memo holds on every update that isn't a
+// metric/series change. Well within the storm guard.
 const TREND_METRICS = new Set(["median_assessvalue", "avall_public", "yoy_pct_change"]);
 const TrendSparkCell = memo(function TrendSparkCell({ series, metric }) {
   const nums = (series ?? []).map((v) => (v == null || !Number.isFinite(+v) || +v === -999 ? null : +v));
