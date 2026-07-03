@@ -138,8 +138,9 @@
   /* §1.4 map / cartography */
   --map-cream: #f7f1df;  /* basemap ground = the label halo colour */
   --label-ink: #2a2621;  /* map label text — dark warm grey, ~13:1 on cream */
-  /* §1.5 type scale (named steps; no ad-hoc sizes) */
-  --t-2xs: 10px;  --t-xs: 12px;  --t-sm: 13px;  --t-md: 15px;  --t-lg: 17px;  --t-xl: 22px;
+  /* §1.5 type scale (named steps; no ad-hoc sizes) — BUMPED for legibility (D-P4 D2):
+     the old 10/12/13/15/17/22 was too small; chrome min is now --t-xs (13px). */
+  --t-2xs: 11px;  --t-xs: 13px;  --t-sm: 14px;  --t-md: 16px;  --t-lg: 19px;  --t-xl: 24px;
   /* §1.6 space (4px base) + radius */
   --s1: 4px;  --s2: 8px;  --s3: 12px;  --s4: 16px;  --s5: 20px;  --s6: 24px;
   --r-sm: 6px;  --r-md: 9px;  --r-lg: 12px;
@@ -649,7 +650,7 @@ p  { margin: 0 0 0.75rem; }
 .pa-detail-sub { margin: 2px 0 0; font-size: 9px; color: var(--pa-mut); }
 .pa-detail .sparkline { display: block; width: 100%; height: 26px; margin: 7px 0 2px; }
 .pa-detail-trip { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; margin-top: 7px; text-align: center; }
-.pa-trip-l { font-size: 8px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pa-mut); }
+.pa-trip-l { font-size: var(--t-2xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--pa-mut); }
 .pa-trip-v { font-size: 12px; font-weight: 500; color: var(--pa-ink); font-variant-numeric: tabular-nums; }
 .pa-trip-muted { color: var(--pa-dim); }
 .pa-trip-city { color: var(--city); }   /* the CITY triplet value = blue (B4) */
@@ -843,9 +844,9 @@ p  { margin: 0 0 0.75rem; }
    "Metric" label + the short-labelled options wrapping across one/two rows. */
 .dt-metric { display: flex; align-items: baseline; gap: 8px; }
 .dt-metric .seg { margin: 0; display: flex; align-items: baseline; gap: 8px; flex: 1 1 auto; min-width: 0; }
-.dt-metric .seg-label { font-size: 10px; white-space: nowrap; }
+.dt-metric .seg-label { font-size: var(--t-2xs); white-space: nowrap; }
 .dt-metric .seg-options { flex-direction: row; flex-wrap: wrap; gap: 4px; }
-.dt-metric .seg-btn { width: auto; padding: 2px 8px; font-size: 11px; gap: 0; }  /* was width:100% → chips, not a stacked list */
+.dt-metric .seg-btn { width: auto; padding: 2px 8px; font-size: var(--t-sm); gap: 0; }  /* was width:100% → chips, not a stacked list */
 .dt-metric .seg-icon { display: none; }
 .dt-count { font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
@@ -916,11 +917,11 @@ p  { margin: 0 0 0.75rem; }
    so it never triggers. */
 /* border-collapse: separate + border-spacing:0 so sticky-header cell backgrounds
    paint reliably (collapsed borders don't travel with sticky cells — A1). */
-.dt-table { table-layout: fixed; width: 100%; min-width: 440px; border-collapse: separate; border-spacing: 0; font-size: 11.5px; }
+.dt-table { table-layout: fixed; width: 100%; min-width: 440px; border-collapse: separate; border-spacing: 0; font-size: var(--t-xs); }
 .dt-table thead th {
   position: sticky; top: 0; z-index: 2;
   background: var(--sidebar-bg);
-  text-align: left; font-size: 10.5px; font-weight: 600;
+  text-align: left; font-size: var(--t-2xs); font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);
   padding: 6px 8px; border-bottom: 1px solid var(--border);
   /* Headers WRAP to a fixed (2-line) height so the full labels survive the narrow
@@ -970,7 +971,7 @@ p  { margin: 0 0 0.75rem; }
    legend · YoY strip. Dark; data flat, per §9. */
 .dt-trend { display: flex; flex-direction: column; gap: 3px; width: 100%; height: 100%; min-height: 0; }
 .dt-trend-head { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.dt-trend-label { font-size: 8px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut); }
+.dt-trend-label { font-size: var(--t-2xs); letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut); }
 .dt-trend-readout { font-size: 9px; color: #c7cacd; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .dt-trend-svg { display: block; width: 100%; flex: 1 1 0; min-height: 44px; }
 .dt-trend-ends { flex: 0 0 auto; display: flex; justify-content: space-between; font-size: 8px; color: var(--pa-mut); font-variant-numeric: tabular-nums; }
@@ -978,7 +979,7 @@ p  { margin: 0 0 0.75rem; }
 .dt-trend-leg .dt-sw { display: inline-block; width: 10px; height: 2px; vertical-align: middle; margin-right: 3px; }
 .dt-trend-leg .dt-sw--band { height: 6px; background: var(--pa-up); opacity: 0.2; }
 .dt-trend-yoy { flex: 0 0 auto; border-top: 1px solid var(--pa-hair); padding-top: 4px; margin-top: 1px; }
-.dt-trend-sub { font-size: 8px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut); }
+.dt-trend-sub { font-size: var(--t-2xs); letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut); }
 .dt-trend-yoy-svg { display: block; width: 100%; height: 20px; margin-top: 2px; }
 .dt-trend--empty { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--pa-mut); font-style: italic; }
 
@@ -1143,8 +1144,8 @@ p  { margin: 0 0 0.75rem; }
 }
 .dt-head-l { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-wrap: wrap; }
 .dt-head-r { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
-.dt-scope { font-size: 13px; font-weight: 500; color: var(--pa-ink); white-space: nowrap; }
-.dt-scope-sub { font-size: 9px; color: var(--pa-mut); white-space: nowrap; }
+.dt-scope { font-size: var(--t-md); font-weight: 500; color: var(--pa-ink); white-space: nowrap; }
+.dt-scope-sub { font-size: var(--t-2xs); color: var(--pa-mut); white-space: nowrap; }
 /* Header metric chips — no "METRIC" label (the chips read clearly next to the scope
    title); a small gap sets them off. */
 .dt-head .dt-metric { margin-left: 6px; }
@@ -1198,10 +1199,10 @@ p  { margin: 0 0 0.75rem; }
   background: transparent; border: 0; box-shadow: none; border-radius: 0;
   padding: 0; margin: 0; gap: 8px;
 }
-.pa-column .pa-id-title { font-size: 14px; font-weight: 600; letter-spacing: 0; color: var(--pa-ink); }
+.pa-column .pa-id-title { font-size: var(--t-lg); font-weight: 600; letter-spacing: 0; color: var(--pa-ink); }
 .pa-column .pa-id-cap { font-size: var(--t-xs); font-weight: 500; letter-spacing: 0.08em; color: var(--pa-mut); }
 .pa-column .pa-id-year { align-items: baseline; gap: 6px; }
-.pa-column .pa-id-year-value { font-size: 14px; font-weight: 600; color: var(--pa-up); }
+.pa-column .pa-id-year-value { font-size: var(--t-lg); font-weight: 600; color: var(--pa-up); }
 /* City switcher → dark chips (active = green border), matching the annex. */
 .pa-column .opt-toggle-label { display: none; }
 .pa-column .opt-toggle-buttons { display: flex; gap: 5px; }
@@ -1227,9 +1228,9 @@ p  { margin: 0 0 0.75rem; }
 
 /* TUNING module — dark year slider + dark range slot (portaled RangeFacet). */
 .pa-tune-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-.pa-tune-name { flex: 0 0 auto; width: 34px; font-size: 11px; color: var(--pa-mut); }
+.pa-tune-name { flex: 0 0 auto; width: 34px; font-size: var(--t-xs); color: var(--pa-mut); }
 .pa-tune-slider { flex: 1 1 auto; width: auto; }
-.pa-tune-year { font-size: 11px; font-weight: 600; color: var(--pa-up); font-variant-numeric: tabular-nums; flex: 0 0 auto; min-width: 34px; text-align: right; }
+.pa-tune-year { font-size: var(--t-md); font-weight: 600; color: var(--pa-up); font-variant-numeric: tabular-nums; flex: 0 0 auto; min-width: 34px; text-align: right; }
 .pa-column .pa-slider::-webkit-slider-runnable-track { background: var(--pa-hair); }
 .pa-column .pa-slider::-moz-range-track { background: var(--pa-hair); }
 /* C1 — thumb-width-aware fill: the fill's right edge tracks the 13px thumb's CENTRE
@@ -1256,7 +1257,7 @@ p  { margin: 0 0 0.75rem; }
 .pa-column .pa-dual { flex: 1 1 auto; width: auto; min-width: 0; }
 .pa-column .pa-dual-track { background: var(--pa-hair); }
 .pa-column .pa-dual-fill { background: var(--pa-up); }
-.pa-column .pa-rack-value { color: var(--pa-ink); font-weight: 600; font-size: 11px; white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+.pa-column .pa-rack-value { color: var(--pa-ink); font-weight: 600; font-size: var(--t-md); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
 .pa-column .pa-rack-label { color: var(--pa-mut); }
 
 /* D1 (DESIGN_SYSTEM §2) — Title Case, NOT ALL-CAPS: the PA chrome LABEL roles were rendering
@@ -1281,7 +1282,7 @@ p  { margin: 0 0 0.75rem; }
 .pa-col-legend .legend-title { color: var(--pa-mut); font-size: var(--t-xs); }
 /* C2 — the ramp min/max end labels lift to the raised --tx-mut at the --t-2xs floor so
    they clear 4.5:1 on --shell (were failing at the old muted grey). */
-.pa-col-legend .legend-lab, .pa-col-legend .legend-lab small { color: var(--pa-mut); font-size: var(--t-2xs); }
+.pa-col-legend .legend-lab, .pa-col-legend .legend-lab small { color: var(--pa-mut); font-size: var(--t-xs); }
 
 /* FOOTER module — About & tips + parcel count on one line; the popover is
    IN-FLOW below (an absolute popover would be clipped by the column's overflow;
