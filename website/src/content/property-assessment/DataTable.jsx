@@ -56,7 +56,7 @@
 // into these slots (no more `detail` prop).
 // =============================================================================
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   flexRender,
@@ -72,6 +72,7 @@ import DistributionStrip from "./DistributionStrip.jsx";
 import TrendChart from "./TrendChart.jsx";
 import ExportMenu from "./ExportMenu.jsx";
 import SegmentedControl from "../../components/SegmentedControl.jsx";
+import Sparkline from "../../components/Sparkline.jsx";
 import { DUR_BASE, reduceMotion } from "../../components/motion.js";
 import { METRICS, STATE_STYLE } from "./choroplethStyle.js";
 import {
@@ -81,6 +82,24 @@ import {
   fmtPct,
   fmtYear,
 } from "../../utils/format.js";
+
+// TREND sparkcol cell (C7, contract §4) — the active-metric trajectory as a ~44×12
+// sparkline, trajectory-coloured (median/mean/YoY → rising green / falling coral;
+// lot/built → neutral), with GAPS (never zero-bridged) at suppressed / -999 years.
+// React.memo'd on (series, metric) so a re-sort / hover / selection never recomputes
+// 400 rows — the per-row render-storm guard. < 2 finite points → an honest em-dash.
+const TREND_METRICS = new Set(["median_assessvalue", "avall_public", "yoy_pct_change"]);
+const TrendSparkCell = memo(function TrendSparkCell({ series, metric }) {
+  const nums = (series ?? []).map((v) => (v == null || !Number.isFinite(+v) || +v === -999 ? null : +v));
+  const finite = nums.filter((v) => v != null);
+  if (finite.length < 2) return <span className="dt-spark-empty">—</span>;
+  let stroke = "var(--pa-dim)"; // neutral (lot / built, or a flat trajectory)
+  if (TREND_METRICS.has(metric)) {
+    const dir = finite[finite.length - 1] - finite[0];
+    stroke = dir > 0 ? "var(--pa-up)" : dir < 0 ? "var(--pa-dn)" : "var(--pa-dim)";
+  }
+  return <Sparkline values={nums} stroke={stroke} width={44} height={12} activeIndex={-1} ariaLabel="Trend" />;
+});
 
 // Per-metric PRESENTATION for the dense table: a compact column label + compact
 // formatter (e.g. $1.41M) that differ from the map's full label / formatter.
@@ -93,22 +112,22 @@ import {
 //             Defaults to `fmt`, so a metric whose unit stays in-cell (e.g. the
 //             "$" currency prefix) needs no cellFmt.
 const PRESENTATION = {
-  median_assessvalue: { label: "Median value", fmt: fmtCurrencyShort },
-  avall_public:       { label: "Mean value",   fmt: fmtCurrencyShort },
-  avg_lotsize:        { label: "Lot size", header: "Lot size (m²)", fmt: fmtArea,
+  median_assessvalue: { label: "Median value", header: "Median", fmt: fmtCurrencyShort },
+  avall_public:       { label: "Mean value",   header: "Mean",   fmt: fmtCurrencyShort },
+  avg_lotsize:        { label: "Lot size", header: "Lot m²", fmt: fmtArea,
                         cellFmt: fmtNumber },                  // bare — "m²" is in the header
-  median_yearbuilt:   { label: "Year built",   fmt: fmtYear },
-  yoy_pct_change:     { label: "YoY %",        fmt: fmtPct,
+  median_yearbuilt:   { label: "Year built",   header: "Built", fmt: fmtYear },
+  yoy_pct_change:     { label: "YoY %",        header: "YoY",   fmt: fmtPct,
                         cellFmt: (v) => (v == null || isNaN(+v) ? "—" : (+v).toFixed(1)) }, // bare — "%" is in the header
 };
 
 // Fixed-chassis column widths (table-layout: fixed) — proportions by column ROLE,
 // so the column SET is a deliberate constant and the table never reflows when
-// values change. The 6 share-width columns (5 map metrics + the % Condo column, D4)
-// share one `metric` width; sum ≈ 100%. The <colgroup> renders these in column
-// order. The per-row Trend sparkline is GONE (D3) — the full trajectory is the
-// console's wide TIMESERIES slot. [console-chassis]
-const COL_WIDTH = { name: "24%", metric: "11%", rank: "10%" };
+// values change. The 6 share-width columns (median · mean · lot · built · %Condo ·
+// YoY) share one `metric` width; name + trend take the rest — 24 + 6×11 + 10 = 100%.
+// The <colgroup> renders these in column order. The per-row TREND sparkline is
+// re-added (contract §4/C7), beside the console's wide trend instrument. [console-chassis]
+const COL_WIDTH = { name: "24%", metric: "11%", trend: "10%" };
 
 // The fixed metric columns, DERIVED from the map's canonical METRICS (one source
 // of truth) in the same order — so a new map metric automatically gets a table
@@ -309,18 +328,13 @@ export default function DataTable({
   // sortUndefined keeps blanks last in BOTH directions; the cell renders "—".
   // `meta.metricKey` lets the renderer highlight the active metric's column. The
   // per-row Trend sparkline is gone (D3) — its full trajectory is the timeseries slot.
-  const columns = useMemo(() => [
-    {
-      accessorKey: "name",
-      header: "Neighbourhood",
-      // title so a name truncated by the fixed-width column stays readable on hover.
-      cell: (info) => <span title={info.getValue()}>{info.getValue()}</span>,
-      meta: { className: "dt-name", width: COL_WIDTH.name },
-    },
-    ...METRIC_COLS.map((m) => ({
+  const columns = useMemo(() => {
+    // One metric column def (level/rate metrics). accessorFn maps null → undefined so
+    // TanStack's sortUndefined keeps blanks last in BOTH directions; the cell renders "—".
+    const metricCol = (m) => ({
       id: m.key,
       accessorFn: (r) => r[m.key] ?? undefined,
-      header: m.header,                         // unit-bearing heading (e.g. "Lot size (m²)")
+      header: m.header,                         // short heading (e.g. "Lot m²")
       cell: (info) => {
         const v = info.getValue();
         return v == null ? "—" : m.cellFmt(v);  // bare number; the unit is in the header
@@ -329,14 +343,12 @@ export default function DataTable({
       enableGlobalFilter: false,
       filterFn: rangeFilter,   // the metric-range facet targets the ACTIVE metric's column
       meta: { numeric: true, metricKey: m.key, width: COL_WIDTH.metric },
-    })),
-    {
-      // % Condo (D4) — share of individually-titled CONDOMINIUM parcels (Plan/Unit
-      // land-titles registration; incl. single-unit bare-land condos). NOT "%
-      // apartments" / "% multi-family": rental blocks register as one Plan/Block/Lot
-      // title and correctly count as non-condo. A TABLE column (not a map metric — no
-      // colour scale), reading the active-year pct_with_unit (real all years post
-      // D-BE1). null (suppressed / non-reportable) → "—", never a false 0.
+    });
+    // % Condo (D4) — share of individually-titled CONDOMINIUM parcels (Plan/Unit
+    // land-titles registration; incl. single-unit bare-land condos). NOT "% apartments"
+    // / "% multi-family": rental blocks register as one Plan/Block/Lot title and count
+    // as non-condo. A TABLE column (not a map metric — no colour scale). null → "—".
+    const condoCol = {
       id: "pct_with_unit",
       accessorFn: (r) => r.pct_with_unit ?? undefined,
       header: "% Condo",
@@ -347,32 +359,45 @@ export default function DataTable({
       sortUndefined: "last",
       enableGlobalFilter: false,
       meta: { numeric: true, width: COL_WIDTH.metric },
-    },
-    {
-      id: "rank",
-      accessorFn: (r) => r.rank ?? undefined,
-      header: "Rank",
-      cell: (info) => {
-        const v = info.getValue();
-        return v == null ? "—" : v;
-      },
-      sortUndefined: "last",
-      enableGlobalFilter: false,
-      meta: { numeric: true, width: COL_WIDTH.rank },
-    },
-    // Hidden facet columns (D6) — accessor + multi-select filter only, never
-    // rendered (hidden via initialState.columnVisibility), so the VISIBLE table is
-    // unchanged. getFacetedUniqueValues reads these to populate the facet controls.
-    ...FACETS.map((f) => ({
-      id: f.id,
-      accessorFn: (r) => r[f.id],
-      filterFn: multiSelectFilter,
+    };
+    // TREND (C7) — the active-metric trajectory as a per-row sparkline. Rendered by the
+    // React.memo'd TrendSparkCell; the active metric comes from table.options.meta so
+    // this []-dep memo never captures a stale metric. Not sortable.
+    const trendCol = {
+      id: "trend",
+      header: "Trend",
       enableSorting: false,
       enableGlobalFilter: false,
-    })),
-    // Static column set (the active-metric highlight is applied in the render, not
-    // the def; the Trend sparkline that needed activeIndex is gone — D3).
-  ], []);
+      cell: (info) => (
+        <TrendSparkCell series={info.row.original.series} metric={info.table.options.meta?.metric} />
+      ),
+      meta: { numeric: true, width: COL_WIDTH.trend },
+    };
+    return [
+      {
+        accessorKey: "name",
+        header: "Neighbourhood",
+        // title so a name truncated by the fixed-width column stays readable on hover.
+        cell: (info) => <span title={info.getValue()}>{info.getValue()}</span>,
+        meta: { className: "dt-name", width: COL_WIDTH.name },
+      },
+      // Contract §4 order: MEDIAN · MEAN · LOT m² · BUILT · % CONDO · YOY · TREND.
+      ...METRIC_COLS.filter((m) => m.key !== "yoy_pct_change").map(metricCol),  // median · mean · lot · built
+      condoCol,                                                                 // % Condo
+      metricCol(METRIC_COLS.find((m) => m.key === "yoy_pct_change")),           // YoY
+      trendCol,                                                                 // Trend
+      // Hidden facet columns (D6) — accessor + multi-select filter only, never
+      // rendered (hidden via initialState.columnVisibility), so the VISIBLE table is
+      // unchanged. getFacetedUniqueValues reads these to populate the facet controls.
+      ...FACETS.map((f) => ({
+        id: f.id,
+        accessorFn: (r) => r[f.id],
+        filterFn: multiSelectFilter,
+        enableSorting: false,
+        enableGlobalFilter: false,
+      })),
+    ];
+  }, []);
 
   // React Compiler can't memoize a component that calls useReactTable (TanStack
   // returns fresh functions each call); it safely skips this one — fine at 407 rows.
@@ -380,6 +405,7 @@ export default function DataTable({
   const table = useReactTable({
     data,
     columns,
+    meta: { metric },   // read by the TREND sparkcol cell (avoids a stale-metric closure)
     // Name filter + categorical facets both suppress in selection mode, so every
     // constituent row stays visible under the aggregate (the facets are VIEW-only,
     // so they never desync from the selection aggregate — D6 recon #4).

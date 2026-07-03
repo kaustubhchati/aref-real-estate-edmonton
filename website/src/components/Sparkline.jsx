@@ -21,6 +21,7 @@ export default function Sparkline({
   activeIndex = -1,
   width = 104,
   height = 30,
+  stroke = "var(--accent)",   // line colour (callers pass a trajectory colour)
   ariaLabel = "Trend",
 }) {
   const nums = (values ?? []).map((v) => (v == null || isNaN(+v) ? null : +v));
@@ -58,7 +59,7 @@ export default function Sparkline({
       <polyline
         points={pts.join(" ")}
         fill="none"
-        stroke="var(--accent)"
+        stroke={stroke}
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
