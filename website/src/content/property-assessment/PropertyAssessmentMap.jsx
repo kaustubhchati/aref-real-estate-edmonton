@@ -1,22 +1,23 @@
 // =============================================================================
 // PropertyAssessmentMap.jsx
 //
-// The Property Assessment route. FULL-BLEED map with floating chrome (D1 removed
-// the in-flow left panel):
+// The Property Assessment route — a three-mode analyst map (PA_MODE_CONTRACT.md §3):
 //
-//   ┌──── .content-map (flex column) ──────────────────────────────┐
-//   │  .pa-topbar  (property count · search)                        │
-//   │ ┌──── .pa-canvas (flex 1, full-bleed) ──────────────────────┐ │
-//   │ │ ┌ .pa-float ┐        MapView (or EmptyState)              │ │
-//   │ │ │ id card   │                                              │ │
-//   │ │ │ (detail)  │                              .pa-legend ▟    │ │
-//   │ │ │ ⓘ about   │                                              │ │
-//   │ │ └───────────┘   .pa-foot: .pa-rack + DataTable (dock)     │ │
-//   │ └────────────────────────────────────────────────────────────┘ │
+//   ┌──── .content-map / .pa-map (full-bleed) ─────────────────────┐
+//   │ ┌.pa-float┐   MAP (sacred centre, zero chrome)   ┌ nav ┐     │
+//   │ │identity │                                       │🔍 +−│     │
+//   │ │ metric  │                        ┌ .pa-detail (S-b only) ┐  │
+//   │ │ tuning  │                        └──────────────────────┘  │
+//   │ │ legend  │                                                   │
+//   │ │ footer  │   .pa-foot: DataTable console (rises ALONE)       │
+//   │ └─────────┘    handle → [ rail | table | trend | margin ]     │
 //   └──────────────────────────────────────────────────────────────┘
-//   The floating cluster overlays the map (absolute); the console/dock can now
-//   span the full width. The single-select detail lives in .pa-float when the dock
-//   is down and in the console when it's up.
+//   The instrument COLUMN (left, .pa-float — kept so chromePadding reserves it) is
+//   ONE dark chassis: identity → metric → tuning → legend → footer. The console
+//   rises from the bottom into a four-frame grid (rail KPI cards | table | trend
+//   instrument | margin); its header carries the scope title + metric chips +
+//   District / Clear / Export. The S-b single-select detail is a right float below
+//   the nav. Three modes (Display / View / Analysis) over url / dockOpen / selectedIds.
 //
 // Data source seam: city + year drive a single URL via dataSources.js.
 // The available years come from /manifest.json (loaded once on mount), never
@@ -965,10 +966,10 @@ export default function PropertyAssessmentMap() {
   const yMax = years.length ? Math.max(...years) : 1;
   const yearPct = `${(((sliderYear ?? year ?? yMin) - yMin) / ((yMax - yMin) || 1)) * 100}%`;
 
-  // The single-select detail, built ONCE so it can render in EITHER home: the left
-  // panel (dock down) or the console's left segment (dock up). Same component +
-  // props — only the container is conditional (notes 7/8). null unless exactly one
-  // neighbourhood is selected.
+  // The S-b single-select DETAIL instrument (contract §4/C9): the right-side float,
+  // shown only when the console is DOWN and exactly one neighbourhood is selected.
+  // When the console is UP the detail role is consolidated into the console's rail
+  // cards + header (no `detail` prop, no re-homing). null unless a single selection.
   const detailRail =
     url && selectedFeature ? (
       <InfoRail

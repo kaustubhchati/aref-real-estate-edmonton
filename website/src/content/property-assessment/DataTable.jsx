@@ -582,7 +582,7 @@ export default function DataTable({
   }, [selectedIds, open, sorting, globalFilter, data, panelMounted]);
 
   return (
-    <section className={`dt${open ? " dt--open" : ""}`} aria-label="Neighbourhood data table">
+    <section className="dt" aria-label="Neighbourhood data table">
       <button
         type="button"
         className="dt-handle"
@@ -1060,7 +1060,7 @@ function RangeFacet({ label, fmt, bounds, value, onChange, disabled = false }) {
           onChange={(e) => onChange([lo, Math.max(+e.target.value, lo)])}
         />
       </div>
-      <strong className="pa-rack-value sb-year-value">{off ? "—" : `${fmt(lo)} – ${fmt(hi)}`}</strong>
+      <strong className="pa-rack-value">{off ? "—" : `${fmt(lo)} – ${fmt(hi)}`}</strong>
     </div>
   );
 }

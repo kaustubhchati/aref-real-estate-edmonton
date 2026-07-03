@@ -446,19 +446,8 @@ p  { margin: 0 0 0.75rem; }
    it (.pa-canvas is the relative containing block). */
 .pa-map { flex-direction: column; }
 
-.pa-topbar {
-  flex: 0 0 auto;
-  display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  padding: 9px 16px;
-  background: var(--sidebar-bg);
-  border-bottom: 1px solid var(--sidebar-edge);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
-}
-.pa-topbar-context { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
-.pa-topbar-sub {
-  font-size: 11px; color: var(--text-muted); white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis;
-}
+/* (.pa-topbar removed, C10/§8 — the parcel count re-homed to the column footer, C2.) */
+
 /* ---- Unified search peek (D5) — the ONE search, by the map's zoom stack ---- */
 /* Push the map's top-right controls (zoom + reset crosshair) DOWN so the magnifier
    peek sits ABOVE them, as the top of the same right-edge stack. PA-scoped. */
@@ -833,7 +822,6 @@ p  { margin: 0 0 0.75rem; }
 .dt-metric .seg-options { flex-direction: row; flex-wrap: wrap; gap: 4px; }
 .dt-metric .seg-btn { width: auto; padding: 2px 8px; font-size: 11px; gap: 0; }  /* was width:100% → chips, not a stacked list */
 .dt-metric .seg-icon { display: none; }
-.dt-toolbar { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
 .dt-count { font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* ----- Categorical facets (D6) — VIEW-only filters under the toolbar ----- */
@@ -945,7 +933,6 @@ p  { margin: 0 0 0.75rem; }
 .dt-row.is-selected { background: var(--bg-soft); outline: 2px solid var(--text); outline-offset: -2px; }
 .dt-name { font-weight: 500; color: var(--text); text-overflow: ellipsis; }
 .dt-empty { padding: 16px; text-align: center; color: var(--text-muted); }
-.dt-toolbar .export-menu { margin-left: auto; }   /* push export to the right of the filter */
 
 /* ===== Gauge slots (D3): wide-but-shallow shape readers ===================== */
 /* The charts FLEX to fill their slot body (the SVG shrinks with the band via
