@@ -1402,14 +1402,22 @@ p  { margin: 0 0 0.75rem; }
 .pa-slider:focus { outline: none; }
 .pa-slider:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 /* C9 — visible keyboard focus for every interactive control (mouse clicks stay quiet
-   via :focus-visible). Shared controls use --accent (both themes); the PA console's
-   dark controls use --pa-up. */
+   via :focus-visible). Light-shell controls use --accent; the PA console's dark chrome
+   controls use CORAL per the directive — specifically --pa-dn (#f88b6b), NOT the
+   selection coral --pa-sel (#e8734a), so a focus ring reads distinct from A5's selection
+   outline on the same rows. */
 .seg-btn:focus-visible,
 .opt-toggle-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .dt-clear:focus-visible,
 .dt-handle:focus-visible,
 .dt-facet-summary:focus-visible,
-.dt-th-btn:focus-visible { outline: 2px solid var(--pa-up); outline-offset: 2px; border-radius: 4px; }
+.dt-th-btn:focus-visible { outline: 2px solid var(--pa-dn); outline-offset: 2px; border-radius: 4px; }
+/* The metric chips + option toggles live ONLY in dark PA chrome (instrument column +
+   console header); give their ring the same coral there. The --accent rule above stays
+   as the light-shell fallback in case either control is ever reused outside the console. */
+.pa-column .seg-btn:focus-visible,
+.pa-column .opt-toggle-btn:focus-visible,
+.dt-panel .seg-btn:focus-visible { outline-color: var(--pa-dn); }
 /* YEAR: green fill up to the thumb via --pct (matches the dual's fill segment). */
 .pa-year-slider::-webkit-slider-runnable-track {
   background: linear-gradient(to right, var(--accent) var(--pct, 0%), var(--border) var(--pct, 0%));
