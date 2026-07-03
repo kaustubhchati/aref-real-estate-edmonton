@@ -984,7 +984,7 @@ p  { margin: 0 0 0.75rem; }
 
 /* DISTRIBUTION — the citywide histogram with the selection marked (DistributionStrip.jsx). */
 .dt-hist { display: flex; flex-direction: column; gap: 3px; width: 100%; flex: 1 1 auto; min-height: 0; }
-.dt-hist-svg { display: block; width: 100%; flex: 1 1 0; min-height: 14px; max-height: 52px; }
+.dt-hist-svg { display: block; width: 100%; flex: 1 1 0; min-height: 10px; max-height: 52px; }
 .dt-hist-ends {
   flex: 0 0 auto; display: flex; justify-content: space-between; gap: 8px;
   font-size: 9.5px; color: var(--text-subtle); font-variant-numeric: tabular-nums;
@@ -1105,8 +1105,13 @@ p  { margin: 0 0 0.75rem; }
    a floor this card would shrink to 0 and its content would overflow + clip. min-height
    54px lets its content shrink-fit; if the KPI cards + this floor exceed the rail, the
    rail SCROLLS (.dt-cards overflow-y:auto), never clips. */
-.dt-card--dist { flex: 1 1 0; min-height: 54px; display: flex; flex-direction: column; }
-.dt-card--dist .dt-slot-body { flex: 1 1 0; min-height: 0; margin-top: 3px; }
+.dt-card--dist { flex: 1 1 0; min-height: 60px; display: flex; flex-direction: column; }
+/* A3 — the histogram body carries NO extra padding (the card already pads); the doubled
+   card+body padding was eating the floor and clipping the SVG. With padding:0 + the
+   svg's 10px shrink floor, the full histogram (bars + end labels) fits the min-height by
+   construction; when the KPI cards above overflow the rail, .dt-cards scrolls — never a
+   silent clip. */
+.dt-card--dist .dt-slot-body { flex: 1 1 0; min-height: 0; margin-top: 3px; padding: 0; }
 
 /* ---- Console header bar (C6, contract §4) --------------------------------- */
 .dt-head {
