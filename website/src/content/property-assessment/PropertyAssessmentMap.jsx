@@ -62,6 +62,7 @@ import {
   choroplethImages,
   CENTROID_SOURCE,
   centroidNameLayer,
+  centroidFocusLayer,
 } from "./choroplethStyle.js";
 import {
   CITIES,
@@ -702,10 +703,77 @@ export default function PropertyAssessmentMap() {
       });
       // No beforeId → appended to the TOP of the stack, above the basemap symbols.
       map.addLayer({ ...centroidNameLayer(), source: CENTROID_SOURCE });
+      // F3 — the hover/selected guarantee layer sits above the base labels.
+      map.addLayer({ ...centroidFocusLayer(), source: CENTROID_SOURCE });
     } catch {
       /* map mid-teardown — the next mounted map re-adds via this effect */
     }
   }, [map, gj]);
+
+  // D-P2 F3 — mirror the selection (pinned) onto the centroid source, so a selected
+  // neighbourhood keeps its name shown via the focus layer even where the base label
+  // was collision-culled. Set-diff, mirroring the polygon `pinned` effect (read-only:
+  // it copies the existing channel, never writes selection).
+  const prevCentroidPinRef = useRef(new Set());
+  useEffect(() => {
+    if (!map) return;
+    const next = new Set(selectedIds.map(String));
+    const prev = prevCentroidPinRef.current;
+    try {
+      for (const id of prev) {
+        if (!next.has(id)) map.setFeatureState({ source: CENTROID_SOURCE, id }, { pinned: false });
+      }
+      for (const id of next) {
+        map.setFeatureState({ source: CENTROID_SOURCE, id }, { pinned: true });
+      }
+      prevCentroidPinRef.current = next;
+    } catch {
+      /* map mid-teardown or centroid source not added yet — re-applies on next change */
+    }
+  }, [map, selectedIds]);
+
+  // D-P2 F3 — mirror the table-row hover onto the centroid source. Map hover is handled
+  // by the listener effect below; the two are never active at once (pointer over the
+  // table OR the map), exactly like the polygon hover channels.
+  const prevCentroidRowHoverRef = useRef(null);
+  useEffect(() => {
+    if (!map) return;
+    const prev = prevCentroidRowHoverRef.current;
+    try {
+      if (prev != null && String(prev) !== String(hoveredRowId)) {
+        map.setFeatureState({ source: CENTROID_SOURCE, id: prev }, { hover: false });
+      }
+      if (hoveredRowId != null) {
+        map.setFeatureState({ source: CENTROID_SOURCE, id: hoveredRowId }, { hover: true });
+      }
+      prevCentroidRowHoverRef.current = hoveredRowId;
+    } catch {
+      /* map mid-teardown or centroid source not added yet */
+    }
+  }, [map, hoveredRowId]);
+
+  // D-P2 F3 — mirror the MAP hover onto the centroid source. interactions.js owns the
+  // polygon hover state (left untouched); this read-only listener copies the pointed-at
+  // id onto the centroid source so its focus label shows. Own listeners so the working
+  // interactions core stays frozen.
+  useEffect(() => {
+    if (!map) return undefined;
+    let curId = null;
+    const set = (id, on) => {
+      try { map.setFeatureState({ source: CENTROID_SOURCE, id }, { hover: on }); } catch { /* source not ready */ }
+    };
+    const onMove = (e) => {
+      const id = e.features?.[0]?.id;
+      if (id === curId) return;
+      if (curId != null) set(curId, false);
+      curId = id ?? null;
+      if (curId != null) set(curId, true);
+    };
+    const onLeave = () => { if (curId != null) { set(curId, false); curId = null; } };
+    map.on("mousemove", "nbhd-fill", onMove);
+    map.on("mouseleave", "nbhd-fill", onLeave);
+    return () => { map.off("mousemove", "nbhd-fill", onMove); map.off("mouseleave", "nbhd-fill", onLeave); };
+  }, [map]);
 
   // Active-metric series across every year for the single-selected nbhd — the
   // rail sparkline. All years are on the resident combined feature (gj), so this

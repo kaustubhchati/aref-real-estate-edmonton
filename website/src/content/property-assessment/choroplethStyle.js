@@ -717,6 +717,47 @@ export function centroidNameLayer() {
       "text-halo-color": "#f7f1df",   // basemap cream — legible over deep red / buildings / water
       "text-halo-width": 1.4,
       "text-halo-blur": 0.4,
+      // Yield to the focus layer (F3): when a neighbourhood is hovered/selected its name
+      // is drawn by centroidFocusLayer instead, so hide the base copy here — otherwise the
+      // two (base collision-placed, focus centred) draw the same name slightly offset.
+      "text-opacity": [
+        "case",
+        ["boolean", ["feature-state", "pinned"], false], 0,
+        ["boolean", ["feature-state", "hover"], false], 0,
+        1,
+      ],
+    },
+  };
+}
+
+// F3 — the hover/selected GUARANTEE. A second layer on the SAME centroid source with
+// text-allow-overlap, so the pointed-at / selected neighbourhood is NEVER collision-
+// culled — it always names itself. Visible only where the centroid source carries the
+// `hover` or `pinned` feature-state (the page mirrors those from the polygon channels);
+// text-opacity is 0 everywhere else, so this layer is invisible until you point/select.
+export function centroidFocusLayer() {
+  return {
+    id: "nbhd-labels-focus",
+    type: "symbol",
+    layout: {
+      "text-field": ["get", "display_name"],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 10, 12, 15, 17], // a touch larger than base
+      "text-font": ["Noto Sans Regular"],
+      "text-max-width": 8,
+      "text-allow-overlap": true,      // never dropped — the guarantee
+      "text-ignore-placement": true,
+    },
+    paint: {
+      "text-color": "#26221a",         // slightly darker than the base labels, for emphasis
+      "text-halo-color": "#f7f1df",
+      "text-halo-width": 2.2,          // stronger halo so it reads on top of the base label
+      "text-halo-blur": 0.3,
+      "text-opacity": [
+        "case",
+        ["boolean", ["feature-state", "pinned"], false], 1,
+        ["boolean", ["feature-state", "hover"], false], 1,
+        0,
+      ],
     },
   };
 }
