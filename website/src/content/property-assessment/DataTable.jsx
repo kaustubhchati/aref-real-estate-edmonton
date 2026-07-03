@@ -726,7 +726,7 @@ export default function DataTable({
                         <th
                           key={header.id}
                           className={`${meta.numeric ? "numeric" : ""}${active ? " is-active-metric" : ""}`}
-                          aria-sort={sorted ? (sorted === "asc" ? "ascending" : "descending") : "none"}
+                          aria-sort={sortable ? (sorted ? (sorted === "asc" ? "ascending" : "descending") : "none") : undefined}
                           title={header.column.id === "rank" ? `City rank by ${metricLabel}` : undefined}
                         >
                           {sortable ? (
@@ -762,7 +762,7 @@ export default function DataTable({
                       <tr
                         key={id}
                         data-id={id}
-                        className={`dt-row${selectedSet.has(String(id)) ? " is-selected" : ""}`}
+                        className={`dt-row${selectedSet.has(String(id)) ? " is-selected" : ""}${selectionMode ? " dt-row--member" : ""}`}
                         onClick={() => onSelectRow(id)}
                         onMouseEnter={() => onHoverRow(id)}
                         onMouseLeave={() => onHoverRow(null)}

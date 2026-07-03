@@ -1040,6 +1040,11 @@ p  { margin: 0 0 0.75rem; }
 .dt-panel .dt-row td { border-bottom-color: rgba(255,255,255,0.06); }
 .dt-panel .dt-row:hover { background: var(--pa-card); }
 .dt-panel .dt-row.is-selected { background: var(--pa-card); outline-color: var(--pa-sel); }
+/* C4 — in SELECTION mode every constituent is "selected"; a full outline on all N
+   rows is noisy. Members get a subtle tint + a 2px coral left bar (inset shadow, no
+   layout shift); the full coral outline is reserved for the hovered (focused) row. */
+.dt-panel .dt-row--member.is-selected { outline: none; box-shadow: inset 3px 0 0 var(--pa-sel); background: rgba(232,115,74,0.055); }
+.dt-panel .dt-row--member.is-selected:hover { outline: 1.5px solid var(--pa-sel); outline-offset: -1.5px; background: var(--pa-card); }
 .dt-panel .dt-name { color: var(--pa-ink); }
 .dt-panel .dt-empty { color: var(--pa-mut); }
 
