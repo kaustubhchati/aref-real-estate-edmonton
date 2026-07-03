@@ -73,7 +73,7 @@ import TrendChart from "./TrendChart.jsx";
 import ExportMenu from "./ExportMenu.jsx";
 import SegmentedControl from "../../components/SegmentedControl.jsx";
 import { DUR_BASE, reduceMotion } from "../../components/motion.js";
-import { METRICS } from "./choroplethStyle.js";
+import { METRICS, STATE_STYLE } from "./choroplethStyle.js";
 import {
   fmtArea,
   fmtCurrencyShort,
@@ -407,6 +407,22 @@ export default function DataTable({
 
   const viewRows = table.getRowModel().rows;
 
+  // Console-header scope title (contract §4): the entity the console describes.
+  //   N=0 → "All M neighbourhoods" (or "K of M" when a search filter narrows it)
+  //   N=1 → "<Name>" + a muted "rank · parcels · state" sub-line
+  //   N≥2 → "N neighbourhoods selected"
+  const stateWord = (st) => (st === "aggregated" ? "reportable" : STATE_STYLE[st]?.label ?? st);
+  const scopeTitle = selectionMode
+    ? `${aggregate.nSelected} neighbourhoods selected`
+    : singleRow
+    ? singleRow.name
+    : viewRows.length < rows.length
+    ? `${viewRows.length} of ${rows.length} neighbourhoods`
+    : `All ${rows.length} neighbourhoods`;
+  const scopeSub = !selectionMode && singleRow
+    ? `rank ${singleRow.rank ?? "—"} · ${singleRow.n_properties != null ? fmtNumber(singleRow.n_properties) : "—"} parcels · ${stateWord(singleRow.state)}`
+    : null;
+
   // --- Categorical facets (D6) — VIEW-only; the controls live in the dock header
   // and read/write the hidden facet columns through TanStack. Each helper is generic
   // over a facet id, so the two facets share one code path (no copy-pasted blocks). --
@@ -534,10 +550,63 @@ export default function DataTable({
       <div className={`dt-panel-wrap${panelExpanded ? " is-open" : ""}`}>
         {panelMounted && (
           <div className="dt-panel">
-            {/* FOUR FIXED GRID SLOTS (D3) — spine · timeseries · distribution ·
-                vs-city. The frames are INVARIANT to selection: they never move,
-                resize, or relabel. Only their interiors change with N (0 = city,
-                1 = the neighbourhood, ≥2 = the selection aggregate). */}
+            {/* ===== CONSOLE HEADER (contract §4) — scope title + metric chips on the
+                left; District facet · × Clear · Export on the right. The metric chips
+                re-home HERE from the instrument column when the console is up (the
+                two-conditional-homes mechanic). ===== */}
+            <div className="dt-head">
+              <div className="dt-head-l">
+                <span className="dt-scope">{scopeTitle}</span>
+                {scopeSub && <span className="dt-scope-sub">{scopeSub}</span>}
+                {metrics && onMetricChange && (
+                  <div className="dt-metric">
+                    <SegmentedControl
+                      label="Metric"
+                      options={metrics.map((m) => ({
+                        key: m.key,
+                        label: METRIC_COLS.find((c) => c.key === m.key)?.label ?? m.label,
+                      }))}
+                      value={metric}
+                      onChange={onMetricChange}
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="dt-head-r">
+                {/* District facet (VIEW-only, brush-fenced) — normal mode only. */}
+                {!selectionMode && (
+                  <div className="dt-facets" role="group" aria-label="Filter the table">
+                    {FACETS.map((f) => {
+                      const shared = {
+                        label: f.label,
+                        options: facetOptions(f.id),
+                        selected: facetValue(f.id),
+                        labelOf: f.labelOf,
+                        onToggle: (v) => toggleFacet(f.id, v),
+                      };
+                      return f.control === "dropdown"
+                        ? <FacetDropdown key={f.id} {...shared} />
+                        : <FacetToggles key={f.id} {...shared} />;
+                    })}
+                    {anyFacet && (
+                      <button type="button" className="dt-facets-clear" onClick={clearFacets}>
+                        Clear filters
+                      </button>
+                    )}
+                  </div>
+                )}
+                {/* × Clear — empties the selection ONLY; the console stays up
+                    (S-e → S-c in place, §5). Shown when there's a selection. */}
+                {(selectionMode || singleRow) && (
+                  <button type="button" className="dt-clear" onClick={onClearSelection}>
+                    × Clear
+                  </button>
+                )}
+                <ExportMenu onExport={onExport} year={year} years={years} selectedCount={selectedIds.length} />
+              </div>
+            </div>
+
+            {/* ===== FOUR FIXED FRAMES — rail | table | trend | margin (§3.2/§4). ===== */}
             <div className="dt-grid">
 
               {/* ===== RAIL — the KPI stack (contract §4). C5 turns these into the
@@ -559,65 +628,10 @@ export default function DataTable({
                 />
               </div>
 
-              {/* ===== TABLE — the compact spine table (centre column). Its head
-                  (metric · count · export · facets) stays here for now; C6 extracts
-                  it to the console header bar. ===== */}
+              {/* ===== TABLE — the compact spine table (centre column). The head
+                  controls (metric chips · facets · × Clear · export) now live in the
+                  console header bar above (C6). ===== */}
               <div className="dt-slot dt-slot--table">
-                <div className="dt-spine-head">
-                  {metrics && onMetricChange && (
-                    <div className="dt-metric">
-                      <SegmentedControl
-                        label="Metric"
-                        /* compact short labels (no icon) — the console band is shallow;
-                           the horizontal wrapped chips keep the table its room (D3). */
-                        options={metrics.map((m) => ({
-                          key: m.key,
-                          label: METRIC_COLS.find((c) => c.key === m.key)?.label ?? m.label,
-                        }))}
-                        value={metric}
-                        onChange={onMetricChange}
-                      />
-                    </div>
-                  )}
-                  {/* The dock's name filter is GONE (D5) — the unified SearchPeek by
-                      the zoom stack is the sole search, driving this table's filter.
-                      "N of M" signals an active filter; clear it from the peek. */}
-                  <div className="dt-toolbar">
-                    <span className="dt-count">
-                      {selectionMode ? `${aggregate.nSelected} selected` : `${viewRows.length} of ${rows.length}`}
-                    </span>
-                    {(selectionMode || singleRow) && (
-                      /* Interim clear — C6 relocates × Clear into the console header. */
-                      <button type="button" className="dt-vs-clear" onClick={onClearSelection}>
-                        × Clear
-                      </button>
-                    )}
-                    <ExportMenu onExport={onExport} year={year} years={years} selectedCount={selectedIds.length} />
-                  </div>
-                  {/* Categorical facets (D6) — VIEW-only filters over the table
-                      (normal mode only; in selection mode the rows ARE the selection). */}
-                  {!selectionMode && (
-                    <div className="dt-facets" role="group" aria-label="Filter the table">
-                      {FACETS.map((f) => {
-                        const shared = {
-                          label: f.label,
-                          options: facetOptions(f.id),
-                          selected: facetValue(f.id),
-                          labelOf: f.labelOf,
-                          onToggle: (v) => toggleFacet(f.id, v),
-                        };
-                        return f.control === "dropdown"
-                          ? <FacetDropdown key={f.id} {...shared} />
-                          : <FacetToggles key={f.id} {...shared} />;
-                      })}
-                      {anyFacet && (
-                        <button type="button" className="dt-facets-clear" onClick={clearFacets}>
-                          Clear filters
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
                 <div className="dt-scroll" ref={scrollRef}>
             <table className="dt-table">
               {/* Fixed chassis: explicit per-column widths (meta.width) in column

@@ -357,10 +357,16 @@ export default function PropertyAssessmentMap() {
   // Auto-collapse the dock when the selection empties — the ONE intentional
   // behaviour change in the layout re-architecture (previously the dock latched
   // open until toggled). This only LOWERS it on an empty set, so a manual open at
-  // 0 selection still sticks: selectedIds doesn't change on a toggle, so this
-  // effect doesn't re-run and re-close it.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { if (selectedIds.length === 0) setDockOpen(false); }, [selectedIds]);
+  // 0 selection still sticks (selectedIds doesn't change on a toggle). EXCEPTION:
+  // the console-header × Clear empties the selection but MUST keep the console up
+  // (S-e → S-c in place, contract §5) — it raises this one-shot flag so this effect
+  // skips the collapse for that emptying only. A map-click deselect still collapses.
+  const keepDockOnClearRef = useRef(false);
+  useEffect(() => {
+    if (selectedIds.length !== 0) return;
+    if (keepDockOnClearRef.current) { keepDockOnClearRef.current = false; return; }
+    setDockOpen(false);
+  }, [selectedIds]);
 
   // Load the manifest once on mount and seed the year in the SAME update (no
   // frame where the manifest is loaded but no year is chosen → no empty-state
@@ -1182,7 +1188,7 @@ export default function PropertyAssessmentMap() {
                 onHoverRow={setHoveredRowId}
                 aggregate={selectionAggregate}
                 cityBaseline={cityBaseline}
-                onClearSelection={() => setSelectedIds([])}
+                onClearSelection={() => { keepDockOnClearRef.current = true; setSelectedIds([]); }}
                 onExport={handleExport}
                 onBrush={setBrushedIds}
                 open={dockOpen}
