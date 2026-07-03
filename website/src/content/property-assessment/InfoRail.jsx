@@ -57,6 +57,12 @@ export default function InfoRail({
   const stateWord = state === "aggregated" ? "reportable" : meta.label;
   const activeMetric = METRICS.find((m) => m.key === metric) ?? METRICS[0];
   const activeVal = num(feature[activeMetric.key]);
+  // C2 — the chrome shows COMPACT figures (full precision is for Export): the $ metrics
+  // use the short currency formatter, everything else keeps its own formatter.
+  const chromeFmt = (v) =>
+    (metric === "median_assessvalue" || metric === "avall_public")
+      ? fmtCurrencyShort(v)
+      : activeMetric.fmt(v);
   const parcels = num(feature.n_properties);
 
   // Sparkline trajectory colour (median/mean/YoY → rising green / falling coral;
@@ -77,7 +83,7 @@ export default function InfoRail({
     if (metric === "yoy_pct_change") delta = { txt: signedPp(activeVal - cityVal), cls: signCls(activeVal - cityVal) };
     else if (cityVal !== 0) delta = { txt: signedPct((activeVal - cityVal) / cityVal), cls: signCls(activeVal - cityVal) };
   }
-  const cityText = cityVal == null ? "—" : (APPROX.has(metric) ? "≈" : "") + activeMetric.fmt(cityVal);
+  const cityText = cityVal == null ? "—" : (APPROX.has(metric) ? "≈" : "") + chromeFmt(cityVal);
 
   // This nbhd's condo figures.
   const condo = num(feature.pct_with_unit);
@@ -105,9 +111,9 @@ export default function InfoRail({
 
       <div className="pa-detail-trip">
         <div>
-          <div className="pa-trip-l">{activeMetric.label}</div>
+          <div className="pa-trip-l">Value</div>
           <div className={`pa-trip-v${aggregated ? "" : " pa-trip-muted"}`}>
-            {aggregated && activeVal != null ? activeMetric.fmt(activeVal) : "—"}
+            {aggregated && activeVal != null ? chromeFmt(activeVal) : "—"}
           </div>
         </div>
         <div>
