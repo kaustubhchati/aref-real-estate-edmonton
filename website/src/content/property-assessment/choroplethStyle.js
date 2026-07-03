@@ -625,7 +625,7 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
       paint: {
         "line-color": [
           "case",
-          ["boolean", ["feature-state", "pinned"], false], "#fff4e0",
+          ["boolean", ["feature-state", "pinned"], false], "#f7f1df",  /* mirrors --map-cream */
           "rgba(0,0,0,0)",
         ],
         "line-width": [
@@ -644,7 +644,7 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
       paint: {
         "line-color": [
           "case",
-          ["boolean", ["feature-state", "pinned"], false], "#e8734a",  /* mirrors --pa-sel */
+          ["boolean", ["feature-state", "pinned"], false], "#e8734a",  /* mirrors --sel */
           ["boolean", ["feature-state", "hover"],  false], "#2a2a30",
           "rgba(0,0,0,0)",
         ],
