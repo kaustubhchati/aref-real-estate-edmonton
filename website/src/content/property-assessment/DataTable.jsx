@@ -401,6 +401,23 @@ export default function DataTable({
       ),
       meta: { numeric: true, width: COL_WIDTH.trend },
     };
+    // YoY (C3) — the only SIGNED rate in the table: render it signed, 1-decimal, %,
+    // and coloured up/down (green/coral) so it reads like a rate, not a bare number.
+    const yoyCol = {
+      id: "yoy_pct_change",
+      accessorFn: (r) => r.yoy_pct_change ?? undefined,
+      header: "YoY",
+      cell: (info) => {
+        const v = info.getValue();
+        if (v == null) return "—";
+        const txt = (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(+v).toFixed(1) + "%";
+        return <span className={signCls(v)}>{txt}</span>;
+      },
+      sortUndefined: "last",
+      enableGlobalFilter: false,
+      filterFn: rangeFilter,   // the metric-range facet targets YoY when it's active
+      meta: { numeric: true, metricKey: "yoy_pct_change", width: COL_WIDTH.metric },
+    };
     return [
       {
         accessorKey: "name",
@@ -412,7 +429,7 @@ export default function DataTable({
       // Contract §4 order: MEDIAN · MEAN · LOT m² · BUILT · % CONDO · YOY · TREND.
       ...METRIC_COLS.filter((m) => m.key !== "yoy_pct_change").map(metricCol),  // median · mean · lot · built
       condoCol,                                                                 // % Condo
-      metricCol(METRIC_COLS.find((m) => m.key === "yoy_pct_change")),           // YoY
+      yoyCol,                                                                   // YoY (C3 — signed/%/coloured)
       trendCol,                                                                 // Trend
       // Hidden facet columns (D6) — accessor + multi-select filter only, never
       // rendered (hidden via initialState.columnVisibility), so the VISIBLE table is
