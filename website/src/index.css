@@ -608,21 +608,38 @@ p  { margin: 0 0 0.75rem; }
   font-family: ui-monospace, Menlo, Consolas, monospace;
 }
 
-/* ----- Single-select detail (Property Assessment) — the View-mode float ----- */
-/* The S-b detail instrument: a RIGHT-side float below the nav stack, mounted only
-   when exactly one neighbourhood is selected and the console is down (contract
-   §3.1). It holds that nbhd's detail + sparkline (InfoRail.jsx). The .rail-* rules
-   below are its content styles. NOTE: C2 relocates it to the right and keeps the
-   light card skin; C9 re-skins the interior to the dark annex anatomy. */
+/* ----- Single-select DETAIL instrument (S-b / View mode, contract §4/C9) ----- */
+/* A dark right-side float below the nav stack, mounted only when exactly one
+   neighbourhood is selected and the console is down. Anatomy: name · rank/parcels/
+   state · sparkline · value/city/delta triplet · condo block. (The legacy .rail-*
+   rules below are no longer emitted by InfoRail.jsx.) */
 .pa-detail {
   position: absolute; right: 12px; top: 46px; z-index: 14;
-  width: 240px; max-width: calc(100vw - 24px);
-  margin: 0; padding: 12px; border-top: 0;
-  background: var(--bg-raised); border: 1px solid var(--sidebar-edge);
-  border-radius: var(--radius-lg); box-shadow: var(--gel-bevel), var(--gel-lift);
+  width: 224px; max-width: calc(100vw - 24px);
+  padding: 11px 13px;
+  background: var(--pa-shell); border-radius: 10px; color: var(--pa-ink);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
   animation: rail-fade-in var(--dur-base) var(--ease);
   pointer-events: auto;
 }
+.pa-detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.pa-detail-name { margin: 0; font-size: 13px; font-weight: 600; color: var(--pa-ink); line-height: 1.2; }
+.pa-detail-clear {
+  flex: 0 0 auto; width: 20px; height: 20px; border: 0; border-radius: 6px;
+  background: var(--pa-card); color: var(--pa-mut); font-size: 11px; line-height: 1; cursor: pointer;
+}
+.pa-detail-clear:hover { color: var(--pa-ink); }
+.pa-detail-sub { margin: 2px 0 0; font-size: 9px; color: var(--pa-mut); }
+.pa-detail .sparkline { display: block; width: 100%; height: 26px; margin: 7px 0 2px; }
+.pa-detail-trip { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; margin-top: 7px; text-align: center; }
+.pa-trip-l { font-size: 8px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pa-mut); }
+.pa-trip-v { font-size: 12px; font-weight: 500; color: var(--pa-ink); font-variant-numeric: tabular-nums; }
+.pa-trip-muted { color: var(--pa-dim); }
+.pa-detail-condo { border-top: 1px solid var(--pa-hair); margin-top: 8px; padding-top: 6px; }
+.pa-detail .pa-kv { display: flex; justify-content: space-between; font-size: 10px; margin-top: 2px; }
+.pa-kv-k { color: var(--pa-mut); }
+.pa-kv-v { color: #c7cacd; font-weight: 500; font-variant-numeric: tabular-nums; }
+.pa-detail-note { margin: 7px 0 0; font-size: 9.5px; color: var(--pa-mut); line-height: 1.5; }
 @keyframes rail-fade-in { from { opacity: 0; } to { opacity: 1; } }
 .rail-inner { width: 100%; }
 /* Tightness: no trailing gap after the last detail row/note. */

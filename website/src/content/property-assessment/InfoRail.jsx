@@ -1,27 +1,25 @@
 // =============================================================================
 // InfoRail.jsx
 //
-// The Property Assessment right-hand INFO RAIL (Felt zone 3). Hidden by default;
-// PropertyAssessmentMap renders it ONLY when exactly one neighbourhood is
-// selected (single-select), and it slides in from the right edge (.rail in
-// index.css). It replaced the old click-to-pin map popup.
+// The Property Assessment single-select DETAIL instrument (S-b / View mode,
+// contract §4/C9). PropertyAssessmentMap renders it as a right-side float below
+// the nav stack ONLY when exactly one neighbourhood is selected and the console
+// is down. Dark annex anatomy, top to bottom:
+//   name · rank/parcels/state · active-metric sparkline · value/city/delta triplet
+//   · hairline · condo block (Condo share / Mean excl. condo / Lot non-condo).
+// A suppressed / non-reportable single-select shows its state label + honest
+// em-dashes (never a false zero).
 //
-// Shows the selected neighbourhood's detail for the active year: name, year,
-// state badge, a value SPARKLINE of the active metric across every year (free —
-// all years are on the resident combined feature), then the full row table.
-//
-// Reuse, not rebuild: the detail rows come from the SAME POPUP_ROWS + STATE_STYLE
-// contract the map paints from (choroplethStyle.js) + the shared format.js
-// formatters — so the rail can never drift from the map. It is the single home
-// for the per-state copy that used to live in buildPopupHtml. (Search moved to
-// the top-centre search pill; site-wide provenance lives in the left control box.)
+// Reuse, not rebuild: reads the SAME projected feature the map paints + the shared
+// cityBaseline aggregate (so it can't drift), and the shared Sparkline. No app
+// state of its own.
 // =============================================================================
 
 import Sparkline from "../../components/Sparkline.jsx";
-import { METRICS, POPUP_ROWS, STATE_STYLE } from "./choroplethStyle.js";
-import { fmtNumber } from "../../utils/format.js";
+import { METRICS, STATE_STYLE } from "./choroplethStyle.js";
+import { fmtNumber, fmtCurrencyShort } from "../../utils/format.js";
 
-// Plain-language reason shown for a non-aggregated polygon, keyed by polygon_state.
+// Plain-language reason for a non-aggregated polygon, keyed by polygon_state.
 const STATE_NOTE = {
   suppressed_low_n:
     "Fewer than 100 properties — aggregate values suppressed to protect privacy.",
@@ -33,118 +31,106 @@ const STATE_NOTE = {
     "No assessment data for this boundary. Area may be unregistered, recently annexed, or a planning placeholder.",
 };
 
-// The metrics the console SPINE already lists (the 5 map metrics + %Condo, D4) —
-// dropped from this detail to avoid duplication (note 21/23). POPUP_ROWS fields NOT
-// in this set (SD assessed, Mean non-unit) STAY: the detail is their only on-screen
-// home in either dock state. Derived from METRICS so it tracks a metric change.
-const TABLE_METRIC_KEYS = new Set([...METRICS.map((m) => m.key), "pct_with_unit"]);
+// Which cityBaseline field is the comparison baseline for each metric (lot/built have
+// none). The median & YoY baselines are approximate → prefixed "≈".
+const CITY_KEY = { median_assessvalue: "medianOfMedians", avall_public: "parcelMean", yoy_pct_change: "areaYoY" };
+const APPROX = new Set(["median_assessvalue", "yoy_pct_change"]);
+const TREND_METRICS = new Set(["median_assessvalue", "avall_public", "yoy_pct_change"]);
+
+const num = (v) => (v == null || !Number.isFinite(+v) || +v === -999 ? null : +v);
+const signCls = (n) => (n > 0 ? "dt-up" : n < 0 ? "dt-dn" : "");
+const signedPct = (r) => (r >= 0 ? "+" : "") + Math.round(r * 100) + "%";
+const signedPp = (d) => (d >= 0 ? "+" : "") + d.toFixed(1) + "pp";
+const pctText = (x) => (x == null ? "—" : `${Math.round(x)}%`);
 
 export default function InfoRail({
   feature,      // projected (bare-named) properties of the selected nbhd, active year
-  year,         // active assessment year — labels the detail so numbers are in context
-  metric,       // active metric key — headline + the sparkline series
-  years,        // the manifest year list (for the sparkline caption range)
-  sparkValues,  // active metric across `years` for the selected nbhd (null = gap)
-  activeIndex,  // index of the active year within `years` (dots the sparkline)
+  metric,       // active metric key — the sparkline series + the triplet
+  sparkValues,  // active metric across the years for this nbhd (null = gap)
+  activeIndex,  // index of the active year (dots the sparkline)
+  cityBaseline, // the shared parcel-weighted city aggregate (for the triplet's city + delta)
+  rank,         // this nbhd's city rank by the active metric (from the table rows)
   onClear,      // () => void — clear the selection
 }) {
   const state = feature.polygon_state;
   const meta = STATE_STYLE[state] || { label: state };
-
-  // The metric the MAP is currently colouring by — shown as the headline so the
-  // encoded value is ALWAYS visible (POPUP_ROWS omits YoY). -999 is the YoY
-  // "no prior year" sentinel; map it (and null) to null so the formatter renders
-  // an em-dash, not "-999%".
+  const stateWord = state === "aggregated" ? "reportable" : meta.label;
   const activeMetric = METRICS.find((m) => m.key === metric) ?? METRICS[0];
-  const rawActive = feature[activeMetric.key];
-  const activeVal = rawActive == null || rawActive === -999 ? null : rawActive;
+  const activeVal = num(feature[activeMetric.key]);
+  const parcels = num(feature.n_properties);
 
-  const yearSpan =
-    years && years.length ? `${years[0]}–${years[years.length - 1]}` : "";
+  // Sparkline trajectory colour (median/mean/YoY → rising green / falling coral;
+  // lot/built → neutral).
+  const sv = (sparkValues ?? []).map(num);
+  const svFinite = sv.filter((v) => v != null);
+  let stroke = "var(--pa-dim)";
+  if (TREND_METRICS.has(metric) && svFinite.length >= 2) {
+    const dir = svFinite[svFinite.length - 1] - svFinite[0];
+    stroke = dir > 0 ? "var(--pa-up)" : dir < 0 ? "var(--pa-dn)" : "var(--pa-dim)";
+  }
+
+  // Active-metric triplet: value · city baseline · delta (level → relative %, YoY → pp;
+  // lot/built have no city baseline → value only).
+  const cityVal = num(cityBaseline?.[CITY_KEY[metric]]);
+  let delta = null;
+  if (cityVal != null && activeVal != null) {
+    if (metric === "yoy_pct_change") delta = { txt: signedPp(activeVal - cityVal), cls: signCls(activeVal - cityVal) };
+    else if (cityVal !== 0) delta = { txt: signedPct((activeVal - cityVal) / cityVal), cls: signCls(activeVal - cityVal) };
+  }
+  const cityText = cityVal == null ? "—" : (APPROX.has(metric) ? "≈" : "") + activeMetric.fmt(cityVal);
+
+  // This nbhd's condo figures.
+  const condo = num(feature.pct_with_unit);
+  const mexcl = num(feature.avg_assessvalue_without_unit);
+  const lot = num(feature.avg_lotsize);
+
+  const aggregated = state === "aggregated";
 
   return (
-    // aria-live so a screen reader announces the neighbourhood when a click or
-    // search changes the selection. Now an in-flow block accreted into the left
-    // panel below the controls (.pa-detail), no longer a floating right rail; the
-    // .rail-* content classes are unchanged.
     <div className="pa-detail" aria-label="Neighbourhood detail" aria-live="polite">
-      <div className="rail-inner">
-        <section className="rail-detail">
-          <header className="rail-detail-head">
-            <div className="rail-detail-titles">
-              <h2 className="rail-name">{feature.display_name}</h2>
-              {feature.district && (
-                <p className="rail-district">{feature.district} district</p>
-              )}
-            </div>
-            <button
-              type="button"
-              className="rail-clear"
-              onClick={onClear}
-              aria-label="Clear selection"
-              title="Clear selection"
-            >
-              ✕
-            </button>
-          </header>
-
-          {year != null && <p className="rail-year">{year} Assessment</p>}
-          <p className={`rail-state ${state}`}>{meta.label}</p>
-
-          {/* Value sparkline — the active metric across every year for this nbhd.
-              Free: all years are on the resident combined feature. Only meaningful
-              when the nbhd is aggregated (other states carry no per-year values). */}
-          {state === "aggregated" && sparkValues && (
-            <div className="rail-spark">
-              <div className="rail-spark-cap">
-                <span>{activeMetric.label}</span>
-                <span className="rail-spark-years">{yearSpan}</span>
-              </div>
-              <Sparkline
-                values={sparkValues}
-                activeIndex={activeIndex}
-                ariaLabel={`${activeMetric.label}, ${yearSpan}`}
-              />
-            </div>
-          )}
-
-          {state === "aggregated" ? (
-            // Sparkline (above) + the ACTIVE metric headline + only the fields the
-            // spine table does NOT already show (SD assessed, Mean non-unit). The
-            // table-duplicated raw metrics are dropped (D4, note 21; No-Duplication
-            // note 23 — the sparkline↔value pair is the exempt complementary
-            // representation, duplicated raw metrics are not).
-            <dl className="rail-rows">
-              <div className="rail-row headline">
-                <dt className="rail-k">{activeMetric.label}</dt>
-                <dd className="rail-v">{activeMetric.fmt(activeVal)}</dd>
-              </div>
-              {POPUP_ROWS.filter(([key]) => !TABLE_METRIC_KEYS.has(key)).map(([key, label, fmt]) => (
-                <div key={key} className="rail-row">
-                  <dt className="rail-k">{label}</dt>
-                  <dd className="rail-v">{fmt(feature[key])}</dd>
-                </div>
-              ))}
-            </dl>
-          ) : state === "suppressed_low_n" ? (
-            <>
-              <dl className="rail-rows">
-                <div className="rail-row">
-                  <dt className="rail-k">N properties</dt>
-                  <dd className="rail-v">{fmtNumber(feature.n_properties)}</dd>
-                </div>
-                <div className="rail-row">
-                  <dt className="rail-k">Median assessed</dt>
-                  <dd className="rail-v rail-v-muted">suppressed</dd>
-                </div>
-              </dl>
-              <p className="rail-note">{STATE_NOTE.suppressed_low_n}</p>
-            </>
-          ) : (
-            <p className="rail-note">{STATE_NOTE[state] ?? ""}</p>
-          )}
-        </section>
+      <div className="pa-detail-head">
+        <h2 className="pa-detail-name">{feature.display_name}</h2>
+        <button type="button" className="pa-detail-clear" onClick={onClear}
+                aria-label="Clear selection" title="Clear selection">✕</button>
       </div>
+      <p className="pa-detail-sub">
+        {rank != null ? `Rank ${rank} · ` : ""}
+        {parcels != null ? `${fmtNumber(parcels)} parcels` : "— parcels"} · {stateWord}
+      </p>
+
+      {aggregated && sparkValues && (
+        <Sparkline values={sv} stroke={stroke} width={196} height={26}
+                   activeIndex={activeIndex} ariaLabel={`${activeMetric.label} trend`} />
+      )}
+
+      <div className="pa-detail-trip">
+        <div>
+          <div className="pa-trip-l">{activeMetric.label}</div>
+          <div className={`pa-trip-v${aggregated ? "" : " pa-trip-muted"}`}>
+            {aggregated && activeVal != null ? activeMetric.fmt(activeVal) : "—"}
+          </div>
+        </div>
+        <div>
+          <div className="pa-trip-l">City</div>
+          <div className="pa-trip-v">{cityText}</div>
+        </div>
+        <div>
+          <div className="pa-trip-l">Delta</div>
+          <div className={`pa-trip-v ${aggregated ? (delta?.cls ?? "") : ""}`}>
+            {aggregated ? (delta?.txt ?? "—") : "—"}
+          </div>
+        </div>
+      </div>
+
+      {aggregated ? (
+        <div className="pa-detail-condo">
+          <div className="pa-kv"><span className="pa-kv-k">Condo share</span><span className="pa-kv-v">{pctText(condo)}</span></div>
+          <div className="pa-kv"><span className="pa-kv-k">Mean excl. condo</span><span className="pa-kv-v">{mexcl != null ? fmtCurrencyShort(mexcl) : "—"}</span></div>
+          <div className="pa-kv"><span className="pa-kv-k">Lot (non-condo)</span><span className="pa-kv-v">{lot != null ? `${Math.round(lot)} m²` : "—"}</span></div>
+        </div>
+      ) : (
+        <p className="pa-detail-note">{STATE_NOTE[state] ?? meta.label}</p>
+      )}
     </div>
   );
 }

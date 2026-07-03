@@ -973,11 +973,11 @@ export default function PropertyAssessmentMap() {
     url && selectedFeature ? (
       <InfoRail
         feature={selectedFeature}
-        year={year}
         metric={metric}
-        years={years}
         sparkValues={sparkValues}
         activeIndex={activeYearIndex}
+        cityBaseline={cityBaseline}
+        rank={tableRows.find((r) => String(r.id) === String(singleSelectedId))?.rank ?? null}
         onClear={() => setSelectedIds([])}
       />
     ) : null;
