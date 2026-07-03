@@ -935,15 +935,21 @@ p  { margin: 0 0 0.75rem; }
    flex:1 1 0 + a small min-height floor; preserveAspectRatio="none" scales the
    viewBox to whatever height results), so a short viewport shows a shorter chart
    rather than an overflowing/scrolling one. The value-range axis stays fixed. */
-/* TIMESERIES — the active-metric trajectory as a real line chart (TrendChart.jsx). */
-.dt-trend { display: flex; flex-direction: column; gap: 3px; width: 100%; flex: 1 1 auto; min-height: 0; }
-.dt-trend-svg { display: block; width: 100%; flex: 1 1 0; min-height: 18px; max-height: 56px; }
-.dt-trend-ax {
-  flex: 0 0 auto; display: flex; justify-content: space-between; gap: 8px;
-  font-size: 9.5px; color: var(--text-subtle); font-variant-numeric: tabular-nums;
-}
-.dt-trend-years { color: var(--text-muted); }
-.dt-trend--empty { font-size: 11px; color: var(--text-muted); font-style: italic; }
+/* TREND INSTRUMENT (C8) — fills the trend card: header · main SVG · endpoints ·
+   legend · YoY strip. Dark; data flat, per §9. */
+.dt-trend { display: flex; flex-direction: column; gap: 3px; width: 100%; height: 100%; min-height: 0; }
+.dt-trend-head { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.dt-trend-label { font-size: 8px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut); }
+.dt-trend-readout { font-size: 9px; color: #c7cacd; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dt-trend-svg { display: block; width: 100%; flex: 1 1 0; min-height: 44px; }
+.dt-trend-ends { flex: 0 0 auto; display: flex; justify-content: space-between; font-size: 8px; color: var(--pa-mut); font-variant-numeric: tabular-nums; }
+.dt-trend-leg { flex: 0 0 auto; display: flex; gap: 12px; font-size: 8px; color: var(--pa-mut); }
+.dt-trend-leg .dt-sw { display: inline-block; width: 10px; height: 2px; vertical-align: middle; margin-right: 3px; }
+.dt-trend-leg .dt-sw--band { height: 6px; background: var(--pa-up); opacity: 0.2; }
+.dt-trend-yoy { flex: 0 0 auto; border-top: 1px solid var(--pa-hair); padding-top: 4px; margin-top: 1px; }
+.dt-trend-sub { font-size: 8px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut); }
+.dt-trend-yoy-svg { display: block; width: 100%; height: 20px; margin-top: 2px; }
+.dt-trend--empty { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--pa-mut); font-style: italic; }
 
 /* DISTRIBUTION — the citywide histogram with the selection marked (DistributionStrip.jsx). */
 .dt-hist { display: flex; flex-direction: column; gap: 3px; width: 100%; flex: 1 1 auto; min-height: 0; }

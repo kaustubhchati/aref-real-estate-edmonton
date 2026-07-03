@@ -69,7 +69,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import DistributionStrip from "./DistributionStrip.jsx";
-import TrendChart from "./TrendChart.jsx";
+import TrendInstrument from "./TrendInstrument.jsx";
 import ExportMenu from "./ExportMenu.jsx";
 import SegmentedControl from "../../components/SegmentedControl.jsx";
 import Sparkline from "../../components/Sparkline.jsx";
@@ -316,6 +316,34 @@ export default function DataTable({
     if (selectionMode) return data.map((r) => r[metric]).filter((v) => v != null);
     return [];
   }, [singleRow, selectionMode, data, metric]);
+
+  // ---- Trend instrument data (C8) --------------------------------------------
+  // The dashed CITY baseline — the city's active-metric mean per year (drawn for the
+  // S-d/S-e comparison; at N=0 the main line IS the city, so it isn't drawn twice).
+  const cityLine = useMemo(
+    () => years.map((_, i) => {
+      const vals = rows.map((r) => r.series?.[i]).filter((v) => v != null);
+      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    }),
+    [rows, years]
+  );
+  // The min–max ENVELOPE across the selection (N≥2 only) — per-year [min, max].
+  const trendEnvelope = useMemo(() => {
+    if (!selectionMode) return null;
+    return years.map((_, i) => {
+      const vals = data.map((r) => r.series?.[i]).filter((v) => v != null);
+      return vals.length ? [Math.min(...vals), Math.max(...vals)] : null;
+    });
+  }, [selectionMode, data, years]);
+  // The matched-sample YoY per year for the scope (single nbhd / selection mean / city
+  // mean of the per-nbhd yoy_pct_change series) — the trend instrument's YoY strip.
+  const trendYoy = useMemo(() => {
+    const src = singleRow ? [singleRow] : selectionMode ? data : rows;
+    return years.map((_, i) => {
+      const vals = src.map((r) => r.yoySeries?.[i]).filter((v) => v != null);
+      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    });
+  }, [singleRow, selectionMode, data, rows, years]);
 
   // TIMESERIES scope label — the entity the trend/distribution describe.
   const scopeLabel = singleRow
@@ -749,18 +777,17 @@ export default function DataTable({
                   full trend instrument: min–max envelope + dashed city baseline +
                   year cursor + labelled endpoints + YoY strip). ===== */}
               <div className="dt-slot dt-slot--trend">
-                <div className="dt-slot-label">
-                  Trend · {activeCol?.label ?? metricLabel} · {scopeLabel}
-                </div>
-                <div className="dt-slot-body">
-                  <TrendChart
-                    series={plotSeries}
-                    years={years}
-                    activeIndex={activeIndex}
-                    fmt={activeCol?.fmt ?? ((v) => v)}
-                    ariaLabel={`${activeCol?.label ?? metricLabel} trend, ${scopeLabel}`}
-                  />
-                </div>
+                <TrendInstrument
+                  label={`${activeCol?.label ?? metricLabel} · ${scopeLabel}`}
+                  main={plotSeries}
+                  city={selectionMode || singleRow ? cityLine : null}
+                  envelope={trendEnvelope}
+                  yoy={trendYoy}
+                  years={years}
+                  activeIndex={activeIndex}
+                  fmt={activeCol?.fmt ?? ((v) => v)}
+                  scopeName={singleRow ? singleRow.name : selectionMode ? "selection mean" : "city"}
+                />
               </div>
 
               {/* ===== MARGIN — residual width, deliberately empty (the honest

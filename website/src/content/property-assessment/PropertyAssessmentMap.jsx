@@ -683,8 +683,10 @@ export default function PropertyAssessmentMap() {
         yoy_pct_change:     num(p.yoy_pct_change),
         n_properties:       num(p.n_properties),   // parcels — for the console's vs-city slot (D3)
         pct_with_unit:      num(p.pct_with_unit),  // condo share 0–100 — the spine's % Condo column (D4); real all years post D-BE1
-        // The ACTIVE metric across every year — drives the console's timeseries slot (D3).
+        // The ACTIVE metric across every year — drives the console's trend instrument (D3/C8).
         series: years.map((y) => num(gp[`${metric}_${y}`])),
+        // The matched-sample YoY across every year — the trend instrument's YoY strip (C8).
+        yoySeries: years.map((y) => num(gp[`yoy_pct_change_${y}`])),
         rank: null,
       };
     });
