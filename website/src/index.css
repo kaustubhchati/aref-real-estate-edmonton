@@ -1401,6 +1401,15 @@ p  { margin: 0 0 0.75rem; }
 }
 .pa-slider:focus { outline: none; }
 .pa-slider:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+/* C9 — visible keyboard focus for every interactive control (mouse clicks stay quiet
+   via :focus-visible). Shared controls use --accent (both themes); the PA console's
+   dark controls use --pa-up. */
+.seg-btn:focus-visible,
+.opt-toggle-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dt-clear:focus-visible,
+.dt-handle:focus-visible,
+.dt-facet-summary:focus-visible,
+.dt-th-btn:focus-visible { outline: 2px solid var(--pa-up); outline-offset: 2px; border-radius: 4px; }
 /* YEAR: green fill up to the thumb via --pct (matches the dual's fill segment). */
 .pa-year-slider::-webkit-slider-runnable-track {
   background: linear-gradient(to right, var(--accent) var(--pct, 0%), var(--border) var(--pct, 0%));
