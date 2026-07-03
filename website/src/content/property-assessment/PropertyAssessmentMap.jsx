@@ -789,6 +789,28 @@ export default function PropertyAssessmentMap() {
     return () => { map.off("mousemove", "nbhd-fill", onMove); map.off("mouseleave", "nbhd-fill", onLeave); };
   }, [map]);
 
+  // D-P3 B4 — building/ramp harmony. Carto's building fills are a warm TAN (set by
+  // applyAppleClassic) that clashes hue-vs-hue with the choropleth ramp at parcel zoom.
+  // MapLibre has no per-layer blend mode, so approximate a LUMINOSITY blend: drop the
+  // buildings to a neutral warm GREY (hue out → tonal texture) and make `building`
+  // translucent so the ramp reads THROUGH as lightness modulation, not a competing colour.
+  // Colour/opacity only; composes with the choropleth's own F4 zoom-fade (separate layer,
+  // untouched). PA-scoped (runs after applyAppleClassic); guarded.
+  useEffect(() => {
+    if (!map) return;
+    try {
+      if (map.getLayer("building")) {
+        map.setPaintProperty("building", "fill-color", "#d9d6cf");   // neutral warm grey (desaturated)
+        map.setPaintProperty("building", "fill-opacity", 0.6);        // ramp reads through
+      }
+      if (map.getLayer("building-top")) {
+        map.setPaintProperty("building-top", "fill-color", "#e7e3db"); // lighter neutral top face (keeps its zoom opacity ramp)
+      }
+    } catch {
+      /* map mid-teardown */
+    }
+  }, [map]);
+
   // D-P2 F5 — suppress the basemap's OWN neighbourhood labels for the PA view. Carto's
   // place_hamlet (class=neighbourhood) and place_suburbs (class=suburb) label Edmonton
   // neighbourhoods from z12, which DOUBLES our centroid labels (at Carto's point, offset
