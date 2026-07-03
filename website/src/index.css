@@ -1092,7 +1092,8 @@ p  { margin: 0 0 0.75rem; }
   background: var(--card); border: 1px solid var(--hair); border-radius: var(--r-md);
   padding: var(--s2); display: flex; flex-direction: column; gap: 1px; min-width: 0;
 }
-.dt-tile--condo, .dt-card--dist { grid-column: 1 / -1; }   /* full-width tiles */
+.dt-card--dist { grid-column: 1 / -1; }   /* the distribution is the one full-width tile */
+.dt-tile-foot { color: var(--tx-mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dt-tile-l {
   font-size: var(--t-2xs); letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--tx-mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

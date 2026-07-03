@@ -942,11 +942,18 @@ function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, 
         city: cityTxt(city.areaYoY, fmtPct),
         value: s.yoy != null ? fmtPct(s.yoy) : "—", valueCls: signCls(s.yoy),
         delta: pp(s.yoy, city.areaYoY) });
+  // A4 — the CONDO card splits into two EQUAL square tiles (matching Median/Mean): the
+  // vs-city SHARE (lens a) and the condo-stripped view (lens b, "Excluding Condos": the
+  // mean value + lot), so neither is a wide rectangle.
   cards.push({
-    key: "condo", label: "Condo", tag: s.tags.condo, cityScope: s.isCity, condo: true,
+    key: "condo", label: "Condo", tag: s.tags.condo, cityScope: s.isCity,
     city: s.isCity ? null : (city.condoShare != null ? `${cityName ?? "city"} ${pctText(city.condoShare)}` : null),
     value: pctText(s.condo), delta: pp(s.condo, city.condoShare),
-    mexcl: s.mexcl, lot: s.lot,
+  });
+  cards.push({
+    key: "exclcondo", label: "Excluding Condos",
+    value: s.mexcl != null ? fmtCurrencyShort(s.mexcl) : "—",
+    foot: `Lot ${s.lot != null ? `${Math.round(s.lot)} m²` : "—"}`,
   });
 
   return (
@@ -967,36 +974,29 @@ function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, 
   );
 }
 
-// One KPI card: label (+ honesty tag) · city baseline · value · coloured delta, plus
-// the CONDO card's secondary block (Mean excl. condo / Lot non-condo). At city scope
-// the card shows "· City" and no delta (it IS the baseline). Honest em-dashes when a
-// figure is null (suppressed / all-condo).
-function KpiCard({ label, tag, city, value, valueCls, delta, cityScope, cityName, condo, mexcl, lot }) {
+// One KPI square tile: label (+ honesty tag) · big value · footer. The footer is either
+// the city baseline + coloured delta (standard tiles) OR a single `foot` string (the
+// Excluding-Condos tile, whose footer is the non-condo lot). At city scope the label
+// shows "· <City>" and no delta (it IS the baseline). Honest em-dashes on nulls.
+function KpiCard({ label, tag, city, value, valueCls, delta, cityScope, cityName, foot }) {
   return (
-    <div className={`dt-tile${condo ? " dt-tile--condo" : ""}`}>
-      {/* C1 — tile anatomy: label (top) · big value (centre) · city + delta (footer). */}
+    <div className="dt-tile">
+      {/* C1 — tile anatomy: label (top) · big value (centre) · footer. */}
       <div className="dt-tile-l">
         {label}{cityScope ? ` · ${cityName ?? "City"}` : ""}
         {tag && <span className="dt-card-tag"> {tag}</span>}
       </div>
       <div className={`dt-tile-v${valueCls ? " " + valueCls : ""}`}>{value}</div>
       <div className="dt-tile-ft">
-        <span className="dt-tile-city">{city ?? ""}</span>
-        {delta && <span className={`dt-tile-d ${delta.cls}`}>{delta.txt}</span>}
+        {foot != null ? (
+          <span className="dt-tile-foot">{foot}</span>
+        ) : (
+          <>
+            <span className="dt-tile-city">{city ?? ""}</span>
+            {delta && <span className={`dt-tile-d ${delta.cls}`}>{delta.txt}</span>}
+          </>
+        )}
       </div>
-      {/* C4 — two lenses, labelled. The tile value + footer above ARE lens (a): this
-          neighbourhood's condo SHARE vs the city (pp delta). This block is lens (b): the
-          SAME neighbourhood with condos STRIPPED OUT — a different question, so it sits
-          under its own "Excluding condos" label and never reads as more city comparison. */}
-      {condo && (cityScope
-        ? (mexcl != null && <div className="dt-card-note">excl. condos: mean {fmtCurrencyShort(mexcl)}</div>)
-        : (
-          <div className="dt-card-sub">
-            <div className="dt-sub-lens">Excluding condos</div>
-            <div className="dt-kv"><span className="dt-kv-k">Mean value</span><span className="dt-kv-v">{mexcl != null ? fmtCurrencyShort(mexcl) : "—"}</span></div>
-            <div className="dt-kv"><span className="dt-kv-k">Lot size</span><span className="dt-kv-v">{lot != null ? `${Math.round(lot)} m²` : "—"}</span></div>
-          </div>
-        ))}
     </div>
   );
 }
