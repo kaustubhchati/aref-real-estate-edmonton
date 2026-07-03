@@ -749,17 +749,18 @@ p  { margin: 0 0 0.75rem; }
 }
 
 /* FOUR FIXED FRAMES (contract §3.2/§4) — rail | table | trend | margin, packed
-   LEFT: rail (KPI cards ~192px) · table (content-capped, never stretched) · trend
-   (width-bound ~340px) · margin (residual, deliberately empty — the honest gutter).
+   LEFT: rail (KPI cards) · table (content-capped, never stretched) · trend. The
+   retired margin frame's width is absorbed proportionally by the three frames + a
+   fixed RIGHT gutter (the honest empty space is now padding, not a dashed box — B3).
    The frames are INVARIANT to selection; only their interiors change. */
 .dt-grid {
   flex: 1 1 auto; min-height: 0;   /* fills the panel below the header bar (C6) */
   display: grid;
-  grid-template-columns: 192px minmax(0, 640px) 340px 1fr;
+  grid-template-columns: minmax(210px, 0.9fr) minmax(0, 2.5fr) minmax(300px, 1.5fr);
   grid-template-rows: 1fr;
-  grid-template-areas: "rail table trend margin";
-  gap: 11px;
-  padding: 11px 14px;
+  grid-template-areas: "rail table trend";
+  gap: 12px;
+  padding: 11px 20px 11px 14px;   /* the extra RIGHT padding IS the honest gutter (was the margin frame) */
   background: transparent;
 }
 .dt-slot {
@@ -770,12 +771,6 @@ p  { margin: 0 0 0.75rem; }
 .dt-slot--rail   { grid-area: rail; gap: 6px; }
 .dt-slot--table  { grid-area: table; }
 .dt-slot--trend  { grid-area: trend; background: var(--pa-card); border-radius: 9px; padding: 9px 12px; }
-.dt-slot--margin {
-  grid-area: margin;
-  border: 1px dashed var(--pa-hair); border-radius: 9px;
-  align-items: center; justify-content: center;
-  font-size: 9px; color: var(--pa-dim);
-}
 /* Rail interior (C5 turns these into KPI cards): the vs-city figures, then the
    distribution histogram in a card that takes the remaining height. */
 .dt-rail-figures { flex: 0 0 auto; }
@@ -2069,7 +2064,6 @@ p  { margin: 0 0 0.75rem; }
     gap: 8px;
     overflow-y: auto;
   }
-  .dt-slot--margin { display: none; }   /* the honest gutter collapses first on a phone */
   /* Bottom-left so it clears the centred tuning rack + corner controls. */
   .pa-legend { width: 42vw; left: 12px; right: auto; bottom: 10px; }
   .shell-footer-grid { grid-template-columns:1fr; gap:1.25rem; }

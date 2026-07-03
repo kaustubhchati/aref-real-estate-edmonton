@@ -790,10 +790,6 @@ export default function DataTable({
                 />
               </div>
 
-              {/* ===== MARGIN — residual width, deliberately empty (the honest
-                  gutter; a full-width shell ≠ full-width content, §3.2/§4). ===== */}
-              <div className="dt-slot dt-slot--margin" aria-hidden="true">margin</div>
-
             </div>
           </div>
         )}
