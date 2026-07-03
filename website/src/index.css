@@ -1083,29 +1083,46 @@ p  { margin: 0 0 0.75rem; }
 .dt-panel .dt-vs-clear { color: var(--pa-mut); }
 .dt-panel .dt-vs-clear:hover { color: var(--pa-ink); }
 
-/* ---- KPI cards (C5, contract §4/§7) — the rail's fixed card stack ----------- */
-.dt-cards { display: flex; flex-direction: column; gap: 5px; height: 100%; overflow-y: auto; }
-.dt-card { background: var(--pa-card); border-radius: 9px; padding: 7px 10px; flex: 0 0 auto; }
+/* ---- KPI tiles (C1, DESIGN_SYSTEM §6) — compact square-ish tiles in a 2-up grid:
+   label (top) · big value (centre) · city + delta (footer). Kills the wide-card mid-void;
+   CONDO + DISTRIBUTION span full width. --card surface (raised a step), --hair border. */
+.dt-cards {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+  height: 100%; overflow-y: auto; align-content: start;
+}
+.dt-tile {
+  background: var(--card); border: 1px solid var(--hair); border-radius: var(--r-md);
+  padding: var(--s2); display: flex; flex-direction: column; gap: 1px; min-width: 0;
+}
+.dt-tile--condo, .dt-card--dist { grid-column: 1 / -1; }   /* full-width tiles */
+.dt-tile-l {
+  font-size: var(--t-2xs); letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--tx-mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dt-tile-v {
+  font-size: var(--t-lg); font-weight: 500; color: var(--tx);
+  font-variant-numeric: tabular-nums; line-height: 1.15; margin: 1px 0;
+}
+.dt-tile-ft {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 6px;
+  font-size: var(--t-2xs); font-variant-numeric: tabular-nums; min-width: 0;
+}
+.dt-tile-city { color: var(--city); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.dt-tile-d { font-weight: 500; white-space: nowrap; flex: 0 0 auto; }
+/* Shared bits — the distribution card frame + the CONDO secondary block + sign colours. */
+.dt-card { background: var(--card); border: 1px solid var(--hair); border-radius: var(--r-md); padding: 7px 10px; }
 .dt-card-hd { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
-.dt-card-l { font-size: 8px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut); }
-.dt-card-tag { color: var(--pa-dim); text-transform: none; letter-spacing: 0; }
-.dt-card-c { font-size: 9px; color: var(--city); white-space: nowrap; }   /* city baseline = blue (B4) */
-.dt-card-bd { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 1px; }
-.dt-card-v { font-size: 16px; font-weight: 500; color: var(--pa-ink); font-variant-numeric: tabular-nums; }
-.dt-card-d { font-size: 10px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.dt-up { color: var(--pa-up); }
-.dt-dn { color: var(--pa-dn); }
-.dt-card-note { font-size: 9px; color: var(--pa-mut); margin-top: 2px; }
-.dt-card-sub { border-top: 1px solid var(--pa-hair); margin-top: 5px; padding-top: 4px; }
-.dt-kv { display: flex; justify-content: space-between; font-size: 9px; margin-top: 1px; }
-.dt-kv-k { color: var(--pa-mut); }
-.dt-kv-v { color: #c7cacd; font-variant-numeric: tabular-nums; }
-/* The distribution card takes the remaining rail height for its histogram, but with
-   a definite FLOOR (A3): the 3 KPI cards are flex:0 0 auto (unshrinkable), so without
-   a floor this card would shrink to 0 and its content would overflow + clip. min-height
-   54px lets its content shrink-fit; if the KPI cards + this floor exceed the rail, the
-   rail SCROLLS (.dt-cards overflow-y:auto), never clips. */
-.dt-card--dist { flex: 1 1 0; min-height: 60px; display: flex; flex-direction: column; }
+.dt-card-l { font-size: var(--t-2xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--tx-mut); }
+.dt-card-tag { color: var(--tx-dim); text-transform: none; letter-spacing: 0; }
+.dt-up { color: var(--data-up); }
+.dt-dn { color: var(--data-down); }
+.dt-card-note { font-size: var(--t-2xs); color: var(--tx-mut); margin-top: 2px; }
+.dt-card-sub { border-top: 1px solid var(--hair); margin-top: 5px; padding-top: 4px; }
+.dt-kv { display: flex; justify-content: space-between; font-size: var(--t-2xs); margin-top: 1px; }
+.dt-kv-k { color: var(--tx-mut); }
+.dt-kv-v { color: var(--tx); font-variant-numeric: tabular-nums; }
+/* Distribution card — a full-width tile with a floor so the histogram never clips (A3). */
+.dt-card--dist { min-height: 60px; display: flex; flex-direction: column; }
 /* A3 — the histogram body carries NO extra padding (the card already pads); the doubled
    card+body padding was eating the floor and clipping the SVG. With padding:0 + the
    svg's 10px shrink floor, the full histogram (bars + end labels) fits the min-height by

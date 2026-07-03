@@ -926,14 +926,14 @@ function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, 
         delta: pp(s.yoy, city.areaYoY) });
   cards.push({
     key: "condo", label: "Condo", tag: s.tags.condo, cityScope: s.isCity, condo: true,
-    city: s.isCity ? null : (city.condoShare != null ? `city ${pctText(city.condoShare)}` : null),
+    city: s.isCity ? null : (city.condoShare != null ? `${cityName ?? "city"} ${pctText(city.condoShare)}` : null),
     value: pctText(s.condo), delta: pp(s.condo, city.condoShare),
     mexcl: s.mexcl, lot: s.lot,
   });
 
   return (
     <div className="dt-cards">
-      {cards.map((c) => <KpiCard key={c.key} {...c} />)}
+      {cards.map((c) => <KpiCard key={c.key} {...c} cityName={cityName} />)}
       {/* DISTRIBUTION — the 4th card: the citywide histogram with the selection marked. */}
       <div className="dt-card dt-card--dist">
         <div className="dt-card-hd">
@@ -953,19 +953,18 @@ function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, 
 // the CONDO card's secondary block (Mean excl. condo / Lot non-condo). At city scope
 // the card shows "· City" and no delta (it IS the baseline). Honest em-dashes when a
 // figure is null (suppressed / all-condo).
-function KpiCard({ label, tag, city, value, valueCls, delta, cityScope, condo, mexcl, lot }) {
+function KpiCard({ label, tag, city, value, valueCls, delta, cityScope, cityName, condo, mexcl, lot }) {
   return (
-    <div className="dt-card">
-      <div className="dt-card-hd">
-        <span className="dt-card-l">
-          {label}{cityScope ? " · City" : ""}
-          {tag && <span className="dt-card-tag"> {tag}</span>}
-        </span>
-        {city && <span className="dt-card-c">{city}</span>}
+    <div className={`dt-tile${condo ? " dt-tile--condo" : ""}`}>
+      {/* C1 — tile anatomy: label (top) · big value (centre) · city + delta (footer). */}
+      <div className="dt-tile-l">
+        {label}{cityScope ? ` · ${cityName ?? "City"}` : ""}
+        {tag && <span className="dt-card-tag"> {tag}</span>}
       </div>
-      <div className="dt-card-bd">
-        <span className={`dt-card-v${valueCls ? " " + valueCls : ""}`}>{value}</span>
-        {delta && <span className={`dt-card-d ${delta.cls}`}>{delta.txt}</span>}
+      <div className={`dt-tile-v${valueCls ? " " + valueCls : ""}`}>{value}</div>
+      <div className="dt-tile-ft">
+        <span className="dt-tile-city">{city ?? ""}</span>
+        {delta && <span className={`dt-tile-d ${delta.cls}`}>{delta.txt}</span>}
       </div>
       {condo && (cityScope
         ? (mexcl != null && <div className="dt-card-note">excl. mean {fmtCurrencyShort(mexcl)}</div>)
