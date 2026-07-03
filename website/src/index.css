@@ -608,15 +608,20 @@ p  { margin: 0 0 0.75rem; }
   font-family: ui-monospace, Menlo, Consolas, monospace;
 }
 
-/* ----- Single-select detail (Property Assessment) ----- */
-/* Was a floating right rail; now an IN-FLOW block accreted into the left panel
-   below the controls when exactly one neighbourhood is selected. A hairline
-   separates it from the controls above; it fades in. Holds that nbhd's detail +
-   sparkline (InfoRail.jsx). The .rail-* rules below are its content styles. */
+/* ----- Single-select detail (Property Assessment) — the View-mode float ----- */
+/* The S-b detail instrument: a RIGHT-side float below the nav stack, mounted only
+   when exactly one neighbourhood is selected and the console is down (contract
+   §3.1). It holds that nbhd's detail + sparkline (InfoRail.jsx). The .rail-* rules
+   below are its content styles. NOTE: C2 relocates it to the right and keeps the
+   light card skin; C9 re-skins the interior to the dark annex anatomy. */
 .pa-detail {
-  margin-top: 12px; padding-top: 12px;
-  border-top: 1px solid var(--border);
+  position: absolute; right: 12px; top: 46px; z-index: 14;
+  width: 240px; max-width: calc(100vw - 24px);
+  margin: 0; padding: 12px; border-top: 0;
+  background: var(--bg-raised); border: 1px solid var(--sidebar-edge);
+  border-radius: var(--radius-lg); box-shadow: var(--gel-bevel), var(--gel-lift);
   animation: rail-fade-in var(--dur-base) var(--ease);
+  pointer-events: auto;
 }
 @keyframes rail-fade-in { from { opacity: 0; } to { opacity: 1; } }
 .rail-inner { width: 100%; }
@@ -954,25 +959,112 @@ p  { margin: 0 0 0.75rem; }
 }
 .dt-vs-clear:hover { color: var(--text); }
 
-/* ----- Floating top-left chrome (D1) ----- */
-/* The in-flow left panel is GONE — its contents float over the full-bleed map as a
-   top-left cluster that overlays (does not reserve width). A bounded vertical stack:
-   the identity card, then the single-select detail (dock-down), then the About&tips
-   popover. Scrolls internally if the stack outgrows the available height, and stops
-   above the bottom chrome (rack/console) so it never collides with it. */
+/* ============================================================================
+   PA INSTRUMENT COLUMN (contract §3.1/§4) — ONE dark chassis on the left of the
+   full-bleed map: identity → metric → tuning → legend → footer, hairline-
+   separated modules. Replaces the old light floating cluster. Keeps the .pa-float
+   class so chromePadding's live LEFT reserve still measures it (interactions.js
+   :178). Flat dark surfaces — gloss lives on the map chrome; data stays flat (§9).
+   ============================================================================ */
 .pa-float {
-  position: absolute; top: 12px; left: 12px; z-index: 15;
-  width: min(288px, calc(100vw - 24px));
-  max-height: calc(100% - 120px);          /* leave the bottom for the rack/console */
+  position: absolute; left: 10px; top: 10px; bottom: 10px; z-index: 15;
+  width: 196px; box-sizing: border-box;
   overflow-y: auto; overflow-x: hidden;
-  display: flex; flex-direction: column; gap: 10px;
-  /* Wrapper is CLICK-THROUGH so map clicks / shift-drag box-selects pass through the
-     transparent gaps; only the cards/controls below re-enable pointer events. */
-  pointer-events: none;
+  display: flex; flex-direction: column;
+  background: var(--pa-shell); border-radius: 12px; padding: 11px 13px;
+  color: var(--pa-mut); font-size: 11px;
+  pointer-events: auto;
 }
-.pa-float > * { pointer-events: auto; }
-/* Card control margins scoped to the CARD (was .pa-panel) so they hold in the float. */
 .pa-id-card .opt-toggle, .pa-id-card .seg { margin: 0; }
+
+/* ---- Column modules + dark skin -------------------------------------------
+   Hairline-separated modules top→bottom; the footer pins to the bottom via
+   margin-top:auto. The base light identity/info/slider/legend rules are
+   overridden here by the more-specific .pa-column selectors. */
+.pa-col-mod { border-top: 1px solid var(--pa-hair); margin-top: 9px; padding-top: 8px; }
+.pa-col-lab {
+  display: block; margin: 0 0 5px;
+  font-size: 9px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut);
+}
+
+/* IDENTITY module — flatten the old light card into the column. */
+.pa-column .pa-id-card {
+  background: transparent; border: 0; box-shadow: none; border-radius: 0;
+  padding: 0; margin: 0; gap: 8px;
+}
+.pa-column .pa-id-title { font-size: 13px; font-weight: 600; letter-spacing: 0; color: var(--pa-ink); }
+.pa-column .pa-id-cap { font-size: 9px; font-weight: 500; letter-spacing: 0.09em; color: var(--pa-mut); }
+.pa-column .pa-id-year { align-items: baseline; gap: 6px; }
+.pa-column .pa-id-year-value { font-size: 13px; font-weight: 600; color: var(--pa-up); }
+/* City switcher → dark chips (active = green border), matching the annex. */
+.pa-column .opt-toggle-label { display: none; }
+.pa-column .opt-toggle-buttons { display: flex; gap: 5px; }
+.pa-column .opt-toggle-btn {
+  font-family: inherit; font-size: 11px; color: #c7cacd; cursor: pointer;
+  background: transparent; border: 1px solid var(--pa-hair); border-radius: 6px; padding: 2px 9px;
+}
+.pa-column .opt-toggle-btn.active { background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); }
+
+/* METRIC module — vertical chip list, active green-bordered. */
+.pa-col-metric .seg { display: flex; flex-direction: column; gap: 5px; margin: 0; }
+.pa-col-metric .seg-label {
+  margin: 0; font-size: 9px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut);
+}
+.pa-col-metric .seg-options { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; background: transparent; border: 0; padding: 0; }
+.pa-col-metric .seg-icon { display: none; }
+.pa-col-metric .seg-btn {
+  width: auto; display: inline-flex; align-items: center;
+  font-family: inherit; font-size: 11px; color: #c7cacd; cursor: pointer;
+  background: transparent; border: 1px solid var(--pa-hair); border-radius: 6px; padding: 2px 9px;
+}
+.pa-col-metric .seg-btn.active { background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); }
+
+/* TUNING module — dark year slider + dark range slot (portaled RangeFacet). */
+.pa-tune-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.pa-tune-name { flex: 0 0 auto; width: 30px; font-size: 10px; color: var(--pa-mut); }
+.pa-tune-slider { flex: 1 1 auto; width: auto; }
+.pa-tune-year { font-size: 11px; font-weight: 600; color: var(--pa-up); font-variant-numeric: tabular-nums; }
+.pa-column .pa-slider::-webkit-slider-runnable-track { background: var(--pa-hair); }
+.pa-column .pa-slider::-moz-range-track { background: var(--pa-hair); }
+.pa-column .pa-year-slider::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, var(--pa-up) var(--pct, 0%), var(--pa-hair) var(--pct, 0%));
+}
+.pa-column .pa-year-slider::-moz-range-track {
+  background: linear-gradient(to right, var(--pa-up) var(--pct, 0%), var(--pa-hair) var(--pct, 0%));
+}
+.pa-column .pa-slider::-webkit-slider-thumb { background: var(--pa-up); border-color: var(--pa-shell); }
+.pa-column .pa-slider::-moz-range-thumb { background: var(--pa-up); border-color: var(--pa-shell); }
+.pa-column .pa-rack-range-slot { margin-top: 7px; }
+.pa-column .pa-range-slot { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; }
+.pa-column .pa-dual-track { background: var(--pa-hair); }
+.pa-column .pa-dual-fill { background: var(--pa-up); }
+.pa-column .pa-rack-value { color: var(--pa-ink); font-weight: 600; font-size: 11px; white-space: nowrap; }
+.pa-column .pa-rack-label { color: var(--pa-mut); }
+
+/* LEGEND module — flat dark (strip the gel frame; Legend.jsx internals untouched). */
+.pa-col-legend .legend { background: transparent; border: 0; box-shadow: none; border-radius: 0; padding: 0; }
+.pa-col-legend .legend-title { color: var(--pa-mut); }
+.pa-col-legend .legend-lab, .pa-col-legend .legend-lab small { color: var(--pa-mut); }
+
+/* FOOTER module — About & tips + parcel count on one line; the popover is
+   IN-FLOW below (an absolute popover would be clipped by the column's overflow;
+   in-flow lets the column's own scroll contain it). */
+.pa-col-foot { margin-top: auto; display: flex; flex-direction: column; gap: 6px; }
+.pa-foot-line { display: flex; align-items: baseline; gap: 8px; }
+.pa-column .pa-info-btn {
+  background: transparent; border: 0; box-shadow: none; border-radius: 0;
+  color: var(--pa-mut); font-size: 10px; padding: 0; white-space: nowrap;
+}
+.pa-column .pa-info-btn:hover { color: var(--pa-ink); }
+.pa-column .pa-info-pop {
+  position: static; width: 100%; max-width: 100%; padding: 9px 10px;
+  background: var(--pa-card); border: 1px solid var(--pa-hair); border-radius: 6px;
+  box-shadow: none; color: var(--pa-mut);
+}
+.pa-column .pa-hint { color: var(--pa-mut); }
+.pa-column .pa-box-ref { color: var(--pa-mut); }
+.pa-column .pa-box-ref a { color: var(--pa-up); }
+.pa-col-count { font-size: 10px; color: var(--pa-mut); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* About&tips popover — the box-select tip + provenance/naming note, rehomed off the
    dead panel. A small trigger + an in-flow expansion (so the float's scroll contains
@@ -1805,10 +1897,9 @@ p  { margin: 0 0 0.75rem; }
   /* PA on mobile: full-bleed map with the floating cluster narrowed to the phone
      width; the dock stays bounded in the canvas foot. */
   .pa-search-peek-panel { width: min(64vw, 240px); }
-  /* Cap the float shorter on mobile so a tall stack (card + single-select detail)
-     stops well ABOVE the bottom-left legend (which moves left on mobile) — the
-     reserve clears the ~210px legend + a margin; the float scrolls if it must. */
-  .pa-float { width: min(70vw, 288px); max-height: calc(100% - 250px); }
+  /* Narrow the instrument column on a phone; it keeps the base top/bottom:10 full
+     height and scrolls internally if the modules outgrow it. */
+  .pa-float { width: 150px; padding: 9px 10px; max-height: none; }
   .pa-canvas .canvas-wrap { min-height: 0; }
   .pa-rack { width: calc(100vw - 24px); }
   /* The four-slot grid is too tight side-by-side on a phone — STACK it into one

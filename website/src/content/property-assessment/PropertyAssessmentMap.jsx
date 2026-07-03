@@ -34,6 +34,7 @@ import EmptyState from "../../components/EmptyState.jsx";
 import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
 import IdentityCard from "./IdentityCard.jsx";
+import SegmentedControl from "../../components/SegmentedControl.jsx";
 import InfoRail from "./InfoRail.jsx";
 import DataTable from "./DataTable.jsx";
 import SearchPeek from "./SearchPeek.jsx";
@@ -956,22 +957,10 @@ export default function PropertyAssessmentMap() {
 
   return (
     <article className="content-map pa-map">
-      {/* ===== TOP CONTEXT BAR — property count only. The name search moved OUT of
-          here (D5): it's now the ONE unified SearchPeek by the map's zoom stack,
-          driving both the map fly-to AND the table filter. */}
-      <header className="pa-topbar">
-        <div className="pa-topbar-context">
-          {url && (
-            <span className="pa-topbar-sub">
-              {propCount.toLocaleString()} cleaned residential properties
-            </span>
-          )}
-        </div>
-      </header>
-
-      {/* ===== BODY: full-bleed map canvas — NO reserved side column. The controls
-           float over the map as a top-left cluster (.pa-float); the console below
-           can now span the full width. ===== */}
+      {/* ===== FULL-BLEED MAP CANVAS — no reserved column in flow. The instrument
+           column (left) and the console (bottom) float over the map (contract
+           §3.1/§3.2); the map centre stays chrome-free. The old .pa-topbar is
+           gone — the parcel count re-homes to the column footer. ===== */}
       <div className="pa-canvas">
           <div className="canvas-wrap">
             {fetchError && url ? (
@@ -1024,62 +1013,118 @@ export default function PropertyAssessmentMap() {
             )}
           </div>
 
-          {/* ===== FLOATING TOP-LEFT CHROME ===== overlays the map, does not
-              reserve width. Holds: the identity card (title/city/year/metric) —
-              ALWAYS rendered so the city switcher stays reachable even in the
-              Calgary no-data state; the single-select detail when the dock is DOWN
-              (it re-homes into the console when the dock is UP, via the `detail`
-              prop below — never shown twice); and an "About & tips" popover holding
-              the box-select tip + the provenance/naming note (rehomed from the
-              removed left panel). */}
-          <div className="pa-float">
+          {/* ===== INSTRUMENT COLUMN (contract §3.1) — ONE dark chassis on the
+              left: identity → metric → tuning → legend → footer, hairline-
+              separated modules. Keeps the .pa-float class so chromePadding's live
+              left reserve still measures it (interactions.js:178). ALWAYS rendered
+              so the city switcher stays reachable in the Calgary no-data state. ===== */}
+          <div className="pa-float pa-column">
             <IdentityCard
               cities={CITIES}
               city={city}
               onCityChange={changeCity}
               year={year}
               sliderYear={sliderYear}
-              metrics={METRICS}
-              metric={metric}
-              onMetricChange={setMetric}
               hasData={!!url}
-              /* Metric buttons lift away when the console rises — the console's own
-                 spine header then carries the metric selector (D3). */
-              showMetric={!dockOpen}
             />
 
-            {url && !dockOpen && detailRail}
-
             {url && (
-              <div className="pa-info">
-                <button
-                  type="button"
-                  className="pa-info-btn"
-                  aria-expanded={infoOpen}
-                  onClick={() => setInfoOpen((o) => !o)}
-                >
-                  About &amp; tips
-                </button>
-                {infoOpen && (
-                  <div className="pa-info-pop" role="group" aria-label="About and tips">
-                    <p className="pa-hint">Tip: shift-drag the map to select an area.</p>
-                    <p className="pa-box-ref">
-                      <span>Updated {manifest?.last_updated ?? "—"}.</span>{" "}
-                      Some neighbourhoods were renamed (e.g. Oliver → Wîhkwêntôwin, 2025); a
-                      neighbourhood's full history shows under its current name.{" "}
-                      <a
-                        href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Naming Committee
-                      </a>.
-                    </p>
+              <>
+                {/* METRIC module — the down-state home of the metric selector. It
+                    goes DORMANT in Analysis (dockOpen): the chips re-home to the
+                    console header (DataTable spine), never in two places at once.
+                    Same two-conditional-homes mechanic, relocated into the column. */}
+                {!dockOpen && (
+                  <div className="pa-col-mod pa-col-metric">
+                    <SegmentedControl
+                      label="Metric"
+                      options={METRICS}
+                      value={metric}
+                      onChange={setMetric}
+                    />
                   </div>
                 )}
-              </div>
+
+                {/* TUNING module — year slider (same slideYear/sliderYear throttle)
+                    + the metric-range slot. DataTable PORTALS its RangeFacet into
+                    .pa-rack-range-slot (ref below); its TanStack wiring + the
+                    VIEW-only brush stay in the dock. Fixed slot: the range is
+                    disabled (not removed) in selection mode. */}
+                <div className="pa-col-mod pa-col-tuning" role="group" aria-label="Tuning">
+                  <span className="pa-col-lab">⚙ Tuning</span>
+                  {year != null && (
+                    <div className="pa-tune-row">
+                      <span className="pa-tune-name">Year</span>
+                      <input
+                        type="range"
+                        className="pa-slider pa-year-slider pa-tune-slider"
+                        aria-label="Year"
+                        min={yMin}
+                        max={yMax}
+                        step={1}
+                        value={sliderYear ?? year}
+                        style={{ "--pct": yearPct }}
+                        onChange={(e) => slideYear(Number(e.target.value))}
+                      />
+                      <strong className="pa-tune-year">{sliderYear ?? year}</strong>
+                    </div>
+                  )}
+                  <div className="pa-rack-range-slot" ref={setRangeSlot} />
+                </div>
+
+                {/* LEGEND module — relocated from the bottom-right .pa-legend float
+                    into the column (a real relocation, §4). Legend.jsx internals
+                    untouched; the horizontal ramp swaps with the active metric. */}
+                <div className="pa-col-mod pa-col-legend">
+                  <Legend
+                    title={selectedMetric.label}
+                    stops={stops}
+                    format={selectedMetric.fmt}
+                    horizontal
+                    diverging={isYoy}
+                  />
+                </div>
+
+                {/* FOOTER module — About & tips trigger + parcel count (re-homed
+                    here from the removed .pa-topbar). The popover opens upward. */}
+                <div className="pa-col-mod pa-col-foot">
+                  <div className="pa-foot-line">
+                    <button
+                      type="button"
+                      className="pa-info-btn"
+                      aria-expanded={infoOpen}
+                      onClick={() => setInfoOpen((o) => !o)}
+                    >
+                      About &amp; tips
+                    </button>
+                    <span className="pa-col-count">{propCount.toLocaleString()} parcels</span>
+                  </div>
+                  {infoOpen && (
+                    <div className="pa-info-pop" role="group" aria-label="About and tips">
+                      <p className="pa-hint">Tip: shift-drag the map to select an area.</p>
+                      <p className="pa-box-ref">
+                        <span>Updated {manifest?.last_updated ?? "—"}.</span>{" "}
+                        Some neighbourhoods were renamed (e.g. Oliver → Wîhkwêntôwin, 2025); a
+                        neighbourhood's full history shows under its current name.{" "}
+                        <a
+                          href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Naming Committee
+                        </a>.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </div>
+
+          {/* ===== SINGLE-SELECT DETAIL (S-b) — a right-side float below the nav
+              stack, mounted only when exactly one neighbourhood is selected and the
+              console is down. Interior anatomy re-skinned to the annex in C9. ===== */}
+          {url && !dockOpen && detailRail}
 
           {/* UNIFIED SEARCH (D5) — the ONE search control: a magnifier peek sitting
               with the map's zoom stack (top-right). Typing filters the table live
@@ -1095,60 +1140,11 @@ export default function PropertyAssessmentMap() {
             />
           )}
 
-          {/* LEGEND — small card bottom-right; persistent (a map needs its legend
-              while a selection is being analysed). */}
-          {url && (
-            <div className="pa-legend">
-              <Legend
-                title={selectedMetric.label}
-                stops={stops}
-                format={selectedMetric.fmt}
-                horizontal
-                diverging={isYoy}
-              />
-            </div>
-          )}
-
-          {/* CANVAS FOOT — the TUNING RACK rides ABOVE the analysis dock in a
-              bottom-anchored flex column, so the rack's lift tracks the dock's
-              REAL laid-out height (collapsed pill or open panel) with no magic
-              number. pointer-events:none lets map clicks pass between them. */}
+          {/* ===== CONSOLE FOOT — the analysis dock only. The tuning rack moved
+              into the instrument column (contract §3.2), so the console now rises
+              ALONE from the bottom. pointer-events:none lets map clicks pass
+              through the gap around the dock. ===== */}
           <div className="pa-foot">
-            {/* TUNING RACK — one slim fixed band holding every slider (year +
-                value-range), replacing the old floating .pa-year pill (the
-                bottom-centre occluder). A proper bottom band, not a floating
-                pill, so it never occludes the map centre. Present in BOTH dock
-                states. */}
-            {url && (
-              <div className="pa-rack" role="group" aria-labelledby="pa-rack-title">
-                <span className="pa-rack-title" id="pa-rack-title">Tuning</span>
-                {/* YEAR — always live; same slideYear/sliderYear throttle wiring. */}
-                {year != null && (
-                  <div className="pa-rack-slot">
-                    <span className="pa-rack-label">Year</span>
-                    <input
-                      type="range"
-                      className="pa-slider pa-year-slider pa-rack-slider"
-                      aria-label="Year"
-                      min={yMin}
-                      max={yMax}
-                      step={1}
-                      value={sliderYear ?? year}
-                      style={{ "--pct": yearPct }}
-                      onChange={(e) => slideYear(Number(e.target.value))}
-                    />
-                    <strong className="sb-year-value pa-rack-value">{sliderYear ?? year}</strong>
-                  </div>
-                )}
-                {/* RANGE slot — DataTable PORTALS its metric-range slider here
-                    (its TanStack wiring + the VIEW-only brush stay in the dock).
-                    A fixed slot: the range is disabled, not removed, when it
-                    doesn't apply (selection mode). The ref-callback hands the
-                    slot's DOM node down so the portal has a target. */}
-                <div className="pa-rack-range-slot" ref={setRangeSlot} />
-              </div>
-            )}
-
             {/* ANALYSIS DOCK — the handle doubles as the dock toggle (open =
                 dockOpen). Analytical surface over the resident gjView; rows link
                 both ways to the shared selection. Only with data loaded. */}
