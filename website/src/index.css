@@ -718,16 +718,21 @@ p  { margin: 0 0 0.75rem; }
 }
 .dt-panel-wrap.is-open { grid-template-rows: 1fr; }
 
-/* The FULL-WIDTH, height-capped console (D3): a wide, shallow instrument panel that
-   rises from the bottom. overflow:hidden + min-height:0 let the grid-rows transition
-   collapse it to 0. The height CAP is anchored so the assembly (tuning bay + console)
-   top lands at the old "District button" line (~63svh, screenshot-validated) —
-   encoded viewport-relative (not a fixed px), so the map CENTRE always stays visible
-   above the band. rack≈70 + gap≈8 + handle≈28 sit above the panel, hence −106px. */
+/* The FULL-WIDTH, height-capped console (contract §3.2/§5): a wide, shallow
+   instrument panel that rises ALONE from the bottom (the tuning rack moved into the
+   instrument column, C2). overflow:hidden + min-height:0 let the grid-rows
+   transition collapse it to 0.
+   ── BOTTOM-BAND SOURCE OF TRUTH ─────────────────────────────────────────────
+   The band is 37svh: the assembly (handle + panel) TOP lands at ~63svh so the map
+   CENTRE always stays visible above it (viewport-relative, not a fixed px). Only the
+   handle sits above the panel now, so the cap subtracts handle(~28) + a small
+   breathing gap(~8) = 36px — WAS 106px (rack70 + gap8 + handle28); the rack term is
+   gone. chromePadding's CONSOLE_SVH fractions (interactions.js) describe this SAME
+   band and are kept in sync with this cap. */
 .dt-panel {
   overflow: hidden; min-height: 0;
   width: calc(100vw - 16px);
-  max-height: calc(37svh - 106px);
+  max-height: calc(37svh - 36px);
   background: var(--sidebar-bg);
   border: 1px solid var(--sidebar-edge); border-bottom: 0;
   border-radius: 12px 12px 0 0;
