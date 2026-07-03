@@ -711,11 +711,15 @@ export function centroidNameLayer() {
       // step output is a per-feature `tier` case, and text-size 0 hides a tier (0 size = no
       // collision box, so it also frees space). tier 1 (major) labels from the overview,
       // tier 2 (mid) from ~z12.5, tier 3 (all) from ~z14. The overview breathes.
+      // B2 — with the layer filtered to REPORTABLE polygons only (B1 frees collision
+      // budget), fill in earlier: major only at the overview, then EVERY reportable label
+      // eligible from ~z12.5, where the collision engine packs greedily by area sort-key so
+      // any coloured polygon with room on screen gets named.
       "text-size": [
         "step", ["zoom"],
-        ["case", ["==", ["get", "tier"], 1], 11, 0],       // < z12.5: major only
-        12.5, ["case", ["<=", ["get", "tier"], 2], 12, 0], // z12.5–14: major + mid
-        14, 13,                                            // ≥ z14: all
+        ["case", ["==", ["get", "tier"], 1], 11, 0],       // < z11: major only (overview breathes)
+        11,   ["case", ["<=", ["get", "tier"], 2], 12, 0], // z11–12.5: major + mid
+        12.5, 13,                                          // ≥ z12.5: ALL reportable — collision packs
       ],
       "text-font": ["Noto Sans Regular"],
       "text-max-width": 8,

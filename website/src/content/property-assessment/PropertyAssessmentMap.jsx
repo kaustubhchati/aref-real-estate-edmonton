@@ -728,6 +728,24 @@ export default function PropertyAssessmentMap() {
     }
   }, [map, gj]);
 
+  // D-P4 B1 — filter the BASE name layer to REPORTABLE (coloured/aggregated) neighbourhoods
+  // for the ACTIVE YEAR only. Suppressed / non-residential / no-data names never clutter the
+  // overview and their collision budget frees the analyzable set to fill in (B2). The centroid
+  // SOURCE is year-invariant, so the per-year reportable set is applied as a layer FILTER here
+  // (recomputed on year change from gjView's polygon_state). The FOCUS layer stays unfiltered —
+  // hover/selected still names any neighbourhood (the always-label exception).
+  useEffect(() => {
+    if (!map || !gjView || !map.getLayer("nbhd-labels")) return;
+    const reportable = gjView.features
+      .filter((f) => f.properties.polygon_state === "aggregated")
+      .map((f) => String(f.properties["Neighbourhood ID"]));
+    try {
+      map.setFilter("nbhd-labels", ["in", ["get", "Neighbourhood ID"], ["literal", reportable]]);
+    } catch {
+      /* map mid-teardown */
+    }
+  }, [map, gjView]);
+
   // D-P2 F3 — mirror the selection (pinned) onto the centroid source, so a selected
   // neighbourhood keeps its name shown via the focus layer even where the base label
   // was collision-culled. Set-diff, mirroring the polygon `pinned` effect (read-only:
