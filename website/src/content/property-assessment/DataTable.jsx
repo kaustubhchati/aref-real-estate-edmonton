@@ -966,12 +966,17 @@ function KpiCard({ label, tag, city, value, valueCls, delta, cityScope, cityName
         <span className="dt-tile-city">{city ?? ""}</span>
         {delta && <span className={`dt-tile-d ${delta.cls}`}>{delta.txt}</span>}
       </div>
+      {/* C4 — two lenses, labelled. The tile value + footer above ARE lens (a): this
+          neighbourhood's condo SHARE vs the city (pp delta). This block is lens (b): the
+          SAME neighbourhood with condos STRIPPED OUT — a different question, so it sits
+          under its own "Excluding condos" label and never reads as more city comparison. */}
       {condo && (cityScope
-        ? (mexcl != null && <div className="dt-card-note">excl. mean {fmtCurrencyShort(mexcl)}</div>)
+        ? (mexcl != null && <div className="dt-card-note">excl. condos: mean {fmtCurrencyShort(mexcl)}</div>)
         : (
           <div className="dt-card-sub">
-            <div className="dt-kv"><span className="dt-kv-k">Mean excl. condo</span><span className="dt-kv-v">{mexcl != null ? fmtCurrencyShort(mexcl) : "—"}</span></div>
-            <div className="dt-kv"><span className="dt-kv-k">Lot (non-condo)</span><span className="dt-kv-v">{lot != null ? `${Math.round(lot)} m²` : "—"}</span></div>
+            <div className="dt-sub-lens">Excluding condos</div>
+            <div className="dt-kv"><span className="dt-kv-k">Mean value</span><span className="dt-kv-v">{mexcl != null ? fmtCurrencyShort(mexcl) : "—"}</span></div>
+            <div className="dt-kv"><span className="dt-kv-k">Lot size</span><span className="dt-kv-v">{lot != null ? `${Math.round(lot)} m²` : "—"}</span></div>
           </div>
         ))}
     </div>

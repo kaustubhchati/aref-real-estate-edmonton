@@ -1118,6 +1118,9 @@ p  { margin: 0 0 0.75rem; }
 .dt-dn { color: var(--data-down); }
 .dt-card-note { font-size: var(--t-2xs); color: var(--tx-mut); margin-top: 2px; }
 .dt-card-sub { border-top: 1px solid var(--hair); margin-top: 5px; padding-top: 4px; }
+/* C4 — the "excluding condos" lens label: a distinct mini-header so the condo-stripped
+   view never reads as another city comparison. */
+.dt-sub-lens { font-size: var(--t-2xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--tx-dim); margin-bottom: 2px; }
 .dt-kv { display: flex; justify-content: space-between; font-size: var(--t-2xs); margin-top: 1px; }
 .dt-kv-k { color: var(--tx-mut); }
 .dt-kv-v { color: var(--tx); font-variant-numeric: tabular-nums; }
