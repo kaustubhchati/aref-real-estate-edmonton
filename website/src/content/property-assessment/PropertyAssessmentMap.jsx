@@ -662,13 +662,15 @@ export default function PropertyAssessmentMap() {
   useEffect(() => {
     if (!map || !gj) return;
     const next = new Set();
-    // The dim set is EITHER the table's facet view (brush, VIEW-only) OR — in the
-    // S-b₂ state (N≥2 with the console DOWN) — the non-selected polygons, so a
-    // multi-select reads as "outlines + dim" (contract §2/§3.1). brushedIds is always
-    // null in selection mode (the fence), so the two sources never collide.
+    // The dim set is EITHER the table's facet view (brush, VIEW-only) OR — whenever N≥2
+    // are SELECTED — the non-selected polygons, so the selected set's boundaries read for
+    // analysis. A6: this now applies in BOTH the S-b₂ down-state AND Analysis (console up),
+    // not just when the console is down. brushedIds is ALWAYS null in selection mode (the
+    // VIEW-only fence is off), so the two dim channels never collide — they stay separate
+    // code paths (brush branch first) and the SELECTION dim takes precedence by construction.
     const keepIds = brushedIds
       ? brushedIds.map(String)
-      : selectedIds.length >= 2 && !dockOpen
+      : selectedIds.length >= 2
       ? selectedIds.map(String)
       : null;
     if (keepIds) {
