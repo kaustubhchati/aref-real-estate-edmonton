@@ -1114,8 +1114,10 @@ p  { margin: 0 0 0.75rem; }
    :178). Flat dark surfaces — gloss lives on the map chrome; data stays flat (§9).
    ============================================================================ */
 .pa-float {
-  position: absolute; left: 10px; top: 10px; bottom: 10px; z-index: 15;
-  width: 196px; box-sizing: border-box;
+  /* B2 — fit-content height (the chassis ENDS after the footer; no void below the
+     legend), capped at the viewport so it scrolls internally on a short screen. */
+  position: absolute; left: 10px; top: 10px; z-index: 15;
+  width: 228px; max-height: calc(100% - 20px); box-sizing: border-box;
   overflow-y: auto; overflow-x: hidden;
   display: flex; flex-direction: column;
   background: var(--pa-shell); border-radius: 12px; padding: 11px 13px;
@@ -1131,7 +1133,7 @@ p  { margin: 0 0 0.75rem; }
 .pa-col-mod { border-top: 1px solid var(--pa-hair); margin-top: 9px; padding-top: 8px; }
 .pa-col-lab {
   display: block; margin: 0 0 5px;
-  font-size: 9px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut);
+  font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut);
 }
 
 /* IDENTITY module — flatten the old light card into the column. */
@@ -1139,15 +1141,15 @@ p  { margin: 0 0 0.75rem; }
   background: transparent; border: 0; box-shadow: none; border-radius: 0;
   padding: 0; margin: 0; gap: 8px;
 }
-.pa-column .pa-id-title { font-size: 13px; font-weight: 600; letter-spacing: 0; color: var(--pa-ink); }
-.pa-column .pa-id-cap { font-size: 9px; font-weight: 500; letter-spacing: 0.09em; color: var(--pa-mut); }
+.pa-column .pa-id-title { font-size: 14px; font-weight: 600; letter-spacing: 0; color: var(--pa-ink); }
+.pa-column .pa-id-cap { font-size: 10px; font-weight: 500; letter-spacing: 0.09em; color: var(--pa-mut); }
 .pa-column .pa-id-year { align-items: baseline; gap: 6px; }
-.pa-column .pa-id-year-value { font-size: 13px; font-weight: 600; color: var(--pa-up); }
+.pa-column .pa-id-year-value { font-size: 14px; font-weight: 600; color: var(--pa-up); }
 /* City switcher → dark chips (active = green border), matching the annex. */
 .pa-column .opt-toggle-label { display: none; }
 .pa-column .opt-toggle-buttons { display: flex; gap: 5px; }
 .pa-column .opt-toggle-btn {
-  font-family: inherit; font-size: 11px; color: #c7cacd; cursor: pointer;
+  font-family: inherit; font-size: 12px; color: #c7cacd; cursor: pointer;
   background: transparent; border: 1px solid var(--pa-hair); border-radius: 6px; padding: 2px 9px;
 }
 .pa-column .opt-toggle-btn.active { background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); }
@@ -1155,20 +1157,20 @@ p  { margin: 0 0 0.75rem; }
 /* METRIC module — vertical chip list, active green-bordered. */
 .pa-col-metric .seg { display: flex; flex-direction: column; gap: 5px; margin: 0; }
 .pa-col-metric .seg-label {
-  margin: 0; font-size: 9px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut);
+  margin: 0; font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut);
 }
 .pa-col-metric .seg-options { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; background: transparent; border: 0; padding: 0; }
 .pa-col-metric .seg-icon { display: none; }
 .pa-col-metric .seg-btn {
   width: auto; display: inline-flex; align-items: center;
-  font-family: inherit; font-size: 11px; color: #c7cacd; cursor: pointer;
-  background: transparent; border: 1px solid var(--pa-hair); border-radius: 6px; padding: 2px 9px;
+  font-family: inherit; font-size: 12px; color: #c7cacd; cursor: pointer;
+  background: transparent; border: 1px solid var(--pa-hair); border-radius: 6px; padding: 3px 10px;
 }
 .pa-col-metric .seg-btn.active { background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); }
 
 /* TUNING module — dark year slider + dark range slot (portaled RangeFacet). */
 .pa-tune-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-.pa-tune-name { flex: 0 0 auto; width: 30px; font-size: 10px; color: var(--pa-mut); }
+.pa-tune-name { flex: 0 0 auto; width: 34px; font-size: 11px; color: var(--pa-mut); }
 .pa-tune-slider { flex: 1 1 auto; width: auto; }
 .pa-tune-year { font-size: 11px; font-weight: 600; color: var(--pa-up); font-variant-numeric: tabular-nums; flex: 0 0 auto; min-width: 34px; text-align: right; }
 .pa-column .pa-slider::-webkit-slider-runnable-track { background: var(--pa-hair); }
@@ -1201,7 +1203,9 @@ p  { margin: 0 0 0.75rem; }
 /* FOOTER module — About & tips + parcel count on one line; the popover is
    IN-FLOW below (an absolute popover would be clipped by the column's overflow;
    in-flow lets the column's own scroll contain it). */
-.pa-col-foot { margin-top: auto; display: flex; flex-direction: column; gap: 6px; }
+/* B2 — footer flows right after the legend (no margin-top:auto pinning) since the
+   column is now fit-content, so there's no void between the legend and the footer. */
+.pa-col-foot { display: flex; flex-direction: column; gap: 6px; }
 .pa-foot-line { display: flex; align-items: baseline; gap: 8px; }
 .pa-column .pa-info-btn {
   background: transparent; border: 0; box-shadow: none; border-radius: 0;
@@ -1216,7 +1220,7 @@ p  { margin: 0 0 0.75rem; }
 .pa-column .pa-hint { color: var(--pa-mut); }
 .pa-column .pa-box-ref { color: var(--pa-mut); }
 .pa-column .pa-box-ref a { color: var(--pa-up); }
-.pa-col-count { font-size: 10px; color: var(--pa-mut); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pa-col-count { font-size: 11px; color: var(--pa-mut); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* About&tips popover — the box-select tip + provenance/naming note, rehomed off the
    dead panel. A small trigger + an in-flow expansion (so the float's scroll contains
