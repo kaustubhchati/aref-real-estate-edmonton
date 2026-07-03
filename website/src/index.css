@@ -960,7 +960,7 @@ p  { margin: 0 0 0.75rem; }
 
 /* DISTRIBUTION — the citywide histogram with the selection marked (DistributionStrip.jsx). */
 .dt-hist { display: flex; flex-direction: column; gap: 3px; width: 100%; flex: 1 1 auto; min-height: 0; }
-.dt-hist-svg { display: block; width: 100%; flex: 1 1 0; min-height: 16px; max-height: 52px; }
+.dt-hist-svg { display: block; width: 100%; flex: 1 1 0; min-height: 14px; max-height: 52px; }
 .dt-hist-ends {
   flex: 0 0 auto; display: flex; justify-content: space-between; gap: 8px;
   font-size: 9.5px; color: var(--text-subtle); font-variant-numeric: tabular-nums;
@@ -1055,8 +1055,8 @@ p  { margin: 0 0 0.75rem; }
 .dt-panel .dt-vs-clear:hover { color: var(--pa-ink); }
 
 /* ---- KPI cards (C5, contract §4/§7) — the rail's fixed card stack ----------- */
-.dt-cards { display: flex; flex-direction: column; gap: 6px; height: 100%; overflow-y: auto; }
-.dt-card { background: var(--pa-card); border-radius: 9px; padding: 8px 11px; flex: 0 0 auto; }
+.dt-cards { display: flex; flex-direction: column; gap: 5px; height: 100%; overflow-y: auto; }
+.dt-card { background: var(--pa-card); border-radius: 9px; padding: 7px 10px; flex: 0 0 auto; }
 .dt-card-hd { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
 .dt-card-l { font-size: 8px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut); }
 .dt-card-tag { color: var(--pa-dim); text-transform: none; letter-spacing: 0; }
@@ -1071,9 +1071,13 @@ p  { margin: 0 0 0.75rem; }
 .dt-kv { display: flex; justify-content: space-between; font-size: 9px; margin-top: 1px; }
 .dt-kv-k { color: var(--pa-mut); }
 .dt-kv-v { color: #c7cacd; font-variant-numeric: tabular-nums; }
-/* The distribution card takes the remaining rail height for its histogram. */
-.dt-card--dist { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-.dt-card--dist .dt-slot-body { flex: 1 1 auto; min-height: 0; margin-top: 3px; }
+/* The distribution card takes the remaining rail height for its histogram, but with
+   a definite FLOOR (A3): the 3 KPI cards are flex:0 0 auto (unshrinkable), so without
+   a floor this card would shrink to 0 and its content would overflow + clip. min-height
+   54px lets its content shrink-fit; if the KPI cards + this floor exceed the rail, the
+   rail SCROLLS (.dt-cards overflow-y:auto), never clips. */
+.dt-card--dist { flex: 1 1 0; min-height: 54px; display: flex; flex-direction: column; }
+.dt-card--dist .dt-slot-body { flex: 1 1 0; min-height: 0; margin-top: 3px; }
 
 /* ---- Console header bar (C6, contract §4) --------------------------------- */
 .dt-head {
