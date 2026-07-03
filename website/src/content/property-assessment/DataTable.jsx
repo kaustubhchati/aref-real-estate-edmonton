@@ -809,7 +809,7 @@ export default function DataTable({
       {rangeSlot &&
         createPortal(
           <RangeFacet
-            label={activeCol?.label ?? metricLabel}
+            label={activeCol?.header ?? metricLabel}
             fmt={activeCol?.fmt ?? ((v) => v)}
             bounds={rangeBounds}
             value={rangeValue}
@@ -1037,28 +1037,32 @@ function RangeFacet({ label, fmt, bounds, value, onChange, disabled = false }) {
   const pct = (v) => `${((v - min) / (max - min || 1)) * 100}%`;
   return (
     <div className={`pa-rack-slot pa-range-slot${off ? " is-off" : ""}`}>
-      <span className="pa-rack-label">{label}</span>
-      <div className="pa-dual" style={{ "--lo": pct(lo), "--hi": pct(hi) }}>
-        <div className="pa-dual-track" />
-        <div className="pa-dual-fill" />
-        {/* When the thumbs COINCIDE, only the top one is grabbable, so raise whichever
-            must move to separate them: `lo` clamps to ≤ hi (can only go DOWN), `hi`
-            clamps to ≥ lo (can only go UP). So raise lo in the upper half (recovers a
-            stuck [max,max]) and leave hi on top otherwise (recovers [min,min]). */}
-        <input
-          type="range" className="pa-slider pa-dual-input"
-          min={min} max={max} step={step} value={lo} disabled={off}
-          style={{ zIndex: lo > (min + max) / 2 ? 3 : 1 }}
-          aria-label={`${label} minimum`}
-          onChange={(e) => onChange([Math.min(+e.target.value, hi), hi])}
-        />
-        <input
-          type="range" className="pa-slider pa-dual-input"
-          min={min} max={max} step={step} value={hi} disabled={off}
-          style={{ zIndex: 2 }}
-          aria-label={`${label} maximum`}
-          onChange={(e) => onChange([lo, Math.max(+e.target.value, lo)])}
-        />
+      {/* Row 1: label + flexing track. Row 2: the readout on its OWN right-aligned
+          line, so a long value can't push the track or overflow the column (B1). */}
+      <div className="pa-range-top">
+        <span className="pa-rack-label">{label}</span>
+        <div className="pa-dual" style={{ "--lo": pct(lo), "--hi": pct(hi) }}>
+          <div className="pa-dual-track" />
+          <div className="pa-dual-fill" />
+          {/* When the thumbs COINCIDE, only the top one is grabbable, so raise whichever
+              must move to separate them: `lo` clamps to ≤ hi (can only go DOWN), `hi`
+              clamps to ≥ lo (can only go UP). So raise lo in the upper half (recovers a
+              stuck [max,max]) and leave hi on top otherwise (recovers [min,min]). */}
+          <input
+            type="range" className="pa-slider pa-dual-input"
+            min={min} max={max} step={step} value={lo} disabled={off}
+            style={{ zIndex: lo > (min + max) / 2 ? 3 : 1 }}
+            aria-label={`${label} minimum`}
+            onChange={(e) => onChange([Math.min(+e.target.value, hi), hi])}
+          />
+          <input
+            type="range" className="pa-slider pa-dual-input"
+            min={min} max={max} step={step} value={hi} disabled={off}
+            style={{ zIndex: 2 }}
+            aria-label={`${label} maximum`}
+            onChange={(e) => onChange([lo, Math.max(+e.target.value, lo)])}
+          />
+        </div>
       </div>
       <strong className="pa-rack-value">{off ? "—" : `${fmt(lo)} – ${fmt(hi)}`}</strong>
     </div>

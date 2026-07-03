@@ -127,6 +127,7 @@
   --pa-up:    #4ade80;
   --pa-dn:    #f88b6b;
   --pa-sel:   #e8734a;
+  --pa-track-w: 150px;   /* the tuning sliders' track width — one source of truth (B1) */
 
   font: 16px/1.5 var(--font-sans);
   color: var(--text);
@@ -1169,7 +1170,7 @@ p  { margin: 0 0 0.75rem; }
 .pa-tune-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
 .pa-tune-name { flex: 0 0 auto; width: 30px; font-size: 10px; color: var(--pa-mut); }
 .pa-tune-slider { flex: 1 1 auto; width: auto; }
-.pa-tune-year { font-size: 11px; font-weight: 600; color: var(--pa-up); font-variant-numeric: tabular-nums; }
+.pa-tune-year { font-size: 11px; font-weight: 600; color: var(--pa-up); font-variant-numeric: tabular-nums; flex: 0 0 auto; min-width: 34px; text-align: right; }
 .pa-column .pa-slider::-webkit-slider-runnable-track { background: var(--pa-hair); }
 .pa-column .pa-slider::-moz-range-track { background: var(--pa-hair); }
 .pa-column .pa-year-slider::-webkit-slider-runnable-track {
@@ -1181,10 +1182,15 @@ p  { margin: 0 0 0.75rem; }
 .pa-column .pa-slider::-webkit-slider-thumb { background: var(--pa-up); border-color: var(--pa-shell); }
 .pa-column .pa-slider::-moz-range-thumb { background: var(--pa-up); border-color: var(--pa-shell); }
 .pa-column .pa-rack-range-slot { margin-top: 7px; }
-.pa-column .pa-range-slot { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; }
+/* B1 — the range is TWO rows: label + FLEXING track (own row), then the readout on
+   its OWN full-width right-aligned row (a long value can't push the track or wrap). */
+.pa-column .pa-range-slot { display: flex; flex-direction: column; gap: 4px; width: 100%; min-width: 0; align-items: stretch; }
+.pa-range-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.pa-range-top .pa-rack-label { flex: 0 0 auto; white-space: nowrap; }
+.pa-column .pa-dual { flex: 1 1 auto; width: auto; min-width: 0; }
 .pa-column .pa-dual-track { background: var(--pa-hair); }
 .pa-column .pa-dual-fill { background: var(--pa-up); }
-.pa-column .pa-rack-value { color: var(--pa-ink); font-weight: 600; font-size: 11px; white-space: nowrap; }
+.pa-column .pa-rack-value { color: var(--pa-ink); font-weight: 600; font-size: 11px; white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
 .pa-column .pa-rack-label { color: var(--pa-mut); }
 
 /* LEGEND module — flat dark (strip the gel frame; Legend.jsx internals untouched). */
@@ -1399,7 +1405,7 @@ p  { margin: 0 0 0.75rem; }
 
 /* ---- Dual-handle range: two thumbs on ONE track (matches the year slider) --- */
 .pa-range-slot { min-width: 0; }
-.pa-dual { position: relative; flex: 0 0 auto; width: 150px; height: 16px; }
+.pa-dual { position: relative; flex: 0 0 auto; width: var(--pa-track-w); height: 16px; }
 .pa-dual-track {
   position: absolute; top: 50%; left: 0; right: 0; height: 4px; margin-top: -2px;
   border-radius: 999px; background: var(--border);
