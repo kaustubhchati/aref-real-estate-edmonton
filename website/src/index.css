@@ -712,6 +712,7 @@ p  { margin: 0 0 0.75rem; }
 .dt-handle-title { font-weight: 600; }
 .dt-handle-meta { color: var(--pa-mut); font-size: 10.5px; }
 .dt-handle-caret { margin-left: auto; color: var(--pa-mut); }
+.dt-handle-sel { color: var(--pa-sel); font-weight: 600; }   /* "N selected" in b₂ (§3.1) */
 
 /* The animating SHELL — a TRUE height transition via the grid-rows 0fr↔1fr trick,
    so the console rises/collapses smoothly and the handle + tuning rack above it

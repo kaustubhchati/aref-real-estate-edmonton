@@ -590,7 +590,7 @@ export default function DataTable({
         aria-expanded={open}
       >
         <span className="dt-handle-title">Data table</span>
-        <span className="dt-handle-meta">
+        <span className={`dt-handle-meta${selectionMode ? " dt-handle-sel" : ""}`}>
           {selectionMode
             ? `${aggregate.nSelected} selected`
             : `${rows.length} · ${open ? "Analyst view" : "Analyst view · press T"}`}

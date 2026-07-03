@@ -621,8 +621,17 @@ export default function PropertyAssessmentMap() {
   useEffect(() => {
     if (!map || !gj) return;
     const next = new Set();
-    if (brushedIds) {
-      const keep = new Set(brushedIds.map(String));
+    // The dim set is EITHER the table's facet view (brush, VIEW-only) OR — in the
+    // S-b₂ state (N≥2 with the console DOWN) — the non-selected polygons, so a
+    // multi-select reads as "outlines + dim" (contract §2/§3.1). brushedIds is always
+    // null in selection mode (the fence), so the two sources never collide.
+    const keepIds = brushedIds
+      ? brushedIds.map(String)
+      : selectedIds.length >= 2 && !dockOpen
+      ? selectedIds.map(String)
+      : null;
+    if (keepIds) {
+      const keep = new Set(keepIds);
       for (const f of gj.features) {
         const id = String(f.properties["Neighbourhood ID"]);
         if (!keep.has(id)) next.add(id);
@@ -640,7 +649,7 @@ export default function PropertyAssessmentMap() {
     } catch {
       /* map mid-teardown — the next mounted map re-applies via this effect */
     }
-  }, [map, gj, brushedIds]);
+  }, [map, gj, brushedIds, selectedIds, dockOpen]);
 
   // Active-metric series across every year for the single-selected nbhd — the
   // rail sparkline. All years are on the resident combined feature (gj), so this
