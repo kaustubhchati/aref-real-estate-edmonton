@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>PA Mode Contract — Visual Annex (S-E…S-e)</title>
+<style>
+  :root{--shell:#0d0e10;--card:#1a1c1f;--hair:#2a2d31;--tx:#f5f6f7;--mut:#8b8f94;--dim:#6b7076;--up:#4ade80;--dn:#f88b6b;--sel:#e8734a;--map:#f7f1df}
+  body{font-family:-apple-system,system-ui,sans-serif;background:#f2efe6;margin:0;padding:28px;color:#333}
+  h1{font-size:18px} h2{font-size:13px;margin:26px 0 6px;color:#555} .note{font-size:11px;color:#777;margin:2px 0 8px}
+  .vp{position:relative;background:var(--map);border:1px solid #ddd;border-radius:12px;overflow:hidden}
+  .col{position:absolute;left:10px;top:10px;bottom:10px;width:196px;background:var(--shell);border-radius:12px;padding:10px 13px;box-sizing:border-box;display:flex;flex-direction:column;color:var(--mut);font-size:10px}
+  .col .ttl{font-weight:500;font-size:13px;color:var(--tx)} .mod{border-top:1px solid var(--hair);margin-top:8px;padding-top:7px}
+  .lab{font-size:9px;letter-spacing:.09em;color:var(--mut)}
+  .chip{display:inline-block;font-size:11px;border:1px solid var(--hair);border-radius:6px;padding:2px 9px;color:#c7cacd;margin:2px 3px 0 0}
+  .chip.on{background:var(--card);border-color:var(--up);color:var(--up)}
+  .slider{height:3px;background:var(--hair);border-radius:2px;position:relative;flex:1}
+  .th{position:absolute;top:-4px;width:11px;height:11px;background:#3a3d42;border:2px solid #55585e;border-radius:50%;box-sizing:border-box}
+  .row{display:flex;align-items:center;gap:7px;margin-top:7px}
+  .grn{color:var(--up)} .crl{color:var(--dn)} .wht{color:var(--tx)}
+  .ramp{height:7px;border-radius:4px;margin-top:5px;background:linear-gradient(90deg,#fbe3a0,#f5a02e,#ec6f2e,#e0381c,#cc0000)}
+  .rampY{height:7px;border-radius:4px;margin-top:5px;background:linear-gradient(90deg,#08519c,#4393c3 34%,#fbe3a0 44%,#fbe3a0 56%,#d6604d 68%,#cc0000)}
+  .nav{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:4px}
+  .nav span{width:26px;height:26px;background:var(--shell);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#c7cacd;font-size:13px}
+  .handle{position:absolute;left:calc(50% + 96px);transform:translateX(-50%);bottom:8px;background:var(--shell);border-radius:8px 8px 0 0;padding:4px 17px;font-size:11px;color:#c7cacd}
+  .blk{position:absolute;opacity:.55} .sel-poly{border:2.5px solid var(--sel)}
+  .float{position:absolute;right:10px;top:46px;width:212px;background:var(--shell);border-radius:10px;padding:10px 12px;box-sizing:border-box;color:var(--tx)}
+  .kv{display:flex;justify-content:space-between;font-size:10px;margin-top:2px} .kv .k{color:var(--mut)}
+  .trip{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin-top:7px;text-align:center}
+  .trip .l{font-size:8px;color:var(--mut)} .trip .v{font-size:12px;font-weight:500;color:var(--tx)}
+  .console{background:var(--shell);border-radius:12px;overflow:hidden}
+  .chead{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--hair)}
+  .chead .t{font-size:13px;font-weight:500;color:var(--tx)} .chead .s{font-size:9px;color:var(--mut)}
+  .pill{font-size:11px;background:var(--card);border-radius:8px;padding:4px 11px;color:#e8eaec;margin-left:6px}
+  .mchip{font-size:10px;border:1px solid var(--hair);border-radius:999px;padding:1px 9px;color:var(--mut);margin-left:4px}
+  .mchip.on{background:var(--card);border-color:var(--up);color:var(--up)}
+  .cgrid{display:grid;grid-template-columns:192px minmax(0,400px) 340px 1fr;gap:11px;padding:11px 14px}
+  .card{background:var(--card);border-radius:9px;padding:8px 11px;margin-bottom:6px}
+  .card .hd{display:flex;justify-content:space-between;align-items:baseline}
+  .card .hd .l{font-size:8px;letter-spacing:.09em;color:var(--mut)} .card .hd .c{font-size:9px;color:var(--mut)}
+  .card .bd{display:flex;justify-content:space-between;align-items:baseline;margin-top:1px}
+  .card .bd .v{font-size:16px;font-weight:500;color:var(--tx)} .card .bd .d{font-size:10px;font-weight:500}
+  .sub{border-top:1px solid var(--hair);margin-top:5px;padding-top:4px;font-size:9px;color:#c7cacd}
+  table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px;font-variant-numeric:tabular-nums;color:#e8eaec}
+  th{color:var(--mut);font-size:8px;letter-spacing:.07em;text-align:right;padding:4px 4px;font-weight:500}
+  th:first-child,td:first-child{text-align:left;padding-left:7px} td{text-align:right;padding:5px 4px}
+  tr.sel{outline:1.5px solid var(--sel);outline-offset:-1.5px;background:#16181b} tr.sel td:first-child{color:var(--tx);font-weight:500}
+  tr.sup{color:var(--dim)}
+  .tpanel{background:var(--card);border-radius:9px;padding:9px 12px;display:flex;flex-direction:column}
+  .margin{border:1px dashed var(--hair);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--dim)}
+  .leg{display:flex;gap:12px;font-size:8px;color:var(--mut);margin-top:2px}
+  .sw{display:inline-block;width:10px;height:2px;vertical-align:middle;margin-right:3px}
+</style></head><body>
+<h1>PA Mode Contract — Visual Annex</h1>
+<p class="note">Reference truth for the seven states. Frames are invariant; only interiors change. Sentence case here is a tool artifact — product typography is Title Case. Tokens: shell #0d0e10 · card #1a1c1f · hairline #2a2d31 · text #f5f6f7 · muted #8b8f94 · up #4ade80 · down #f88b6b · selection #e8734a. Map cartography (cream + ramps) untouched.</p>
+
+<h2>S-E · No data (Calgary / unlisted year)</h2>
+<p class="note">Column persists: identity + switcher only; metric/tuning/legend hidden. Canvas = EmptyState copy. No nav, no handle.</p>
+<div class="vp" style="height:120px;background:#efeadb">
+  <div class="col" style="width:176px"><div class="ttl">Property assessment</div>
+    <div style="margin-top:6px"><span class="chip">Edmonton</span><span class="chip on">Calgary</span></div>
+    <div style="margin-top:8px;color:var(--dim)">metric · tuning · legend hidden</div></div>
+  <div style="position:absolute;left:210px;right:16px;top:50%;transform:translateY(-50%);text-align:center;color:#8b8f94;font-size:12px">Calgary data is coming soon.</div>
+</div>
+
+<h2>S-a · Display, idle (Down · N=0)</h2>
+<p class="note">Full column (identity → metric → tuning → legend → footer). Map centre carries zero chrome. Handle bottom. Nav right-top.</p>
+<div class="vp" style="height:300px">
+  <div class="blk" style="left:42%;top:10%;width:14%;height:28%;background:#e8a35c"></div>
+  <div class="blk" style="left:58%;top:22%;width:12%;height:24%;background:#d85a30"></div>
+  <div class="blk" style="left:38%;top:52%;width:11%;height:24%;background:#f0c987"></div>
+  <div class="blk" style="left:64%;top:38%;width:22%;height:44%;border-left:5px solid #a9d3e8;border-radius:40% 0 0 60%"></div>
+  <div class="col">
+    <div class="ttl">Property assessment</div>
+    <div style="margin-top:6px"><span class="chip on">Edmonton</span><span class="chip">Calgary</span></div>
+    <div class="mod"><span class="lab">METRIC</span><div style="display:flex;flex-direction:column;align-items:flex-start"><span class="chip on">Median value</span><span class="chip">Mean value</span><span class="chip">YoY %</span></div></div>
+    <div class="mod"><span class="lab">⚙ TUNING</span>
+      <div class="row"><span style="width:30px">Year</span><span class="slider"><span class="th" style="right:0"></span></span><span class="grn" style="font-size:11px;font-weight:500">2026</span></div>
+      <div class="row"><span style="width:30px">Median</span><span class="slider"><span class="th" style="left:8%"></span><span class="th" style="right:6%"></span></span></div>
+      <div class="wht" style="text-align:right;font-weight:500;margin-top:3px">$127k – $884k</div></div>
+    <div class="mod"><span class="lab">LEGEND · MEDIAN VALUE</span><div class="ramp"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:3px"><span>$104k</span><span>$1.23M</span></div>
+      <div class="lab" style="margin-top:6px">WHEN YOY ACTIVE:</div><div class="rampY"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:2px"><span>−E</span><span>−1 · +1</span><span>+E</span></div></div>
+    <div class="mod" style="margin-top:auto">About and tips · 365,149 parcels</div>
+  </div>
+  <div class="nav"><span>🔍</span><span>+</span><span>−</span></div>
+  <div class="handle">Data table · 403 · <span class="grn">Analyst view ▴</span></div>
+</div>
+
+<h2>S-b · View (Down · N=1)</h2>
+<p class="note">Same grid + detail instrument (right, below nav). Interior: name · rank/parcels/state · sparkline · value/city/delta · condo block. Suppressed single-select: state label + honest em-dashes.</p>
+<div class="vp" style="height:280px">
+  <div class="blk" style="left:42%;top:10%;width:14%;height:28%;background:#e8a35c;opacity:.32"></div>
+  <div class="blk" style="left:64%;top:38%;width:22%;height:44%;border-left:5px solid #a9d3e8;border-radius:40% 0 0 60%;opacity:.32"></div>
+  <div class="blk sel-poly" style="left:48%;top:32%;width:12%;height:18%;background:#f0c987;opacity:1"></div>
+  <div class="col" style="width:176px"><div class="ttl">Property assessment</div>
+    <div style="font-size:10px;margin-top:2px">Edmonton · <span class="grn">2026</span></div>
+    <div style="margin-top:8px;color:var(--dim)">metric · tuning · legend<br>(frames unchanged)</div></div>
+  <div class="nav"><span>🔍</span></div>
+  <div class="float">
+    <div style="font-weight:500;font-size:12px">Wîhkwêntôwin</div>
+    <div style="font-size:9px;color:var(--mut)">Rank 274 · 7,475 parcels · reportable</div>
+    <svg viewBox="0 0 188 26" style="width:100%;height:26px;margin-top:5px"><polyline points="2,8 24,9 46,11 68,10 90,13 112,15 134,14 156,17 186,19" fill="none" stroke="#4ade80" stroke-width="1.4"/><circle cx="186" cy="19" r="2.3" fill="#4ade80"/></svg>
+    <div class="trip"><div><div class="l">MEDIAN</div><div class="v">$167K</div></div><div><div class="l">CITY</div><div class="v">≈$323K</div></div><div><div class="l">DELTA</div><div class="v crl">−48%</div></div></div>
+    <div class="sub"><div class="kv"><span class="k">Condo share</span><span class="wht" style="font-weight:500">98%</span></div>
+    <div class="kv"><span class="k">Mean excl. condo</span><span>$412K</span></div>
+    <div class="kv"><span class="k">Lot (non-condo)</span><span>296 m²</span></div></div>
+  </div>
+  <div class="handle">Data table · 403 · <span class="grn">Analyst view ▴</span></div>
+</div>
+
+<h2>S-b₂ · Multi-select, console down (Down · N≥2)</h2>
+<p class="note">Outlined members + dimmed non-selection ONLY. No detail instrument (aggregate reading = Analysis). Range slider inert (is-off). Handle shows count in selection coral.</p>
+<div class="vp" style="height:170px">
+  <div class="blk" style="left:64%;top:30%;width:22%;height:50%;border-left:5px solid #a9d3e8;border-radius:40% 0 0 60%;opacity:.14"></div>
+  <div class="blk sel-poly" style="left:42%;top:16%;width:13%;height:28%;background:#e8a35c;opacity:1"></div>
+  <div class="blk sel-poly" style="left:57%;top:26%;width:11%;height:26%;background:#d85a30;opacity:1"></div>
+  <div class="blk sel-poly" style="left:46%;top:54%;width:11%;height:26%;background:#f0c987;opacity:1"></div>
+  <div class="col" style="width:176px"><div class="ttl">Property assessment</div>
+    <div style="margin-top:8px;color:var(--dim)">column unchanged;<br>range slider dims (selection mode)</div></div>
+  <div class="handle">Data table · <span style="color:var(--sel)">15 selected</span> · <span class="grn">Analyst view ▴</span></div>
+</div>
+
+<h2>S-c · Analysis, city scope (Up · N=0)</h2>
+<p class="note">Console alone from bottom; column persists above (metric dormant → header chips). Cards = baselines, no deltas. Trend = city line only + year cursor.</p>
+<div class="console">
+  <div class="chead"><div><span class="t">All 403 neighbourhoods</span><span class="mchip on">Median</span><span class="mchip">Mean</span><span class="mchip">YoY %</span></div>
+  <div><span class="pill">District ▾</span><span class="pill">Export</span></div></div>
+  <div class="cgrid">
+    <div>
+      <div class="card"><div class="hd"><span class="l">MEDIAN · CITY</span></div><div class="bd"><span class="v">≈$425K</span></div></div>
+      <div class="card"><div class="hd"><span class="l">YOY · CITY</span></div><div class="bd"><span class="v grn">+6.5%</span></div></div>
+      <div class="card"><div class="hd"><span class="l">CONDO · CITY</span></div><div class="bd"><span class="v">26%</span><span style="font-size:9px;color:var(--mut)">excl. mean $486K</span></div></div>
+      <div class="card"><div class="hd"><span class="l">DISTRIBUTION · MEDIAN</span></div>
+        <svg viewBox="0 0 164 28" style="width:100%;height:28px;margin-top:3px"><rect x="4" y="18" width="8" height="10" fill="#3a4048"/><rect x="14" y="10" width="8" height="18" fill="#3a4048"/><rect x="24" y="4" width="8" height="24" fill="#3a4048"/><rect x="34" y="8" width="8" height="20" fill="#3a4048"/><rect x="44" y="14" width="8" height="14" fill="#3a4048"/><rect x="54" y="18" width="8" height="10" fill="#3a4048"/><rect x="64" y="21" width="8" height="7" fill="#3a4048"/><rect x="74" y="23" width="8" height="5" fill="#3a4048"/><rect x="84" y="25" width="8" height="3" fill="#3a4048"/></svg></div>
+    </div>
+    <div>
+      <table><colgroup><col style="width:28%"><col style="width:13%"><col style="width:12%"><col style="width:11%"><col style="width:11%"><col style="width:12%"><col style="width:13%"></colgroup>
+        <thead><tr><th>NEIGHBOURHOOD</th><th style="color:var(--up)">MEDIAN</th><th>MEAN</th><th>% CONDO</th><th>BUILT</th><th>YOY</th><th>TREND</th></tr></thead>
+        <tbody>
+          <tr><td>Abbottsfield</td><td>$150K</td><td>$153K</td><td>100%</td><td>1972</td><td class="grn">+1.7%</td><td><svg viewBox="0 0 40 10" style="width:40px;height:10px"><polyline points="1,7 12,6 24,5 39,4" fill="none" stroke="#4ade80" stroke-width="1.2"/></svg></td></tr>
+          <tr><td>Albany</td><td>$180K</td><td>$255K</td><td>51%</td><td>2013</td><td class="grn">+79.7%</td><td><svg viewBox="0 0 40 10" style="width:40px;height:10px"><polyline points="1,9 12,7 24,4 39,1" fill="none" stroke="#4ade80" stroke-width="1.2"/></svg></td></tr>
+          <tr class="sup"><td>Yellowhead C. East</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        </tbody></table>
+    </div>
+    <div class="tpanel"><div class="hd" style="display:flex;justify-content:space-between"><span class="l" style="font-size:8px;letter-spacing:.09em;color:var(--mut)">TREND · MEDIAN · CITY</span><span style="font-size:9px;color:#c7cacd">2026 · $425K</span></div>
+      <svg viewBox="0 0 300 92" style="width:100%;height:92px;margin-top:5px"><line x1="8" y1="80" x2="292" y2="80" stroke="#2a2d31"/><polyline points="8,70 48,68 88,63 128,64 168,56 208,48 248,38 292,28" fill="none" stroke="#4ade80" stroke-width="2"/><line x1="292" y1="10" x2="292" y2="80" stroke="#e8734a" stroke-width="1.2"/><text x="8" y="90" font-size="8" fill="#8b8f94">2012 · $268K</text><text x="230" y="90" font-size="8" fill="#8b8f94">2026 · $425K</text></svg>
+      <div class="sub" style="margin-top:6px"><span class="l" style="font-size:8px;letter-spacing:.09em;color:var(--mut)">YOY · MATCHED SAMPLE</span>
+      <svg viewBox="0 0 300 22" style="width:100%;height:22px;margin-top:2px"><line x1="0" y1="11" x2="300" y2="11" stroke="#2a2d31"/><rect x="8" y="6" width="12" height="5" fill="#4ade80"/><rect x="29" y="5" width="12" height="6" fill="#4ade80"/><rect x="50" y="11" width="12" height="4" fill="#f88b6b"/><rect x="71" y="7" width="12" height="4" fill="#4ade80"/><rect x="92" y="11" width="12" height="5" fill="#f88b6b"/><rect x="113" y="8" width="12" height="3" fill="#4ade80"/><rect x="134" y="11" width="12" height="3" fill="#f88b6b"/><rect x="155" y="6" width="12" height="5" fill="#4ade80"/><rect x="176" y="4" width="12" height="7" fill="#4ade80"/><rect x="197" y="7" width="12" height="4" fill="#4ade80"/><rect x="218" y="11" width="12" height="2" fill="#f88b6b"/><rect x="239" y="5" width="12" height="6" fill="#4ade80"/><rect x="260" y="4" width="12" height="7" fill="#4ade80"/></svg></div>
+    </div>
+    <div class="margin">margin</div>
+  </div>
+</div>
+
+<h2>S-d · Analysis, one neighbourhood (Up · N=1)</h2>
+<p class="note">Header carries identity (name · rank · parcels · state) + chips + Clear/Export. Cards value/city/delta; CONDO secondary block. Trend = neighbourhood (coral if declining) vs dashed city; no envelope. Selected row coral-outlined, top-scrolled, order preserved.</p>
+<div class="console">
+  <div class="chead"><div><span class="t">Wîhkwêntôwin</span><span class="s" style="margin-left:8px">rank 274 · 7,475 parcels · reportable</span><span class="mchip on">Median</span><span class="mchip">YoY %</span></div>
+  <div><span class="pill">× Clear</span><span class="pill">Export</span></div></div>
+  <div class="cgrid">
+    <div>
+      <div class="card"><div class="hd"><span class="l">MEDIAN</span><span class="c">city ≈$425K</span></div><div class="bd"><span class="v">$167K</span><span class="d crl">−61%</span></div></div>
+      <div class="card"><div class="hd"><span class="l">YOY</span><span class="c">city +6.5%</span></div><div class="bd"><span class="v crl">−0.6%</span><span class="d crl">−7.1pp</span></div></div>
+      <div class="card"><div class="hd"><span class="l">CONDO</span><span class="c">city 26%</span></div><div class="bd"><span class="v">98%</span><span class="d grn">+72pp</span></div>
+        <div class="sub"><div class="kv"><span class="k">Mean excl. condo</span><span>$412K</span></div><div class="kv"><span class="k">Lot (non-condo)</span><span>296 m²</span></div></div></div>
+      <div class="card"><div class="hd"><span class="l">DISTRIBUTION</span></div>
+        <svg viewBox="0 0 164 24" style="width:100%;height:24px;margin-top:2px"><rect x="4" y="15" width="8" height="8" fill="#3a4048"/><rect x="14" y="9" width="8" height="14" fill="#3a4048"/><rect x="24" y="3" width="8" height="20" fill="#3a4048"/><rect x="34" y="7" width="8" height="16" fill="#3a4048"/><rect x="44" y="12" width="8" height="11" fill="#3a4048"/><rect x="54" y="15" width="8" height="8" fill="#3a4048"/><line x1="15" y1="1" x2="15" y2="23" stroke="#e8734a" stroke-width="1.5"/></svg></div>
+    </div>
+    <div>
+      <table><colgroup><col style="width:28%"><col style="width:13%"><col style="width:12%"><col style="width:11%"><col style="width:11%"><col style="width:12%"><col style="width:13%"></colgroup>
+        <thead><tr><th>NEIGHBOURHOOD</th><th style="color:var(--up)">MEDIAN</th><th>MEAN</th><th>% CONDO</th><th>BUILT</th><th>YOY</th><th>TREND</th></tr></thead>
+        <tbody>
+          <tr class="sel"><td>Wîhkwêntôwin</td><td>$167K</td><td>$216K</td><td>98%</td><td>1979</td><td class="crl">−0.6%</td><td><svg viewBox="0 0 40 10" style="width:40px;height:10px"><polyline points="1,3 12,4 24,6 39,7" fill="none" stroke="#f88b6b" stroke-width="1.2"/></svg></td></tr>
+          <tr><td>York</td><td>$344K</td><td>$320K</td><td>19%</td><td>1967</td><td class="grn">+8.5%</td><td><svg viewBox="0 0 40 10" style="width:40px;height:10px"><polyline points="1,8 12,7 24,5 39,3" fill="none" stroke="#4ade80" stroke-width="1.2"/></svg></td></tr>
+        </tbody></table>
+      <div style="font-size:8px;color:var(--dim);padding:4px 7px">selected row top-scrolled · order preserved</div>
+    </div>
+    <div class="tpanel"><div style="display:flex;justify-content:space-between"><span style="font-size:8px;letter-spacing:.09em;color:var(--mut)">TREND · MEDIAN · VS CITY</span><span style="font-size:9px;color:#c7cacd">2019 · $158K</span></div>
+      <svg viewBox="0 0 300 82" style="width:100%;height:82px;margin-top:5px"><line x1="8" y1="70" x2="292" y2="70" stroke="#2a2d31"/><polyline points="8,40 48,39 88,42 128,41 168,46 208,48 248,47 292,51" fill="none" stroke="#f88b6b" stroke-width="2"/><polyline points="8,54 48,51 88,47 128,48 168,40 208,33 248,25 292,17" fill="none" stroke="#5b6167" stroke-width="1.3" stroke-dasharray="3 3"/><line x1="168" y1="8" x2="168" y2="70" stroke="#e8734a" stroke-width="1.2"/><text x="8" y="80" font-size="8" fill="#8b8f94">2012</text><text x="272" y="80" font-size="8" fill="#8b8f94">2026</text></svg>
+      <div class="leg"><span><span class="sw" style="background:#f88b6b"></span>Wîhkwêntôwin</span><span><span class="sw" style="background:#5b6167"></span>city</span></div>
+      <div class="sub" style="margin-top:5px"><span style="font-size:8px;letter-spacing:.09em;color:var(--mut)">YOY · MATCHED</span>
+      <svg viewBox="0 0 300 20" style="width:100%;height:20px;margin-top:2px"><line x1="0" y1="10" x2="300" y2="10" stroke="#2a2d31"/><rect x="8" y="7" width="11" height="3" fill="#4ade80"/><rect x="28" y="10" width="11" height="3" fill="#f88b6b"/><rect x="48" y="8" width="11" height="2" fill="#4ade80"/><rect x="68" y="10" width="11" height="4" fill="#f88b6b"/><rect x="88" y="6" width="11" height="4" fill="#4ade80"/><rect x="108" y="10" width="11" height="2" fill="#f88b6b"/><rect x="128" y="7" width="11" height="3" fill="#4ade80"/><rect x="148" y="10" width="11" height="3" fill="#f88b6b"/><rect x="168" y="8" width="11" height="2" fill="#4ade80"/><rect x="188" y="10" width="11" height="2" fill="#f88b6b"/><rect x="208" y="9" width="11" height="1" fill="#4ade80"/><rect x="228" y="10" width="11" height="1" fill="#f88b6b"/><rect x="248" y="10" width="11" height="2" fill="#f88b6b"/></svg></div>
+    </div>
+    <div class="margin">margin</div>
+  </div>
+</div>
+
+<h2>S-e · Analysis, aggregate (Up · N≥2)</h2>
+<p class="note">Cards carry honesty tags inline (≈ of medians / parcel-weighted · exact / weighted). CONDO aggregate parcel-weighted; excl.-condo figures non-condo-weighted (Σnc·x/Σnc; all-condo ⇒ —). Trend = selection mean + min–max envelope + dashed city. Distribution = selection band. Export scoped to selection.</p>
+<div class="console">
+  <div class="chead"><div><span class="t">15 neighbourhoods selected</span><span class="mchip on">Median</span><span class="mchip">Mean</span></div>
+  <div><span class="pill">District ▾</span><span class="pill">× Clear</span><span class="pill">Export</span></div></div>
+  <div class="cgrid">
+    <div>
+      <div class="card"><div class="hd"><span class="l">MEDIAN <span style="color:var(--dim)">≈ of medians</span></span><span class="c">city $425K</span></div><div class="bd"><span class="v">$372K</span><span class="d crl">−12.5%</span></div></div>
+      <div class="card"><div class="hd"><span class="l">MEAN <span style="color:var(--dim)">parcel-weighted · exact</span></span><span class="c">city $440K</span></div><div class="bd"><span class="v">$386K</span><span class="d crl">−12.3%</span></div></div>
+      <div class="card"><div class="hd"><span class="l">CONDO <span style="color:var(--dim)">weighted</span></span><span class="c">city 26%</span></div><div class="bd"><span class="v">11%</span><span class="d crl">−15pp</span></div>
+        <div class="sub"><div class="kv"><span class="k">Mean excl. condo</span><span>$401K</span></div><div class="kv"><span class="k">Lot (non-condo)</span><span>612 m²</span></div></div></div>
+      <div class="card"><div class="hd"><span class="l">DISTRIBUTION</span></div>
+        <svg viewBox="0 0 164 24" style="width:100%;height:24px;margin-top:2px"><rect x="4" y="15" width="8" height="8" fill="#3a4048"/><rect x="14" y="9" width="8" height="14" fill="#3a4048"/><rect x="24" y="3" width="8" height="20" fill="#3a4048"/><rect x="34" y="7" width="8" height="16" fill="#3a4048"/><rect x="44" y="12" width="8" height="11" fill="#3a4048"/><rect x="54" y="15" width="8" height="8" fill="#3a4048"/><rect x="40" y="1" width="18" height="22" fill="#4ade80" opacity=".15"/></svg></div>
+    </div>
+    <div>
+      <table><colgroup><col style="width:28%"><col style="width:13%"><col style="width:12%"><col style="width:11%"><col style="width:11%"><col style="width:12%"><col style="width:13%"></colgroup>
+        <thead><tr><th>NEIGHBOURHOOD</th><th style="color:var(--up)">MEDIAN</th><th>MEAN</th><th>% CONDO</th><th>BUILT</th><th>YOY</th><th>TREND</th></tr></thead>
+        <tbody>
+          <tr class="sel"><td>Killarney</td><td>$307K</td><td>$299K</td><td>6%</td><td>1959</td><td class="crl">−2.6%</td><td><svg viewBox="0 0 40 10" style="width:40px;height:10px"><polyline points="1,4 12,5 24,7 39,8" fill="none" stroke="#f88b6b" stroke-width="1.2"/></svg></td></tr>
+          <tr><td>Aldergrove</td><td>$420K</td><td>$368K</td><td>4%</td><td>1976</td><td class="grn">+7.3%</td><td><svg viewBox="0 0 40 10" style="width:40px;height:10px"><polyline points="1,8 12,7 24,5 39,4" fill="none" stroke="#4ade80" stroke-width="1.2"/></svg></td></tr>
+          <tr><td>Glenwood</td><td>$333K</td><td>$309K</td><td>7%</td><td>1971</td><td class="grn">+12.0%</td><td><svg viewBox="0 0 40 10" style="width:40px;height:10px"><polyline points="1,10 12,8 24,5 39,2" fill="none" stroke="#4ade80" stroke-width="1.2"/></svg></td></tr>
+        </tbody></table>
+      <div style="font-size:8px;color:var(--dim);padding:4px 7px">constituents auditable · export scoped to selection</div>
+    </div>
+    <div class="tpanel"><div style="display:flex;justify-content:space-between"><span style="font-size:8px;letter-spacing:.09em;color:var(--mut)">TREND · SELECTION VS CITY</span><span style="font-size:9px;color:#c7cacd">2019 · $341K</span></div>
+      <svg viewBox="0 0 300 84" style="width:100%;height:84px;margin-top:5px"><line x1="8" y1="72" x2="292" y2="72" stroke="#2a2d31"/><polygon points="8,56 48,53 88,48 128,50 168,42 208,34 292,24 292,62 208,66 168,68 128,69 88,68 48,67 8,68" fill="#4ade80" opacity=".10"/><polyline points="8,50 48,47 88,43 128,45 168,37 208,30 292,20" fill="none" stroke="#5b6167" stroke-width="1.3" stroke-dasharray="3 3"/><polyline points="8,61 48,58 88,54 128,56 168,50 208,43 292,34" fill="none" stroke="#4ade80" stroke-width="2"/><line x1="146" y1="8" x2="146" y2="72" stroke="#e8734a" stroke-width="1.2"/><text x="8" y="82" font-size="8" fill="#8b8f94">2012</text><text x="272" y="82" font-size="8" fill="#8b8f94">2026</text></svg>
+      <div class="leg"><span><span class="sw" style="background:#4ade80"></span>selection mean</span><span><span class="sw" style="background:#5b6167"></span>city</span><span><span class="sw" style="background:#4ade80;opacity:.2;height:6px"></span>min–max of 15</span></div>
+      <div class="sub" style="margin-top:5px"><span style="font-size:8px;letter-spacing:.09em;color:var(--mut)">YOY · MATCHED</span>
+      <svg viewBox="0 0 300 20" style="width:100%;height:20px;margin-top:2px"><line x1="0" y1="10" x2="300" y2="10" stroke="#2a2d31"/><rect x="8" y="6" width="11" height="4" fill="#4ade80"/><rect x="28" y="5" width="11" height="5" fill="#4ade80"/><rect x="48" y="10" width="11" height="3" fill="#f88b6b"/><rect x="68" y="7" width="11" height="3" fill="#4ade80"/><rect x="88" y="10" width="11" height="4" fill="#f88b6b"/><rect x="108" y="8" width="11" height="2" fill="#4ade80"/><rect x="128" y="10" width="11" height="2" fill="#f88b6b"/><rect x="148" y="6" width="11" height="4" fill="#4ade80"/><rect x="168" y="4" width="11" height="6" fill="#4ade80"/><rect x="188" y="7" width="11" height="3" fill="#4ade80"/><rect x="208" y="10" width="11" height="1" fill="#f88b6b"/><rect x="228" y="5" width="11" height="5" fill="#4ade80"/><rect x="248" y="4" width="11" height="6" fill="#4ade80"/></svg></div>
+    </div>
+    <div class="margin">margin</div>
+  </div>
+</div>
+</body></html>
