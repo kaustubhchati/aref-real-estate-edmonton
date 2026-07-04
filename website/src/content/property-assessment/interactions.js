@@ -155,14 +155,15 @@ export function installChoroplethInteractions(map, gj, onSelect) {
 // (applyCameraPreset → easeTo/jumpTo HOME_VIEW's literal center/zoom/pitch).
 
 // Padding that keeps a fit inside the VISIBLE map — clear of the bottom chrome.
-// .pa-foot stacks the tuning rack + the console (when open) ABSOLUTELY over the
-// map's bottom, so its live height is exactly the bottom inset to reserve. The
-// bottom reserves the rack + console; LEFT reserves the floating control card
-// (.pa-float, D1) which now OVERLAYS the map's left edge — the reverse of the old
-// in-flow panel, which needed no left padding. Deterministic because the fixed-grid
-// work made those zones real, measurable elements. [camera-model]
-const CONSOLE_SVH_DESKTOP = 0.42; // .dt-panel max-height (desktop)
-const CONSOLE_SVH_MOBILE = 0.56;  // .dt-panel max-height under the ≤680px breakpoint
+// The console rises ALONE over the map's bottom (the tuning rack moved into the
+// instrument column, contract §3.2); the .pa-rack query below now returns null, so
+// rackH is naturally 0 (kept, not forked, per §5). The bottom reserves the console;
+// LEFT reserves the instrument column (.pa-float), which OVERLAYS the map's left
+// edge. Deterministic because the fixed-grid work made those zones real, measurable.
+// The CONSOLE_SVH fractions describe the SAME bottom band as .dt-panel's max-height
+// cap (index.css is the source of truth); keep them in sync with that cap. [camera-model]
+const CONSOLE_SVH_DESKTOP = 0.37; // matches the .dt-panel cap calc(37svh - 36px)
+const CONSOLE_SVH_MOBILE = 0.62;  // matches the ≤680px .dt-panel cap (62svh)
 const MOBILE_BP = 680;
 function chromePadding(map, { reserveConsole = false } = {}) {
   const root = map.getContainer().closest(".content-map") || map.getContainer();

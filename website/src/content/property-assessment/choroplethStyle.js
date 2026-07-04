@@ -21,6 +21,12 @@ import { CITY_BOUNDS } from "../../config/cityBounds.js";
 // ---- Map view defaults (Edmonton, matches 09_build_choropleth.html) --------
 // (Data URL no longer lives here — single source of truth is dataSources.js,
 // which the page resolves from the (city, year) controls.)
+// C10 (optional; KC to veto in review) — colour policy for LEVEL-metric ($ / lot /
+// year) deltas. true = coloured green/coral (the annex default, no visual change);
+// false = neutral white, reserving colour for the signed RATE deltas (YoY / pp). ONE
+// switch, read by both the console KPI cards (DataTable) and the detail float (InfoRail).
+export const COLOUR_LEVEL_DELTAS = false;
+
 export const MAP_VIEW = {
   // center/zoom are only the CONSTRUCTION FALLBACK (the map must build with some
   // view before HOME_VIEW is applied). The real HOME view is the tuned pitched
@@ -119,7 +125,11 @@ const METRIC_RAMP = {
   median_assessvalue: RAMP_ASSESSED,
   avall_public:       RAMP_ASSESSED,
   avg_lotsize:        RAMP_AREA,
-  median_yearbuilt:   RAMP_YEAR,
+  median_yearbuilt:   RAMP_YEAR,   // kept (table 'Built' column) though no longer a MAP metric
+  // %Condo reuses the WARM sequential ramp (A3 — DESIGN_SYSTEM §1.4; the D1 purple is
+  // retired) so a share reads visually consistent with the level metrics; it is CLASSED by
+  // the actual condo-share quantiles (condoStops) rather than an even 0–100 ramp that read flat.
+  pct_with_unit:      RAMP_ASSESSED,
   // yoy_pct_change is not a sequential ramp — it uses the continuous diverging scale
   // built by yoyDivergingStops (flat yellow plateau + potent blue/red), not this table.
 };
@@ -150,6 +160,15 @@ export const STOPS = buildStops({
   min: 103500, q25: 352625, median: 425125, q75: 496188, max: 1226000,
 }, RAMP_ASSESSED);
 
+// %Condo stops (A3) — the WARM ramp CLASSIFIED by the actual condo-share quantiles, so the
+// map reveals the real spatial pattern (an even 0–100 ramp reads flat). Reuses metricStops
+// (the same quantile path the dollar/level metrics use) with a WARM even-0–100 fallback for
+// a degenerate distribution — never the dollar STOPS. Legend shows the quantile break %s.
+export function condoStops(gj) {
+  return metricStops(gj, "pct_with_unit",
+    buildStops({ min: 0, q25: 25, median: 50, q75: 75, max: 100 }, RAMP_ASSESSED));
+}
+
 // Per-year stops from a manifest colourScaleByYear[year] entry, falling back to
 // the locked STOPS when that year's scale is missing or unusable.
 export function stopsFromScale(scale, metricKey = "median_assessvalue") {
@@ -165,7 +184,7 @@ export function stopsFromScale(scale, metricKey = "median_assessvalue") {
 // too little data,
 // and drops any stop not strictly greater than the previous one so MapLibre's
 // interpolate (which requires ascending inputs) never throws on ties.
-export function metricStops(gj, metricKey) {
+export function metricStops(gj, metricKey, fallback = STOPS) {
   const ramp = METRIC_RAMP[metricKey] ?? RAMP_DEFAULT;
   const vals = [];
   for (const f of gj?.features ?? []) {
@@ -174,7 +193,7 @@ export function metricStops(gj, metricKey) {
     const v = Number(p[metricKey]);
     if (Number.isFinite(v)) vals.push(v);
   }
-  if (vals.length < 2) return STOPS;
+  if (vals.length < 2) return fallback;
   vals.sort((a, b) => a - b);
 
   // Build a {min,q25,median,q75,max} scale from the data quantiles, then run it
@@ -189,7 +208,7 @@ export function metricStops(gj, metricKey) {
     q75:    quantile(vals, 0.75),
     max:    quantile(vals, 1),
   };
-  return buildStops(q, ramp) ?? STOPS;
+  return buildStops(q, ramp) ?? fallback;
 }
 
 // Linear-interpolated quantile of an ascending-sorted array (p in [0, 1]).
@@ -271,15 +290,19 @@ export function yoyStopsFromValues(values) {
 //           drawn by the segmented metric control (SegmentedControl.jsx). Adding
 //           a metric stays a ONE-PLACE change — add its row here, icon included.
 const METRICS = [
-  { key: "median_assessvalue", label: "Median assessed value",   fmt: fmtCurrency,
+  { key: "median_assessvalue", label: "Median Assessed Value",   fmt: fmtCurrency,
     icon: "M12 2v20 M17 7H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" },             // dollar
-  { key: "avall_public",       label: "Mean assessed value",     fmt: fmtCurrency,
+  { key: "avall_public",       label: "Mean Assessed Value",     fmt: fmtCurrency,
     icon: "M3 3v18h18 M8 17V9 M13 17V5 M18 17v-7" },                                  // distribution / mean
-  { key: "avg_lotsize",        label: "Mean lot size",           fmt: fmtArea,
+  { key: "avg_lotsize",        label: "Mean Lot Size",           fmt: fmtArea,
     icon: "M15 3h6v6 M9 21H3v-6 M21 3l-7 7 M3 21l7-7" },                              // area / extent
-  { key: "median_yearbuilt",   label: "Median year built",       fmt: fmtYear,
-    icon: "M8 2v4 M16 2v4 M3 10h18 M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" }, // calendar
-  { key: "yoy_pct_change",     label: "Year-over-year change %", fmt: fmtPct,
+  // D1 — %Condo promoted to a MAP metric (varies spatially, informative) on its own
+  // 0–100 share ramp; Year built demoted from the metric row (near-flat, uninformative
+  // choropleth) but KEPT as a table column. %Condo = share of individually-titled
+  // condominium parcels (Plan/Unit); label "% Condo", never "% apartments".
+  { key: "pct_with_unit",      label: "% Condo",                 fmt: fmtPct,
+    icon: "M3 21h18 M5 21V7l7-4 7 4v14 M9 9h.01 M9 13h.01 M9 17h.01 M15 9h.01 M15 13h.01 M15 17h.01" }, // building / units
+  { key: "yoy_pct_change",     label: "Year-Over-Year Change %", fmt: fmtPct,
     icon: "M3 17l6-6 4 4 8-8 M21 7v6 M21 7h-6" },                                     // trending up
 ];
 export { METRICS };
@@ -464,21 +487,34 @@ export function choroplethFillColor(metricKey = "median_assessvalue", year, stop
 const DIM_OPACITY = 0.12;
 function fillOpacityExpr(year) {
   const state = yget("polygon_state", year);
-  return [
+  // The per-state opacity at a given aggregated-fade factor k. Only the AGGREGATED branch
+  // scales by k (KC: existing_state_opacity × zoom_factor); the glass / suppressed states
+  // (0.04–0.15) are already faint and NEVER fade — fading them would erase their honesty
+  // encoding. hover/pinned/dimmed stay proportional (all inside the scaled branch).
+  const stateCase = (k) => [
     "case",
     ["==", state, "aggregated"],
       [
         "case",
         // Hover + pinned (selection) stay DOMINANT over the dim — checked first.
-        ["boolean", ["feature-state", "hover"], false], 0.88,
-        ["boolean", ["feature-state", "pinned"], false], 0.88,
+        ["boolean", ["feature-state", "hover"], false], 0.88 * k,
+        ["boolean", ["feature-state", "pinned"], false], 0.88 * k,
         // Third channel: dimmed = not in the current table-filter brush set (D7).
-        ["boolean", ["feature-state", "dimmed"], false], DIM_OPACITY,
-        0.74,
+        ["boolean", ["feature-state", "dimmed"], false], DIM_OPACITY * k,
+        0.74 * k,
       ],
     ["boolean", ["feature-state", "hover"], false], 0.15,
     ["boolean", ["feature-state", "pinned"], false], 0.15,
     0.04,
+  ];
+  // F4 — high-zoom fade. ZOOM must be the OUTERMOST expression (MapLibre forbids a nested
+  // zoom), so interpolate between two pre-scaled state-cases: hold as-built to z14, ease
+  // the aggregated fills to k=0.68 by z16.5 (0.74 base → ≈0.50) so streets, buildings, and
+  // the labels read through at parcel scale.
+  return [
+    "interpolate", ["linear"], ["zoom"],
+    14, stateCase(1),
+    16.5, stateCase(0.68),
   ];
 }
 const stateEqFilter = (year, state) => ["==", yget("polygon_state", year), state];
@@ -502,13 +538,19 @@ const solidOutlineColor = (year) => [
   "manufactured_home_community", STATE_STYLE.manufactured_home_community.outlineColor,
   STATE_STYLE.aggregated.outlineColor,
 ];
-const suppressedCountText = (year) => [
-  "concat", "N=", ["to-string", yget("n_properties", year)],
-];
 
 // ---- Layer specs handed to MapView ----------------------------------------
 // One function so the consumer file is short. Layers are in z-order
-// (first = bottom). MapView inserts them all below the basemap's labels.
+// (first = bottom).
+//
+// LAYER-ORDER CONTRACT (D-P2 F1) — two deliberate anchors:
+//   • These choropleth layers (fill / outline / pattern) are
+//     inserted by MapView BELOW the basemap's first symbol layer (findFirstSymbolLayerId
+//     + beforeId), so ALL basemap labels — streets, places — render ABOVE our fills.
+//   • The neighbourhood NAME labels are NOT here: they mount ABOVE everything (basemap
+//     symbols included) from a client-derived centroid source, added by the page after
+//     MapView's batch — see centroidNameLayer() / centroidFocusLayer() below.
+//
 // `stops` selects the colour ramp and `metricKey` the column to colour by;
 // both default to the locked median scale when a caller doesn't pass them.
 export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue", year) {
@@ -590,15 +632,36 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
         "line-dasharray": STATE_STYLE.no_data.outlineDash,
       },
     },
-    // 6. Highlight outline — invisible by default, darkens on hover, darker
-    //    + thicker when pinned. Sits below the basemap labels via beforeId.
+    // 5b. Selection CASING — a light cream under-stroke drawn BENEATH the coral
+    //     highlight (this layer precedes nbhd-highlight, so it renders below it),
+    //     so the selected outline stays legible over deep-red / plateau-yellow
+    //     fills (A5). Pinned only; transparent otherwise.
+    {
+      id: "nbhd-highlight-casing",
+      type: "line",
+      paint: {
+        "line-color": [
+          "case",
+          ["boolean", ["feature-state", "pinned"], false], "#f7f1df",  /* mirrors --map-cream */
+          "rgba(0,0,0,0)",
+        ],
+        "line-width": [
+          "case",
+          ["boolean", ["feature-state", "pinned"], false], 4.4,
+          0,
+        ],
+      },
+    },
+    // 6. Highlight outline — invisible by default, darkens on hover, and turns
+    //    the selection CORAL (--pa-sel, one selection colour across every surface,
+    //    A5) + thicker when pinned. Sits below the basemap labels via beforeId.
     {
       id: "nbhd-highlight",
       type: "line",
       paint: {
         "line-color": [
           "case",
-          ["boolean", ["feature-state", "pinned"], false], "#0f0f12",
+          ["boolean", ["feature-state", "pinned"], false], "#e8734a",  /* mirrors --sel */
           ["boolean", ["feature-state", "hover"],  false], "#2a2a30",
           "rgba(0,0,0,0)",
         ],
@@ -610,58 +673,113 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
         ],
       },
     },
-    // 7. Neighbourhood name labels. Last in the array so they render above the
-    //    fills and outlines. Only from zoom 11 in, so the city-wide view stays
-    //    uncluttered and labels appear as the user zooms to a neighbourhood.
-    {
-      id: "nbhd-labels",
-      type: "symbol",
-      minzoom: 11,
-      layout: {
-        "text-field": ["get", "display_name"],
-        "text-size": 11,
-        "text-font": ["Noto Sans Regular"],
-        "text-max-width": 8,
-        // Collision avoidance: try centred first (keeps the current on-centroid
-        // look), then nudge to an offset anchor instead of DROPPING the label
-        // when labels crowd at zoom 11+.
-        "text-variable-anchor": ["center", "top", "bottom", "left", "right"],
-        "text-radial-offset": 0.6,
-        "text-justify": "auto",
-      },
-      paint: {
-        "text-color": "#3c3728",
-        "text-halo-color": "#ffffff",
-        "text-halo-width": 1.5,
-      },
-    },
-    // 8. N-count label on suppressed (N < 100) polygons. These carry no value
-    //    on the ramp, so showing the count makes the suppression legible rather
-    //    than just grey. Zoom 11+ like the name labels, to keep the wide view
-    //    uncluttered.
-    {
-      id: "nbhd-suppressed-count",
-      type: "symbol",
-      filter: stateEqFilter(year, "suppressed_low_n"),
-      minzoom: 11,
-      layout: {
-        "text-field": suppressedCountText(year),
-        "text-size": 9,
-        "text-font": ["Noto Sans Regular"],
-        // Collision avoidance: try centred first (keeps the current on-centroid
-        // look), then nudge to an offset anchor instead of DROPPING the label
-        // when labels crowd at zoom 11+.
-        "text-variable-anchor": ["center", "top", "bottom", "left", "right"],
-        "text-radial-offset": 0.6,
-        "text-justify": "auto",
-      },
-      paint: {
-        "text-color": "#7a7468",
-        "text-halo-color": "#ffffff",
-        "text-halo-width": 1.2,
-      },
-    },
+    // 7. (Neighbourhood NAME labels moved OUT of this array — D-P2 F1/F2.) They now
+    //    live on a dedicated client-derived CENTROID point source (one point per
+    //    neighbourhood, so no per-tile duplicates) and are added ABOVE everything by
+    //    the page (centroidNameLayer / centroidFocusLayer, mounted in
+    //    PropertyAssessmentMap's label effect — NOT via MapView's beforeId batch). See
+    //    the layer-order note in the header comment above.
+    // 8. (Suppressed N-count map label REMOVED — D-P3 A2 / DESIGN_SYSTEM §3,§5: internal
+    //    parcel counts are not cartographic text. The count still lives in the table +
+    //    detail float. The suppressed state stays legible on the map via its dashed grey
+    //    outline (nbhd-outline-suppressed) + the state legend.)
   ];
+}
+
+// ---- Neighbourhood NAME labels (D-P2 F1/F2) -------------------------------
+// The name labels render from a dedicated CLIENT-DERIVED centroid point source
+// (buildCentroidPoints in PropertyAssessmentMap): ONE point per neighbourhood, so
+// MapLibre never places the per-tile duplicates a polygon source produced. The page
+// anchors the base name layer ADJACENT to the basemap symbols (B2 — shared collision
+// index), and the focus layer ABOVE everything. The source is year-invariant (geometry
+// only) — applyYearMetric never touches it.
+export const CENTROID_SOURCE = "nbhd-centroids";
+
+// F2 — the base name-label layer. Zoom-graduated size + area-priority collision so the
+// major neighbourhoods win when labels crowd; cream halo reads over the reddest fill.
+export function centroidNameLayer() {
+  return {
+    id: "nbhd-labels",
+    type: "symbol",
+    minzoom: 9,
+    layout: {
+      "text-field": ["get", "display_name"],
+      // Priority: bigger neighbourhoods win placement. symbol-sort-key gives LOWER keys
+      // priority, so negate the (year-invariant) area → largest area = lowest key.
+      "symbol-sort-key": ["-", 0, ["get", "area"]],
+      // B3 — zoom-density tiers via a step on ZOOM (the only valid place for [zoom]); each
+      // step output is a per-feature `tier` case, and text-size 0 hides a tier (0 size = no
+      // collision box, so it also frees space). tier 1 (major) labels from the overview,
+      // tier 2 (mid) from ~z12.5, tier 3 (all) from ~z14. The overview breathes.
+      // B2 — with the layer filtered to REPORTABLE polygons only (B1 frees collision
+      // budget), fill in earlier: major only at the overview, then EVERY reportable label
+      // eligible from ~z12.5, where the collision engine packs greedily by area sort-key so
+      // any coloured polygon with room on screen gets named.
+      "text-size": [
+        "step", ["zoom"],
+        ["case", ["==", ["get", "tier"], 1], 11, 0],       // < z11: major only (overview breathes)
+        11,   ["case", ["<=", ["get", "tier"], 2], 12, 0], // z11–12.5: major + mid
+        12.5, 13,                                          // ≥ z12.5: ALL reportable — collision packs
+      ],
+      "text-font": ["Noto Sans Regular"],
+      "text-max-width": 8,
+      // B2 — allow-overlap:false so this layer joins the basemap's ONE collision index
+      // (the page inserts it adjacent to the basemap symbols); our names and the basemap
+      // labels mutually collide-test and never overprint. Try centred first, then nudge to
+      // an offset anchor instead of DROPPING a label outright.
+      "text-allow-overlap": false,
+      "text-variable-anchor": ["center", "top", "bottom", "left", "right"],
+      "text-radial-offset": 0.6,
+      "text-justify": "auto",
+    },
+    paint: {
+      "text-color": "#2a2621",        // mirrors --label-ink (dark warm grey, ~13:1 on cream) — DESIGN_SYSTEM §5
+      "text-halo-color": "#f7f1df",   // mirrors --map-cream — the halo IS the label's effective background
+      "text-halo-width": 1.5,         // as narrow as stays legible ("effective but invisible")
+      "text-halo-blur": 0.4,
+      // Yield to the focus layer (F3): when a neighbourhood is hovered/selected its name
+      // is drawn by centroidFocusLayer instead, so hide the base copy here — otherwise the
+      // two (base collision-placed, focus centred) draw the same name slightly offset.
+      "text-opacity": [
+        "case",
+        ["boolean", ["feature-state", "pinned"], false], 0,
+        ["boolean", ["feature-state", "hover"], false], 0,
+        1,
+      ],
+    },
+  };
+}
+
+// F3 — the hover/selected GUARANTEE. A second layer on the SAME centroid source with
+// text-allow-overlap, so the pointed-at / selected neighbourhood is NEVER collision-
+// culled — it always names itself. Visible only where the centroid source carries the
+// `hover` or `pinned` feature-state (the page mirrors those from the polygon channels);
+// text-opacity is 0 everywhere else, so this layer is invisible until you point/select.
+export function centroidFocusLayer() {
+  return {
+    id: "nbhd-labels-focus",
+    type: "symbol",
+    layout: {
+      "text-field": ["get", "display_name"],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 10, 12, 15, 17], // a touch larger than base
+      "text-font": ["Noto Sans Regular"],
+      "text-max-width": 8,
+      "text-allow-overlap": true,      // never dropped — the guarantee
+      "text-ignore-placement": true,
+    },
+    paint: {
+      "text-color": "#2a2621",         // mirrors --label-ink — same ink as the base label (DESIGN_SYSTEM §5)
+      "text-halo-color": "#f7f1df",    // mirrors --map-cream
+      "text-halo-width": 2.2,          // stronger halo so the focus label reads on top of the base label
+      "text-halo-blur": 0.3,
+      "text-opacity": [
+        "case",
+        ["boolean", ["feature-state", "pinned"], false], 1,
+        ["boolean", ["feature-state", "hover"], false], 1,
+        0,
+      ],
+    },
+  };
 }
 
 // Reapply every YEAR/METRIC-dependent map expression on a persistent map — the
@@ -670,7 +788,8 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
 // so geometry stays put and nbhd-fill's fill-color-transition tweens the colour.
 // Mirrors choroplethLayers exactly (same builders), updating only the layers
 // whose expressions read a per-year field — nbhd-highlight (feature-state only)
-// and nbhd-labels (display_name) are year-invariant and untouched. Guarded:
+// and the centroid NAME labels (display_name, a separate year-invariant source)
+// are untouched. Guarded:
 // the map can be mid-teardown (getLayer throws on a removed map).
 export function applyYearMetric(map, metricKey, year, stops) {
   if (!map || !map.getLayer("nbhd-fill")) return;
@@ -690,8 +809,6 @@ export function applyYearMetric(map, metricKey, year, stops) {
   map.setPaintProperty("nbhd-outline-solid", "line-color", solidOutlineColor(year));
   map.setFilter("nbhd-outline-suppressed", stateEqFilter(year, "suppressed_low_n"));
   map.setFilter("nbhd-outline-nodata", stateEqFilter(year, "no_data"));
-  map.setFilter("nbhd-suppressed-count", stateEqFilter(year, "suppressed_low_n"));
-  map.setLayoutProperty("nbhd-suppressed-count", "text-field", suppressedCountText(year));
 }
 
 // Pattern images for MapView to register on load (before any layer that

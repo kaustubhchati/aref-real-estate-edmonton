@@ -107,6 +107,56 @@
   --dur-base: 250ms;   /* appear/disappear, paint tweens */
   --dur-slow: 400ms;   /* crossfades */
 
+  /* ---- PA analyst dark palette (PA_MODE_CONTRACT §9) --------------------
+     The dark instrument chassis of the Property Assessment map: the left
+     instrument column, the analysis console, the KPI cards, the detail
+     float. Namespaced --pa-* so they never collide with the light-theme
+     semantic tokens above (--text is slate-900; --pa-ink is text ON dark).
+     Gloss belongs on CHROME (column/console/cards); DATA stays flat.
+     One source of truth — every PA dark surface reads these, no re-literals.
+       shell = deepest ground · card = raised panel · hair = 1px divider
+       ink   = primary text   · mut  = labels/muted · dim = faintest text
+       up    = positive/accent green · dn = negative/declining coral
+       sel   = selection outline coral (distinct from dn — a hair warmer) */
+  /* ===== DESIGN_SYSTEM.md §1 — canonical tokens (single source of truth; components
+     read THESE, never raw hex/px). The --pa-* names below are retained as ALIASES so the
+     as-built PA chrome keeps working while new work cites the DESIGN_SYSTEM names. ===== */
+  /* §1.1 surfaces (dark chrome) */
+  --shell: #0d0e10;   /* console / column chassis */
+  --card:  #16181b;   /* KPI / detail tiles — one step DARKER than panel, so tiles read raised */
+  --panel: #1a1c1f;   /* inner panel surfaces (table frame, trend frame) */
+  --hair:  #2a2d31;   /* hairline borders / dividers */
+  /* §1.2 text (all clear the §4 ≥4.5:1 floor on their surface) */
+  --tx:     #f5f6f7;  /* primary text / values */
+  --tx-mut: #9ba1a8;  /* secondary / labels — RAISED from #8b8f94 to clear 4.5:1 on --shell */
+  --tx-dim: #6b7076;  /* tertiary / suppressed ONLY — never for text that must be read */
+  /* §1.3 semantic data roles (the ONLY places colour carries meaning) */
+  --data-up:   #4ade80;  /* growth / increase (YoY +, pp +) */
+  --data-down: #f88b6b;  /* decline / decrease (YoY −, pp −) */
+  --city:      #60a5fa;  /* comparison-baseline (active-city) datum EVERYWHERE — dashed+blue, colour-blind-safe */
+  --sel:       #e8734a;  /* selection, EVERY surface (map outline + table outline + rail) */
+  /* §1.4 map / cartography */
+  --map-cream: #f7f1df;  /* basemap ground = the label halo colour */
+  --label-ink: #2a2621;  /* map label text — dark warm grey, ~13:1 on cream */
+  /* §1.5 type scale (named steps; no ad-hoc sizes) — BUMPED for legibility (D-P4 D2):
+     the old 10/12/13/15/17/22 was too small; chrome min is now --t-xs (13px). */
+  --t-2xs: 11px;  --t-xs: 13px;  --t-sm: 14px;  --t-md: 16px;  --t-lg: 19px;  --t-xl: 24px;
+  /* §1.6 space (4px base) + radius */
+  --s1: 4px;  --s2: 8px;  --s3: 12px;  --s4: 16px;  --s5: 20px;  --s6: 24px;
+  --r-sm: 6px;  --r-md: 9px;  --r-lg: 12px;
+
+  /* --pa-* aliases → canonical (as-built chrome keeps working; migrate on touch) */
+  --pa-shell: var(--shell);
+  --pa-card:  var(--panel);   /* was #1a1c1f = --panel; NEW tiles use --card (a step darker) */
+  --pa-hair:  var(--hair);
+  --pa-ink:   var(--tx);
+  --pa-mut:   var(--tx-mut);  /* raised for contrast (§1.2 / §4) — lifts as-built muted text too */
+  --pa-dim:   var(--tx-dim);
+  --pa-up:    var(--data-up);
+  --pa-dn:    var(--data-down);
+  --pa-sel:   var(--sel);
+  --pa-track-w: 150px;   /* the tuning sliders' track width — one source of truth (B1) */
+
   font: 16px/1.5 var(--font-sans);
   color: var(--text);
   background: var(--bg);
@@ -425,19 +475,8 @@ p  { margin: 0 0 0.75rem; }
    it (.pa-canvas is the relative containing block). */
 .pa-map { flex-direction: column; }
 
-.pa-topbar {
-  flex: 0 0 auto;
-  display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  padding: 9px 16px;
-  background: var(--sidebar-bg);
-  border-bottom: 1px solid var(--sidebar-edge);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
-}
-.pa-topbar-context { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
-.pa-topbar-sub {
-  font-size: 11px; color: var(--text-muted); white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis;
-}
+/* (.pa-topbar removed, C10/§8 — the parcel count re-homed to the column footer, C2.) */
+
 /* ---- Unified search peek (D5) — the ONE search, by the map's zoom stack ---- */
 /* Push the map's top-right controls (zoom + reset crosshair) DOWN so the magnifier
    peek sits ABOVE them, as the top of the same right-edge stack. PA-scoped. */
@@ -587,16 +626,39 @@ p  { margin: 0 0 0.75rem; }
   font-family: ui-monospace, Menlo, Consolas, monospace;
 }
 
-/* ----- Single-select detail (Property Assessment) ----- */
-/* Was a floating right rail; now an IN-FLOW block accreted into the left panel
-   below the controls when exactly one neighbourhood is selected. A hairline
-   separates it from the controls above; it fades in. Holds that nbhd's detail +
-   sparkline (InfoRail.jsx). The .rail-* rules below are its content styles. */
+/* ----- Single-select DETAIL instrument (S-b / View mode, contract §4/C9) ----- */
+/* A dark right-side float below the nav stack, mounted only when exactly one
+   neighbourhood is selected and the console is down. Anatomy: name · rank/parcels/
+   state · sparkline · value/city/delta triplet · condo block. (The legacy .rail-*
+   rules below are no longer emitted by InfoRail.jsx.) */
 .pa-detail {
-  margin-top: 12px; padding-top: 12px;
-  border-top: 1px solid var(--border);
+  position: absolute; right: 12px; top: 46px; z-index: 14;
+  width: 224px; max-width: calc(100vw - 24px);
+  padding: 11px 13px;
+  background: var(--pa-shell); border-radius: 10px; color: var(--pa-ink);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
   animation: rail-fade-in var(--dur-base) var(--ease);
+  pointer-events: auto;
 }
+.pa-detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.pa-detail-name { margin: 0; font-size: 13px; font-weight: 600; color: var(--pa-ink); line-height: 1.2; }
+.pa-detail-clear {
+  flex: 0 0 auto; width: 20px; height: 20px; border: 0; border-radius: 6px;
+  background: var(--pa-card); color: var(--pa-mut); font-size: 11px; line-height: 1; cursor: pointer;
+}
+.pa-detail-clear:hover { color: var(--pa-ink); }
+.pa-detail-sub { margin: 2px 0 0; font-size: 9px; color: var(--pa-mut); }
+.pa-detail .sparkline { display: block; width: 100%; height: 26px; margin: 7px 0 2px; }
+.pa-detail-trip { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; margin-top: 7px; text-align: center; }
+.pa-trip-l { font-size: var(--t-2xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--pa-mut); }
+.pa-trip-v { font-size: 12px; font-weight: 500; color: var(--pa-ink); font-variant-numeric: tabular-nums; }
+.pa-trip-muted { color: var(--pa-dim); }
+.pa-trip-city { color: var(--city); }   /* the CITY triplet value = blue (B4) */
+.pa-detail-condo { border-top: 1px solid var(--pa-hair); margin-top: 8px; padding-top: 6px; }
+.pa-detail .pa-kv { display: flex; justify-content: space-between; font-size: 10px; margin-top: 2px; }
+.pa-kv-k { color: var(--pa-mut); }
+.pa-kv-v { color: #c7cacd; font-weight: 500; font-variant-numeric: tabular-nums; }
+.pa-detail-note { margin: 7px 0 0; font-size: 9.5px; color: var(--pa-mut); line-height: 1.5; }
 @keyframes rail-fade-in { from { opacity: 0; } to { opacity: 1; } }
 .rail-inner { width: 100%; }
 /* Tightness: no trailing gap after the last detail row/note. */
@@ -669,17 +731,18 @@ p  { margin: 0 0 0.75rem; }
   pointer-events: auto;
   display: flex; align-items: center; gap: 10px;
   padding: 6px 16px;
-  font-family: inherit; font-size: 12px; color: var(--text);
-  background: var(--sidebar-bg);
-  border: 1px solid var(--sidebar-edge); border-bottom: 0;
+  font-family: inherit; font-size: 12px; color: var(--pa-ink);
+  background: var(--pa-shell);
+  border: 1px solid var(--pa-hair); border-bottom: 0;
   border-radius: 10px 10px 0 0;
-  box-shadow: 0 -3px 10px rgba(74,60,33,0.12);
+  box-shadow: 0 -3px 12px rgba(0,0,0,0.4);
   cursor: pointer; text-align: left;
 }
-.dt-handle:hover { background: var(--bg-soft); }
+.dt-handle:hover { background: var(--pa-card); }
 .dt-handle-title { font-weight: 600; }
-.dt-handle-meta { color: var(--text-muted); font-size: 10.5px; }
-.dt-handle-caret { margin-left: auto; color: var(--text-muted); }
+.dt-handle-meta { color: var(--pa-mut); font-size: 10.5px; }
+.dt-handle-caret { margin-left: auto; color: var(--pa-mut); }
+.dt-handle-sel { color: var(--pa-sel); font-weight: 600; }   /* "N selected" in b₂ (§3.1) */
 
 /* The animating SHELL — a TRUE height transition via the grid-rows 0fr↔1fr trick,
    so the console rises/collapses smoothly and the handle + tuning rack above it
@@ -692,47 +755,59 @@ p  { margin: 0 0 0.75rem; }
 }
 .dt-panel-wrap.is-open { grid-template-rows: 1fr; }
 
-/* The FULL-WIDTH, height-capped console (D3): a wide, shallow instrument panel that
-   rises from the bottom. overflow:hidden + min-height:0 let the grid-rows transition
-   collapse it to 0. The height CAP is anchored so the assembly (tuning bay + console)
-   top lands at the old "District button" line (~63svh, screenshot-validated) —
-   encoded viewport-relative (not a fixed px), so the map CENTRE always stays visible
-   above the band. rack≈70 + gap≈8 + handle≈28 sit above the panel, hence −106px. */
+/* The FULL-WIDTH, height-capped console (contract §3.2/§5): a wide, shallow
+   instrument panel that rises ALONE from the bottom (the tuning rack moved into the
+   instrument column, C2). overflow:hidden + min-height:0 let the grid-rows
+   transition collapse it to 0.
+   ── BOTTOM-BAND SOURCE OF TRUTH ─────────────────────────────────────────────
+   The band is 37svh: the assembly (handle + panel) TOP lands at ~63svh so the map
+   CENTRE always stays visible above it (viewport-relative, not a fixed px). Only the
+   handle sits above the panel now, so the cap subtracts handle(~28) + a small
+   breathing gap(~8) = 36px — WAS 106px (rack70 + gap8 + handle28); the rack term is
+   gone. chromePadding's CONSOLE_SVH fractions (interactions.js) describe this SAME
+   band and are kept in sync with this cap. */
 .dt-panel {
   overflow: hidden; min-height: 0;
+  display: flex; flex-direction: column;   /* header bar (C6) above the four-frame grid */
   width: calc(100vw - 16px);
-  max-height: calc(37svh - 106px);
-  background: var(--sidebar-bg);
-  border: 1px solid var(--sidebar-edge); border-bottom: 0;
+  max-height: calc(37svh - 36px);
+  background: var(--pa-shell); color: var(--pa-ink);
+  border: 1px solid var(--pa-hair); border-bottom: 0;
   border-radius: 12px 12px 0 0;
-  box-shadow: 0 -4px 14px rgba(74,60,33,0.12);
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.45);
 }
 
-/* FOUR FIXED GRID SLOTS — spine (left, spans all rows) + three stacked wide-shallow
-   gauges (timeseries · distribution · vs-city). The frames are INVARIANT to
-   selection; only their interiors change. The 1px gap over a soft background paints
-   the hairline seams between frames. */
+/* FOUR FIXED FRAMES (contract §3.2/§4) — rail | table | trend | margin, packed
+   LEFT: rail (KPI cards) · table (content-capped, never stretched) · trend. The
+   retired margin frame's width is absorbed proportionally by the three frames + a
+   fixed RIGHT gutter (the honest empty space is now padding, not a dashed box — B3).
+   The frames are INVARIANT to selection; only their interiors change. */
 .dt-grid {
-  height: 100%;
+  flex: 1 1 auto; min-height: 0;   /* fills the panel below the header bar (C6) */
   display: grid;
-  grid-template-columns: minmax(340px, 1.15fr) minmax(300px, 1fr);
-  grid-template-rows: 1fr 1fr 1.3fr;   /* vs-city gets a touch more room for its four figures */
-  grid-template-areas:
-    "spine timeseries"
-    "spine distribution"
-    "spine vscity";
-  gap: 1px;
-  background: var(--border-soft);
+  grid-template-columns: minmax(210px, 0.9fr) minmax(0, 2.5fr) minmax(300px, 1.5fr);
+  grid-template-rows: 1fr;
+  grid-template-areas: "rail table trend";
+  gap: 12px;
+  padding: 11px 20px 11px 14px;   /* the extra RIGHT padding IS the honest gutter (was the margin frame) */
+  background: transparent;
 }
 .dt-slot {
-  background: var(--sidebar-bg);
   min-width: 0; min-height: 0;
   display: flex; flex-direction: column; overflow: hidden;
+  background: transparent;
 }
-.dt-slot--spine { grid-area: spine; }
-.dt-slot--ts    { grid-area: timeseries; }
-.dt-slot--dist  { grid-area: distribution; }
-.dt-slot--vs    { grid-area: vscity; }
+.dt-slot--rail   { grid-area: rail; gap: 6px; }
+.dt-slot--table  { grid-area: table; }
+.dt-slot--trend  { grid-area: trend; background: var(--pa-card); border-radius: 9px; padding: 9px 12px; }
+/* Rail interior (C5 turns these into KPI cards): the vs-city figures, then the
+   distribution histogram in a card that takes the remaining height. */
+.dt-rail-figures { flex: 0 0 auto; }
+.dt-rail-dist {
+  flex: 1 1 auto; min-height: 0;
+  background: var(--pa-card); border-radius: 9px; padding: 8px 11px;
+  display: flex; flex-direction: column;
+}
 
 /* A gauge slot's constant labelled frame: label bar (never changes) + a body whose
    interior swaps with the selection. */
@@ -769,11 +844,10 @@ p  { margin: 0 0 0.75rem; }
    "Metric" label + the short-labelled options wrapping across one/two rows. */
 .dt-metric { display: flex; align-items: baseline; gap: 8px; }
 .dt-metric .seg { margin: 0; display: flex; align-items: baseline; gap: 8px; flex: 1 1 auto; min-width: 0; }
-.dt-metric .seg-label { font-size: 10px; white-space: nowrap; }
+.dt-metric .seg-label { font-size: var(--t-2xs); white-space: nowrap; }
 .dt-metric .seg-options { flex-direction: row; flex-wrap: wrap; gap: 4px; }
-.dt-metric .seg-btn { width: auto; padding: 2px 8px; font-size: 11px; gap: 0; }  /* was width:100% → chips, not a stacked list */
+.dt-metric .seg-btn { width: auto; padding: 2px 8px; font-size: var(--t-sm); gap: 0; }  /* was width:100% → chips, not a stacked list */
 .dt-metric .seg-icon { display: none; }
-.dt-toolbar { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
 .dt-count { font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* ----- Categorical facets (D6) — VIEW-only filters under the toolbar ----- */
@@ -781,33 +855,33 @@ p  { margin: 0 0 0.75rem; }
   display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
   flex: 0 0 auto;
 }
-/* District multi-select — native <details> dropdown in the small-button idiom. */
-.dt-facet-dd { position: relative; }
+/* District multi-select (A1) — a dark BUTTON trigger + a PORTALED menu. The menu is
+   position:fixed (set inline from the trigger rect) on <body>, so the console's
+   overflow:hidden never clips it, and it flips upward when there's no room below. */
+.dt-facet-dd { position: relative; display: inline-flex; }
 .dt-facet-summary {
   display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
-  font-family: inherit; font-size: 0.78rem; font-weight: 500;
-  padding: 4px 9px; border-radius: 7px; white-space: nowrap; list-style: none;
-  background: var(--bg-soft); border: 1px solid var(--border); color: var(--text);
+  font-family: inherit; font-size: var(--t-sm); font-weight: 500;
+  padding: 4px 10px; border-radius: var(--r-md); white-space: nowrap;
+  background: var(--card); border: 1px solid var(--hair); color: var(--tx);
 }
-.dt-facet-summary::-webkit-details-marker { display: none; }
-.dt-facet-summary::after { content: "▾"; color: var(--text-muted); font-size: 0.9em; }
-.dt-facet-dd[open] .dt-facet-summary { background: var(--accent-soft); color: var(--accent-dark); }
+.dt-facet-summary:hover { border-color: var(--tx-mut); }
+.dt-facet-summary.is-open { border-color: var(--sel); }
+.dt-facet-caret { color: var(--tx-mut); font-size: 0.9em; }
+/* Portaled menu (role=menu on <body>) — its OWN dark surface (no longer a .dt-panel
+   descendant), elevated above the console. */
 .dt-facet-list {
-  position: absolute; top: calc(100% + 4px); left: 0; z-index: 5;
-  /* svh-capped so the dropdown stays WITHIN the console (which now clips via
-     overflow:hidden for the height transition) on short viewports — it scrolls
-     internally rather than being cut off at the panel edge. */
-  min-width: 180px; max-height: min(240px, 28svh); overflow-y: auto;
-  display: flex; flex-direction: column; gap: 1px; padding: 5px;
-  background: var(--gel-grad-gloss); box-shadow: var(--gel-lift-float), var(--gel-bevel);
-  border: var(--gel-border); border-radius: var(--radius-md);
+  z-index: 200; min-width: 180px; max-height: min(340px, 62svh); overflow-y: auto;
+  display: flex; flex-direction: column; gap: 1px; padding: var(--s2);
+  background: var(--panel); border: 1px solid var(--hair); border-radius: var(--r-md);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
 }
 .dt-facet-opt {
   display: flex; align-items: center; gap: 7px; cursor: pointer;
-  font-size: 0.8rem; padding: 4px 7px; border-radius: var(--radius-sm); color: var(--text);
+  font-size: var(--t-xs); padding: 5px 7px; border-radius: var(--r-sm); color: var(--tx);
 }
-.dt-facet-opt:hover { background: var(--accent-soft); }
-.dt-facet-opt input { accent-color: var(--accent); }
+.dt-facet-opt:hover { background: var(--shell); }
+.dt-facet-opt input { accent-color: var(--sel); }
 /* Polygon-state multi-select — toggle chips (one per state); pressed = included. */
 .dt-facet-toggles { display: flex; flex-wrap: wrap; gap: 5px; }
 .dt-facet-chip {
@@ -841,11 +915,13 @@ p  { margin: 0 0 0.75rem; }
    scrolls horizontally rather than letting columns shrink + clip (the 80px
    sparkline and right-aligned numbers fit at >=600px). The desktop dock is wider,
    so it never triggers. */
-.dt-table { table-layout: fixed; width: 100%; min-width: 440px; border-collapse: collapse; font-size: 11.5px; }
+/* border-collapse: separate + border-spacing:0 so sticky-header cell backgrounds
+   paint reliably (collapsed borders don't travel with sticky cells — A1). */
+.dt-table { table-layout: fixed; width: 100%; min-width: 440px; border-collapse: separate; border-spacing: 0; font-size: var(--t-xs); }
 .dt-table thead th {
-  position: sticky; top: 0; z-index: 1;
+  position: sticky; top: 0; z-index: 2;
   background: var(--sidebar-bg);
-  text-align: left; font-size: 10.5px; font-weight: 600;
+  text-align: left; font-size: var(--t-2xs); font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);
   padding: 6px 8px; border-bottom: 1px solid var(--border);
   /* Headers WRAP to a fixed (2-line) height so the full labels survive the narrow
@@ -885,26 +961,33 @@ p  { margin: 0 0 0.75rem; }
 .dt-row.is-selected { background: var(--bg-soft); outline: 2px solid var(--text); outline-offset: -2px; }
 .dt-name { font-weight: 500; color: var(--text); text-overflow: ellipsis; }
 .dt-empty { padding: 16px; text-align: center; color: var(--text-muted); }
-.dt-toolbar .export-menu { margin-left: auto; }   /* push export to the right of the filter */
 
 /* ===== Gauge slots (D3): wide-but-shallow shape readers ===================== */
 /* The charts FLEX to fill their slot body (the SVG shrinks with the band via
    flex:1 1 0 + a small min-height floor; preserveAspectRatio="none" scales the
    viewBox to whatever height results), so a short viewport shows a shorter chart
    rather than an overflowing/scrolling one. The value-range axis stays fixed. */
-/* TIMESERIES — the active-metric trajectory as a real line chart (TrendChart.jsx). */
-.dt-trend { display: flex; flex-direction: column; gap: 3px; width: 100%; flex: 1 1 auto; min-height: 0; }
-.dt-trend-svg { display: block; width: 100%; flex: 1 1 0; min-height: 18px; max-height: 56px; }
-.dt-trend-ax {
-  flex: 0 0 auto; display: flex; justify-content: space-between; gap: 8px;
-  font-size: 9.5px; color: var(--text-subtle); font-variant-numeric: tabular-nums;
-}
-.dt-trend-years { color: var(--text-muted); }
-.dt-trend--empty { font-size: 11px; color: var(--text-muted); font-style: italic; }
+/* TREND INSTRUMENT (C8) — fills the trend card: header · main SVG · endpoints ·
+   legend · YoY strip. Dark; data flat, per §9. */
+.dt-trend { display: flex; flex-direction: column; gap: 3px; width: 100%; height: 100%; min-height: 0; }
+.dt-trend-head { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.dt-trend-label { font-size: var(--t-2xs); letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut); }
+.dt-trend-readout { font-size: 9px; color: #c7cacd; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dt-trend-svg { display: block; width: 100%; flex: 1 1 0; min-height: 44px; }
+.dt-trend-ends { flex: 0 0 auto; display: flex; justify-content: space-between; font-size: 8px; color: var(--pa-mut); font-variant-numeric: tabular-nums; }
+.dt-trend-leg { flex: 0 0 auto; display: flex; gap: 12px; font-size: 8px; color: var(--pa-mut); }
+.dt-trend-leg .dt-sw { display: inline-block; width: 10px; height: 2px; vertical-align: middle; margin-right: 3px; }
+.dt-trend-leg .dt-sw--band { height: 6px; background: var(--pa-up); opacity: 0.2; }
+.dt-trend-yoy { flex: 0 0 auto; border-top: 1px solid var(--pa-hair); padding-top: 4px; margin-top: 1px; }
+.dt-trend-sub { font-size: var(--t-2xs); letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut); }
+.dt-trend-yoy-svg { display: block; width: 100%; height: 20px; margin-top: 2px; }
+.dt-trend--empty { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--pa-mut); font-style: italic; }
 
 /* DISTRIBUTION — the citywide histogram with the selection marked (DistributionStrip.jsx). */
 .dt-hist { display: flex; flex-direction: column; gap: 3px; width: 100%; flex: 1 1 auto; min-height: 0; }
-.dt-hist-svg { display: block; width: 100%; flex: 1 1 0; min-height: 16px; max-height: 52px; }
+/* A5 — taller histogram: A4's compact condo tiles freed rail height, so the distribution
+   gets real bars (was a clipped sliver). Shrink-fit SVG, floor 12 → 72px cap. */
+.dt-hist-svg { display: block; width: 100%; flex: 1 1 0; min-height: 12px; max-height: 72px; }
 .dt-hist-ends {
   flex: 0 0 auto; display: flex; justify-content: space-between; gap: 8px;
   font-size: 9.5px; color: var(--text-subtle); font-variant-numeric: tabular-nums;
@@ -933,25 +1016,299 @@ p  { margin: 0 0 0.75rem; }
 }
 .dt-vs-clear:hover { color: var(--text); }
 
-/* ----- Floating top-left chrome (D1) ----- */
-/* The in-flow left panel is GONE — its contents float over the full-bleed map as a
-   top-left cluster that overlays (does not reserve width). A bounded vertical stack:
-   the identity card, then the single-select detail (dock-down), then the About&tips
-   popover. Scrolls internally if the stack outgrows the available height, and stops
-   above the bottom chrome (rack/console) so it never collides with it. */
-.pa-float {
-  position: absolute; top: 12px; left: 12px; z-index: 15;
-  width: min(288px, calc(100vw - 24px));
-  max-height: calc(100% - 120px);          /* leave the bottom for the rack/console */
-  overflow-y: auto; overflow-x: hidden;
-  display: flex; flex-direction: column; gap: 10px;
-  /* Wrapper is CLICK-THROUGH so map clicks / shift-drag box-selects pass through the
-     transparent gaps; only the cards/controls below re-enable pointer events. */
-  pointer-events: none;
+/* ============================================================================
+   CONSOLE DARK SKIN (C4) — override the light interior rules for the dark
+   console (contract §9). All .dt-panel-prefixed so they win on specificity
+   regardless of source order. Data stays flat; gloss lives on chrome only.
+   The table COLUMN set + coral outline + TREND sparkcol are C7; the KPI cards
+   are C5; the full trend instrument is C8 — this block only makes the
+   re-templated console READABLE and on-palette.
+   ============================================================================ */
+.dt-panel .dt-slot-label { color: var(--pa-mut); }
+.dt-panel .dt-slot-body { color: var(--pa-ink); }
+
+/* Spine head controls (stay in the table frame until C6 lifts them to the header). */
+.dt-panel .dt-spine-head { color: var(--pa-mut); }
+.dt-panel .dt-count { color: var(--pa-mut); }
+.dt-panel .dt-metric .seg-options { background: transparent; border: 0; padding: 0; }
+.dt-panel .dt-metric .seg-label { color: var(--pa-mut); }
+.dt-panel .dt-metric .seg-btn {
+  color: #c7cacd; background: transparent;
+  border: 1px solid var(--pa-hair); border-radius: 999px;
 }
-.pa-float > * { pointer-events: auto; }
-/* Card control margins scoped to the CARD (was .pa-panel) so they hold in the float. */
+.dt-panel .dt-metric .seg-btn.active {
+  background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); box-shadow: none;
+}
+.dt-panel .dt-metric .seg-btn:hover:not(.active) { background: var(--pa-card); color: var(--pa-ink); }
+
+/* Facets — dark. (A1: the District dropdown trigger + portaled menu now carry their own
+   dark styling above; the summary/list/opt overrides here are retired — the menu is on
+   <body>, no longer a .dt-panel descendant.) */
+.dt-panel .dt-facet-chip { background: var(--pa-card); border-color: var(--pa-hair); color: #c7cacd; }
+.dt-panel .dt-facet-chip.is-on { background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); }
+.dt-panel .dt-facets-clear { color: var(--pa-mut); }
+.dt-panel .dt-facets-clear:hover { color: var(--pa-ink); }
+
+/* Table — basic dark skin (C7 re-cuts columns + adds the TREND sparkcol). */
+.dt-panel .dt-table { color: var(--pa-ink); }
+.dt-panel .dt-table thead th { color: var(--pa-mut); background: var(--pa-shell); border-color: var(--pa-hair); }
+.dt-panel .dt-table th.is-active-metric,
+.dt-panel .dt-table td.is-active-metric { background: rgba(74,222,128,0.09); }
+/* A1 — the sticky active-metric HEADER cell must stay OPAQUE, else scrolled row
+   values ghost through the translucent tint. Composite the 9% tint over the shell. */
+.dt-panel .dt-table thead th.is-active-metric {
+  background: linear-gradient(rgba(74,222,128,0.09), rgba(74,222,128,0.09)), var(--pa-shell);
+}
+.dt-panel .dt-th-btn { color: var(--pa-mut); }
+.dt-panel .dt-th-btn:hover { color: var(--pa-ink); }
+.dt-panel .dt-sort { color: var(--pa-dim); }
+.dt-panel .dt-sort.active { color: var(--pa-up); }
+.dt-panel .dt-row { color: var(--pa-ink); }
+.dt-panel .dt-row td { border-bottom-color: rgba(255,255,255,0.06); }
+.dt-panel .dt-row:hover { background: var(--pa-card); }
+.dt-panel .dt-row.is-selected { background: var(--pa-card); outline-color: var(--pa-sel); }
+/* C4 — in SELECTION mode every constituent is "selected"; a full outline on all N
+   rows is noisy. Members get a subtle tint + a 2px coral left bar (inset shadow, no
+   layout shift); the full coral outline is reserved for the hovered (focused) row. */
+.dt-panel .dt-row--member.is-selected { outline: none; box-shadow: inset 3px 0 0 var(--pa-sel); background: rgba(232,115,74,0.055); }
+.dt-panel .dt-row--member.is-selected:hover { outline: 1.5px solid var(--pa-sel); outline-offset: -1.5px; background: var(--pa-card); }
+.dt-panel .dt-name { color: var(--pa-ink); }
+.dt-panel .dt-empty { color: var(--pa-mut); }
+
+/* vs-city figures in the rail — dark (C5 turns them into KPI cards). */
+.dt-panel .dt-vs-k { color: var(--pa-mut); }
+.dt-panel .dt-vs-v { color: var(--pa-ink); }
+.dt-panel .dt-vs-cmp { color: var(--pa-mut); }
+.dt-panel .dt-vs-note { color: var(--pa-mut); }
+.dt-panel .dt-vs-row.is-approx .dt-vs-v { color: var(--pa-up); }
+.dt-panel .dt-vs-clear { color: var(--pa-mut); }
+.dt-panel .dt-vs-clear:hover { color: var(--pa-ink); }
+
+/* ---- KPI tiles (C1, DESIGN_SYSTEM §6) — compact square-ish tiles in a 2-up grid:
+   label (top) · big value (centre) · city + delta (footer). Kills the wide-card mid-void;
+   CONDO + DISTRIBUTION span full width. --card surface (raised a step), --hair border. */
+.dt-cards {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+  height: 100%; overflow-y: auto; align-content: start;
+}
+.dt-tile {
+  background: var(--card); border: 1px solid var(--hair); border-radius: var(--r-md);
+  padding: var(--s2); display: flex; flex-direction: column; gap: 1px; min-width: 0;
+}
+.dt-card--dist { grid-column: 1 / -1; }   /* the distribution is the one full-width tile */
+.dt-tile-foot { color: var(--tx-mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dt-tile-l {
+  /* E1 — the label may carry an honesty TAG (e.g. "Parcel-Weighted · Exact"); let it flow
+     to its own wrapping line (below) rather than clip with an ellipsis in the half-width
+     square — §6: honesty labels are always shown, never hidden. */
+  font-size: var(--t-2xs); letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--tx-mut); white-space: normal; overflow: visible; line-height: 1.2;
+}
+.dt-card-tag { display: block; white-space: normal; }
+.dt-tile-v {
+  font-size: var(--t-lg); font-weight: 500; color: var(--tx);
+  font-variant-numeric: tabular-nums; line-height: 1.15; margin: 1px 0;
+}
+.dt-tile-ft {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 6px;
+  font-size: var(--t-2xs); font-variant-numeric: tabular-nums; min-width: 0;
+}
+.dt-tile-city { color: var(--city); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.dt-tile-d { font-weight: 500; white-space: nowrap; flex: 0 0 auto; }
+/* Shared bits — the distribution card frame + the CONDO secondary block + sign colours. */
+.dt-card { background: var(--card); border: 1px solid var(--hair); border-radius: var(--r-md); padding: 7px 10px; }
+.dt-card-hd { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+.dt-card-l { font-size: var(--t-2xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--tx-mut); }
+.dt-card-tag { color: var(--tx-dim); text-transform: none; letter-spacing: 0; }
+.dt-up { color: var(--data-up); }
+.dt-dn { color: var(--data-down); }
+.dt-card-note { font-size: var(--t-2xs); color: var(--tx-mut); margin-top: 2px; }
+.dt-card-sub { border-top: 1px solid var(--hair); margin-top: 5px; padding-top: 4px; }
+/* C4 — the "excluding condos" lens label: a distinct mini-header so the condo-stripped
+   view never reads as another city comparison. */
+.dt-sub-lens { font-size: var(--t-2xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--tx-dim); margin-bottom: 2px; }
+.dt-kv { display: flex; justify-content: space-between; font-size: var(--t-2xs); margin-top: 1px; }
+.dt-kv-k { color: var(--tx-mut); }
+.dt-kv-v { color: var(--tx); font-variant-numeric: tabular-nums; }
+/* Distribution card — a full-width tile with a taller floor (A5) so the histogram reads as
+   a real distribution; never clips (A3). */
+.dt-card--dist { min-height: 96px; display: flex; flex-direction: column; }
+/* A3 — the histogram body carries NO extra padding (the card already pads); the doubled
+   card+body padding was eating the floor and clipping the SVG. With padding:0 + the
+   svg's 10px shrink floor, the full histogram (bars + end labels) fits the min-height by
+   construction; when the KPI cards above overflow the rail, .dt-cards scrolls — never a
+   silent clip. */
+.dt-card--dist .dt-slot-body { flex: 1 1 0; min-height: 0; margin-top: 3px; padding: 0; }
+
+/* ---- Console header bar (C6, contract §4) --------------------------------- */
+.dt-head {
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 9px 14px; border-bottom: 1px solid var(--pa-hair);
+}
+.dt-head-l { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-wrap: wrap; }
+.dt-head-r { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.dt-scope { font-size: var(--t-md); font-weight: 500; color: var(--pa-ink); white-space: nowrap; }
+.dt-scope-sub { font-size: var(--t-2xs); color: var(--pa-mut); white-space: nowrap; }
+/* Header metric chips — no "METRIC" label (the chips read clearly next to the scope
+   title); a small gap sets them off. */
+.dt-head .dt-metric { margin-left: 6px; }
+.dt-head .dt-metric .seg-label { display: none; }
+.dt-head .dt-metric .seg, .dt-head .dt-metric .seg-options { margin: 0; }
+/* × Clear — a header pill; hovers to the selection coral. */
+.dt-clear {
+  font-family: inherit; font-size: 11px; color: #e8eaec; cursor: pointer;
+  background: var(--pa-card); border: 1px solid var(--pa-hair); border-radius: 8px; padding: 4px 11px;
+}
+.dt-clear:hover { border-color: var(--pa-sel); color: var(--pa-sel); }
+
+/* TREND sparkcol cell (C7) — the sparkline sits inline; suppressed rows show "—". */
+.dt-panel .dt-table td .sparkline { display: inline-block; vertical-align: middle; }
+.dt-spark-empty { color: var(--pa-dim); }
+
+/* ============================================================================
+   PA INSTRUMENT COLUMN (contract §3.1/§4) — ONE dark chassis on the left of the
+   full-bleed map: identity → metric → tuning → legend → footer, hairline-
+   separated modules. Replaces the old light floating cluster. Keeps the .pa-float
+   class so chromePadding's live LEFT reserve still measures it (interactions.js
+   :178). Flat dark surfaces — gloss lives on the map chrome; data stays flat (§9).
+   ============================================================================ */
+.pa-float {
+  /* B2 — fit-content height (the chassis ENDS after the footer; no void below the
+     legend), capped at the viewport so it scrolls internally on a short screen. */
+  position: absolute; left: 10px; top: 10px; z-index: 15;
+  width: 228px; max-height: calc(100% - 20px); box-sizing: border-box;
+  overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column;
+  background: var(--pa-shell); border-radius: 12px; padding: 11px 13px;
+  color: var(--pa-mut); font-size: 11px;
+  pointer-events: auto;
+}
 .pa-id-card .opt-toggle, .pa-id-card .seg { margin: 0; }
+
+/* ---- Column modules + dark skin -------------------------------------------
+   Hairline-separated modules top→bottom; the footer pins to the bottom via
+   margin-top:auto. The base light identity/info/slider/legend rules are
+   overridden here by the more-specific .pa-column selectors. */
+.pa-col-mod { border-top: 1px solid var(--pa-hair); margin-top: 9px; padding-top: 8px; }
+.pa-col-lab {
+  /* C2 — module labels at the --t-xs floor (was 10px, below the DESIGN_SYSTEM §1.5 min);
+     --pa-mut now resolves to the raised --tx-mut, clearing 4.5:1 on --shell. */
+  display: block; margin: 0 0 5px;
+  font-size: var(--t-xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--pa-mut);
+}
+
+/* IDENTITY module — flatten the old light card into the column. */
+.pa-column .pa-id-card {
+  background: transparent; border: 0; box-shadow: none; border-radius: 0;
+  padding: 0; margin: 0; gap: 8px;
+}
+.pa-column .pa-id-title { font-size: var(--t-lg); font-weight: 600; letter-spacing: 0; color: var(--pa-ink); }
+.pa-column .pa-id-cap { font-size: var(--t-xs); font-weight: 500; letter-spacing: 0.08em; color: var(--pa-mut); }
+.pa-column .pa-id-year { align-items: baseline; gap: 6px; }
+.pa-column .pa-id-year-value { font-size: var(--t-lg); font-weight: 600; color: var(--pa-up); }
+/* City switcher → dark chips (active = green border), matching the annex. */
+.pa-column .opt-toggle-label { display: none; }
+.pa-column .opt-toggle-buttons { display: flex; gap: 5px; }
+.pa-column .opt-toggle-btn {
+  font-family: inherit; font-size: 12px; color: #c7cacd; cursor: pointer;
+  background: transparent; border: 1px solid var(--pa-hair); border-radius: 6px; padding: 2px 9px;
+}
+.pa-column .opt-toggle-btn.active { background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); }
+
+/* METRIC module — vertical chip list, active green-bordered. */
+.pa-col-metric .seg { display: flex; flex-direction: column; gap: 5px; margin: 0; }
+.pa-col-metric .seg-label {
+  margin: 0; font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut);
+}
+.pa-col-metric .seg-options { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; background: transparent; border: 0; padding: 0; }
+.pa-col-metric .seg-icon { display: none; }
+.pa-col-metric .seg-btn {
+  width: auto; display: inline-flex; align-items: center;
+  font-family: inherit; font-size: 12px; color: #c7cacd; cursor: pointer;
+  background: transparent; border: 1px solid var(--pa-hair); border-radius: 6px; padding: 3px 10px;
+}
+.pa-col-metric .seg-btn.active { background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); }
+
+/* TUNING module — dark year slider + dark range slot (portaled RangeFacet). */
+.pa-tune-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.pa-tune-name { flex: 0 0 auto; width: 34px; font-size: var(--t-xs); color: var(--pa-mut); }
+.pa-tune-slider { flex: 1 1 auto; width: auto; }
+.pa-tune-year { font-size: var(--t-md); font-weight: 600; color: var(--pa-up); font-variant-numeric: tabular-nums; flex: 0 0 auto; min-width: 34px; text-align: right; }
+.pa-column .pa-slider::-webkit-slider-runnable-track { background: var(--pa-hair); }
+.pa-column .pa-slider::-moz-range-track { background: var(--pa-hair); }
+/* C1 — thumb-width-aware fill: the fill's right edge tracks the 13px thumb's CENTRE
+   (6.5px + pct·(track − thumb)) instead of the raw pct%, so it never overshoots the thumb
+   at the extremes. --pct is unitless 0–100 (set by the JSX). */
+.pa-column .pa-year-slider::-webkit-slider-runnable-track {
+  background: linear-gradient(to right,
+    var(--pa-up) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
+    var(--pa-hair) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100));
+}
+.pa-column .pa-year-slider::-moz-range-track {
+  background: linear-gradient(to right,
+    var(--pa-up) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
+    var(--pa-hair) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100));
+}
+.pa-column .pa-slider::-webkit-slider-thumb { background: var(--pa-up); border-color: var(--pa-shell); }
+.pa-column .pa-slider::-moz-range-thumb { background: var(--pa-up); border-color: var(--pa-shell); }
+.pa-column .pa-rack-range-slot { margin-top: 7px; }
+/* B1 — the range is TWO rows: label + FLEXING track (own row), then the readout on
+   its OWN full-width right-aligned row (a long value can't push the track or wrap). */
+.pa-column .pa-range-slot { display: flex; flex-direction: column; gap: 4px; width: 100%; min-width: 0; align-items: stretch; }
+.pa-range-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.pa-range-top .pa-rack-label { flex: 0 0 auto; white-space: nowrap; }
+.pa-column .pa-dual { flex: 1 1 auto; width: auto; min-width: 0; }
+.pa-column .pa-dual-track { background: var(--pa-hair); }
+.pa-column .pa-dual-fill { background: var(--pa-up); }
+.pa-column .pa-rack-value { color: var(--pa-ink); font-weight: 600; font-size: var(--t-md); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+.pa-column .pa-rack-label { color: var(--pa-mut); }
+
+/* D1 (DESIGN_SYSTEM §2) — Title Case, NOT ALL-CAPS: the PA chrome LABEL roles were rendering
+   their Title-cased strings uppercased by text-transform + wide tracking. Retire that so the
+   labels read as authored (table headers, KPI labels, section labels, triplet, trend labels).
+   Placed after the label rules + scoped to match their specificity so it governs. */
+.dt-table thead th,
+.dt-tile-l, .dt-card-l, .dt-sub-lens,
+.dt-trend-label, .dt-trend-sub,
+.pa-trip-l,
+.pa-column .pa-col-lab,
+.pa-col-metric .seg-label, .dt-metric .seg-label,
+.pa-column .pa-rack-label,
+.pa-col-legend .legend-title,
+.pa-id-cap {
+  text-transform: none;
+  letter-spacing: 0.01em;
+}
+
+/* LEGEND module — flat dark (strip the gel frame; Legend.jsx internals untouched). */
+.pa-col-legend .legend { background: transparent; border: 0; box-shadow: none; border-radius: 0; padding: 0; }
+.pa-col-legend .legend-title { color: var(--pa-mut); font-size: var(--t-xs); }
+/* C2 — the ramp min/max end labels lift to the raised --tx-mut at the --t-2xs floor so
+   they clear 4.5:1 on --shell (were failing at the old muted grey). */
+.pa-col-legend .legend-lab, .pa-col-legend .legend-lab small { color: var(--pa-mut); font-size: var(--t-xs); }
+
+/* FOOTER module — About & tips + parcel count on one line; the popover is
+   IN-FLOW below (an absolute popover would be clipped by the column's overflow;
+   in-flow lets the column's own scroll contain it). */
+/* B2 — footer flows right after the legend (no margin-top:auto pinning) since the
+   column is now fit-content, so there's no void between the legend and the footer. */
+.pa-col-foot { display: flex; flex-direction: column; gap: 6px; }
+.pa-foot-line { display: flex; align-items: baseline; gap: 8px; }
+.pa-column .pa-info-btn {
+  background: transparent; border: 0; box-shadow: none; border-radius: 0;
+  color: var(--pa-mut); font-size: 10px; padding: 0; white-space: nowrap;
+}
+.pa-column .pa-info-btn:hover { color: var(--pa-ink); }
+.pa-column .pa-info-pop {
+  position: static; width: 100%; max-width: 100%; padding: 9px 10px;
+  background: var(--pa-card); border: 1px solid var(--pa-hair); border-radius: 6px;
+  box-shadow: none; color: var(--pa-mut);
+}
+.pa-column .pa-hint { color: var(--pa-mut); }
+.pa-column .pa-box-ref { color: var(--pa-mut); }
+.pa-column .pa-box-ref a { color: var(--pa-up); }
+.pa-col-count { font-size: 11px; color: var(--pa-mut); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* About&tips popover — the box-select tip + provenance/naming note, rehomed off the
    dead panel. A small trigger + an in-flow expansion (so the float's scroll contains
@@ -1027,50 +1384,49 @@ p  { margin: 0 0 0.75rem; }
 
 /* Small button used by the export-menu trigger (was shared with the retired
    analyst tools box). */
+/* A2 — Export trigger: a dark pill matching the District dropdown trigger. */
 .pa-tools-btn {
   display: inline-flex; align-items: center; gap: 5px;
-  font-family: inherit; font-size: 0.78rem; font-weight: 500;
-  padding: 5px 9px; border-radius: 7px; cursor: pointer; white-space: nowrap;
-  background: var(--bg-soft); border: 1px solid var(--border); color: var(--text);
+  font-family: inherit; font-size: var(--t-sm); font-weight: 500;
+  padding: 4px 10px; border-radius: var(--r-md); cursor: pointer; white-space: nowrap;
+  background: var(--card); border: 1px solid var(--hair); color: var(--tx);
 }
-.pa-tools-btn:hover:not(:disabled) { background: var(--bg); }
+.pa-tools-btn:hover:not(:disabled) { border-color: var(--tx-mut); }
 .pa-tools-btn:disabled { opacity: 0.5; cursor: default; }
 .export-menu { position: relative; }
-/* Floated gel callout — same glossy recipe as the other PA popups/dropdowns.
-   PORTALED to <body> with fixed left/top (or bottom) set inline by ExportMenu, so
-   the short D3 console's overflow:hidden can't clip it; bounded + scrollable. */
+/* A2 — the export menu, PORTALED to <body> (position fixed set inline by ExportMenu, so
+   the short console's overflow:hidden can't clip it), in the dark idiom matching the
+   District menu. */
 .export-menu-list {
-  min-width: 232px; max-height: min(320px, 60svh); overflow-y: auto;
-  display: flex; flex-direction: column; padding: 5px; z-index: 40;
-  background: var(--gel-grad-gloss);
-  box-shadow: var(--gel-lift-float), var(--gel-bevel);
-  border: var(--gel-border); border-radius: var(--radius-md);
+  min-width: 232px; max-height: min(340px, 62svh); overflow-y: auto;
+  display: flex; flex-direction: column; padding: var(--s2); z-index: 200;
+  background: var(--panel); border: 1px solid var(--hair); border-radius: var(--r-md);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
 }
 /* Two labelled groups (Data / Map); a hairline divides them. */
 .export-menu-group + .export-menu-group {
-  margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--border-soft);
+  margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--hair);
 }
 .export-menu-head {
   display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
   padding: 4px 8px 2px;
-  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--text-muted);
+  font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--tx-mut);
 }
 /* Scope cue — text, never colour-only (so it survives a greyscale / SR pass). */
 .export-menu-scope {
-  font-size: 0.6rem; font-weight: 600; letter-spacing: 0.02em; text-transform: none;
-  color: var(--accent-dark); background: var(--accent-soft); padding: 1px 6px; border-radius: 999px;
+  font-size: var(--t-2xs); font-weight: 600; letter-spacing: 0.02em; text-transform: none;
+  color: var(--city); background: var(--card); padding: 1px 6px; border-radius: 999px;
 }
 .export-menu-item {
   display: flex; flex-direction: column; gap: 1px; width: 100%;
-  font-family: inherit; text-align: left; color: var(--text);
-  background: transparent; border: 0; border-radius: var(--radius-sm); padding: 6px 8px; cursor: pointer;
+  font-family: inherit; text-align: left; color: var(--tx);
+  background: transparent; border: 0; border-radius: var(--r-sm); padding: 6px 8px; cursor: pointer;
 }
-.export-menu-item:hover { background: var(--accent-soft); }
-.export-menu-item:hover .export-menu-title { color: var(--accent-dark); }
-.export-menu-title { font-size: 0.82rem; font-weight: 600; }
-.export-menu-sub { font-size: 0.68rem; color: var(--text-muted); line-height: 1.3; }
-.export-menu-pair { color: var(--accent-dark); font-weight: 600; white-space: nowrap; }
+.export-menu-item:hover { background: var(--shell); }
+.export-menu-title { font-size: var(--t-xs); font-weight: 600; color: var(--tx); }
+.export-menu-sub { font-size: var(--t-2xs); color: var(--tx-mut); line-height: 1.3; }
+.export-menu-pair { color: var(--data-up); font-weight: 600; white-space: nowrap; }
 
 /* (The neighbourhood search is the unified SearchPeek by the map's zoom stack — see
    .pa-search-peek above. D5 merged the old topbar search + dock filter into it.) */
@@ -1130,17 +1486,39 @@ p  { margin: 0 0 0.75rem; }
 }
 .pa-slider:focus { outline: none; }
 .pa-slider:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-/* YEAR: green fill up to the thumb via --pct (matches the dual's fill segment). */
+/* C9 — visible keyboard focus for every interactive control (mouse clicks stay quiet
+   via :focus-visible). Light-shell controls use --accent; the PA console's dark chrome
+   controls use CORAL per the directive — specifically --pa-dn (#f88b6b), NOT the
+   selection coral --pa-sel (#e8734a), so a focus ring reads distinct from A5's selection
+   outline on the same rows. */
+.seg-btn:focus-visible,
+.opt-toggle-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dt-clear:focus-visible,
+.dt-handle:focus-visible,
+.dt-facet-summary:focus-visible,
+.dt-th-btn:focus-visible { outline: 2px solid var(--pa-dn); outline-offset: 2px; border-radius: 4px; }
+/* The metric chips + option toggles live ONLY in dark PA chrome (instrument column +
+   console header); give their ring the same coral there. The --accent rule above stays
+   as the light-shell fallback in case either control is ever reused outside the console. */
+.pa-column .seg-btn:focus-visible,
+.pa-column .opt-toggle-btn:focus-visible,
+.dt-panel .seg-btn:focus-visible { outline-color: var(--pa-dn); }
+/* YEAR: green fill to the thumb CENTRE via unitless --pct + a thumb-width-aware calc (C1),
+   so the fill never overshoots the 13px thumb at the extremes. */
 .pa-year-slider::-webkit-slider-runnable-track {
-  background: linear-gradient(to right, var(--accent) var(--pct, 0%), var(--border) var(--pct, 0%));
+  background: linear-gradient(to right,
+    var(--accent) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
+    var(--border) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100));
 }
 .pa-year-slider::-moz-range-track {
-  background: linear-gradient(to right, var(--accent) var(--pct, 0%), var(--border) var(--pct, 0%));
+  background: linear-gradient(to right,
+    var(--accent) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
+    var(--border) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100));
 }
 
 /* ---- Dual-handle range: two thumbs on ONE track (matches the year slider) --- */
 .pa-range-slot { min-width: 0; }
-.pa-dual { position: relative; flex: 0 0 auto; width: 150px; height: 16px; }
+.pa-dual { position: relative; flex: 0 0 auto; width: var(--pa-track-w); height: 16px; }
 .pa-dual-track {
   position: absolute; top: 50%; left: 0; right: 0; height: 4px; margin-top: -2px;
   border-radius: 999px; background: var(--border);
@@ -1680,6 +2058,11 @@ p  { margin: 0 0 0.75rem; }
   box-shadow: var(--gel-bevel), var(--gel-lift);
   border-radius: 50% !important;
 }
+/* C7 — deliberate bottom-right placement on the PA map: stack the attribution + scale
+   flush in the corner with a small gap, so nothing floats loose mid-edge. */
+.pa-canvas .maplibregl-ctrl-bottom-right {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px; margin: 0 4px 4px 0;
+}
 
 /* Scale bar — minor convex consistency (subtle lift; stays legible). */
 .maplibregl-ctrl-scale {
@@ -1784,20 +2167,20 @@ p  { margin: 0 0 0.75rem; }
   /* PA on mobile: full-bleed map with the floating cluster narrowed to the phone
      width; the dock stays bounded in the canvas foot. */
   .pa-search-peek-panel { width: min(64vw, 240px); }
-  /* Cap the float shorter on mobile so a tall stack (card + single-select detail)
-     stops well ABOVE the bottom-left legend (which moves left on mobile) — the
-     reserve clears the ~210px legend + a margin; the float scrolls if it must. */
-  .pa-float { width: min(70vw, 288px); max-height: calc(100% - 250px); }
+  /* Narrow the instrument column on a phone; it keeps the base top/bottom:10 full
+     height and scrolls internally if the modules outgrow it. */
+  .pa-float { width: 150px; padding: 9px 10px; max-height: none; }
   .pa-canvas .canvas-wrap { min-height: 0; }
   .pa-rack { width: calc(100vw - 24px); }
-  /* The four-slot grid is too tight side-by-side on a phone — STACK it into one
-     column (spine, then the three gauges), the whole console scrolling. Taller cap
-     on mobile since it no longer has to share width. */
+  /* The four-frame grid is too tight side-by-side on a phone — STACK it into one
+     column and scroll the console. Per §6 degradation: the table dominates (never
+     collapses), the rail cards + trend fold below it, the margin gutter collapses. */
   .dt-panel { width: calc(100vw - 16px); max-height: 62svh; }
   .dt-grid {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(200px, 2fr) 1fr 1fr 1.2fr;
-    grid-template-areas: "spine" "timeseries" "distribution" "vscity";
+    grid-template-rows: minmax(240px, 3fr) auto auto;
+    grid-template-areas: "table" "rail" "trend";
+    gap: 8px;
     overflow-y: auto;
   }
   /* Bottom-left so it clears the centred tuning rack + corner controls. */

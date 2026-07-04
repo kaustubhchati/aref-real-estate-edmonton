@@ -112,9 +112,12 @@ export default function Legend({
             display: "flex",
             justifyContent: "space-between",
             marginTop: 4,
-            fontSize: "0.70rem",
+            fontSize: "0.76rem",
             fontVariantNumeric: "tabular-nums",
-            color: "var(--text)",
+            // inherit the container's colour so the end labels are readable on BOTH
+            // the dark PA column and the light BP/BC theme (was var(--text) = near
+            // black → invisible on the dark shell) — B2.
+            color: "inherit",
           }}>
             <span>{format(hMin)}</span>
             {diverging && <span style={{ color: "var(--text-subtle)" }}>±1%</span>}

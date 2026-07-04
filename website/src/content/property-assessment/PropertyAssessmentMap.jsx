@@ -1,22 +1,23 @@
 // =============================================================================
 // PropertyAssessmentMap.jsx
 //
-// The Property Assessment route. FULL-BLEED map with floating chrome (D1 removed
-// the in-flow left panel):
+// The Property Assessment route — a three-mode analyst map (PA_MODE_CONTRACT.md §3):
 //
-//   ┌──── .content-map (flex column) ──────────────────────────────┐
-//   │  .pa-topbar  (property count · search)                        │
-//   │ ┌──── .pa-canvas (flex 1, full-bleed) ──────────────────────┐ │
-//   │ │ ┌ .pa-float ┐        MapView (or EmptyState)              │ │
-//   │ │ │ id card   │                                              │ │
-//   │ │ │ (detail)  │                              .pa-legend ▟    │ │
-//   │ │ │ ⓘ about   │                                              │ │
-//   │ │ └───────────┘   .pa-foot: .pa-rack + DataTable (dock)     │ │
-//   │ └────────────────────────────────────────────────────────────┘ │
+//   ┌──── .content-map / .pa-map (full-bleed) ─────────────────────┐
+//   │ ┌.pa-float┐   MAP (sacred centre, zero chrome)   ┌ nav ┐     │
+//   │ │identity │                                       │🔍 +−│     │
+//   │ │ metric  │                        ┌ .pa-detail (S-b only) ┐  │
+//   │ │ tuning  │                        └──────────────────────┘  │
+//   │ │ legend  │                                                   │
+//   │ │ footer  │   .pa-foot: DataTable console (rises ALONE)       │
+//   │ └─────────┘    handle → [ rail | table | trend | margin ]     │
 //   └──────────────────────────────────────────────────────────────┘
-//   The floating cluster overlays the map (absolute); the console/dock can now
-//   span the full width. The single-select detail lives in .pa-float when the dock
-//   is down and in the console when it's up.
+//   The instrument COLUMN (left, .pa-float — kept so chromePadding reserves it) is
+//   ONE dark chassis: identity → metric → tuning → legend → footer. The console
+//   rises from the bottom into a four-frame grid (rail KPI cards | table | trend
+//   instrument | margin); its header carries the scope title + metric chips +
+//   District / Clear / Export. The S-b single-select detail is a right float below
+//   the nav. Three modes (Display / View / Analysis) over url / dockOpen / selectedIds.
 //
 // Data source seam: city + year drive a single URL via dataSources.js.
 // The available years come from /manifest.json (loaded once on mount), never
@@ -28,12 +29,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import polylabel from "polylabel";
 
-import MapView from "../../components/MapView.jsx";
+import MapView, { findFirstSymbolLayerId } from "../../components/MapView.jsx";
 import Legend from "../../components/Legend.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
 import IdentityCard from "./IdentityCard.jsx";
+import SegmentedControl from "../../components/SegmentedControl.jsx";
 import InfoRail from "./InfoRail.jsx";
 import DataTable from "./DataTable.jsx";
 import SearchPeek from "./SearchPeek.jsx";
@@ -55,9 +57,13 @@ import {
   yoyStopsFromValues,
   stopsFromScale,
   metricStops,
+  condoStops,
   applyYearMetric,
   choroplethLayers,
   choroplethImages,
+  CENTROID_SOURCE,
+  centroidNameLayer,
+  centroidFocusLayer,
 } from "./choroplethStyle.js";
 import {
   CITIES,
@@ -200,6 +206,42 @@ function pointInGeom(pt, geom) {
     : inPoly(geom.coordinates);
 }
 
+// D-P2 F2 — client-derived neighbourhood centroid POINTS for the name-label layer.
+// One Point per neighbourhood (the combined source is already one feature per nbhd,
+// so no dedup is needed), placed at the guaranteed-interior centroid — reusing the
+// SAME geometryCentroid the box-select uses (shoelace, polylabel fallback). `area` is
+// the largest ring's |area|, year-invariant, handed to the label layer's
+// symbol-sort-key so the bigger neighbourhood wins a collision. Returns a GeoJSON
+// FeatureCollection ready for map.addSource.
+function buildCentroidPoints(gj) {
+  const pts = [];
+  for (const f of gj.features) {
+    const c = geometryCentroid(f.geometry);
+    if (!c) continue;
+    const g = f.geometry;
+    const polys = g.type === "MultiPolygon" ? g.coordinates : [g.coordinates];
+    const area = polys.reduce((max, poly) => Math.max(max, ringArea(poly[0])), 0);
+    pts.push({ c, area, id: f.properties["Neighbourhood ID"], name: f.properties.display_name });
+  }
+  // D-P2 F2 F3 D-P3 B3 — assign a zoom-density TIER by area rank so the overview breathes:
+  // the largest neighbourhoods (tier 1) label from the wide view, mid ones (tier 2) appear
+  // ~z12.5, the rest (tier 3) only at neighbourhood zoom ~z14. The label layer's text-size
+  // step reads this tier; the table always holds the exhaustive list.
+  const byArea = [...pts].sort((a, b) => b.area - a.area);
+  const n = byArea.length;
+  const t1 = Math.round(n * 0.08);  // top ~8% = major
+  const t2 = Math.round(n * 0.33);  // next ~25% = mid
+  byArea.forEach((p, i) => { p.tier = i < t1 ? 1 : i < t2 ? 2 : 3; });
+  return {
+    type: "FeatureCollection",
+    features: pts.map((p) => ({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: p.c },
+      properties: { "Neighbourhood ID": p.id, display_name: p.name, area: p.area, tier: p.tier },
+    })),
+  };
+}
+
 // Plain median of a numeric array (used for the labelled "median of medians"
 // area approximation).
 function medianOf(arr) {
@@ -221,6 +263,13 @@ function aggregateFeatures(features) {
   const num = (v) => (v == null || !Number.isFinite(+v) || +v === -999 ? null : +v);
   let nReportable = 0, nSuppressed = 0, nExcluded = 0;
   let totalParcels = 0, sumNV = 0, sumN = 0, sumNYoY = 0, sumNYoYW = 0;
+  // §7 condo math: condo SHARE is parcel-weighted (Σ n·pct / Σ n, exact); the
+  // excl-condo MEAN and LOT are NON-CONDO-parcel-weighted (Σ nc·x / Σ nc, exact,
+  // where nc = n·(1−pct/100)), each summed only over members with a finite figure.
+  // An all-condo selection (Σ nc = 0) yields an honest null → "—", never a false 0.
+  let sumNPct = 0, sumNPctW = 0;            // condo share
+  let sumNcMexcl = 0, sumNcMexclW = 0;      // mean excl. condo
+  let sumNcLot = 0, sumNcLotW = 0;          // lot (non-condo)
   const medians = [];
   for (const f of features) {
     const p = f.properties;
@@ -234,6 +283,15 @@ function aggregateFeatures(features) {
       if (med != null) medians.push(med);
       const yoy = num(p.yoy_pct_change);
       if (yoy != null && n != null) { sumNYoY += n * yoy; sumNYoYW += n; }
+      const pct = num(p.pct_with_unit);       // % of parcels that are titled condo units
+      if (pct != null && n != null) {
+        sumNPct += n * pct; sumNPctW += n;
+        const nc = n * (1 - pct / 100);        // non-condo parcels in this nbhd
+        const mexcl = num(p.avg_assessvalue_without_unit);
+        if (mexcl != null) { sumNcMexcl += nc * mexcl; sumNcMexclW += nc; }
+        const lot = num(p.avg_lotsize);
+        if (lot != null) { sumNcLot += nc * lot; sumNcLotW += nc; }
+      }
     } else if (p.polygon_state === "suppressed_low_n") {
       nSuppressed++;
       if (n != null) totalParcels += n;
@@ -246,6 +304,9 @@ function aggregateFeatures(features) {
     parcelMean: sumN > 0 ? sumNV / sumN : null,            // EXACT (n-weighted)
     medianOfMedians: medians.length ? medianOf(medians) : null, // APPROX
     areaYoY: sumNYoYW > 0 ? sumNYoY / sumNYoYW : null,     // APPROX (n-weighted)
+    condoShare: sumNPctW > 0 ? sumNPct / sumNPctW : null,          // % parcel-weighted, EXACT
+    meanExclCondo: sumNcMexclW > 0 ? sumNcMexcl / sumNcMexclW : null, // $ non-condo-weighted, EXACT; null if all-condo
+    lotNonCondo: sumNcLotW > 0 ? sumNcLot / sumNcLotW : null,      // m² non-condo-weighted, EXACT; null if all-condo
   };
 }
 
@@ -337,10 +398,16 @@ export default function PropertyAssessmentMap() {
   // Auto-collapse the dock when the selection empties — the ONE intentional
   // behaviour change in the layout re-architecture (previously the dock latched
   // open until toggled). This only LOWERS it on an empty set, so a manual open at
-  // 0 selection still sticks: selectedIds doesn't change on a toggle, so this
-  // effect doesn't re-run and re-close it.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { if (selectedIds.length === 0) setDockOpen(false); }, [selectedIds]);
+  // 0 selection still sticks (selectedIds doesn't change on a toggle). EXCEPTION:
+  // the console-header × Clear empties the selection but MUST keep the console up
+  // (S-e → S-c in place, contract §5) — it raises this one-shot flag so this effect
+  // skips the collapse for that emptying only. A map-click deselect still collapses.
+  const keepDockOnClearRef = useRef(false);
+  useEffect(() => {
+    if (selectedIds.length !== 0) return;
+    if (keepDockOnClearRef.current) { keepDockOnClearRef.current = false; return; }
+    setDockOpen(false);
+  }, [selectedIds]);
 
   // Load the manifest once on mount and seed the year in the SAME update (no
   // frame where the manifest is loaded but no year is chosen → no empty-state
@@ -430,6 +497,7 @@ export default function PropertyAssessmentMap() {
 
   const stops = useMemo(() => {
     if (metric === "yoy_pct_change") return yoyStopsFromValues(yoyAllValues);
+    if (metric === "pct_with_unit") return condoStops(gjView);  // warm quantile share ramp (A3)
     return metric === "median_assessvalue"
       ? stopsFromScale(getColourScale(manifest, city, year), metric)
       : metricStops(gjView, metric);
@@ -594,8 +662,19 @@ export default function PropertyAssessmentMap() {
   useEffect(() => {
     if (!map || !gj) return;
     const next = new Set();
-    if (brushedIds) {
-      const keep = new Set(brushedIds.map(String));
+    // The dim set is EITHER the table's facet view (brush, VIEW-only) OR — whenever N≥2
+    // are SELECTED — the non-selected polygons, so the selected set's boundaries read for
+    // analysis. A6: this now applies in BOTH the S-b₂ down-state AND Analysis (console up),
+    // not just when the console is down. brushedIds is ALWAYS null in selection mode (the
+    // VIEW-only fence is off), so the two dim channels never collide — they stay separate
+    // code paths (brush branch first) and the SELECTION dim takes precedence by construction.
+    const keepIds = brushedIds
+      ? brushedIds.map(String)
+      : selectedIds.length >= 2
+      ? selectedIds.map(String)
+      : null;
+    if (keepIds) {
+      const keep = new Set(keepIds);
       for (const f of gj.features) {
         const id = String(f.properties["Neighbourhood ID"]);
         if (!keep.has(id)) next.add(id);
@@ -613,7 +692,163 @@ export default function PropertyAssessmentMap() {
     } catch {
       /* map mid-teardown — the next mounted map re-applies via this effect */
     }
-  }, [map, gj, brushedIds]);
+  }, [map, gj, brushedIds, selectedIds, dockOpen]);
+
+  // D-P2 F1/F2 — mount the neighbourhood NAME labels on a client-derived centroid
+  // point source, ABOVE everything (no beforeId), so names clear the choropleth fills
+  // AND the basemap's own labels. Runs once the map + data are ready; re-derives on a
+  // city switch (gj changes). The source is year-invariant, so the year slider never
+  // touches it (applyYearMetric leaves it alone).
+  useEffect(() => {
+    if (!map || !gj) return;
+    const points = buildCentroidPoints(gj);
+    try {
+      const src = map.getSource(CENTROID_SOURCE);
+      if (src) {
+        src.setData(points);   // city switch — same layers, new points
+        return;
+      }
+      map.addSource(CENTROID_SOURCE, {
+        type: "geojson",
+        data: points,
+        promoteId: "Neighbourhood ID", // so the focus layer (F3) reads feature-state by id
+      });
+      // B2 (DESIGN_SYSTEM §5) — anchor the base name layer ADJACENT to the basemap's
+      // symbol layers (insert before the first one) so it joins their ONE collision
+      // index: with allow-overlap:false, our names and the basemap's own labels mutually
+      // collide-test and never overprint. Inserted first among the symbols → our names
+      // win placement (basemap street/place labels yield in the gaps).
+      const symbolAnchor = findFirstSymbolLayerId(map);
+      map.addLayer({ ...centroidNameLayer(), source: CENTROID_SOURCE }, symbolAnchor);
+      // F3 — the hover/selected guarantee stays ON TOP (allow-overlap:true, the ONE
+      // exception): the pointed-at neighbourhood always names itself, above everything.
+      map.addLayer({ ...centroidFocusLayer(), source: CENTROID_SOURCE });
+    } catch {
+      /* map mid-teardown — the next mounted map re-adds via this effect */
+    }
+  }, [map, gj]);
+
+  // D-P4 B1 — filter the BASE name layer to REPORTABLE (coloured/aggregated) neighbourhoods
+  // for the ACTIVE YEAR only. Suppressed / non-residential / no-data names never clutter the
+  // overview and their collision budget frees the analyzable set to fill in (B2). The centroid
+  // SOURCE is year-invariant, so the per-year reportable set is applied as a layer FILTER here
+  // (recomputed on year change from gjView's polygon_state). The FOCUS layer stays unfiltered —
+  // hover/selected still names any neighbourhood (the always-label exception).
+  useEffect(() => {
+    if (!map || !gjView || !map.getLayer("nbhd-labels")) return;
+    const reportable = gjView.features
+      .filter((f) => f.properties.polygon_state === "aggregated")
+      .map((f) => String(f.properties["Neighbourhood ID"]));
+    try {
+      map.setFilter("nbhd-labels", ["in", ["get", "Neighbourhood ID"], ["literal", reportable]]);
+    } catch {
+      /* map mid-teardown */
+    }
+  }, [map, gjView]);
+
+  // D-P2 F3 — mirror the selection (pinned) onto the centroid source, so a selected
+  // neighbourhood keeps its name shown via the focus layer even where the base label
+  // was collision-culled. Set-diff, mirroring the polygon `pinned` effect (read-only:
+  // it copies the existing channel, never writes selection).
+  const prevCentroidPinRef = useRef(new Set());
+  useEffect(() => {
+    if (!map) return;
+    const next = new Set(selectedIds.map(String));
+    const prev = prevCentroidPinRef.current;
+    try {
+      for (const id of prev) {
+        if (!next.has(id)) map.setFeatureState({ source: CENTROID_SOURCE, id }, { pinned: false });
+      }
+      for (const id of next) {
+        map.setFeatureState({ source: CENTROID_SOURCE, id }, { pinned: true });
+      }
+      prevCentroidPinRef.current = next;
+    } catch {
+      /* map mid-teardown or centroid source not added yet — re-applies on next change */
+    }
+  }, [map, selectedIds]);
+
+  // D-P2 F3 — mirror the table-row hover onto the centroid source. Map hover is handled
+  // by the listener effect below; the two are never active at once (pointer over the
+  // table OR the map), exactly like the polygon hover channels.
+  const prevCentroidRowHoverRef = useRef(null);
+  useEffect(() => {
+    if (!map) return;
+    const prev = prevCentroidRowHoverRef.current;
+    try {
+      if (prev != null && String(prev) !== String(hoveredRowId)) {
+        map.setFeatureState({ source: CENTROID_SOURCE, id: prev }, { hover: false });
+      }
+      if (hoveredRowId != null) {
+        map.setFeatureState({ source: CENTROID_SOURCE, id: hoveredRowId }, { hover: true });
+      }
+      prevCentroidRowHoverRef.current = hoveredRowId;
+    } catch {
+      /* map mid-teardown or centroid source not added yet */
+    }
+  }, [map, hoveredRowId]);
+
+  // D-P2 F3 — mirror the MAP hover onto the centroid source. interactions.js owns the
+  // polygon hover state (left untouched); this read-only listener copies the pointed-at
+  // id onto the centroid source so its focus label shows. Own listeners so the working
+  // interactions core stays frozen.
+  useEffect(() => {
+    if (!map) return undefined;
+    let curId = null;
+    const set = (id, on) => {
+      try { map.setFeatureState({ source: CENTROID_SOURCE, id }, { hover: on }); } catch { /* source not ready */ }
+    };
+    const onMove = (e) => {
+      const id = e.features?.[0]?.id;
+      if (id === curId) return;
+      if (curId != null) set(curId, false);
+      curId = id ?? null;
+      if (curId != null) set(curId, true);
+    };
+    const onLeave = () => { if (curId != null) { set(curId, false); curId = null; } };
+    map.on("mousemove", "nbhd-fill", onMove);
+    map.on("mouseleave", "nbhd-fill", onLeave);
+    return () => { map.off("mousemove", "nbhd-fill", onMove); map.off("mouseleave", "nbhd-fill", onLeave); };
+  }, [map]);
+
+  // D-P3 B4 — building/ramp harmony. Carto's building fills are a warm TAN (set by
+  // applyAppleClassic) that clashes hue-vs-hue with the choropleth ramp at parcel zoom.
+  // MapLibre has no per-layer blend mode, so approximate a LUMINOSITY blend: drop the
+  // buildings to a neutral warm GREY (hue out → tonal texture) and make `building`
+  // translucent so the ramp reads THROUGH as lightness modulation, not a competing colour.
+  // Colour/opacity only; composes with the choropleth's own F4 zoom-fade (separate layer,
+  // untouched). PA-scoped (runs after applyAppleClassic); guarded.
+  useEffect(() => {
+    if (!map) return;
+    try {
+      if (map.getLayer("building")) {
+        map.setPaintProperty("building", "fill-color", "#d9d6cf");   // neutral warm grey (desaturated)
+        map.setPaintProperty("building", "fill-opacity", 0.6);        // ramp reads through
+      }
+      if (map.getLayer("building-top")) {
+        map.setPaintProperty("building-top", "fill-color", "#e7e3db"); // lighter neutral top face (keeps its zoom opacity ramp)
+      }
+    } catch {
+      /* map mid-teardown */
+    }
+  }, [map]);
+
+  // D-P2 F5 — suppress the basemap's OWN neighbourhood labels for the PA view. Carto's
+  // place_hamlet (class=neighbourhood) and place_suburbs (class=suburb) label Edmonton
+  // neighbourhoods from z12, which DOUBLES our centroid labels (at Carto's point, offset
+  // from our interior centroid). Ours are the authoritative set — all 403, reconciled
+  // names incl. Wîhkwêntôwin — so hide theirs. PA-scoped (this map only); guarded, so a
+  // basemap without these layers is a no-op.
+  useEffect(() => {
+    if (!map) return;
+    try {
+      for (const id of ["place_hamlet", "place_suburbs"]) {
+        if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", "none");
+      }
+    } catch {
+      /* map mid-teardown */
+    }
+  }, [map]);
 
   // Active-metric series across every year for the single-selected nbhd — the
   // rail sparkline. All years are on the resident combined feature (gj), so this
@@ -653,12 +888,18 @@ export default function PropertyAssessmentMap() {
         median_assessvalue: num(p.median_assessvalue),
         avall_public:       num(p.avall_public),
         avg_lotsize:        num(p.avg_lotsize),
+        // Mean excl. condo — carried on the row so the single-select KPI card's CONDO
+        // secondary block shows the real value (was absent → a false "—", A4). At 0%
+        // condo it equals the overall mean; null ONLY at 100% condo (no non-condo).
+        avg_assessvalue_without_unit: num(p.avg_assessvalue_without_unit),
         median_yearbuilt:   num(p.median_yearbuilt),
         yoy_pct_change:     num(p.yoy_pct_change),
         n_properties:       num(p.n_properties),   // parcels — for the console's vs-city slot (D3)
         pct_with_unit:      num(p.pct_with_unit),  // condo share 0–100 — the spine's % Condo column (D4); real all years post D-BE1
-        // The ACTIVE metric across every year — drives the console's timeseries slot (D3).
+        // The ACTIVE metric across every year — drives the console's trend instrument (D3/C8).
         series: years.map((y) => num(gp[`${metric}_${y}`])),
+        // The matched-sample YoY across every year — the trend instrument's YoY strip (C8).
+        yoySeries: years.map((y) => num(gp[`yoy_pct_change_${y}`])),
         rank: null,
       };
     });
@@ -935,43 +1176,34 @@ export default function PropertyAssessmentMap() {
   // sliders read as one instrument. [D2]
   const yMin = years.length ? Math.min(...years) : 0;
   const yMax = years.length ? Math.max(...years) : 1;
-  const yearPct = `${(((sliderYear ?? year ?? yMin) - yMin) / ((yMax - yMin) || 1)) * 100}%`;
+  // C1 — UNITLESS 0–100 (not a "%" string) so the track fill can be thumb-width-aware in
+  // CSS (calc), keeping the fill's right edge at the thumb centre instead of overshooting.
+  const yearPct = ((sliderYear ?? year ?? yMin) - yMin) / ((yMax - yMin) || 1) * 100;
 
-  // The single-select detail, built ONCE so it can render in EITHER home: the left
-  // panel (dock down) or the console's left segment (dock up). Same component +
-  // props — only the container is conditional (notes 7/8). null unless exactly one
-  // neighbourhood is selected.
+  // The S-b single-select DETAIL instrument (contract §4/C9): the right-side float,
+  // shown only when the console is DOWN and exactly one neighbourhood is selected.
+  // When the console is UP the detail role is consolidated into the console's rail
+  // cards + header (no `detail` prop, no re-homing). null unless a single selection.
   const detailRail =
     url && selectedFeature ? (
       <InfoRail
         feature={selectedFeature}
-        year={year}
         metric={metric}
-        years={years}
         sparkValues={sparkValues}
         activeIndex={activeYearIndex}
+        cityBaseline={cityBaseline}
+        cityName={city}
+        rank={tableRows.find((r) => String(r.id) === String(singleSelectedId))?.rank ?? null}
         onClear={() => setSelectedIds([])}
       />
     ) : null;
 
   return (
     <article className="content-map pa-map">
-      {/* ===== TOP CONTEXT BAR — property count only. The name search moved OUT of
-          here (D5): it's now the ONE unified SearchPeek by the map's zoom stack,
-          driving both the map fly-to AND the table filter. */}
-      <header className="pa-topbar">
-        <div className="pa-topbar-context">
-          {url && (
-            <span className="pa-topbar-sub">
-              {propCount.toLocaleString()} cleaned residential properties
-            </span>
-          )}
-        </div>
-      </header>
-
-      {/* ===== BODY: full-bleed map canvas — NO reserved side column. The controls
-           float over the map as a top-left cluster (.pa-float); the console below
-           can now span the full width. ===== */}
+      {/* ===== FULL-BLEED MAP CANVAS — no reserved column in flow. The instrument
+           column (left) and the console (bottom) float over the map (contract
+           §3.1/§3.2); the map centre stays chrome-free. The old .pa-topbar is
+           gone — the parcel count re-homes to the column footer. ===== */}
       <div className="pa-canvas">
           <div className="canvas-wrap">
             {fetchError && url ? (
@@ -1024,62 +1256,119 @@ export default function PropertyAssessmentMap() {
             )}
           </div>
 
-          {/* ===== FLOATING TOP-LEFT CHROME ===== overlays the map, does not
-              reserve width. Holds: the identity card (title/city/year/metric) —
-              ALWAYS rendered so the city switcher stays reachable even in the
-              Calgary no-data state; the single-select detail when the dock is DOWN
-              (it re-homes into the console when the dock is UP, via the `detail`
-              prop below — never shown twice); and an "About & tips" popover holding
-              the box-select tip + the provenance/naming note (rehomed from the
-              removed left panel). */}
-          <div className="pa-float">
+          {/* ===== INSTRUMENT COLUMN (contract §3.1) — ONE dark chassis on the
+              left: identity → metric → tuning → legend → footer, hairline-
+              separated modules. Keeps the .pa-float class so chromePadding's live
+              left reserve still measures it (interactions.js:178). ALWAYS rendered
+              so the city switcher stays reachable in the Calgary no-data state. ===== */}
+          <div className="pa-float pa-column">
             <IdentityCard
               cities={CITIES}
               city={city}
               onCityChange={changeCity}
               year={year}
               sliderYear={sliderYear}
-              metrics={METRICS}
-              metric={metric}
-              onMetricChange={setMetric}
               hasData={!!url}
-              /* Metric buttons lift away when the console rises — the console's own
-                 spine header then carries the metric selector (D3). */
-              showMetric={!dockOpen}
             />
 
-            {url && !dockOpen && detailRail}
-
             {url && (
-              <div className="pa-info">
-                <button
-                  type="button"
-                  className="pa-info-btn"
-                  aria-expanded={infoOpen}
-                  onClick={() => setInfoOpen((o) => !o)}
-                >
-                  About &amp; tips
-                </button>
-                {infoOpen && (
-                  <div className="pa-info-pop" role="group" aria-label="About and tips">
-                    <p className="pa-hint">Tip: shift-drag the map to select an area.</p>
-                    <p className="pa-box-ref">
-                      <span>Updated {manifest?.last_updated ?? "—"}.</span>{" "}
-                      Some neighbourhoods were renamed (e.g. Oliver → Wîhkwêntôwin, 2025); a
-                      neighbourhood's full history shows under its current name.{" "}
-                      <a
-                        href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Naming Committee
-                      </a>.
-                    </p>
+              <>
+                {/* METRIC module — the down-state home of the metric selector. It
+                    goes DORMANT in Analysis (dockOpen): the chips re-home to the
+                    console header (DataTable spine), never in two places at once.
+                    Same two-conditional-homes mechanic, relocated into the column. */}
+                {!dockOpen && (
+                  <div className="pa-col-mod pa-col-metric">
+                    <SegmentedControl
+                      label="Metric"
+                      options={METRICS}
+                      value={metric}
+                      onChange={setMetric}
+                    />
                   </div>
                 )}
-              </div>
+
+                {/* TUNING module — year slider (same slideYear/sliderYear throttle)
+                    + the metric-range slot. DataTable PORTALS its RangeFacet into
+                    .pa-rack-range-slot (ref below); its TanStack wiring + the
+                    VIEW-only brush stay in the dock. Fixed slot: the range is
+                    disabled (not removed) in selection mode. */}
+                <div className="pa-col-mod pa-col-tuning" role="group" aria-label="Tuning">
+                  {/* C2 — the "⚙ Tuning" module label is removed (the sliders are
+                      self-evident); the group keeps its aria-label for a11y. */}
+                  {year != null && (
+                    <div className="pa-tune-row">
+                      <span className="pa-tune-name">Year</span>
+                      <input
+                        type="range"
+                        className="pa-slider pa-year-slider pa-tune-slider"
+                        aria-label="Year"
+                        min={yMin}
+                        max={yMax}
+                        step={1}
+                        value={sliderYear ?? year}
+                        style={{ "--pct": yearPct }}
+                        onChange={(e) => slideYear(Number(e.target.value))}
+                      />
+                      <strong className="pa-tune-year">{sliderYear ?? year}</strong>
+                    </div>
+                  )}
+                  <div className="pa-rack-range-slot" ref={setRangeSlot} />
+                </div>
+
+                {/* LEGEND module — relocated from the bottom-right .pa-legend float
+                    into the column (a real relocation, §4). Legend.jsx internals
+                    untouched; the horizontal ramp swaps with the active metric. */}
+                <div className="pa-col-mod pa-col-legend">
+                  <Legend
+                    title={selectedMetric.label}
+                    stops={stops}
+                    format={selectedMetric.fmt}
+                    horizontal
+                    diverging={isYoy}
+                  />
+                </div>
+
+                {/* FOOTER module — About & tips trigger + parcel count (re-homed
+                    here from the removed .pa-topbar). The popover opens upward. */}
+                <div className="pa-col-mod pa-col-foot">
+                  <div className="pa-foot-line">
+                    <button
+                      type="button"
+                      className="pa-info-btn"
+                      aria-expanded={infoOpen}
+                      onClick={() => setInfoOpen((o) => !o)}
+                    >
+                      About &amp; tips
+                    </button>
+                    <span className="pa-col-count">{propCount.toLocaleString()} parcels</span>
+                  </div>
+                  {infoOpen && (
+                    <div className="pa-info-pop" role="group" aria-label="About and tips">
+                      <p className="pa-hint">Tip: shift-drag the map to select an area.</p>
+                      <p className="pa-box-ref">
+                        <span>Updated {manifest?.last_updated ?? "—"}.</span>{" "}
+                        Some neighbourhoods were renamed (e.g. Oliver → Wîhkwêntôwin, 2025); a
+                        neighbourhood's full history shows under its current name.{" "}
+                        <a
+                          href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Naming Committee
+                        </a>.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </div>
+
+          {/* ===== SINGLE-SELECT DETAIL (S-b) — a right-side float below the nav
+              stack, mounted only when exactly one neighbourhood is selected and the
+              console is down. Interior anatomy re-skinned to the annex in C9. ===== */}
+          {url && !dockOpen && detailRail}
 
           {/* UNIFIED SEARCH (D5) — the ONE search control: a magnifier peek sitting
               with the map's zoom stack (top-right). Typing filters the table live
@@ -1095,60 +1384,11 @@ export default function PropertyAssessmentMap() {
             />
           )}
 
-          {/* LEGEND — small card bottom-right; persistent (a map needs its legend
-              while a selection is being analysed). */}
-          {url && (
-            <div className="pa-legend">
-              <Legend
-                title={selectedMetric.label}
-                stops={stops}
-                format={selectedMetric.fmt}
-                horizontal
-                diverging={isYoy}
-              />
-            </div>
-          )}
-
-          {/* CANVAS FOOT — the TUNING RACK rides ABOVE the analysis dock in a
-              bottom-anchored flex column, so the rack's lift tracks the dock's
-              REAL laid-out height (collapsed pill or open panel) with no magic
-              number. pointer-events:none lets map clicks pass between them. */}
+          {/* ===== CONSOLE FOOT — the analysis dock only. The tuning rack moved
+              into the instrument column (contract §3.2), so the console now rises
+              ALONE from the bottom. pointer-events:none lets map clicks pass
+              through the gap around the dock. ===== */}
           <div className="pa-foot">
-            {/* TUNING RACK — one slim fixed band holding every slider (year +
-                value-range), replacing the old floating .pa-year pill (the
-                bottom-centre occluder). A proper bottom band, not a floating
-                pill, so it never occludes the map centre. Present in BOTH dock
-                states. */}
-            {url && (
-              <div className="pa-rack" role="group" aria-labelledby="pa-rack-title">
-                <span className="pa-rack-title" id="pa-rack-title">Tuning</span>
-                {/* YEAR — always live; same slideYear/sliderYear throttle wiring. */}
-                {year != null && (
-                  <div className="pa-rack-slot">
-                    <span className="pa-rack-label">Year</span>
-                    <input
-                      type="range"
-                      className="pa-slider pa-year-slider pa-rack-slider"
-                      aria-label="Year"
-                      min={yMin}
-                      max={yMax}
-                      step={1}
-                      value={sliderYear ?? year}
-                      style={{ "--pct": yearPct }}
-                      onChange={(e) => slideYear(Number(e.target.value))}
-                    />
-                    <strong className="sb-year-value pa-rack-value">{sliderYear ?? year}</strong>
-                  </div>
-                )}
-                {/* RANGE slot — DataTable PORTALS its metric-range slider here
-                    (its TanStack wiring + the VIEW-only brush stay in the dock).
-                    A fixed slot: the range is disabled, not removed, when it
-                    doesn't apply (selection mode). The ref-callback hands the
-                    slot's DOM node down so the portal has a target. */}
-                <div className="pa-rack-range-slot" ref={setRangeSlot} />
-              </div>
-            )}
-
             {/* ANALYSIS DOCK — the handle doubles as the dock toggle (open =
                 dockOpen). Analytical surface over the resident gjView; rows link
                 both ways to the shared selection. Only with data loaded. */}
@@ -1157,6 +1397,7 @@ export default function PropertyAssessmentMap() {
                 rows={tableRows}
                 metric={metric}
                 metricLabel={selectedMetric.label}
+                cityName={city}
                 metrics={METRICS}
                 onMetricChange={setMetric}
                 activeIndex={activeYearIndex}
@@ -1167,7 +1408,7 @@ export default function PropertyAssessmentMap() {
                 onHoverRow={setHoveredRowId}
                 aggregate={selectionAggregate}
                 cityBaseline={cityBaseline}
-                onClearSelection={() => setSelectedIds([])}
+                onClearSelection={() => { keepDockOnClearRef.current = true; setSelectedIds([]); }}
                 onExport={handleExport}
                 onBrush={setBrushedIds}
                 open={dockOpen}

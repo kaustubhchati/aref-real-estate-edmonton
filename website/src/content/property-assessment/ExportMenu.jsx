@@ -78,7 +78,7 @@ export default function ExportMenu({ onExport, year, years = [], selectedCount =
   // Live labels from state — no year literals (refresh-by-design).
   const span = years.length ? `${Math.min(...years)}–${Math.max(...years)}` : "";
   // Scope these exports cover (mirrors the filename's N-selected vs all logic).
-  const scopeLabel = selectedCount > 0 ? `${selectedCount} selected` : "All neighbourhoods";
+  const scopeLabel = selectedCount > 0 ? `${selectedCount} Selected` : "All Neighbourhoods";
 
   // Data-driven option table — rendered in a loop, not copy-pasted blocks.
   // `sidecar:true` items download a CSV + a provenance .txt.
@@ -86,14 +86,14 @@ export default function ExportMenu({ onExport, year, years = [], selectedCount =
     {
       key: "data", heading: "Data",
       items: [
-        { format: "csv-current", title: `This year (${year})`,
+        { format: "csv-current", title: `This Year (${year})`,
           sub: "One row per neighbourhood — spreadsheet / GIS.", sidecar: true },
-        { format: "csv-timeseries", title: `All years (${span})`,
+        { format: "csv-timeseries", title: `All Years (${span})`,
           sub: "One row per neighbourhood × year — panel analysis.", sidecar: true },
         // Selection summary (item 7) — only with an aggregate (≥2 selected): the
         // honest rollup + city comparison, distinct from the per-neighbourhood rows.
         ...(selectedCount >= 2
-          ? [{ format: "csv-aggregate", title: "Selection summary",
+          ? [{ format: "csv-aggregate", title: "Selection Summary",
               sub: "Aggregate figures + city comparison — one row per measure.", sidecar: true }]
           : []),
       ],
