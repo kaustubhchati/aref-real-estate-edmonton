@@ -879,11 +879,13 @@ function fmtSignedPp(diff) {              // diff already in percentage points (
 }
 // ---- KPI RAIL (contract §4/§7) ---------------------------------------------
 // The rail's four cards in FIXED order: MEDIAN → (MEAN or YOY) → CONDO → DISTRIBUTION.
-// Card anatomy: small-caps label (+ inline honesty tag) · city baseline top-right ·
-// big value · coloured delta. The CONDO card carries a secondary block (Mean excl.
+// Card anatomy: small-caps label · big value · footer = city baseline on its OWN line (so
+// "<City> $NNNk" renders in full — D-F3) + coloured delta. The CONDO card carries a
+// secondary block (Mean excl.
 // condo / Lot non-condo). Interiors by scope: N=0 city baselines (NO delta — the card
 // IS the baseline); N=1 this neighbourhood vs city; N≥2 the parcel-weighted aggregate
-// (§7) with honesty tags. Deltas: level metrics relative %, YoY & condo in pp. Reads
+// (§7); its honest-aggregate note lives once in About & tips. Deltas: level metrics
+// relative %, YoY & condo in pp. Reads
 // the SELECTION channel only — never brushedIds (the VIEW-only fence).
 function signCls(n) { return n > 0 ? "dt-up" : n < 0 ? "dt-dn" : ""; }
 
@@ -897,16 +899,15 @@ function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, 
   if (selectionMode && a) {
     s = { isCity: false,
           median: a.medianOfMedians, mean: a.parcelMean, yoy: a.areaYoY,
-          condo: a.condoShare, mexcl: a.meanExclCondo, lot: a.lotNonCondo,
-          tags: { median: "≈ Of Medians", mean: "Parcel-Weighted · Exact", yoy: "≈ Weighted", condo: "Weighted" } };
+          condo: a.condoShare, mexcl: a.meanExclCondo, lot: a.lotNonCondo };
   } else if (r) {
     s = { isCity: false,
           median: num(r.median_assessvalue), mean: num(r.avall_public), yoy: num(r.yoy_pct_change),
-          condo: num(r.pct_with_unit), mexcl: num(r.avg_assessvalue_without_unit), lot: num(r.avg_lotsize), tags: {} };
+          condo: num(r.pct_with_unit), mexcl: num(r.avg_assessvalue_without_unit), lot: num(r.avg_lotsize) };
   } else if (cb) {
     s = { isCity: true,
           median: cb.medianOfMedians, mean: cb.parcelMean, yoy: cb.areaYoY,
-          condo: cb.condoShare, mexcl: cb.meanExclCondo, lot: cb.lotNonCondo, tags: {} };
+          condo: cb.condoShare, mexcl: cb.meanExclCondo, lot: cb.lotNonCondo };
   } else {
     return <p className="dt-vs-note">No data.</p>;
   }
@@ -928,17 +929,17 @@ function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, 
 
   const cards = [];
   cards.push({
-    key: "median", label: "Median", tag: s.tags.median, cityScope: s.isCity,
+    key: "median", label: "Median", cityScope: s.isCity,
     city: cityTxt(city.medianOfMedians, fmtCurrencyShort),
     value: s.median != null ? fmtCurrencyShort(s.median) : "—",
     delta: rel(s.median, city.medianOfMedians),
   });
   cards.push(secondKey === "mean"
-    ? { key: "mean", label: "Mean", tag: s.tags.mean, cityScope: s.isCity,
+    ? { key: "mean", label: "Mean", cityScope: s.isCity,
         city: cityTxt(city.parcelMean, fmtCurrencyShort),
         value: s.mean != null ? fmtCurrencyShort(s.mean) : "—",
         delta: rel(s.mean, city.parcelMean) }
-    : { key: "yoy", label: "YoY", tag: s.tags.yoy, cityScope: s.isCity,
+    : { key: "yoy", label: "YoY", cityScope: s.isCity,
         city: cityTxt(city.areaYoY, fmtPct),
         value: s.yoy != null ? fmtPct(s.yoy) : "—", valueCls: signCls(s.yoy),
         delta: pp(s.yoy, city.areaYoY) });
@@ -946,7 +947,7 @@ function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, 
   // vs-city SHARE (lens a) and the condo-stripped view (lens b, "Excluding Condos": the
   // mean value + lot), so neither is a wide rectangle.
   cards.push({
-    key: "condo", label: "Condo", tag: s.tags.condo, cityScope: s.isCity,
+    key: "condo", label: "Condo", cityScope: s.isCity,
     city: s.isCity ? null : (city.condoShare != null ? `${cityName ?? "city"} ${pctText(city.condoShare)}` : null),
     value: pctText(s.condo), delta: pp(s.condo, city.condoShare),
   });
@@ -978,13 +979,15 @@ function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, 
 // the city baseline + coloured delta (standard tiles) OR a single `foot` string (the
 // Excluding-Condos tile, whose footer is the non-condo lot). At city scope the label
 // shows "· <City>" and no delta (it IS the baseline). Honest em-dashes on nulls.
-function KpiCard({ label, tag, city, value, valueCls, delta, cityScope, cityName, foot }) {
+function KpiCard({ label, city, value, valueCls, delta, cityScope, cityName, foot }) {
   return (
     <div className="dt-tile">
-      {/* C1 — tile anatomy: label (top) · big value (centre) · footer. */}
+      {/* C1 — tile anatomy: label (top) · big value (centre) · footer (city baseline on its
+          OWN line + coloured delta). D-F3: the per-card methodology tag was removed and the
+          honest-aggregate disclosure now lives once in the column's About & tips popover;
+          the freed footer space lets the "<City> $NNNk" baseline render in full. */}
       <div className="dt-tile-l">
         {label}{cityScope ? ` · ${cityName ?? "City"}` : ""}
-        {tag && <span className="dt-card-tag"> {tag}</span>}
       </div>
       <div className={`dt-tile-v${valueCls ? " " + valueCls : ""}`}>{value}</div>
       <div className="dt-tile-ft">
@@ -992,7 +995,7 @@ function KpiCard({ label, tag, city, value, valueCls, delta, cityScope, cityName
           <span className="dt-tile-foot">{foot}</span>
         ) : (
           <>
-            <span className="dt-tile-city">{city ?? ""}</span>
+            {city != null && <span className="dt-tile-city">{city}</span>}
             {delta && <span className={`dt-tile-d ${delta.cls}`}>{delta.txt}</span>}
           </>
         )}

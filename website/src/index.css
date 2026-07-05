@@ -1098,28 +1098,27 @@ p  { margin: 0 0 0.75rem; }
 .dt-card--dist { grid-column: 1 / -1; }   /* the distribution is the one full-width tile */
 .dt-tile-foot { color: var(--tx-mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dt-tile-l {
-  /* E1 — the label may carry an honesty TAG (e.g. "Parcel-Weighted · Exact"); let it flow
-     to its own wrapping line (below) rather than clip with an ellipsis in the half-width
-     square — §6: honesty labels are always shown, never hidden. */
+  /* Small-caps muted card label. (D-F3: the per-card honesty TAG was removed — the
+     honest-aggregate note now lives once in the About & tips popover.) */
   font-size: var(--t-2xs); letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--tx-mut); white-space: normal; overflow: visible; line-height: 1.2;
 }
-.dt-card-tag { display: block; white-space: normal; }
 .dt-tile-v {
   font-size: var(--t-lg); font-weight: 500; color: var(--tx);
   font-variant-numeric: tabular-nums; line-height: 1.15; margin: 1px 0;
 }
 .dt-tile-ft {
-  display: flex; justify-content: space-between; align-items: baseline; gap: 6px;
+  /* D-F3 — vertical stack so the city baseline gets its OWN full-width line (was a
+     space-between row where the non-shrinking delta clipped "<City> $NNNk"). */
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
   font-size: var(--t-2xs); font-variant-numeric: tabular-nums; min-width: 0;
 }
-.dt-tile-city { color: var(--city); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.dt-tile-d { font-weight: 500; white-space: nowrap; flex: 0 0 auto; }
+.dt-tile-city { color: var(--city); white-space: normal; }   /* own line, wraps if long — never clips */
+.dt-tile-d { font-weight: 500; white-space: nowrap; }
 /* Shared bits — the distribution card frame + the CONDO secondary block + sign colours. */
 .dt-card { background: var(--card); border: 1px solid var(--hair); border-radius: var(--r-md); padding: 7px 10px; }
 .dt-card-hd { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
 .dt-card-l { font-size: var(--t-2xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--tx-mut); }
-.dt-card-tag { color: var(--tx-dim); text-transform: none; letter-spacing: 0; }
 .dt-up { color: var(--data-up); }
 .dt-dn { color: var(--data-down); }
 .dt-card-note { font-size: var(--t-2xs); color: var(--tx-mut); margin-top: 2px; }

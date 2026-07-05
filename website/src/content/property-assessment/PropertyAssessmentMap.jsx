@@ -1355,6 +1355,13 @@ export default function PropertyAssessmentMap() {
                   {infoOpen && (
                     <div className="pa-info-pop" role="group" aria-label="About and tips">
                       <p className="pa-hint">Tip: shift-drag the map to select an area.</p>
+                      {/* D-F3 — the honest-aggregate disclosure, re-homed here from the per-KPI
+                          methodology chips (surfaced ONCE, unobtrusively; §4/§9 never stripped). */}
+                      <p className="pa-box-ref">
+                        Selection aggregates: <b>Mean</b> is parcel-weighted (exact);{" "}
+                        <b>Median</b> (of neighbourhood medians) and <b>YoY</b> are
+                        neighbourhood-weighted approximations (≈).
+                      </p>
                       <p className="pa-box-ref">
                         <span>Updated {manifest?.last_updated ?? "—"}.</span>{" "}
                         Some neighbourhoods were renamed (e.g. Oliver → Wîhkwêntôwin, 2025); a
