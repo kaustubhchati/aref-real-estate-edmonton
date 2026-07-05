@@ -632,7 +632,13 @@ p  { margin: 0 0 0.75rem; }
    state · sparkline · value/city/delta triplet · condo block. (The legacy .rail-*
    rules below are no longer emitted by InfoRail.jsx.) */
 .pa-detail {
-  position: absolute; right: 12px; top: 46px; z-index: 14;
+  /* D-F4 — sit BELOW the top-right MapLibre nav stack so the zoom / fullscreen / reset
+     controls stay visible and clickable (CONTRACT §3.1 "detail instrument — below nav").
+     Derived offset (the stack is fixed — 3 control groups, no dynamic add/remove): nav
+     container top 40px (.pa-canvas .maplibregl-ctrl-top-right margin-top) + zoom (10+60+2)
+     + fullscreen (10+30+2) + reset (10+30+2) ≈ 196px bottom, + ~12px gap = 208px. If a
+     control is ever added/removed here, re-derive this top. */
+  position: absolute; right: 12px; top: 208px; z-index: 14;
   width: 224px; max-width: calc(100vw - 24px);
   padding: 11px 13px;
   background: var(--pa-shell); border-radius: 10px; color: var(--pa-ink);
