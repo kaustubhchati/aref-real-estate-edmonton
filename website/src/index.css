@@ -647,24 +647,27 @@ p  { margin: 0 0 0.75rem; }
   pointer-events: auto;
 }
 .pa-detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.pa-detail-name { margin: 0; font-size: 13px; font-weight: 600; color: var(--pa-ink); line-height: 1.2; }
+.pa-detail-name { margin: 0; font-size: var(--t-xs); font-weight: 600; color: var(--pa-ink); line-height: 1.2; }
 .pa-detail-clear {
   flex: 0 0 auto; width: 20px; height: 20px; border: 0; border-radius: 6px;
-  background: var(--pa-card); color: var(--pa-mut); font-size: 11px; line-height: 1; cursor: pointer;
+  background: var(--pa-card); color: var(--pa-mut); font-size: var(--t-2xs); line-height: 1; cursor: pointer;
 }
 .pa-detail-clear:hover { color: var(--pa-ink); }
-.pa-detail-sub { margin: 2px 0 0; font-size: 9px; color: var(--pa-mut); }
+.pa-detail-sub { margin: 2px 0 0; font-size: var(--t-2xs); color: var(--pa-mut); }
 .pa-detail .sparkline { display: block; width: 100%; height: 26px; margin: 7px 0 2px; }
 .pa-detail-trip { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; margin-top: 7px; text-align: center; }
 .pa-trip-l { font-size: var(--t-2xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--pa-mut); }
-.pa-trip-v { font-size: 12px; font-weight: 500; color: var(--pa-ink); font-variant-numeric: tabular-nums; }
+.pa-trip-v { font-size: var(--t-xs); font-weight: 500; color: var(--pa-ink); font-variant-numeric: tabular-nums; }
+/* D-F5 — the active metric's Value leads: one size step up + bold (WEIGHT+SIZE emphasis;
+   colour stays white — §1.3 keeps blue for City and up/down for Delta, not the lead). */
+.pa-trip-lead { font-size: var(--t-md); font-weight: 700; }
 .pa-trip-muted { color: var(--pa-dim); }
-.pa-trip-city { color: var(--city); }   /* the CITY triplet value = blue (B4) */
+.pa-trip-city { color: var(--city); }   /* the CITY triplet value = blue (§1.3, mandatory) */
 .pa-detail-condo { border-top: 1px solid var(--pa-hair); margin-top: 8px; padding-top: 6px; }
-.pa-detail .pa-kv { display: flex; justify-content: space-between; font-size: 10px; margin-top: 2px; }
+.pa-detail .pa-kv { display: flex; justify-content: space-between; font-size: var(--t-2xs); margin-top: 2px; }
 .pa-kv-k { color: var(--pa-mut); }
-.pa-kv-v { color: #c7cacd; font-weight: 500; font-variant-numeric: tabular-nums; }
-.pa-detail-note { margin: 7px 0 0; font-size: 9.5px; color: var(--pa-mut); line-height: 1.5; }
+.pa-kv-v { color: var(--pa-ink); font-weight: 500; font-variant-numeric: tabular-nums; }   /* D-F5 — was raw #c7cacd */
+.pa-detail-note { margin: 7px 0 0; font-size: var(--t-xs); color: var(--pa-mut); line-height: 1.5; }
 @keyframes rail-fade-in { from { opacity: 0; } to { opacity: 1; } }
 .rail-inner { width: 100%; }
 /* Tightness: no trailing gap after the last detail row/note. */

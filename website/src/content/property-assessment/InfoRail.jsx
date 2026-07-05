@@ -110,10 +110,13 @@ export default function InfoRail({
                    activeIndex={activeIndex} ariaLabel={`${activeMetric.label} trend`} />
       )}
 
+      {/* D-F5 — the active metric's Value LEADS via weight + a size step only (NOT a semantic
+          colour: §1.3 reserves blue for City and up/down for Delta). City + Delta keep those
+          mandatory colours but sit in the smaller/muted tier around the lead. */}
       <div className="pa-detail-trip">
         <div>
           <div className="pa-trip-l">Value</div>
-          <div className={`pa-trip-v${aggregated ? "" : " pa-trip-muted"}`}>
+          <div className={`pa-trip-v pa-trip-lead${aggregated ? "" : " pa-trip-muted"}`}>
             {aggregated && activeVal != null ? chromeFmt(activeVal) : "—"}
           </div>
         </div>
