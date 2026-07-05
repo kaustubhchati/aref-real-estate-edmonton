@@ -44,7 +44,7 @@ Every text role gets exactly one token. A role rendered at any other size is a d
 
 | Role | Token | px |
 |---|---|---|
-| Panel/section label (e.g. "Metric", "Tuning" removed) | `--t-2xs` | 11 |
+| Module banner (e.g. "Metric", "⚙ Tuning", "Legend") | `--t-2xs` | 11 |
 | KPI card label + honesty tag | `--t-2xs` | 11 |
 | Table header | `--t-2xs` | 11 |
 | Slider label ("Year", "Median") | `--t-xs` | 13 |

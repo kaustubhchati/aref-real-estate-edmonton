@@ -1195,7 +1195,7 @@ p  { margin: 0 0 0.75rem; }
   /* C2 — module labels at the --t-xs floor (was 10px, below the DESIGN_SYSTEM §1.5 min);
      --pa-mut now resolves to the raised --tx-mut, clearing 4.5:1 on --shell. */
   display: block; margin: 0 0 5px;
-  font-size: var(--t-xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--pa-mut);
+  font-size: var(--t-2xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--pa-mut);
 }
 
 /* IDENTITY module — flatten the old light card into the column. */
@@ -1219,7 +1219,9 @@ p  { margin: 0 0 0.75rem; }
 /* METRIC module — vertical chip list, active green-bordered. */
 .pa-col-metric .seg { display: flex; flex-direction: column; gap: 5px; margin: 0; }
 .pa-col-metric .seg-label {
-  margin: 0; font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut);
+  /* D-F1 — the METRIC module banner: lifted off the sub-floor 10px onto --t-2xs (11px),
+     matching the shared .pa-col-lab used by the ⚙ Tuning + Legend banners. */
+  margin: 0; font-size: var(--t-2xs); letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut);
 }
 .pa-col-metric .seg-options { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; background: transparent; border: 0; padding: 0; }
 .pa-col-metric .seg-icon { display: none; }
@@ -1230,11 +1232,43 @@ p  { margin: 0 0 0.75rem; }
 }
 .pa-col-metric .seg-btn.active { background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); }
 
-/* TUNING module — dark year slider + dark range slot (portaled RangeFacet). */
-.pa-tune-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-.pa-tune-name { flex: 0 0 auto; width: 34px; font-size: var(--t-xs); color: var(--pa-mut); }
-.pa-tune-slider { flex: 1 1 auto; width: auto; }
-.pa-tune-year { font-size: var(--t-md); font-weight: 600; color: var(--pa-up); font-variant-numeric: tabular-nums; flex: 0 0 auto; min-width: 34px; text-align: right; }
+/* TUNING module — ONE shared grid so the Year row and the metric-range row share the
+   SAME slider track (Principle 0: the frame is fixed, only the numbers inside move).
+   Columns: label | min | track(1fr) | max. Label + value columns are content-sized
+   (max-content) so no pixel literal can clip a future value; the value columns carry a
+   min-width floor so the two number columns stay balanced even when a cell is empty
+   (single-value Year). Both rows DISSOLVE (display:contents) so their cells become items
+   of THIS one grid — that shared grid is what lines the two tracks up. Each cell
+   self-places by its named column, so DOM/portal order doesn't matter. */
+.pa-col-tuning {
+  display: grid;
+  grid-template-columns:
+    [label] max-content
+    [min]   minmax(2.5rem, max-content)   /* balance floor; grows to fit a wide value */
+    [track] 1fr
+    [max]   minmax(2.5rem, max-content);
+  align-items: center;      /* cells never stretch vertically (stretch = the drift bug) */
+  column-gap: 8px;
+  row-gap: 8px;
+}
+.pa-col-tuning > .pa-col-lab { grid-column: 1 / -1; margin-bottom: 0; }   /* ⚙ Tuning banner spans the row; row-gap handles spacing */
+.pa-tune-row,
+.pa-column .pa-rack-range-slot,
+.pa-column .pa-range-slot { display: contents; }
+/* Label cell (Year / Median / …) — §1.5a slider-label = 13px, one shared look. */
+.pa-tune-name,
+.pa-column .pa-rack-label { grid-column: label; font-size: var(--t-xs); color: var(--pa-mut); white-space: nowrap; }
+/* Value cells flank the track, right-aligned so each number hugs the track edge. Year is
+   the single "slider readout" (§1.5a 16px, green, headline); the range min/max are the
+   endpoint pair (§1.5a legend min/max = 13px, white). tabular so digits line up. */
+.pa-tune-min, .pa-rack-min { grid-column: min; }
+.pa-tune-year, .pa-rack-max { grid-column: max; }
+.pa-tune-year { font-size: var(--t-md); font-weight: 600; color: var(--pa-up); }
+.pa-rack-min, .pa-rack-max { font-size: var(--t-xs); font-weight: 600; color: var(--pa-ink); }
+.pa-tune-year, .pa-rack-min, .pa-rack-max { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* Track cells fill the 1fr column. */
+.pa-tune-slider,
+.pa-column .pa-dual { grid-column: track; width: 100%; min-width: 0; }
 .pa-column .pa-slider::-webkit-slider-runnable-track { background: var(--pa-hair); }
 .pa-column .pa-slider::-moz-range-track { background: var(--pa-hair); }
 /* C1 — thumb-width-aware fill: the fill's right edge tracks the 13px thumb's CENTRE
@@ -1252,17 +1286,12 @@ p  { margin: 0 0 0.75rem; }
 }
 .pa-column .pa-slider::-webkit-slider-thumb { background: var(--pa-up); border-color: var(--pa-shell); }
 .pa-column .pa-slider::-moz-range-thumb { background: var(--pa-up); border-color: var(--pa-shell); }
-.pa-column .pa-rack-range-slot { margin-top: 7px; }
-/* B1 — the range is TWO rows: label + FLEXING track (own row), then the readout on
-   its OWN full-width right-aligned row (a long value can't push the track or wrap). */
-.pa-column .pa-range-slot { display: flex; flex-direction: column; gap: 4px; width: 100%; min-width: 0; align-items: stretch; }
-.pa-range-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.pa-range-top .pa-rack-label { flex: 0 0 auto; white-space: nowrap; }
-.pa-column .pa-dual { flex: 1 1 auto; width: auto; min-width: 0; }
+/* Range row — the portaled RangeFacet dissolves into the tuning grid above (its
+   label / min / track / max self-place into the shared columns); the old B1 "readout on
+   its own row below the track" is retired — min/max now flank the track as grid cells.
+   These rules only skin the dual-slider track. */
 .pa-column .pa-dual-track { background: var(--pa-hair); }
 .pa-column .pa-dual-fill { background: var(--pa-up); }
-.pa-column .pa-rack-value { color: var(--pa-ink); font-weight: 600; font-size: var(--t-md); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
-.pa-column .pa-rack-label { color: var(--pa-mut); }
 
 /* D1 (DESIGN_SYSTEM §2) — Title Case, NOT ALL-CAPS: the PA chrome LABEL roles were rendering
    their Title-cased strings uppercased by text-transform + wide tracking. Retire that so the
@@ -1538,7 +1567,8 @@ p  { margin: 0 0 0.75rem; }
 
 /* Inert state — shown (not removed) when the range doesn't apply (selection mode) or
    bounds are degenerate, so the rack slot stays fixed. [tuning-bay] */
-.pa-range-slot.is-off { opacity: 0.45; }
+/* In the tuning grid the slot is display:contents (no box), so dim its CELLS, not the slot. */
+.pa-range-slot.is-off > * { opacity: 0.45; }
 .pa-range-slot.is-off .pa-slider { cursor: not-allowed; }
 
 /* Bottom-right legend card (default view), lifted above the map's corner controls. */

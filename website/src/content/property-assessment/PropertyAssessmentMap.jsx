@@ -1294,11 +1294,17 @@ export default function PropertyAssessmentMap() {
                     VIEW-only brush stay in the dock. Fixed slot: the range is
                     disabled (not removed) in selection mode. */}
                 <div className="pa-col-mod pa-col-tuning" role="group" aria-label="Tuning">
-                  {/* C2 — the "⚙ Tuning" module label is removed (the sliders are
-                      self-evident); the group keeps its aria-label for a11y. */}
+                  {/* D-F1 — the "⚙ Tuning" module banner is restored (annex:73; DESIGN_SYSTEM
+                      §1.5a updated in the same commit) so every module reads as a labelled
+                      frame. The bay is ONE grid: the Year row and the portaled range row share
+                      its columns, so their slider tracks line up (see .pa-col-tuning in CSS). */}
+                  <span className="pa-col-lab">⚙ Tuning</span>
                   {year != null && (
                     <div className="pa-tune-row">
                       <span className="pa-tune-name">Year</span>
+                      {/* reserved empty min cell — keeps the Year track's left edge aligned
+                          with the metric row (single-value = value-right, min-left empty). */}
+                      <span className="pa-tune-min" aria-hidden="true" />
                       <input
                         type="range"
                         className="pa-slider pa-year-slider pa-tune-slider"
@@ -1320,6 +1326,9 @@ export default function PropertyAssessmentMap() {
                     into the column (a real relocation, §4). Legend.jsx internals
                     untouched; the horizontal ramp swaps with the active metric. */}
                 <div className="pa-col-mod pa-col-legend">
+                  {/* D-F1 / AF-1 — restore the "Legend" module banner (was missing); uniform
+                      with the Metric + ⚙ Tuning banners via the shared .pa-col-lab hook. */}
+                  <span className="pa-col-lab">Legend</span>
                   <Legend
                     title={selectedMetric.label}
                     stops={stops}

@@ -1108,10 +1108,10 @@ function FacetToggles({ label, options, selected, labelOf, onToggle }) {
 // `value` is the column's [lo, hi] filter (undefined = full range); `bounds` is
 // [min, max] from getFacetedMinMaxValues.
 //
-// FORM (D2): a ONE-LINE control matching the year slider — [label · one track with
-// two thumbs · min–max value] — laid out with the tuning-rack's own classes
-// (.pa-rack-slot/-label/-value) + the shared .pa-slider look, so year + range read
-// as the same instrument. The dual handle is two range inputs OVERLAID on one track
+// FORM (D-F1): laid out on the shared TUNING GRID — [label | min | track | max] — so it
+// lines up with the year row (see .pa-col-tuning in index.css). The min/max readouts flank
+// the dual-slider track as fixed cells (.pa-rack-min / .pa-rack-max), retiring the old
+// below-track line. The dual handle is two range inputs OVERLAID on one track
 // (.pa-dual): each input's native track is transparent and only its thumb catches
 // pointer events, so both thumbs sit on the single .pa-dual-track with a green
 // .pa-dual-fill segment between them.
@@ -1130,34 +1130,34 @@ function RangeFacet({ label, fmt, bounds, value, onChange, disabled = false }) {
   const pct = (v) => `${((v - min) / (max - min || 1)) * 100}%`;
   return (
     <div className={`pa-rack-slot pa-range-slot${off ? " is-off" : ""}`}>
-      {/* Row 1: label + flexing track. Row 2: the readout on its OWN right-aligned
-          line, so a long value can't push the track or overflow the column (B1). */}
-      <div className="pa-range-top">
-        <span className="pa-rack-label">{label}</span>
-        <div className="pa-dual" style={{ "--lo": pct(lo), "--hi": pct(hi) }}>
-          <div className="pa-dual-track" />
-          <div className="pa-dual-fill" />
-          {/* When the thumbs COINCIDE, only the top one is grabbable, so raise whichever
-              must move to separate them: `lo` clamps to ≤ hi (can only go DOWN), `hi`
-              clamps to ≥ lo (can only go UP). So raise lo in the upper half (recovers a
-              stuck [max,max]) and leave hi on top otherwise (recovers [min,min]). */}
-          <input
-            type="range" className="pa-slider pa-dual-input"
-            min={min} max={max} step={step} value={lo} disabled={off}
-            style={{ zIndex: lo > (min + max) / 2 ? 3 : 1 }}
-            aria-label={`${label} minimum`}
-            onChange={(e) => onChange([Math.min(+e.target.value, hi), hi])}
-          />
-          <input
-            type="range" className="pa-slider pa-dual-input"
-            min={min} max={max} step={step} value={hi} disabled={off}
-            style={{ zIndex: 2 }}
-            aria-label={`${label} maximum`}
-            onChange={(e) => onChange([lo, Math.max(+e.target.value, lo)])}
-          />
-        </div>
+      {/* D-F1 — flattened into the shared tuning grid: [label | min | track | max]. The
+          min/max readouts flank the track as fixed cells (retiring the B1 below-track line);
+          when the range is inapplicable (selection mode) BOTH cells show an honest em-dash. */}
+      <span className="pa-rack-label">{label}</span>
+      <span className="pa-rack-min">{off ? "—" : fmt(lo)}</span>
+      <div className="pa-dual" style={{ "--lo": pct(lo), "--hi": pct(hi) }}>
+        <div className="pa-dual-track" />
+        <div className="pa-dual-fill" />
+        {/* When the thumbs COINCIDE, only the top one is grabbable, so raise whichever
+            must move to separate them: `lo` clamps to ≤ hi (can only go DOWN), `hi`
+            clamps to ≥ lo (can only go UP). So raise lo in the upper half (recovers a
+            stuck [max,max]) and leave hi on top otherwise (recovers [min,min]). */}
+        <input
+          type="range" className="pa-slider pa-dual-input"
+          min={min} max={max} step={step} value={lo} disabled={off}
+          style={{ zIndex: lo > (min + max) / 2 ? 3 : 1 }}
+          aria-label={`${label} minimum`}
+          onChange={(e) => onChange([Math.min(+e.target.value, hi), hi])}
+        />
+        <input
+          type="range" className="pa-slider pa-dual-input"
+          min={min} max={max} step={step} value={hi} disabled={off}
+          style={{ zIndex: 2 }}
+          aria-label={`${label} maximum`}
+          onChange={(e) => onChange([lo, Math.max(+e.target.value, lo)])}
+        />
       </div>
-      <strong className="pa-rack-value">{off ? "—" : `${fmt(lo)} – ${fmt(hi)}`}</strong>
+      <strong className="pa-rack-max">{off ? "—" : fmt(hi)}</strong>
     </div>
   );
 }
