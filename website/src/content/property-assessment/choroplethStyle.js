@@ -236,9 +236,15 @@ function quantile(sorted, p) {
 // the level maps' hottest red. The plateau yellow reuses RAMP_FLOOR (the sequential
 // ramps' shared soft-yellow floor) — no new hex.
 const YOY_YELLOW    = RAMP_FLOOR;   // #fbe3a0 — the held plateau (base canvas)
-const YOY_DEEP_BLUE = "#08519c";    // potent decline extreme (chroma-matched to MEDIAN_RED)
-const YOY_MED_BLUE  = "#4393c3";    // mid decline
-const YOY_MED_RED   = "#d6604d";    // mid growth
+// Negative (decline) arm DEEPENED — intentionally overrides the old §1.4 "diverging ramp
+// UNTOUCHED" note (see DESIGN_SYSTEM §1.4, updated in the same commit). The old blues read
+// too weakly below the plateau, and the mid (#4393c3, L≈51) sat close to --city #60a5fa in
+// lightness. Both now go DARKER in lightness AND hue-shift toward INDIGO, so sub--1% declines
+// read strongly and the decline colour can never be mistaken for the --city azure baseline on
+// the map. The ±1% plateau and the red (growth) arm are untouched.
+const YOY_DEEP_BLUE = "#0d1f6b";    // decline EXTREME — deep indigo (L≈24, hue≈229; far from --city L68/hue213). Was #08519c.
+const YOY_MED_BLUE  = "#2166ac";    // mid decline — potent medium blue (darker than the weak #4393c3)
+const YOY_MED_RED   = "#d6604d";    // mid growth (untouched)
 // (removed: "#92c5de" light blue + "#f4a582" light salmon — the washed near-zero shades.)
 
 // Build the CONTINUOUS diverging stops for a clamp endpoint E (> 1). Each stop is

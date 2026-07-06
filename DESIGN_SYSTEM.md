@@ -33,7 +33,7 @@ All values below live as CSS variables defined once. Components reference tokens
 - `--map-cream: #f7f1df` — basemap ground = the label halo colour
 - `--label-ink: #2a2621` — map label text (dark warm grey, NOT pure black; ~13:1 on cream)
 - Sequential ramp (levels): cream→red as-built (choroplethStyle). UNTOUCHED.
-- Diverging ramp (YoY): blue→yellow-plateau→red as-built (D6). UNTOUCHED.
+- Diverging ramp (YoY): blue→yellow-plateau→red (D6). The ±1% yellow plateau and the red (growth) arm are as-built; the **negative (decline) arm is DEEPENED** — this note intentionally overrides the former "UNTOUCHED" line here and the D-F2 "diverging ramp untouched" directive. Named tokens (in `choroplethStyle.js`): the decline EXTREME `YOY_DEEP_BLUE = #0d1f6b` (deep indigo, was #08519c) and the mid `YOY_MED_BLUE = #2166ac` (potent medium blue, was #4393c3). Both are darker in **lightness** (not just more saturated) and hue-shifted toward **indigo**, so sub-−1% declines read strongly AND the decline colour stays clearly distinct from `--city #60a5fa` — it must never read as the city baseline on the map. Plateau reuses `RAMP_FLOOR`; the deepening is one-sided (blue only).
 - Share ramp (%Condo): reuses the WARM sequential ramp (the cream→amber→orange→brown family used by dollar/level metrics — NOT a new hue, NOT purple). **Quantile classification, 5 classes** (sequential data reveals pattern via classed quantiles; an unclassed linear ramp reads flat). Legend shows the quantile break values (e.g. `0 · 8 · 19 · 34 · 61 · 100 %`). Domain = actual condo-share distribution. Higher share = darker, per sequential convention.
 
 ### 1.5 Type scale (named steps; no ad-hoc sizes) — BUMPED for legibility
