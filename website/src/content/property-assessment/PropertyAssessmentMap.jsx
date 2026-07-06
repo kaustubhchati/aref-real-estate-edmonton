@@ -1293,16 +1293,17 @@ export default function PropertyAssessmentMap() {
                     VIEW-only brush stay in the dock. Fixed slot: the range is
                     disabled (not removed) in selection mode. */}
                 <div className="pa-col-mod pa-col-tuning" role="group" aria-label="Tuning">
-                  {/* D-F1 — the "⚙ Tuning" module banner is restored (annex:73; DESIGN_SYSTEM
-                      §1.5a updated in the same commit) so every module reads as a labelled
-                      frame. The bay is ONE grid: the Year row and the portaled range row share
-                      its columns, so their slider tracks line up (see .pa-col-tuning in CSS). */}
+                  {/* The "⚙ Tuning" module banner (annex:73) so every module reads as a
+                      labelled frame. P2 — each control is its own fixed two-row grid (name
+                      header + [min · fixed track · max]); the Year row and the portaled range
+                      row share the SAME column template, so their tracks pin to the same x +
+                      length regardless of value (see .pa-col-tuning in CSS). */}
                   <span className="pa-col-lab">⚙ Tuning</span>
                   {year != null && (
                     <div className="pa-tune-row">
                       <span className="pa-tune-name">Year</span>
-                      {/* reserved empty min cell — keeps the Year track's left edge aligned
-                          with the metric row (single-value = value-right, min-left empty). */}
+                      {/* reserved empty min cell — holds the Year track's LEFT edge at the same
+                          x as the range track (single-value = value-right, min-left empty). */}
                       <span className="pa-tune-min" aria-hidden="true" />
                       <input
                         type="range"

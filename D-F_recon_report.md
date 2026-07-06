@@ -40,6 +40,16 @@ screenshots came from before scoping those two.
 
 ## D-F1 — Tuning bay: enforce the fixed grid (KEYSTONE)
 
+> **SUPERSEDED BY P2 (2026-07-06).** D-F1 shipped the "one shared 4-column grid
+> `[label | min | track(1fr) | max]`, both rows `display:contents`" approach described
+> below. P2 (PA Patch Directives 2026-07-06) replaced it: the track was still a `1fr`
+> residual flanked by `max-content` value cells, so its length + x drifted between
+> metrics/states — a Principle-0 violation. P2 rebuilt the bay as a **vertical flow of
+> fixed two-row grids** (name header + `[min · fixed track · max]`), aligning the Year and
+> range tracks by shared fixed cell-width tokens (`--pa-tune-num-w` / `--pa-track-w`), so
+> the track is now a fixed width at a fixed x on every control and state. The banner
+> restore + §1.5a reconciliation from D-F1 stand; only the grid mechanism changed.
+
 **Where it lives.** Markup `PropertyAssessmentMap.jsx:1296–1317` (`.pa-col-mod.pa-col-tuning`); CSS
 `index.css:1233–1265` + shared slider base `index.css:1461–1542`.
 

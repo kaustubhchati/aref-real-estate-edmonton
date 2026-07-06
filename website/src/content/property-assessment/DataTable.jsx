@@ -1111,10 +1111,11 @@ function FacetToggles({ label, options, selected, labelOf, onToggle }) {
 // `value` is the column's [lo, hi] filter (undefined = full range); `bounds` is
 // [min, max] from getFacetedMinMaxValues.
 //
-// FORM (D-F1): laid out on the shared TUNING GRID — [label | min | track | max] — so it
-// lines up with the year row (see .pa-col-tuning in index.css). The min/max readouts flank
-// the dual-slider track as fixed cells (.pa-rack-min / .pa-rack-max), retiring the old
-// below-track line. The dual handle is two range inputs OVERLAID on one track
+// FORM (P2): a fixed two-row grid — a name header row (.pa-rack-label) then the slider row
+// [min · fixed track · max] (.pa-rack-min / .pa-dual / .pa-rack-max). The track is a FIXED
+// width at a fixed x (Principle 0); it uses the SAME column template as the Year row (see
+// .pa-col-tuning in index.css) so the two tracks pin to the same x + length, retiring the
+// old below-track line. The dual handle is two range inputs OVERLAID on one track
 // (.pa-dual): each input's native track is transparent and only its thumb catches
 // pointer events, so both thumbs sit on the single .pa-dual-track with a green
 // .pa-dual-fill segment between them.
@@ -1132,10 +1133,10 @@ function RangeFacet({ label, fmt, bounds, value, onChange, disabled = false }) {
   const step = (max - min) / 100 || 1;
   const pct = (v) => `${((v - min) / (max - min || 1)) * 100}%`;
   return (
-    <div className={`pa-rack-slot pa-range-slot${off ? " is-off" : ""}`}>
-      {/* D-F1 — flattened into the shared tuning grid: [label | min | track | max]. The
-          min/max readouts flank the track as fixed cells (retiring the B1 below-track line);
-          when the range is inapplicable (selection mode) BOTH cells show an honest em-dash. */}
+    <div className={`pa-range-slot${off ? " is-off" : ""}`}>
+      {/* P2 — a fixed two-row grid: name header (.pa-rack-label) + slider row
+          [min · fixed track · max]. min/max flank the FIXED track as fixed cells; when the
+          range is inapplicable (selection mode) BOTH cells show an honest em-dash. */}
       <span className="pa-rack-label">{label}</span>
       <span className="pa-rack-min">{off ? "—" : fmt(lo)}</span>
       <div className="pa-dual" style={{ "--lo": pct(lo), "--hi": pct(hi) }}>

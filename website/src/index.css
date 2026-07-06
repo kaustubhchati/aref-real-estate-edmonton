@@ -155,7 +155,8 @@
   --pa-up:    var(--data-up);
   --pa-dn:    var(--data-down);
   --pa-sel:   var(--sel);
-  --pa-track-w: 150px;   /* the tuning sliders' track width — one source of truth (B1) */
+  --pa-track-w: 80px;         /* tuning sliders' FIXED track width — one source of truth (P2 re-armed it) */
+  --pa-tune-num-w: 54px;      /* tuning min/max value-cell width; flanks the fixed track (P2) */
 
   font: 16px/1.5 var(--font-sans);
   color: var(--text);
@@ -1251,43 +1252,42 @@ p  { margin: 0 0 0.75rem; }
 }
 .pa-col-metric .seg-btn.active { background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); }
 
-/* TUNING module — ONE shared grid so the Year row and the metric-range row share the
-   SAME slider track (Principle 0: the frame is fixed, only the numbers inside move).
-   Columns: label | min | track(1fr) | max. Label + value columns are content-sized
-   (max-content) so no pixel literal can clip a future value; the value columns carry a
-   min-width floor so the two number columns stay balanced even when a cell is empty
-   (single-value Year). Both rows DISSOLVE (display:contents) so their cells become items
-   of THIS one grid — that shared grid is what lines the two tracks up. Each cell
-   self-places by its named column, so DOM/portal order doesn't matter. */
-.pa-col-tuning {
-  display: grid;
-  grid-template-columns:
-    [label] max-content
-    [min]   minmax(2.5rem, max-content)   /* balance floor; grows to fit a wide value */
-    [track] 1fr
-    [max]   minmax(2.5rem, max-content);
-  align-items: center;      /* cells never stretch vertically (stretch = the drift bug) */
-  column-gap: 8px;
-  row-gap: 8px;
-}
-.pa-col-tuning > .pa-col-lab { grid-column: 1 / -1; margin-bottom: 0; }   /* ⚙ Tuning banner spans the row; row-gap handles spacing */
+/* TUNING module (P2) — Principle 0 made literal: the slider TRACK is a FIXED width at a
+   FIXED x on EVERY control and EVERY state; only the handle + the flanking numbers move.
+   The bay is a vertical FLOW of controls; each control is its OWN two-row grid — a name
+   header row, then the slider row [min · fixed track · max]. Alignment across the Year
+   row and the range row is guaranteed by the SHARED fixed cell widths (--pa-tune-num-w on
+   each flank, --pa-track-w in the centre), NOT by a shared parent grid — so no value
+   string can shift a track edge (the old 1fr + max-content drift is gone). Single-value
+   Year: the left (min) cell is reserved empty, the value sits right. */
+.pa-col-tuning { display: flex; flex-direction: column; row-gap: 8px; }
+.pa-col-tuning > .pa-col-lab { margin: 0; }   /* ⚙ Tuning banner; the flow's row-gap spaces it */
+/* Portal target passes through (no box) so the RangeFacet root IS the flow item. */
+.pa-column .pa-rack-range-slot { display: contents; }
+/* Each control = a fixed two-row grid: the name spans row 1; [min · track · max] on row 2.
+   Both controls share the SAME column template, so their tracks pin to the same x + width. */
 .pa-tune-row,
-.pa-column .pa-rack-range-slot,
-.pa-column .pa-range-slot { display: contents; }
-/* Label cell (Year / Median / …) — §1.5a slider-label = 13px, one shared look. */
+.pa-column .pa-range-slot {
+  display: grid;
+  grid-template-columns: [min] var(--pa-tune-num-w) [track] var(--pa-track-w) [max] var(--pa-tune-num-w);
+  grid-template-rows: [name] auto [track] auto;
+  align-items: center;
+  gap: 3px 6px;
+}
+/* Name header (Year / Median / …) — row 1, spanning; §1.5a slider-label = 13px. */
 .pa-tune-name,
-.pa-column .pa-rack-label { grid-column: label; font-size: var(--t-xs); color: var(--pa-mut); white-space: nowrap; }
-/* Value cells flank the track, right-aligned so each number hugs the track edge. Year is
-   the single "slider readout" (§1.5a 16px, green, headline); the range min/max are the
-   endpoint pair (§1.5a legend min/max = 13px, white). tabular so digits line up. */
-.pa-tune-min, .pa-rack-min { grid-column: min; }
-.pa-tune-year, .pa-rack-max { grid-column: max; }
+.pa-column .pa-rack-label { grid-row: name; grid-column: 1 / -1; font-size: var(--t-xs); color: var(--pa-mut); white-space: nowrap; }
+/* Slider-row numbers. Year is the single "slider readout" (§1.5a 16px, green); the range
+   min/max are the endpoint pair (§1.5a legend min/max = 13px, white). min hugs the track's
+   LEFT edge (right-aligned in its cell); max + the single Year value hug the RIGHT edge. */
+.pa-tune-min, .pa-rack-min { grid-row: track; grid-column: min; text-align: right; }
+.pa-tune-year, .pa-rack-max { grid-row: track; grid-column: max; text-align: left; }
 .pa-tune-year { font-size: var(--t-md); font-weight: 600; color: var(--pa-up); }
 .pa-rack-min, .pa-rack-max { font-size: var(--t-xs); font-weight: 600; color: var(--pa-ink); }
-.pa-tune-year, .pa-rack-min, .pa-rack-max { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-/* Track cells fill the 1fr column. */
+.pa-tune-min, .pa-tune-year, .pa-rack-min, .pa-rack-max { white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* The FIXED track — fills the fixed [track] column (= --pa-track-w) on both rows. */
 .pa-tune-slider,
-.pa-column .pa-dual { grid-column: track; width: 100%; min-width: 0; }
+.pa-column .pa-dual { grid-row: track; grid-column: track; width: 100%; min-width: 0; }
 .pa-column .pa-slider::-webkit-slider-runnable-track { background: var(--pa-hair); }
 .pa-column .pa-slider::-moz-range-track { background: var(--pa-hair); }
 /* C1 — thumb-width-aware fill: the fill's right edge tracks the 13px thumb's CENTRE
@@ -1305,9 +1305,8 @@ p  { margin: 0 0 0.75rem; }
 }
 .pa-column .pa-slider::-webkit-slider-thumb { background: var(--pa-up); border-color: var(--pa-shell); }
 .pa-column .pa-slider::-moz-range-thumb { background: var(--pa-up); border-color: var(--pa-shell); }
-/* Range row — the portaled RangeFacet dissolves into the tuning grid above (its
-   label / min / track / max self-place into the shared columns); the old B1 "readout on
-   its own row below the track" is retired — min/max now flank the track as grid cells.
+/* Range control — the portaled RangeFacet is its OWN two-row grid (name header +
+   [min · fixed track · max], same template as the Year row so the tracks align).
    These rules only skin the dual-slider track. */
 .pa-column .pa-dual-track { background: var(--pa-hair); }
 .pa-column .pa-dual-fill { background: var(--pa-up); }
