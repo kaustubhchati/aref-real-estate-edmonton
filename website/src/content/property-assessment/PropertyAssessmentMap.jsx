@@ -632,6 +632,24 @@ export default function PropertyAssessmentMap() {
     }
   }, [map, selectedIds]);
 
+  // P4 — lift the selection outline pair (cream casing + violet highlight) to the TOP of
+  // the map stack, above all fills AND basemap hairlines/labels, so the selected boundary
+  // is never occluded by an adjacent polygon (the QMP z-order fix). MapView inserts them
+  // below the basemap symbols with the rest of the choropleth batch; we re-order them up
+  // once the map + data are ready. Casing first, then highlight, so the cream under-stroke
+  // stays beneath the violet. This runs BEFORE the centroid effect below, so the selected
+  // neighbourhood's focus label still lands above the outline. getLayer + try/catch guard a
+  // mid-teardown / not-yet-added instance; re-runs on map remount (city switch).
+  useEffect(() => {
+    if (!map) return;
+    try {
+      if (map.getLayer("nbhd-highlight-casing")) map.moveLayer("nbhd-highlight-casing");
+      if (map.getLayer("nbhd-highlight")) map.moveLayer("nbhd-highlight");
+    } catch {
+      /* map mid-teardown — re-applies when the next map mounts */
+    }
+  }, [map, gj]);
+
   // Row hover in the bottom table highlights its polygon via the SAME `hover`
   // feature-state the map hover uses — the two are never active at once (the
   // pointer is over the table OR the map). Clear the previous, set the new.

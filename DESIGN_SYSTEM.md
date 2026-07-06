@@ -25,7 +25,8 @@ All values below live as CSS variables defined once. Components reference tokens
 - `--data-up: #4ade80` — growth/increase (YoY positive, pp positive)
 - `--data-down: #f88b6b` — decline/decrease (YoY negative, pp negative)
 - `--city: #60a5fa` — the comparison-baseline (active city) datum, EVERYWHERE (line + numbers). Dashed line + blue = redundant encoding (colour-blind safe)
-- `--sel: #e8734a` — selection, EVERY surface (map outline + table outline + rail)
+- `--sel: #e8734a` — selection accent on the **TABLE + RAIL** surfaces (the map boundary uses `--pa-selection-outline`)
+- `--pa-selection-outline: #8b5cf6` — the **MAP** selection boundary stroke; violet, reserved distinct from the sequential/diverging ramps, `--data-up` green, `--data-down`/`--sel` coral, and `--city` blue. Violet appears nowhere in the basemap or any data ramp, so it reads unambiguously as "not data." Map-only (P4): the ramp collision it solves exists only on the choropleth; the table has no fill behind its rows, so table/rail selection stays `--sel` coral. MapLibre paint can't read CSS vars → `choroplethStyle.js` mirrors this literal.
 - Level-metric deltas (median/mean/lot vs city): NEUTRAL `--tx` (white), not up/down — per COLOUR_LEVEL_DELTAS=false. Colour on levels editorializes; reserve it for rates.
 
 ### 1.4 Colour — map/cartography
@@ -102,7 +103,7 @@ Every displayed element must answer: *does this help the user decide?* If not, c
 ## 6. Component patterns
 - **KPI card = square-ish tile:** label (top) → big value (centre) → city + delta (footer row). Vertical stack kills mid-rectangle dead space. Grid of tiles in the rail, not wide rectangles. `--card` surface, `--hair` border.
 - **Two-lens comparison (CONDO card):** distinguish the two questions explicitly — (a) vs-city share comparison (primary line, pp delta, `--city` baseline) and (b) within-neighbourhood condo-stripped view (secondary block under an `excluding condos:` label). Never conflate.
-- **Selection:** `--sel` on every surface. One colour = "selected."
+- **Selection:** one meaning, two surface-appropriate encodings — the **map** boundary is `--pa-selection-outline` violet (top-of-stack, distinct from the ramp), the **table/rail** accent is `--sel` coral (P4). Both read as "selected."
 - **City baseline:** `--city` blue on every surface, labelled with the ACTIVE CITY NAME (e.g. "Edmonton"), read dynamically — never the literal word "city," never a hardcoded "Edmonton."
 - **Honesty labels:** reportable/suppressed/excluded, exact/approx, aggregate formula tags — always shown, muted tier, never stripped.
 

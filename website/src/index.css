@@ -134,7 +134,10 @@
   --data-up:   #4ade80;  /* growth / increase (YoY +, pp +) */
   --data-down: #f88b6b;  /* decline / decrease (YoY −, pp −) */
   --city:      #60a5fa;  /* comparison-baseline (active-city) datum EVERYWHERE — dashed+blue, colour-blind-safe */
-  --sel:       #e8734a;  /* selection, EVERY surface (map outline + table outline + rail) */
+  --sel:       #e8734a;  /* selection accent on the TABLE + RAIL (the MAP boundary uses --pa-selection-outline) */
+  --pa-selection-outline: #8b5cf6;  /* MAP selection boundary stroke — violet (P4); reserved distinct from the
+     sequential + diverging ramps, --data-up green, --data-down/--sel coral, --city blue. MapLibre paint can't read
+     CSS vars, so choroplethStyle.js mirrors this literal (kept in sync by comment). */
   /* §1.4 map / cartography */
   --map-cream: #f7f1df;  /* basemap ground = the label halo colour */
   --label-ink: #2a2621;  /* map label text — dark warm grey, ~13:1 on cream */

@@ -632,10 +632,11 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
         "line-dasharray": STATE_STYLE.no_data.outlineDash,
       },
     },
-    // 5b. Selection CASING — a light cream under-stroke drawn BENEATH the coral
+    // 5b. Selection CASING — a light cream under-stroke drawn BENEATH the violet
     //     highlight (this layer precedes nbhd-highlight, so it renders below it),
-    //     so the selected outline stays legible over deep-red / plateau-yellow
-    //     fills (A5). Pinned only; transparent otherwise.
+    //     so the selected boundary stays legible over deep-red / plateau-yellow
+    //     fills. Pinned only; transparent otherwise. Both this and nbhd-highlight
+    //     are lifted to the TOP of the stack by the page (moveLayer, P4).
     {
       id: "nbhd-highlight-casing",
       type: "line",
@@ -652,22 +653,24 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
         ],
       },
     },
-    // 6. Highlight outline — invisible by default, darkens on hover, and turns
-    //    the selection CORAL (--pa-sel, one selection colour across every surface,
-    //    A5) + thicker when pinned. Sits below the basemap labels via beforeId.
+    // 6. Highlight outline — invisible by default, darkens on hover, and turns the
+    //    selection VIOLET (mirrors --pa-selection-outline; P4) + thicker when pinned.
+    //    Violet is distinct from the ramp reds/oranges the old coral collided with. The
+    //    page lifts this pair to the TOP of the stack (moveLayer) so it is never occluded
+    //    by an adjacent polygon or basemap hairline.
     {
       id: "nbhd-highlight",
       type: "line",
       paint: {
         "line-color": [
           "case",
-          ["boolean", ["feature-state", "pinned"], false], "#e8734a",  /* mirrors --sel */
+          ["boolean", ["feature-state", "pinned"], false], "#8b5cf6",  /* mirrors --pa-selection-outline (violet) */
           ["boolean", ["feature-state", "hover"],  false], "#2a2a30",
           "rgba(0,0,0,0)",
         ],
         "line-width": [
           "case",
-          ["boolean", ["feature-state", "pinned"], false], 2.4,
+          ["boolean", ["feature-state", "pinned"], false], 2.8,
           ["boolean", ["feature-state", "hover"],  false], 1.6,
           0,
         ],
