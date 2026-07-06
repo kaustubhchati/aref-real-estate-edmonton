@@ -5,15 +5,19 @@
 //
 //   ┌──── .content-map / .pa-map (full-bleed) ─────────────────────┐
 //   │ ┌.pa-float┐   MAP (sacred centre, zero chrome)   ┌ nav ┐     │
-//   │ │identity │                                       │🔍 +−│     │
-//   │ │ metric  │                        ┌ .pa-detail (S-b only) ┐  │
-//   │ │ tuning  │                        └──────────────────────┘  │
-//   │ │ legend  │                                                   │
-//   │ │ footer  │   .pa-foot: DataTable console (rises ALONE)       │
-//   │ └─────────┘    handle → [ rail | table | trend | margin ]     │
+//   │ │┌identity┐│                                      │🔍 +−│     │
+//   │ │└────────┘│                       ┌ .pa-detail (S-b only) ┐  │
+//   │ │┌instrmt─┐│                       └──────────────────────┘  │
+//   │ ││ metric ││                                                  │
+//   │ ││ tuning ││   .pa-foot: DataTable console (rises ALONE)      │
+//   │ ││ legend ││    handle → [ rail | table | trend | margin ]    │
+//   │ │└footer──┘│                                                  │
+//   │ └─────────┘                                                   │
 //   └──────────────────────────────────────────────────────────────┘
-//   The instrument COLUMN (left, .pa-float — kept so chromePadding reserves it) is
-//   ONE dark chassis: identity → metric → tuning → legend → footer. The console
+//   The instrument COLUMN (left) is a TRANSPARENT .pa-float wrapper — kept so
+//   chromePadding reserves it — holding TWO dark .pa-card surfaces (P1): an identity
+//   card (title + city switcher) and, below it, the instrument chassis
+//   (metric → tuning → legend → footer). The console
 //   rises from the bottom into a four-frame grid (rail KPI cards | table | trend
 //   instrument | margin); its header carries the scope title + metric chips +
 //   District / Clear / Export. The S-b single-select detail is a right float below
