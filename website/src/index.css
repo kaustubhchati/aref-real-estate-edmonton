@@ -982,10 +982,15 @@ p  { margin: 0 0 0.75rem; }
 .dt-trend { display: flex; flex-direction: column; gap: 3px; width: 100%; height: 100%; min-height: 0; }
 .dt-trend-head { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .dt-trend-label { font-size: var(--t-2xs); letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut); }
-.dt-trend-readout { font-size: 9px; color: #c7cacd; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* P3 — the trend instrument's readout / axis-ends / legend were rendering below the
+   §1.5 floor (9px / 8px / 8px) — the real "impossible to read" defect (contrast on the
+   tokens already clears §4). Lift them to --t-2xs (11px, the floor) and tier by role:
+   the readout + the axis-ends carry $ VALUES → primary --tx (§1.5a values); the legend
+   entries are series LABELS → secondary --pa-mut. Also retires the raw #c7cacd literal (§1). */
+.dt-trend-readout { font-size: var(--t-2xs); color: var(--tx); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .dt-trend-svg { display: block; width: 100%; flex: 1 1 0; min-height: 44px; }
-.dt-trend-ends { flex: 0 0 auto; display: flex; justify-content: space-between; font-size: 8px; color: var(--pa-mut); font-variant-numeric: tabular-nums; }
-.dt-trend-leg { flex: 0 0 auto; display: flex; gap: 12px; font-size: 8px; color: var(--pa-mut); }
+.dt-trend-ends { flex: 0 0 auto; display: flex; justify-content: space-between; font-size: var(--t-2xs); color: var(--tx); font-variant-numeric: tabular-nums; }
+.dt-trend-leg { flex: 0 0 auto; display: flex; gap: 12px; font-size: var(--t-2xs); color: var(--pa-mut); }
 .dt-trend-leg .dt-sw { display: inline-block; width: 10px; height: 2px; vertical-align: middle; margin-right: 3px; }
 .dt-trend-leg .dt-sw--band { height: 6px; background: var(--pa-up); opacity: 0.2; }
 .dt-trend-yoy { flex: 0 0 auto; border-top: 1px solid var(--pa-hair); padding-top: 4px; margin-top: 1px; }
@@ -1124,7 +1129,10 @@ p  { margin: 0 0 0.75rem; }
   font-size: var(--t-2xs); font-variant-numeric: tabular-nums; min-width: 0;
 }
 .dt-tile-city { color: var(--city); white-space: normal; }   /* own line, wraps if long — never clips */
-.dt-tile-d { font-weight: 500; white-space: nowrap; }
+/* P3 — the delta is a DATA VALUE, never grey/secondary. Level deltas (median/mean/lot
+   vs city) are white --tx EXPLICITLY (was inherited, fragile; COLOUR_LEVEL_DELTAS=false);
+   rate deltas (YoY/pp) override to semantic --data-up/--data-down via .dt-up/.dt-dn below. */
+.dt-tile-d { font-weight: 500; white-space: nowrap; color: var(--tx); }
 /* Shared bits — the distribution card frame + the CONDO secondary block + sign colours. */
 .dt-card { background: var(--card); border: 1px solid var(--hair); border-radius: var(--r-md); padding: 7px 10px; }
 .dt-card-hd { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
@@ -1133,12 +1141,9 @@ p  { margin: 0 0 0.75rem; }
 .dt-dn { color: var(--data-down); }
 .dt-card-note { font-size: var(--t-2xs); color: var(--tx-mut); margin-top: 2px; }
 .dt-card-sub { border-top: 1px solid var(--hair); margin-top: 5px; padding-top: 4px; }
-/* C4 — the "excluding condos" lens label: a distinct mini-header so the condo-stripped
-   view never reads as another city comparison. */
-.dt-sub-lens { font-size: var(--t-2xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--tx-dim); margin-bottom: 2px; }
-.dt-kv { display: flex; justify-content: space-between; font-size: var(--t-2xs); margin-top: 1px; }
-.dt-kv-k { color: var(--tx-mut); }
-.dt-kv-v { color: var(--tx); font-variant-numeric: tabular-nums; }
+/* (P3 removed dead CSS here: .dt-sub-lens / .dt-kv / .dt-kv-k / .dt-kv-v — unrendered
+   since KpiCard switched to a `foot` string; .dt-sub-lens was the last remaining
+   --tx-dim-on-must-read-text violation, DESIGN_SYSTEM §1.2.) */
 /* Distribution card — a full-width tile with a taller floor (A5) so the histogram reads as
    a real distribution; never clips (A3). */
 .dt-card--dist { min-height: 96px; display: flex; flex-direction: column; }
@@ -1316,7 +1321,7 @@ p  { margin: 0 0 0.75rem; }
    labels read as authored (table headers, KPI labels, section labels, triplet, trend labels).
    Placed after the label rules + scoped to match their specificity so it governs. */
 .dt-table thead th,
-.dt-tile-l, .dt-card-l, .dt-sub-lens,
+.dt-tile-l, .dt-card-l,
 .dt-trend-label, .dt-trend-sub,
 .pa-trip-l,
 .pa-column .pa-col-lab,
