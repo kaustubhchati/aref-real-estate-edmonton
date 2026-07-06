@@ -1252,7 +1252,12 @@ p  { margin: 0 0 0.75rem; }
   margin: 0; font-size: var(--t-2xs); letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut);
 }
 .pa-col-metric .seg-options { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; background: transparent; border: 0; padding: 0; }
-.pa-col-metric .seg-icon { display: none; }
+/* P5 — surface the per-metric glyph in the LEFT RAIL only (the console-header re-home
+   stays text-only via .dt-metric .seg-icon). The SegmentedControl SVG uses
+   stroke="currentColor", so the glyph greens with the label on the active chip — the
+   green border stays the ONLY selected signal, no per-metric colour. CSS width/height wins
+   over the SVG's intrinsic 16px, sizing it to sit with the chip text. */
+.pa-col-metric .seg-icon { display: inline-flex; width: 14px; height: 14px; flex: 0 0 auto; }
 .pa-col-metric .seg-btn {
   width: auto; display: inline-flex; align-items: center;
   font-family: inherit; font-size: 12px; color: #c7cacd; cursor: pointer;
