@@ -1256,23 +1256,22 @@ export default function PropertyAssessmentMap() {
             )}
           </div>
 
-          {/* ===== INSTRUMENT COLUMN (contract §3.1) — ONE dark chassis on the
-              left: identity → metric → tuning → legend → footer, hairline-
-              separated modules. Keeps the .pa-float class so chromePadding's live
-              left reserve still measures it (interactions.js:178). ALWAYS rendered
-              so the city switcher stays reachable in the Calgary no-data state. ===== */}
+          {/* ===== INSTRUMENT COLUMN (contract §3.1) — TWO stacked cards on the
+              left of the full-bleed map (P1 split the old single chassis): an
+              IDENTITY card (title + city switcher) and, below it, the INSTRUMENT
+              chassis card (metric → tuning → legend → footer, hairline-separated
+              modules). The transparent .pa-float wrapper stays (same class + width)
+              so chromePadding's live left reserve still measures it
+              (interactions.js:178); the two cards carry the dark surface. Identity
+              ALWAYS renders so the city switcher stays reachable in the Calgary
+              no-data state; the instrument chassis is gated on url. ===== */}
           <div className="pa-float pa-column">
-            <IdentityCard
-              cities={CITIES}
-              city={city}
-              onCityChange={changeCity}
-              year={year}
-              sliderYear={sliderYear}
-              hasData={!!url}
-            />
+            <section className="pa-card pa-card-identity">
+              <IdentityCard cities={CITIES} city={city} onCityChange={changeCity} />
+            </section>
 
             {url && (
-              <>
+              <section className="pa-card pa-card-instrument">
                 {/* METRIC module — the down-state home of the metric selector. It
                     goes DORMANT in Analysis (dockOpen): the chips re-home to the
                     console header (DataTable spine), never in two places at once.
@@ -1377,7 +1376,7 @@ export default function PropertyAssessmentMap() {
                     </div>
                   )}
                 </div>
-              </>
+              </section>
             )}
           </div>
 

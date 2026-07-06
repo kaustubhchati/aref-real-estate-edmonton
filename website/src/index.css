@@ -1175,23 +1175,35 @@ p  { margin: 0 0 0.75rem; }
 .dt-spark-empty { color: var(--pa-dim); }
 
 /* ============================================================================
-   PA INSTRUMENT COLUMN (contract §3.1/§4) — ONE dark chassis on the left of the
-   full-bleed map: identity → metric → tuning → legend → footer, hairline-
-   separated modules. Replaces the old light floating cluster. Keeps the .pa-float
-   class so chromePadding's live LEFT reserve still measures it (interactions.js
-   :178). Flat dark surfaces — gloss lives on the map chrome; data stays flat (§9).
+   PA INSTRUMENT COLUMN (contract §3.1/§4) — TWO stacked dark cards on the left of
+   the full-bleed map (P1 split the old single chassis): an IDENTITY card (title +
+   city switcher) and, below it, the INSTRUMENT chassis card (metric → tuning →
+   legend → footer, hairline-separated modules). The .pa-float element is now a
+   TRANSPARENT positioned wrapper — it keeps the class + measured width so
+   chromePadding's live LEFT reserve still measures it (interactions.js:178); the
+   surface/radius/padding moved to .pa-card. Flat dark surfaces — gloss lives on
+   the map chrome; data stays flat (§9).
    ============================================================================ */
 .pa-float {
-  /* B2 — fit-content height (the chassis ENDS after the footer; no void below the
-     legend), capped at the viewport so it scrolls internally on a short screen. */
+  /* Transparent wrapper: position + the measured width + the viewport cap /
+     internal scroll + the column's default text tier. A --s3 gap separates the
+     two cards (the map shows through it — that gap IS what reads them as two). */
   position: absolute; left: 10px; top: 10px; z-index: 15;
   width: 228px; max-height: calc(100% - 20px); box-sizing: border-box;
   overflow-y: auto; overflow-x: hidden;
-  display: flex; flex-direction: column;
-  background: var(--pa-shell); border-radius: 12px; padding: 11px 13px;
+  display: flex; flex-direction: column; gap: var(--s3);
   color: var(--pa-mut); font-size: 11px;
   pointer-events: auto;
 }
+/* P1 — the two instrument cards: fixed dark frames (Principle 0). The paint the
+   single chassis used to carry lives here now; both read as raised surfaces. */
+.pa-card {
+  display: flex; flex-direction: column; box-sizing: border-box;
+  background: var(--pa-shell); border-radius: var(--r-lg); padding: var(--s3);
+}
+/* The first module of the instrument card sits directly under the card's top edge:
+   no leading separator (the hairlines DIVIDE modules, they don't cap the card). */
+.pa-card-instrument .pa-col-mod:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
 .pa-id-card .opt-toggle, .pa-id-card .seg { margin: 0; }
 
 /* ---- Column modules + dark skin -------------------------------------------
@@ -1212,9 +1224,8 @@ p  { margin: 0 0 0.75rem; }
   padding: 0; margin: 0; gap: 8px;
 }
 .pa-column .pa-id-title { font-size: var(--t-lg); font-weight: 600; letter-spacing: 0; color: var(--pa-ink); }
-.pa-column .pa-id-cap { font-size: var(--t-xs); font-weight: 500; letter-spacing: 0.08em; color: var(--pa-mut); }
-.pa-column .pa-id-year { align-items: baseline; gap: 6px; }
-.pa-column .pa-id-year-value { font-size: var(--t-lg); font-weight: 600; color: var(--pa-up); }
+/* (P1 removed the dark .pa-id-cap / .pa-id-year / .pa-id-year-value overrides —
+   the year readout they styled is gone; the tuning slider owns the live year.) */
 /* City switcher → dark chips (active = green border), matching the annex. */
 .pa-column .opt-toggle-label { display: none; }
 .pa-column .opt-toggle-buttons { display: flex; gap: 5px; }
@@ -1312,8 +1323,7 @@ p  { margin: 0 0 0.75rem; }
 .pa-column .pa-col-lab,
 .pa-col-metric .seg-label, .dt-metric .seg-label,
 .pa-column .pa-rack-label,
-.pa-col-legend .legend-title,
-.pa-id-cap {
+.pa-col-legend .legend-title {
   text-transform: none;
   letter-spacing: 0.01em;
 }
@@ -2206,8 +2216,9 @@ p  { margin: 0 0 0.75rem; }
      width; the dock stays bounded in the canvas foot. */
   .pa-search-peek-panel { width: min(64vw, 240px); }
   /* Narrow the instrument column on a phone; it keeps the base top/bottom:10 full
-     height and scrolls internally if the modules outgrow it. */
-  .pa-float { width: 150px; padding: 9px 10px; max-height: none; }
+     height. Padding lives on the cards now (.pa-float is a transparent wrapper). */
+  .pa-float { width: 150px; max-height: none; }
+  .pa-card { padding: 9px 10px; }
   .pa-canvas .canvas-wrap { min-height: 0; }
   .pa-rack { width: calc(100vw - 24px); }
   /* The four-frame grid is too tight side-by-side on a phone — STACK it into one

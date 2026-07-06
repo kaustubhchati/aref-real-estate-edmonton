@@ -44,7 +44,7 @@ P0 (load error) / P1 (loading) remain bare shells as-built. Brush and box-select
 │ └────────┘                          (handle)                 │
 └──────────────────────────────────────────────────────────────┘
 ```
-- **Instrument column** (left, ONE dark chassis, fixed width ~196px, top→bottom, full height minus margins): Identity (title, city toggle, year readout) → Metric module → Tuning module → Legend module → footer (About & tips trigger + parcel count). Modules separated by hairlines; module set identical in all data states.
+- **Instrument column** (left, fixed width ~196px, top→bottom, full height minus margins): TWO stacked dark cards (P1) — an **Identity card** (title, city toggle) and, below it, an **Instrument chassis card** (Metric module → Tuning module → Legend module → footer [About & tips trigger + parcel count]). A gap separates the two cards; within the chassis, modules are hairline-separated. Module set identical in all data states. (The year readout was removed from Identity — the Tuning year slider owns the live year.)
 - **Nav stack** (right-top): search peek + zoom +/− + reset (existing MapLibre controls stay top-right).
 - **Detail instrument** (right, below nav): mounts in S-b only. Fixed frame position; interior = name, rank/parcels/reportable line, sparkline, value/city/delta triplet, hairline, condo block (Condo share / Mean excl. condo / Lot non-condo).
 - **Handle** (bottom, centred over the map area right of the column): the console's only down-state presence. Shows count; shows `N selected` (coral) in b₂.
@@ -75,7 +75,7 @@ Console interior = **four fixed frames**: `rail (≈184–200px) | table (conten
 
 ## 4. Frame inventory — interiors per state
 
-**Identity module:** always: title, city toggle; year readout appears when data (`Edmonton · 2026` compact form in non-idle states is acceptable within the same frame).
+**Identity card:** its own dark surface (P1), always: title, city toggle. No year readout (removed in P1 — it duplicated the Tuning year slider's live readout).
 **Metric module:** S-a/b/b₂: vertical chip list, active chip green-bordered; S-c/d/e: DORMANT (empties; chips render in console header — the ONLY re-homing element, mechanics as-built: two conditional SegmentedControl homes, not a portal). S-E: hidden.
 **Tuning module:** year slider (150px form preserved) + green year readout; dual-handle range + white bold range readout; label strip `TUNING` with icon. Range dims (`is-off`) in selection mode (N≥2) exactly as-built. Present in ALL data states including Analysis (stays left; never floats over map).
 **Legend module:** horizontal ramp bar + min/max labels (D6 as committed: sequential = index-spaced simple gradient; YoY = value-spaced diverging with ±1 plateau tag). Frame fixed; ramp swaps with active metric. Relocated from `.pa-legend` bottom-right into the column — a real relocation, conscious.
