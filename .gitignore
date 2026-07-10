@@ -101,7 +101,13 @@ pipeline/yeg/property-assessment/data/reference/neighbourhood_name_merges_*.csv
 # Shared-section data (City neighbourhood boundary + mature-neighbourhood
 # reference downloads) — large, re-downloaded at refresh. Shared CODE under
 # pipeline/yeg/shared/ stays committable; only its data/ is excluded (CLAUDE.md §3).
-pipeline/yeg/shared/data/
+# Exclude the CONTENTS, not the directory: git cannot re-include a file whose
+# parent DIRECTORY is excluded, so the oracle negation below needs data/* here.
+pipeline/yeg/shared/data/*
+# ...except the hand-curated rescue oracle — a ~2KB non-refetchable public-data
+# ruling table, BP's live reconciliation source (Tier 1; a fresh clone needs it
+# to build BP). The boundary + mature CSVs above stay ignored via data/*.
+!pipeline/yeg/shared/data/neighbourhood_rescue_oracle.csv
 **/building-permits/output/permits.pmtiles
 **/building-permits/output/permit_geojson/*.geojson
 # Point-map per-year GeoJSONs (01's 4b2 emit) — regenerable output; the published
