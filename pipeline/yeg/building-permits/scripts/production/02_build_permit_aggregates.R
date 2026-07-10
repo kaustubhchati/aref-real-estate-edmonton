@@ -59,6 +59,8 @@ library(scales)
 # Repo-root anchoring + path helpers (ROOT, shared_path(), …). Lets this script
 # address the shared boundary by RELATIONSHIP, not a fragile ../../ hop.
 source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
+source(shared_path("fetch_helpers.R"))
+source(shared_path("boundary_helpers.R"))
 
 dir.create("output/permit_aggregates", showWarnings = FALSE, recursive = TRUE)
 dir.create("output/permit_geojson",    showWarnings = FALSE, recursive = TRUE)
@@ -122,24 +124,12 @@ cat("Years present:", paste(sort(unique(permits$year)), collapse = ", "), "\n\n"
 # ============================================================
 # 3. Load boundary file
 # ============================================================
-# Newest neighbourhood boundary snapshot by glob — same sort(decreasing=TRUE)[1]
-# discipline PA's 04/06/07 use. A new City boundary drops in with NO code edit
-# (refresh-by-design); zero date literals in the consumed path. The on-disk name
-# uses "_-_".
-boundary_candidates <- list.files(
-  shared_path("data"),
-  pattern    = "^City_of_Edmonton_-_Neighbourhoods_.*\\.csv$",
-  full.names = TRUE
-)
-if (length(boundary_candidates) == 0) {
-  stop("No neighbourhood boundary CSV in ", shared_path("data"),
-       " matching City_of_Edmonton_-_Neighbourhoods_*.csv — download the latest ",
-       "City of Edmonton Neighbourhoods snapshot and save it there.")
-}
-boundary_path <- sort(boundary_candidates, decreasing = TRUE)[1]
-cat("Using boundary:", basename(boundary_path), "\n")
-
-boundary_raw <- read_csv(boundary_path, show_col_types = FALSE)
+# Boundary via the shared guarded loader: fetch-routed through fetch_socrata_snapshot
+# (finding 5, closes the one-input-bypasses-the-helper gap) + the "follow the City"
+# integrity contract (dup ids, geometry, +/-10% row tolerance vs the accepted
+# snapshot, Effective End Date tripwire, staleness). Returns the raw frame; the
+# st_as_sf/select below and boundary_numbers/bname_tbl are unchanged.
+boundary_raw <- load_boundary()
 
 boundary_sf <- boundary_raw |>
   filter(!is.na(`Geometry Multipolygon`)) |>

@@ -66,6 +66,7 @@ library(sf)
 # boundary is cross-section base geo, resolved via shared_path() newest-by-glob.
 source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
 source(shared_path("fetch_helpers.R"))
+source(shared_path("boundary_helpers.R"))
 
 OUT_DIR <- "output"
 dir.create(OUT_DIR,                  recursive = TRUE, showWarnings = FALSE)
@@ -85,23 +86,12 @@ CENSUS_CSV <- fetch_socrata_snapshot(
   filename_stem = "Edmonton_Business_Census"
 )
 
-# Newest neighbourhood boundary snapshot by glob — same discipline PA/BP use; a
-# new City boundary drops in with NO code edit (no date literal in the path).
-boundary_candidates <- list.files(
-  shared_path("data"),
-  pattern    = "^City_of_Edmonton_-_Neighbourhoods_.*\\.csv$",
-  full.names = TRUE
-)
-if (length(boundary_candidates) == 0) {
-  stop("No neighbourhood boundary CSV in ", shared_path("data"),
-       " matching City_of_Edmonton_-_Neighbourhoods_*.csv — download the latest.")
-}
-BOUNDARY_CSV <- sort(boundary_candidates, decreasing = TRUE)[1]
-
-# ── 1. Load boundary ────────────────────────────────────────
-
+# ── 1. Load boundary (shared guarded loader) ────────────────
+# Fetch-routed through fetch_socrata_snapshot (finding 5) + the "follow the City"
+# integrity contract (dup ids, geometry, +/-10% row tolerance vs the accepted
+# snapshot, Effective End Date tripwire, staleness). Returns the raw frame.
 cat("Loading 2026 neighbourhood boundary...\n")
-boundary_raw <- read_csv(BOUNDARY_CSV, show_col_types = FALSE)
+boundary_raw <- load_boundary()
 cat("  Rows loaded:", nrow(boundary_raw), "\n")
 
 boundary_sf <- boundary_raw |>

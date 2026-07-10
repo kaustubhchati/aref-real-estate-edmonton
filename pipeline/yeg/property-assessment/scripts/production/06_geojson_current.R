@@ -41,6 +41,8 @@
 
 source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
 source(shared_path("reconcile_helpers.R"))
+source(shared_path("fetch_helpers.R"))
+source(shared_path("boundary_helpers.R"))
 
 # --- Setup --------------------------------------------------
 library(tidyverse)
@@ -54,22 +56,16 @@ stopifnot(dir.exists("output"))
 # Locate the newest neighbourhood boundary snapshot by glob — the same
 # sort(decreasing=TRUE)[1] discipline 03/04 use for their inputs, so a new City
 # boundary drops in with no code edit. The real on-disk name uses "_-_".
-boundary_candidates <- list.files(
-  shared_path("data"),
-  pattern    = "^City_of_Edmonton_-_Neighbourhoods_.*\\.csv$",
-  full.names = TRUE
-)
-if (length(boundary_candidates) == 0) {
-  stop("No neighbourhood boundary CSV in ", shared_path("data"),
-       " matching City_of_Edmonton_-_Neighbourhoods_*.csv — download the latest ",
-       "City of Edmonton Neighbourhoods snapshot and save it there.")
-}
-boundary_path <- sort(boundary_candidates, decreasing = TRUE)[1]
+# Boundary via the shared guarded loader (fetch-routed through fetch_socrata_snapshot
+# + the "follow the City" integrity contract). Returns the raw frame; the WKT parse
+# + container-exclude below are unchanged.
+boundary_raw <- load_boundary()
 aggregates_path <- "output/neighbourhood_aggregates_2026.csv"
 non_residential_path <- "output/non_residential_ids_2026.csv"   # emitted by 05
 
-# Hard fail with actionable errors if any input is missing
-for (p in c(boundary_path, aggregates_path, non_residential_path)) {
+# Hard fail with actionable errors if any input is missing (load_boundary already
+# asserts the boundary's presence + contract).
+for (p in c(aggregates_path, non_residential_path)) {
   if (!file.exists(p)) stop("Missing input: ", p)
 }
 
@@ -96,7 +92,7 @@ cat(sprintf("\nLoaded %s aggregate rows\n", comma(nrow(aggregates))))
 
 
 # --- Load boundary polygons ---------------------------------
-nbhd_polygons <- read_csv(boundary_path, show_col_types = FALSE) |>
+nbhd_polygons <- boundary_raw |>
   st_as_sf(wkt = "Geometry Multipolygon", crs = 4326) |>
   st_set_geometry("geometry") |>
   mutate(`Neighbourhood ID` = as.character(as.integer(`Neighbourhood Number`)))

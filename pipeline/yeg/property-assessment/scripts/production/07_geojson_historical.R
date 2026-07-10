@@ -38,6 +38,8 @@ library(sf)
 library(scales)
 source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
 source(shared_path("reconcile_helpers.R"))
+source(shared_path("fetch_helpers.R"))
+source(shared_path("boundary_helpers.R"))
 
 # Historical GeoJSONs land in output/ (the section's build dir, same place 06_geojson_current
 # writes the current-year file). Publishing output/ -> website/public is the
@@ -58,22 +60,10 @@ cat("=============================================================\n\n")
 #    Neighbourhood ID in aggregate CSVs.
 # ============================================================
 
-# Newest neighbourhood boundary snapshot by glob — same sort(decreasing=TRUE)[1]
-# discipline 03/04 use for their inputs; a new City boundary drops in with no
-# code edit. The real on-disk name uses "_-_". Honest stop if none present.
-boundary_candidates <- list.files(
-  shared_path("data"),
-  pattern    = "^City_of_Edmonton_-_Neighbourhoods_.*\\.csv$",
-  full.names = TRUE
-)
-if (length(boundary_candidates) == 0) {
-  stop("No neighbourhood boundary CSV in ", shared_path("data"),
-       " matching City_of_Edmonton_-_Neighbourhoods_*.csv — download the latest ",
-       "City of Edmonton Neighbourhoods snapshot and save it there.")
-}
-boundary_path <- sort(boundary_candidates, decreasing = TRUE)[1]
-
-boundary_raw <- read_csv(boundary_path, show_col_types = FALSE)
+# Boundary via the shared guarded loader (fetch-routed through fetch_socrata_snapshot
+# + the "follow the City" integrity contract). Returns the raw frame; the WKT parse
+# + container-exclude below are unchanged.
+boundary_raw <- load_boundary()
 cat("Boundary rows loaded: ", nrow(boundary_raw), "\n")
 
 # Parse WKT geometry — CRS is WGS84 per dataset documentation
