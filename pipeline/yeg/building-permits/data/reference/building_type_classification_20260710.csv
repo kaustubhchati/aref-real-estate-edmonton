@@ -1,0 +1,72 @@
+building_type,disposition,code,source,date_curated,curated_by
+Single Detached House (110),residential,110,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Single House (110),residential,110,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Single Detached Condo (115),residential,115,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Backyard House (110),residential,110,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Apartments (310),residential,310,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Apartment (310),residential,310,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Apartment Condos (315),residential,315,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Row House (330),residential,330,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Row Houses (330),residential,330,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Row House Condo (335),residential,335,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Row House Condos (335),residential,335,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Semi-Detached House (210),residential,210,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Semi Detached House (210),residential,210,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Semi Detached House,residential,NA,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Semi-Detached Condo (215),residential,215,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Duplex (210),residential,210,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Mobile Home (130),residential,130,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Mixed Use (522),residential,522,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Animal and Plant Services (410),non_residential,410,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Apartment Condo (315),non_residential,315,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Carport (090),non_residential,090,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+"Clinics, Health Units (642)",non_residential,642,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Communication Buildings (470),non_residential,470,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Convention Centres (536),non_residential,536,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+"Day Cares, Nursing Homes (650)",non_residential,650,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Detached Deck (020),non_residential,020,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Detached Garage (010),non_residential,010,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Detached Greenhouse (030),non_residential,030,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Detached Misc. Structure (090),non_residential,090,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Detached Shed (040),non_residential,040,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Duplex Condo (215),non_residential,215,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Elementary Schools (620),non_residential,620,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Engineering (490),non_residential,490,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Funeral Homes (590),non_residential,590,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Gazebo (090),non_residential,090,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Government Legislative/Admin (610),non_residential,610,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Greenhouse (030),non_residential,030,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Hoarding (910),non_residential,910,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Hospitals (640),non_residential,640,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Hotels (530),non_residential,530,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Indoor Recreational Buildings (560),non_residential,560,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Laboratory/Research Centres (580),non_residential,580,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Law Enforcement/Emergency Svcs. (612),non_residential,612,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Libraries/Museums/Art Galleries (630),non_residential,630,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Maintenance Buildings incl Hangars (450),non_residential,450,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+"Malls, Office/Retail (512)",non_residential,512,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Manufacturing Buildings (430),non_residential,430,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Motels (532),non_residential,532,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Office Buildings (520),non_residential,520,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Office Complex (522),non_residential,522,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Other Accommodation (534),non_residential,534,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Other Accomodation (534),non_residential,534,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Outdoor Recreational Buildings (562),non_residential,562,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Parkade (490),non_residential,490,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Play Structure (090),non_residential,090,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Post-secondary Institutions (624),non_residential,624,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Religious Buildings (660),non_residential,660,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Restaurants and Bars (540),non_residential,540,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Retail - Motor Vehicle (570),non_residential,570,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Retail and Shops (510),non_residential,510,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Secondary Schools (622),non_residential,622,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Semi Detached Condo (215),non_residential,215,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+"Service Stations, Repair Garages (572)",non_residential,572,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Shed (040),non_residential,040,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+"Storage Buildings, Warehouses (460)",non_residential,460,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Temporary Structure (099),non_residential,099,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Temporary Structures (999),non_residential,999,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Theatre and Performing Arts Ctrs (550),non_residential,550,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Transportation Terminals (440),non_residential,440,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Universities (626),non_residential,626,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC
+Utility Buildings (480),non_residential,480,"General Building Permits (24uj-dj8v): distinct BUILDING_TYPE strings, curated",2026-07-10,KC

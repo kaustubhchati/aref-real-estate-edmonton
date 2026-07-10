@@ -153,17 +153,45 @@ boundary_sf <- boundary_raw |>
 
 cat("Boundary polygons:", nrow(boundary_sf), "\n\n")
 
-# Residential scope: explicit BUILDING_TYPE whitelist (full strings, including
-# variant spellings). Matched on the full string — never the bare code (the 522
-# code collides: "Mixed Use (522)" vs "Office Complex (522)"). NOT 02a's
-# job-category grouping (different column, different purpose).
-residential_types <- c(
-  "Single Detached House (110)", "Single House (110)", "Single Detached Condo (115)",
-  "Backyard House (110)", "Apartments (310)", "Apartment (310)", "Apartment Condos (315)",
-  "Row House (330)", "Row Houses (330)", "Row House Condo (335)", "Row House Condos (335)",
-  "Semi-Detached House (210)", "Semi Detached House (210)", "Semi Detached House",
-  "Semi-Detached Condo (215)", "Duplex (210)", "Mobile Home (130)", "Mixed Use (522)"
+# Residential scope: read the curated BUILDING_TYPE classification table (01b) —
+# the fail-closed analogue of 01a's JOB_CATEGORY grouping. Newest by glob; no year
+# literal. Disposition is on the FULL string, never the bare code (522 collides:
+# "Mixed Use (522)" residential vs "Office Complex (522)" not). The stop below halts
+# on any permit BUILDING_TYPE absent from the table, so portal drift (a new/renamed
+# type) demands a ruling in 01b instead of silently leaving the residential universe.
+bt_class_candidates <- list.files(
+  "data/reference",
+  pattern    = "^building_type_classification_[0-9]{8}\\.csv$",
+  full.names = TRUE
 )
+if (length(bt_class_candidates) == 0) {
+  stop("No building_type_classification_<YYYYMMDD>.csv in data/reference/ — run ",
+       "scripts/production/01b_build_building_type_classification.R first.")
+}
+bt_class <- read_csv(sort(bt_class_candidates, decreasing = TRUE)[1], show_col_types = FALSE)
+residential_types <- bt_class |> filter(disposition == "residential") |> pull(building_type)
+
+# --- BUILDING_TYPE drift stop (fail-closed; mirror 01's JOB_CATEGORY guard) -----
+# Any string in the data that is neither residential nor non_residential in the
+# table is UNCLASSIFIED portal drift. Halt with row + unit counts so a human rules
+# it in 01b. NA building_type is left excluded (exactly as the old whitelist did) —
+# not a stop. Armed but not sprung: every current string is classified today.
+unclassified <- setdiff(unique(permits$building_type), bt_class$building_type)
+unclassified <- unclassified[!is.na(unclassified)]
+if (length(unclassified) > 0) {
+  drift <- permits |>
+    filter(building_type %in% unclassified) |>
+    group_by(building_type) |>
+    summarise(rows        = n(),
+              units_added = sum(units_added[units_added > 0], na.rm = TRUE),
+              .groups = "drop") |>
+    arrange(desc(rows))
+  print(as.data.frame(drift))
+  stop(length(unclassified), " unclassified BUILDING_TYPE string(s) — neither ",
+       "residential nor non_residential in the classification table. Classify each ",
+       "in 01b (residential or non_residential), re-run 01b, then re-run. Strings: ",
+       paste(unclassified, collapse = " | "))
+}
 
 # ============================================================
 # 3b. Neighbourhood rescue (oracle number-remap + NA-name recovery)
