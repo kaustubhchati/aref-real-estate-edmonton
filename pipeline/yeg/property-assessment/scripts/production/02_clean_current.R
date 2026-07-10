@@ -231,3 +231,13 @@ summary_tbl <- tibble(
                       nrow(assess_clean)   - 338944)
 )
 print(summary_tbl)
+
+# --- Run metrics (Tier 0: durable per-run counts the runner persists to JSONL) ---
+# RUN_METRICS is the runner-provided sink; the guard keeps standalone runs working.
+if (!exists("RUN_METRICS")) RUN_METRICS <- list()
+RUN_METRICS[["rows_in"]]    <- nrow(assess_post_parking)
+RUN_METRICS[["after_R1"]]   <- nrow(assess_post_r1)
+RUN_METRICS[["clean_rows"]] <- nrow(assess_clean)
+RUN_METRICS[["dropped_R1"]] <- n_dropped_r1
+RUN_METRICS[["dropped_R3"]] <- n_dropped_r3
+RUN_METRICS[["per_stage"]]  <- summary_tbl

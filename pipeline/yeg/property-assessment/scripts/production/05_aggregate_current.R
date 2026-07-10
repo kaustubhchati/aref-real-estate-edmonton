@@ -345,3 +345,12 @@ cat(sprintf("Wrote %s (%d resolved/unresolved rows); %d orphan NA-id row(s).\n",
             audit_path, sum(crosswalk_audit$status != "unchanged"), nrow(not_rendered)))
 pruned <- prune_dated_files("output", "^name_mapping_audit_log_\\d{8}\\.csv$", keep = 2L)
 if (length(pruned)) cat(sprintf("Pruned %d old audit log(s).\n", length(pruned)))
+
+# --- Run metrics (Tier 0: durable per-run counts the runner persists to JSONL) ---
+# RUN_METRICS is the runner-provided sink; the guard keeps standalone runs working.
+if (!exists("RUN_METRICS")) RUN_METRICS <- list()
+RUN_METRICS[["neighbourhoods"]]       <- nrow(nbhd_agg)
+RUN_METRICS[["suppressed_low_n"]]     <- n_suppressed
+RUN_METRICS[["crosswalk_resolved"]]   <- sum(crosswalk_audit$status == "resolved")
+RUN_METRICS[["crosswalk_unresolved"]] <- sum(crosswalk_audit$status == "unresolved_no_mapping")
+RUN_METRICS[["non_residential_ids"]]  <- length(non_residential_ids)

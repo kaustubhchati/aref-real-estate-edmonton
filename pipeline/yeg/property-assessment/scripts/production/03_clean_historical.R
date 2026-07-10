@@ -419,3 +419,15 @@ cat("Year span:   ",
 cat("Output:      ", clean_path, "\n")
 cat("QA gate:     output/pa_hist_filter_scorecard.csv → Olivia\n")
 cat("=============================================================\n")
+
+# --- Run metrics (Tier 0: durable per-run counts the runner persists to JSONL) ---
+# RUN_METRICS is the runner-provided sink; the guard keeps standalone runs working.
+if (!exists("RUN_METRICS")) RUN_METRICS <- list()
+RUN_METRICS[["raw_rows"]]     <- n_raw
+RUN_METRICS[["clean_rows"]]   <- nrow(pa_clean)
+RUN_METRICS[["dropped_R1"]]   <- n_drop_r1
+RUN_METRICS[["dropped_R3"]]   <- n_drop_r3
+RUN_METRICS[["dropped_park"]] <- n_drop_park
+RUN_METRICS[["year_min"]]     <- min(pa_clean$`Assessment Year`, na.rm = TRUE)
+RUN_METRICS[["year_max"]]     <- max(pa_clean$`Assessment Year`, na.rm = TRUE)
+RUN_METRICS[["scorecard"]]    <- scorecard

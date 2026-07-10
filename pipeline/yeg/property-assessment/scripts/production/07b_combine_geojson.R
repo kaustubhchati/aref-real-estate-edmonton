@@ -167,3 +167,11 @@ if (n_props != expected_props) {
 cat(sprintf("Sanity: %d aggregated polygons in year %d (combined)\n",
             sum(combined[[paste0("polygon_state_", max_year)]] == "aggregated", na.rm = TRUE),
             max_year))
+
+# --- Run metrics (Tier 0: durable per-run counts the runner persists to JSONL) ---
+# RUN_METRICS is the runner-provided sink; the guard keeps standalone runs working.
+if (!exists("RUN_METRICS")) RUN_METRICS <- list()
+RUN_METRICS[["n_features"]]   <- nrow(combined)
+RUN_METRICS[["n_properties"]] <- n_props
+RUN_METRICS[["n_years"]]      <- length(years)
+RUN_METRICS[["geojson_mb"]]   <- round(size_mb, 2)

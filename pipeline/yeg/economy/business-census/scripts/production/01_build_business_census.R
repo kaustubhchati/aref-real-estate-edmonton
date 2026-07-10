@@ -255,10 +255,13 @@ unmatched <- census_joined |>
   anti_join(st_drop_geometry(boundary_sf), by = "neighbourhood_id")
 
 if (nrow(unmatched) > 0) {
-  cat("WARNING:", nrow(unmatched),
-      "census rows found no matching boundary polygon:\n")
+  # Tier 0: promote to a real warning() so it survives a successful unattended run
+  # (a bare cat() dies with the child's discarded stdout) and tips ok_with_warnings.
+  # The full row list still prints to stdout (captured to the run's .out.log).
+  warning(sprintf(
+    "%d census row(s) found no matching boundary polygon (see stdout for the list)",
+    nrow(unmatched)))
   print(unmatched |> select(neighbourhood_id, source_name_2025, n_businesses_2025))
-  cat("\n")
 } else {
   cat("Sanity check: all 2025 rows matched to a polygon. OK\n\n")
 }
@@ -305,6 +308,18 @@ geojson_ready |>
   st_drop_geometry() |>
   write_csv(csv_path)
 cat("CSV written:    ", csv_path, "\n")
+
+# --- Run metrics (Tier 0: durable per-run counts the runner persists to JSONL) ---
+# RUN_METRICS is the runner-provided sink; the guard keeps standalone runs working.
+if (!exists("RUN_METRICS")) RUN_METRICS <- list()
+RUN_METRICS[["boundary_polygons"]] <- nrow(boundary_sf)
+RUN_METRICS[["census_rows_2025"]]  <- nrow(census_2025)
+RUN_METRICS[["census_rows_2024"]]  <- nrow(census_2024)
+RUN_METRICS[["polygons_data"]]     <- n_data
+RUN_METRICS[["polygons_no_data"]]  <- n_no_data
+RUN_METRICS[["yoy_coverage"]]      <- sum(!is.na(joined_sf$yoy_businesses_pct))
+RUN_METRICS[["unmatched_rows"]]    <- nrow(unmatched)
+RUN_METRICS[["geojson_mb"]]        <- file_mb
 
 # ── 11. Build log ────────────────────────────────────────────
 

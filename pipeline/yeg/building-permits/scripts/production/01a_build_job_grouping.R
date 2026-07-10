@@ -99,5 +99,11 @@ out_path <- file.path(ref_dir,
                       sprintf("job_category_grouping_%s.csv",
                               format(Sys.Date(), "%Y%m%d")))
 write_csv(job_category_grouping, out_path)
+
+# --- Run metrics (Tier 0: durable per-run counts the runner persists to JSONL) ---
+# RUN_METRICS is the runner-provided sink; the guard keeps standalone runs working.
+if (!exists("RUN_METRICS")) RUN_METRICS <- list()
+RUN_METRICS[["n_job_categories"]] <- nrow(job_category_grouping)
+
 cat("\nWrote:", out_path, "\n")
 cat("Columns: job_category, group, rationale, source, date_curated, curated_by\n")

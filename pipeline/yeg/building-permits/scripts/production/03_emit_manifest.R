@@ -41,6 +41,12 @@ writeLines(
   "output/manifest.json"
 )
 
+# --- Run metrics (Tier 0: durable per-run counts the runner persists to JSONL) ---
+# RUN_METRICS is the runner-provided sink; the guard keeps standalone runs working.
+if (!exists("RUN_METRICS")) RUN_METRICS <- list()
+RUN_METRICS[["n_years"]]      <- length(years)
+RUN_METRICS[["default_year"]] <- max(years)
+
 cat("Wrote output/manifest.json — years",
     paste(range(years), collapse = "-"),
     sprintf("(n=%d), defaultYear %d\n", length(years), max(years)))

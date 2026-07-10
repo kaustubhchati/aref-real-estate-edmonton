@@ -239,3 +239,17 @@ cat(sprintf("  Q25:    $%s\n", comma(round(quantile(agg_vals, 0.25, na.rm = TRUE
 cat(sprintf("  Median: $%s\n", comma(round(median(agg_vals, na.rm = TRUE)))))
 cat(sprintf("  Q75:    $%s\n", comma(round(quantile(agg_vals, 0.75, na.rm = TRUE)))))
 cat(sprintf("  Max:    $%s\n", comma(round(max(agg_vals, na.rm = TRUE)))))
+
+# --- Run metrics (Tier 0: durable per-run counts the runner persists to JSONL) ---
+# RUN_METRICS is the runner-provided sink; the guard keeps standalone runs working.
+if (!exists("RUN_METRICS")) RUN_METRICS <- list()
+RUN_METRICS[["container_excluded"]] <- length(exclude_ids)
+RUN_METRICS[["total_polygons"]]     <- nrow(joined)
+RUN_METRICS[["aggregated"]]         <- sum(joined$polygon_state == "aggregated")
+RUN_METRICS[["non_residential"]]    <- sum(joined$polygon_state == "non_residential")
+RUN_METRICS[["suppressed_low_n"]]   <- sum(joined$polygon_state == "suppressed_low_n")
+RUN_METRICS[["manufactured_home"]]  <- sum(joined$polygon_state == "manufactured_home_community")
+RUN_METRICS[["no_data"]]            <- sum(joined$polygon_state == "no_data")
+RUN_METRICS[["value_min"]]          <- round(min(agg_vals, na.rm = TRUE))
+RUN_METRICS[["value_median"]]       <- round(median(agg_vals, na.rm = TRUE))
+RUN_METRICS[["value_max"]]          <- round(max(agg_vals, na.rm = TRUE))

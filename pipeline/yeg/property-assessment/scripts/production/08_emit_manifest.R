@@ -121,7 +121,9 @@ for (yr in years_found) {
            !is.na(median_assessvalue))
   
   if (nrow(gj) == 0) {
-    cat(sprintf("  WARNING: no aggregated polygons for %d — skipping colour scale\n", yr))
+    # Tier 0: a real warning() survives a successful unattended run (a bare cat()
+    # is discarded with the child's stdout) and tips ok_with_warnings.
+    warning(sprintf("no aggregated polygons for %d — skipping colour scale", yr))
     next
   }
   
@@ -168,6 +170,13 @@ manifest <- list(
     )
   )
 )
+
+# --- Run metrics (Tier 0: durable per-run counts the runner persists to JSONL) ---
+# RUN_METRICS is the runner-provided sink; the guard keeps standalone runs working.
+if (!exists("RUN_METRICS")) RUN_METRICS <- list()
+RUN_METRICS[["n_years"]]         <- length(years_found)
+RUN_METRICS[["n_colour_scales"]] <- length(colour_scale_by_year)
+RUN_METRICS[["default_year"]]    <- max(years_found)
 
 # ============================================================
 # 4. Write manifest.json

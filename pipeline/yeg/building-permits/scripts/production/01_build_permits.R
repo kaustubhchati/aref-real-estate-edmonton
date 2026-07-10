@@ -281,6 +281,17 @@ cat(sprintf("\nWrote output/permits_category_counts.csv (%s pairs)\n",
             comma(nrow(category_counts))))
 
 
+# --- Run metrics (Tier 0: durable per-run counts the runner persists to JSONL) ---
+# RUN_METRICS is the runner-provided sink; the guard keeps standalone runs working.
+if (!exists("RUN_METRICS")) RUN_METRICS <- list()
+RUN_METRICS[["total_rows"]]        <- nrow(permits_grouped)
+RUN_METRICS[["mapped_points"]]     <- nrow(points)
+RUN_METRICS[["not_mapped"]]        <- sum(!permits_grouped$has_coord)
+RUN_METRICS[["point_years"]]       <- length(point_years)
+RUN_METRICS[["category_pairs"]]    <- nrow(category_counts)
+RUN_METRICS[["points_geojson_mb"]] <- round(geojson_mb, 1)
+
+
 # ============================================================
 # Run summary
 # ============================================================

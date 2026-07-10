@@ -318,3 +318,9 @@ print(agg_log, n = Inf)
 write_csv(agg_log, "output/hist_aggregates/aggregation_log.csv")
 cat("\nWrote: output/hist_aggregates/aggregation_log.csv\n")
 cat("=============================================================\n")
+
+# --- Run metrics (Tier 0: durable per-run counts the runner persists to JSONL) ---
+# RUN_METRICS is the runner-provided sink; the guard keeps standalone runs working.
+if (!exists("RUN_METRICS")) RUN_METRICS <- list()
+RUN_METRICS[["n_years"]]  <- length(years_present)
+RUN_METRICS[["per_year"]] <- agg_log

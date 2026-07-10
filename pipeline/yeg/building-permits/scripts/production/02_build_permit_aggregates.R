@@ -436,6 +436,21 @@ for (yr in years) {
 # ============================================================
 
 write_csv(build_log, "output/permit_coverage_summary.csv")
+
+# --- Run metrics (Tier 0: durable per-run counts the runner persists to JSONL) ---
+# RUN_METRICS is the runner-provided sink; the guard keeps standalone runs working.
+if (!exists("RUN_METRICS")) RUN_METRICS <- list()
+RUN_METRICS[["boundary_polygons"]]      <- nrow(boundary_sf)
+RUN_METRICS[["residential_rows"]]       <- nrow(res)
+RUN_METRICS[["residential_added"]]      <- u_added(res)
+RUN_METRICS[["residential_demolished"]] <- u_demo(res)
+RUN_METRICS[["recovered_from_NA_rows"]] <- nrow(na_recovered)
+RUN_METRICS[["dropped_rows"]]           <- nrow(dropped_log)
+RUN_METRICS[["dropped_added"]]          <- u_added(dropped_log)
+RUN_METRICS[["dropped_demolished"]]     <- u_demo(dropped_log)
+RUN_METRICS[["n_years"]]                <- length(years)
+RUN_METRICS[["per_year"]]               <- build_log
+
 cat("=============================================================\n")
 cat("Permit aggregate build complete.\n")
 print(build_log, n = Inf)

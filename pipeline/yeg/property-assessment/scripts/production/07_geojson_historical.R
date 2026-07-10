@@ -235,3 +235,9 @@ cat("GeoJSON build complete.\n")
 print(build_log |> select(year, n_aggregated, n_suppressed, n_no_data, file_size_mb),
       n = Inf)
 cat("=============================================================\n")
+
+# --- Run metrics (Tier 0: durable per-run counts the runner persists to JSONL) ---
+# RUN_METRICS is the runner-provided sink; the guard keeps standalone runs working.
+if (!exists("RUN_METRICS")) RUN_METRICS <- list()
+RUN_METRICS[["n_years"]]  <- nrow(build_log)
+RUN_METRICS[["per_year"]] <- build_log

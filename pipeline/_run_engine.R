@@ -31,6 +31,22 @@
 #   loud flag, like a warning — not a failure). The handoff then REFUSES to publish
 #   any zero-byte source (logs handoff_skip_empty), so "surface-and-continue" never
 #   silently becomes "surface-and-publish-empty".
+#
+# Durable run records (Tier 0): every per-script record additionally carries the
+#   child's captured console output and any metrics it emitted, on SUCCESS as well
+#   as on failure (previously these survived only on error). New per-script fields:
+#     stdout_tail / stderr_tail  last 50 lines of the child's stdout / stderr
+#     stdout_log  / stderr_log   repo-relative path to the FULL captured streams
+#                                (runs/<run_id>/<script>.{out,err}.log; gitignored)
+#     metrics                    named list a script opted into via RUN_METRICS
+#   A script emits metrics by assigning into the pre-seeded global RUN_METRICS, e.g.
+#     RUN_METRICS[["boundary_polygons"]] <- nrow(boundary_sf)
+#   The runner pre-creates RUN_METRICS as an empty list in the child's global env,
+#   so a script only appends; one that never touches it emits none (field omitted).
+#   The handoff also emits one action="section_metrics" record per section carrying
+#   published_files (a count the runner already knows). These are ADDITIVE fields:
+#   schema_version still means single(1)/refresh(2) only, and render_report.R
+#   null-coalesces unknown keys, so existing consumers are unaffected.
 # -----------------------------------------------------------------------------
 
 run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
@@ -111,7 +127,18 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
     t0 <- Sys.time()
     status <- "ok"; message <- ""
     warns <- character(0)
-    error_line <- NULL; error_call <- NULL; stderr_tail <- NULL
+    error_line <- NULL; error_call <- NULL
+    run_metrics <- NULL
+
+    # Durable capture (Tier 0): the child's stdout/stderr are redirected to per-run
+    # files so cat()/print() (stdout) and message() (stderr) diagnostics survive a
+    # SUCCESSFUL run, not only a failure. run_id namespaces the dir; the basename
+    # keeps each file human-scannable. runs/ is gitignored -> laptop-durable (the
+    # committed refresh history is the Tier-4 digest, not these files).
+    capture_dir <- file.path(dirname(log_path), run_id)
+    dir.create(capture_dir, showWarnings = FALSE, recursive = TRUE)
+    out_log <- file.path(capture_dir, paste0(basename(script_rel), ".out.log"))
+    err_log <- file.path(capture_dir, paste0(basename(script_rel), ".err.log"))
 
     cat(sprintf("[%d/%d] %s ... ", i, length(scripts), script_rel))
 
@@ -128,6 +155,10 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
         r <- callr::r(
           func   = function(s) {
             options(keep.source = TRUE)
+            # Pre-seed the metrics sink so a script only APPENDS (no per-script
+            # boilerplate): RUN_METRICS[["key"]] <- value. Read it back after
+            # source; a script that never touches it emits an empty list.
+            assign("RUN_METRICS", list(), envir = globalenv())
             warns <- character(0)
             withCallingHandlers(
               source(s, echo = FALSE),
@@ -136,17 +167,19 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
                 invokeRestart("muffleWarning")
               }
             )
-            list(warnings = warns)
+            m <- tryCatch(get("RUN_METRICS", envir = globalenv()),
+                          error = function(.) list())
+            list(warnings = warns, metrics = m)
           },
           args   = list(s = script_abs),
           wd     = cwd_abs,
           error  = "stack",
-          stdout = "|", stderr = "|", spinner = FALSE
+          stdout = out_log, stderr = err_log, spinner = FALSE
         )
         w <- as.character(r$warnings)
         list(status      = if (length(w)) "ok_with_warnings" else "ok",
-             message     = "", warnings = w,
-             error_line  = NULL, error_call = NULL, stderr_tail = NULL)
+             message     = "", warnings = w, metrics = r$metrics,
+             error_line  = NULL, error_call = NULL, stderr_fallback = NULL)
       },
       error = function(e) {
         # Best-effort failure detail from callr's PRESERVED stack (error="stack").
@@ -173,26 +206,42 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
           else if (grepl("#\\d+: ", lbl)) sub("^[^#]*#\\d+: ", "", lbl)
           else NULL
         }, error = function(.) NULL)
-        # stderr_tail: the subprocess's diagnostic output tail. This callr version
-        # carries no $stderr field — the captured output lands in $stdout — so read
-        # $stderr first, then fall back to $stdout; last 20 lines, re-joined.
+        # The captured stdout/stderr FILES already hold the child's output up to the
+        # crash (read below, after the tryCatch). e$stdout is a last-resort fallback
+        # only if that file is empty (a failure before any output flushed); last 50
+        # lines, re-joined. Read $stderr first, then fall back to $stdout.
         st <- tryCatch({
           txt <- e$stderr
           if (is.null(txt) || all(!nzchar(txt))) txt <- e$stdout
           if (is.null(txt) || all(!nzchar(txt))) NULL
           else {
             ln <- strsplit(paste(txt, collapse = "\n"), "\n", fixed = TRUE)[[1]]
-            paste(utils::tail(ln, 20L), collapse = "\n")
+            paste(utils::tail(ln, 50L), collapse = "\n")
           }
         }, error = function(.) NULL)
         list(status      = "error", message = conditionMessage(e),
              warnings    = character(0),  # a thrown child discards its return value
-             error_line  = el, error_call = ec, stderr_tail = st)
+             metrics     = NULL,
+             error_line  = el, error_call = ec, stderr_fallback = st)
       }
     )
     status <- out$status; message <- out$message; warns <- out$warnings
     error_line <- out$error_line; error_call <- out$error_call
-    stderr_tail <- out$stderr_tail
+    run_metrics <- out$metrics
+
+    # Read the captured streams (BOTH success and error). Tail = last 50 lines (a
+    # script's summary block clusters at the end); the full stream stays in the
+    # sibling .log. On error, fall back to callr's in-memory tail if the file is
+    # empty, so the error path records at least as much as it did before.
+    read_tail <- function(p, n = 50L) {
+      if (!file.exists(p)) return(NULL)
+      ln <- tryCatch(readLines(p, warn = FALSE), error = function(.) NULL)
+      if (is.null(ln) || !length(ln)) return(NULL)
+      paste(utils::tail(ln, n), collapse = "\n")
+    }
+    stdout_tail <- read_tail(out_log)
+    stderr_tail <- read_tail(err_log)
+    if (is.null(stderr_tail)) stderr_tail <- out$stderr_fallback
     total_warnings <- total_warnings + length(warns)   # ADDED: contract accounting
 
     # Expected-outputs guard (C2): after a NON-error script, assert each declared
@@ -231,9 +280,13 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
       status        = status,
       message       = message,
       warnings      = I(warns),
+      metrics       = if (length(run_metrics)) run_metrics else NULL,
       error_line    = error_line,
       error_call    = error_call,
+      stdout_tail   = stdout_tail,
       stderr_tail   = stderr_tail,
+      stdout_log    = sub(paste0(REPO_ROOT, "/"), "", out_log, fixed = TRUE),
+      stderr_log    = sub(paste0(REPO_ROOT, "/"), "", err_log, fixed = TRUE),
       started_at    = started_at,
       duration_secs = duration_secs
     )
@@ -285,7 +338,8 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
   if (!is.null(hf)) {
     phase <- "handoff"
     cat("\n=== HANDOFF: publish output/ -> website/public ===\n")
-    hf_failed <- FALSE
+    hf_failed  <- FALSE
+    n_published <- 0L   # successful file.copy count -> section_metrics (Tier 0)
 
     # Generic copy with the PUBLISH-BOUNDARY zero-byte guard (C2). A source that
     # is zero-byte (or a declared output the expected-outputs guard already
@@ -319,6 +373,7 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
                          status = if (ok) "ok" else "error"))
       cat(sprintf("  [%s] %s -> %s\n", if (ok) "ok" else "error",
                   basename(from), dirname(to)))
+      if (isTRUE(ok)) n_published <<- n_published + 1L
       ok
     }
 
@@ -386,7 +441,13 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
                   n_warnings = total_warnings,
                   empty_outputs = section_empty_outputs))
     }
-    cat("Handoff complete.\n")
+    # Per-section published-file count — a metric the runner already knows (no
+    # script edit). Its own record, keyed by action, so per-script metrics stay
+    # per-script. (Rendering deferred to the Tier-3 triage surface.)
+    append_record(list(run_id = run_id, section = section,
+                       action = "section_metrics", status = "ok",
+                       metrics = list(published_files = n_published)))
+    cat(sprintf("Handoff complete (%d file(s) published).\n", n_published))
   }
 
   cat(sprintf("\nDone. Log: %s\n", log_path))

@@ -111,3 +111,10 @@ cat("Wrote: data/processed/assess_2026_no_parking.csv —",
 write_csv(assess_with_flag, "data/processed/assess_2026_with_flags.csv")
 cat("Wrote: data/processed/assess_2026_with_flags.csv —",
     nrow(assess_with_flag), "rows\n")
+
+# --- Run metrics (Tier 0: durable per-run counts the runner persists to JSONL) ---
+# RUN_METRICS is the runner-provided sink; the guard keeps standalone runs working.
+if (!exists("RUN_METRICS")) RUN_METRICS <- list()
+RUN_METRICS[["raw_rows"]]        <- nrow(assess_raw)
+RUN_METRICS[["no_parking_rows"]] <- nrow(assess_clean)
+RUN_METRICS[["parking_dropped"]] <- sum(assess_with_flag$is_parking)
