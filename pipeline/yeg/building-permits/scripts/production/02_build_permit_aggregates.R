@@ -305,6 +305,36 @@ dropped_log |>
   arrange(desc(added)) |> print()
 cat("=============================================================\n\n")
 
+# --- STEP 4: stranded-ID stop (fail-closed; mirror the JOB_CATEGORY guard) -----
+# Every row in permits_res now carries a neighbourhood_number, but the rescue only
+# GUARANTEES a boundary polygon for oracle-known remaps/recoveries. A number that
+# is valid-looking yet in NEITHER the boundary NOR the oracle (the next City
+# renumber before a reconciliation update) would enter the aggregates CSV and then
+# vanish in the boundary left_join below with no audit trace. Halt instead, with
+# the evidence a human needs to rule it (a crosswalk renumber/drop — the path 4485
+# took). boundary_numbers is the current boundary universe; the oracle's remap
+# targets ARE boundary numbers and its drops are already removed, so a non-empty
+# setdiff is a genuinely unreconciled id. Armed but not sprung: 0 stranded today.
+# TIER 2 SEAM: once BP consumes the canonical crosswalk, widen this universe to
+# boundary UNION crosswalk-known so a *ruled* id does not trip the stop.
+stranded <- setdiff(unique(permits_res$neighbourhood_number), boundary_numbers)
+if (length(stranded) > 0) {
+  strand_dump <- permits_res |>
+    filter(neighbourhood_number %in% stranded) |>
+    group_by(neighbourhood_number) |>
+    summarise(rows             = n(),
+              units_added      = sum(units_added[units_added > 0], na.rm = TRUE),
+              units_demolished = abs(sum(units_added[units_added < 0 &
+                                     work_type == "(99) Demolition"], na.rm = TRUE)),
+              .groups = "drop") |>
+    arrange(desc(rows))
+  print(as.data.frame(strand_dump))
+  stop(length(stranded), " stranded neighbourhood number(s) in neither the boundary ",
+       "nor the oracle — they would vanish from the map silently. IDs: ",
+       paste(stranded, collapse = ", "),
+       ". Add a renumber/drop ruling to the reconciliation table and re-run.")
+}
+
 # ============================================================
 # 4. Aggregate per year
 # ============================================================
