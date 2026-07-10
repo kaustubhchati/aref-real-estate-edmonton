@@ -98,6 +98,25 @@ crosswalk_exclude_ids <- function(cw = load_crosswalk()) {
     dplyr::pull(variant_id)
 }
 
+# crosswalk_name_canon(): normalized NAME (variant OR canonical) -> canonical id
+# (integer), for a NAME-keyed recovery — e.g. BP's NA-name rescue, where a comma-
+# joined old/new pair ("OLIVER, WÎHKWÊNTÔWIN") must collapse to one identity. Maps
+# BOTH sides so either the old or the new name resolves. `relations` selects which
+# rows contribute; default is the full resolve set (rename/renumber/typo/
+# suffix_drift/alias/merge) — the canonical table is the one name authority.
+# Returns a named integer vector UPPER(name) -> canonical_id.
+crosswalk_name_canon <- function(cw = load_crosswalk(),
+                                 relations = RECON_RESOLVE_RELATIONS) {
+  norm   <- function(x) toupper(trimws(x))
+  active <- dplyr::filter(cw, relation %in% relations, !is.na(canonical_id))
+  vals   <- as.integer(active$canonical_id)
+  nc <- c(
+    stats::setNames(vals, norm(active$variant_name)),
+    stats::setNames(vals, norm(active$canonical_name))
+  )
+  nc[!is.na(names(nc)) & names(nc) != "" & !is.na(nc)]
+}
+
 # crosswalk_annexation_ids(): ids the City publishes as annexation-area polygons —
 # standalone tiles over the annexed-but-unsubdivided south (8885-8888), geometry-
 # confirmed NOT umbrellas (directive-00b). KEPT on every map and LABELLED via an

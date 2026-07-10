@@ -30,15 +30,16 @@
 #   - output/permit_geojson/permit_neighbourhoods_<year>.geojson (one per year)
 #   - output/permit_coverage_summary.csv  (audit log)
 #   - output/dwelling_units_dropped_spanners_<snapshotdate>.csv  (audit: every
-#     residential unit dropped as unplaceable — multi-neighbourhood spanners,
-#     nameless rows, and oracle "drop" numbers; the rescue audit trail)
+#     residential unit dropped as unplaceable — multi-neighbourhood spanners and
+#     nameless rows; the rescue audit trail)
 #
-# Neighbourhood rescue (§3b, before aggregation): the shared rescue oracle
-#   (shared_path("data","neighbourhood_rescue_oracle.csv"), READ-only) remaps
-#   stranded numbers (rename/renumber/merge), drops oracle "drop" numbers, and
-#   recovers NA-number rows whose comma-joined NEIGHBOURHOOD name collapses to a
-#   single neighbourhood (oracle old/new name pairs unified). Genuine spanners
-#   and nameless rows are dropped + logged — no assign-to-first, no duplication.
+# Neighbourhood rescue (§3b, before aggregation): the ONE canonical crosswalk
+#   (section_path("property-assessment","data","reference"), READ-only; Tier 2 —
+#   the rescue oracle is retired as BP's live input, kept in git for history)
+#   remaps stranded numbers (every resolve relation), keeps+labels annexation-area
+#   ids, and recovers NA-number rows whose comma-joined NEIGHBOURHOOD name collapses
+#   to a single neighbourhood (crosswalk variant/canonical name pairs unified).
+#   Genuine spanners and nameless rows are dropped + logged — no assign-to-first.
 #
 # Run context: from the section dir (pipeline/yeg/building-permits/),
 #   e.g. Rscript scripts/production/02_build_permit_aggregates.R
@@ -61,6 +62,7 @@ library(scales)
 source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
 source(shared_path("fetch_helpers.R"))
 source(shared_path("boundary_helpers.R"))
+source(shared_path("reconcile_helpers.R"))
 
 dir.create("output/permit_aggregates", showWarnings = FALSE, recursive = TRUE)
 dir.create("output/permit_geojson",    showWarnings = FALSE, recursive = TRUE)
@@ -184,46 +186,57 @@ if (length(unclassified) > 0) {
 }
 
 # ============================================================
-# 3b. Neighbourhood rescue (oracle number-remap + NA-name recovery)
+# 3b. Neighbourhood rescue (crosswalk number-remap + NA-name recovery)
 # ============================================================
 # Recover units the polygon join would otherwise silently lose, BEFORE
 # aggregation, so published totals reflect the full residential universe minus
-# only genuinely unplaceable permits (every one logged). The shared rescue
-# oracle is READ-only and is the authority for BOTH number-remap and old/new
-# NAME-pair collapsing. No assign-to-first, no duplication — that is the ruling.
+# only genuinely unplaceable permits (every one logged). Reconciliation reads the
+# ONE canonical crosswalk (Tier 2) — the rescue oracle is retired as BP's live
+# input (kept in git for history). The crosswalk is the authority for BOTH
+# number-remap and old/new NAME-pair collapsing. No assign-to-first, no
+# duplication — that is the ruling.
 
 norm <- function(x) toupper(trimws(x))
 
-# --- Oracle lookups (edmonton only) ---
-oracle <- read_csv(shared_path("data", "neighbourhood_rescue_oracle.csv"),
-                   show_col_types = FALSE) |>
-  filter(city == "edmonton")
+# --- Crosswalk lookups (the one canonical table) ---
+# The canonical crosswalk lives in the property-assessment section (its authoring
+# home); BP reads it cross-section via section_path() — one table, all sections.
+cw <- load_crosswalk(section_path("property-assessment", "data", "reference"))
 
-# Number remap: rename/renumber/merge old_number -> new_number (real targets).
-remap_rows <- oracle |>
-  filter(resolution %in% c("rename", "renumber", "merge"), !is.na(new_number)) |>
-  mutate(old_number = as.integer(old_number), new_number = as.integer(new_number))
+# Number remap: every resolve relation carrying an old->new id (variant_id ->
+# canonical_id). Includes 4485->4261 (Lewis Farms renumber, ratified Directive-00b);
+# 4485 permits now REMAP to 4261 rather than dropping.
+remap_rows <- cw |>
+  filter(relation %in% RECON_RESOLVE_RELATIONS, !is.na(variant_id), !is.na(canonical_id)) |>
+  mutate(old_number = as.integer(variant_id), new_number = as.integer(canonical_id))
 remap_vec <- setNames(remap_rows$new_number, as.character(remap_rows$old_number))
 
-# Drop numbers: oracle says no live polygon (e.g. 4485 Lewis Farms).
-drop_numbers <- oracle |> filter(resolution == "drop") |>
-  pull(old_number) |> as.integer()
+# Drop numbers: only a GENUINE not-a-real-polygon drop (relation container_exclude).
+# EMPTY today — the 8885-8888 containers are annexation_area (kept + labelled, not
+# dropped), so BP no longer drops them; their permits now aggregate.
+drop_numbers <- as.integer(crosswalk_exclude_ids(cw))
 
-# name_canon: normalized oracle name (old OR new) -> canonical new_number, so a
-# comma-joined old/new pair (OLIVER, WÎHKWÊNTÔWIN) collapses to one identity.
-name_canon <- c(
-  setNames(remap_rows$new_number, norm(remap_rows$old_name)),
-  setNames(remap_rows$new_number, norm(remap_rows$new_name))
-)
-name_canon <- name_canon[!is.na(names(name_canon)) & names(name_canon) != ""]
+# Annexation-area ids (8885-8888): KEPT + LABELLED via the orthogonal
+# is_annexation_area flag on the polygon output (not dropped, not a special state).
+annexation_ids <- as.integer(crosswalk_annexation_ids(cw))
 
-# Boundary name<->number (current names/numbers) + the set of valid numbers.
+# name_canon: normalized crosswalk name (variant OR canonical) -> canonical id, so
+# a comma-joined old/new pair (OLIVER, WÎHKWÊNTÔWIN) collapses to one identity.
+# Full resolve vocabulary (KC ruling: BP reads the whole canonical table).
+name_canon <- crosswalk_name_canon(cw)
+
+# Boundary name<->number (current names/numbers) + the set of valid numbers. The
+# stranded-ID guard universe is boundary UNION crosswalk canonical ids, so a ruled
+# renumber target (e.g. 4261) never trips the stop (Tier 1 seam, now widened).
 bname_tbl <- boundary_raw |>
   transmute(nm = norm(`Neighbourhood Name`), num = as.integer(`Neighbourhood Number`)) |>
   filter(!is.na(nm), !is.na(num)) |>
   distinct(nm, .keep_all = TRUE)
 bname_vec        <- setNames(bname_tbl$num, bname_tbl$nm)
-boundary_numbers <- sort(unique(as.integer(boundary_raw$`Neighbourhood Number`)))
+boundary_numbers <- sort(unique(c(
+  as.integer(boundary_raw$`Neighbourhood Number`),
+  remap_rows$new_number
+)))
 
 # Locked gross-metric helpers, applied to an arbitrary row subset.
 u_added <- function(d) sum(d$units_added[d$units_added > 0], na.rm = TRUE)
@@ -248,8 +261,8 @@ with_num    <- with_num |> filter(!(neighbourhood_number %in% drop_numbers))
 
 # --- STEP 3: NA-number name recovery (rows with NA number) ---
 # Resolve one NEIGHBOURHOOD string to a single neighbourhood_number or a
-# drop-reason. Canonical key per comma-part = oracle new_number (if the part is
-# an oracle name) else the normalized name; distinct keys decide the outcome.
+# drop-reason. Canonical key per comma-part = crosswalk canonical id (if the part
+# is a crosswalk name) else the normalized name; distinct keys decide the outcome.
 resolve_na_name <- function(nm) {
   if (is.na(nm) || trimws(nm) == "") return(c(num = NA, reason = "nameless"))
   parts <- norm(str_split(nm, ",")[[1]])
@@ -293,7 +306,7 @@ permits_res <- bind_rows(
 
 # --- Dropped-rows audit log (every dropped unit, row-level) ---
 dropped_log <- bind_rows(
-  num_dropped |> transmute(reason = "oracle_drop", year, orig_number,
+  num_dropped |> transmute(reason = "crosswalk_drop", year, orig_number,
                            neighbourhood, building_type, work_type, units_added),
   na_dropped  |> transmute(reason = drop_reason, year, orig_number,
                            neighbourhood, building_type, work_type, units_added)
@@ -325,16 +338,14 @@ cat("=============================================================\n\n")
 
 # --- STEP 4: stranded-ID stop (fail-closed; mirror the JOB_CATEGORY guard) -----
 # Every row in permits_res now carries a neighbourhood_number, but the rescue only
-# GUARANTEES a boundary polygon for oracle-known remaps/recoveries. A number that
-# is valid-looking yet in NEITHER the boundary NOR the oracle (the next City
-# renumber before a reconciliation update) would enter the aggregates CSV and then
-# vanish in the boundary left_join below with no audit trace. Halt instead, with
-# the evidence a human needs to rule it (a crosswalk renumber/drop — the path 4485
-# took). boundary_numbers is the current boundary universe; the oracle's remap
-# targets ARE boundary numbers and its drops are already removed, so a non-empty
-# setdiff is a genuinely unreconciled id. Armed but not sprung: 0 stranded today.
-# TIER 2 SEAM: once BP consumes the canonical crosswalk, widen this universe to
-# boundary UNION crosswalk-known so a *ruled* id does not trip the stop.
+# GUARANTEES a boundary polygon for crosswalk-known remaps/recoveries. A number
+# that is valid-looking yet in NEITHER the boundary NOR the crosswalk (the next
+# City renumber before a reconciliation update) would enter the aggregates CSV and
+# then vanish in the boundary left_join below with no audit trace. Halt instead,
+# with the evidence a human needs to rule it (a crosswalk renumber/drop — the path
+# 4485 took). boundary_numbers is now boundary UNION crosswalk canonical ids
+# (widened here, Tier 2 seam), so a *ruled* renumber target (e.g. 4261) never trips
+# the stop. Armed but not sprung: 0 stranded today.
 stranded <- setdiff(unique(permits_res$neighbourhood_number), boundary_numbers)
 if (length(stranded) > 0) {
   strand_dump <- permits_res |>
@@ -348,7 +359,7 @@ if (length(stranded) > 0) {
     arrange(desc(rows))
   print(as.data.frame(strand_dump))
   stop(length(stranded), " stranded neighbourhood number(s) in neither the boundary ",
-       "nor the oracle — they would vanish from the map silently. IDs: ",
+       "nor the crosswalk — they would vanish from the map silently. IDs: ",
        paste(stranded, collapse = ", "),
        ". Add a renumber/drop ruling to the reconciliation table and re-run.")
 }
@@ -434,7 +445,10 @@ for (yr in years) {
         is.na(n_permits)          ~ "no_data",
         suppressed                ~ "suppressed_low_n",
         TRUE                      ~ "aggregated"
-      )
+      ),
+      # Orthogonal to polygon_state: the City's annexation-area tiles (kept +
+      # labelled — their permits now aggregate; previously dropped + greyed).
+      is_annexation_area = `Neighbourhood ID` %in% annexation_ids
     ) |>
     # Attach this year's YoY % (additive; n_permits / polygon_state untouched).
     # A neighbourhood that dropped to zero this year is no_data here but still
@@ -449,6 +463,7 @@ for (yr in years) {
       display_name               = display_name,
       district                   = district,
       polygon_state              = polygon_state,
+      is_annexation_area         = is_annexation_area,
       n_permits                  = n_permits,
       total_construction_value   = total_construction_value,
       median_construction_value  = median_construction_value,
