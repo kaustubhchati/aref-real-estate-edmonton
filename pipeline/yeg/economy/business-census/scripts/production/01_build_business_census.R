@@ -255,13 +255,18 @@ unmatched <- census_joined |>
   anti_join(st_drop_geometry(boundary_sf), by = "neighbourhood_id")
 
 if (nrow(unmatched) > 0) {
-  # Tier 0: promote to a real warning() so it survives a successful unattended run
-  # (a bare cat() dies with the child's discarded stdout) and tips ok_with_warnings.
-  # The full row list still prints to stdout (captured to the run's .out.log).
-  warning(sprintf(
-    "%d census row(s) found no matching boundary polygon (see stdout for the list)",
-    nrow(unmatched)))
-  print(unmatched |> select(neighbourhood_id, source_name_2025, n_businesses_2025))
+  # Tier 1: fail-closed stop (was a Tier-0 warning). An unmatched census row is a
+  # neighbourhood number carrying business data that matches no boundary polygon —
+  # the BC twin of BP's stranded-ID stop. Halt with the id/name/count dump so a
+  # human can rule it (an ID_REMAP row, or a boundary reconciliation). The two known
+  # old ids (5462/5464) are already remapped upstream (0 unmatched today); the kept
+  # annexation containers 8885-8888 are valid boundary ids and do NOT trip this.
+  print(unmatched |> select(neighbourhood_id, source_name_2025,
+                            n_businesses_2025, n_employees_2025))
+  stop(nrow(unmatched), " census row(s) matched no boundary polygon (see the dump ",
+       "above) — their businesses would be absent from the map. Add an ID_REMAP row ",
+       "or reconcile the boundary, then re-run. Unmatched ids: ",
+       paste(unmatched$neighbourhood_id, collapse = ", "))
 } else {
   cat("Sanity check: all 2025 rows matched to a polygon. OK\n\n")
 }
