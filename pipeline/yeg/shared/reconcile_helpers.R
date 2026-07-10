@@ -86,11 +86,26 @@ apply_crosswalk <- function(df,
     dplyr::select(-canonical_id, -canonical_name)
 }
 
-# crosswalk_exclude_ids(): the ids to DROP before any join (annexation-container
-# umbrella rows that are not real neighbourhoods). Character vector, possibly
-# empty.
+# crosswalk_exclude_ids(): ids to DROP before any join. Reserved for a GENUINE
+# not-a-real-polygon drop (relation == "container_exclude"). Returns EMPTY today:
+# the four 8885-8888 rows were re-dispositioned container_exclude -> annexation_area
+# (Tier 2 / DECISION_container_universe_20260710.md — they are real standalone
+# annexation-area polygons, KEPT + LABELLED, not dropped). Kept as the drop-API for
+# any future true exclusion. Character vector, possibly empty.
 crosswalk_exclude_ids <- function(cw = load_crosswalk()) {
   cw |>
     dplyr::filter(relation == "container_exclude") |>
+    dplyr::pull(variant_id)
+}
+
+# crosswalk_annexation_ids(): ids the City publishes as annexation-area polygons —
+# standalone tiles over the annexed-but-unsubdivided south (8885-8888), geometry-
+# confirmed NOT umbrellas (directive-00b). KEPT on every map and LABELLED via an
+# ORTHOGONAL is_annexation_area flag (the polygon keeps its natural data-state —
+# suppressed_low_n / no_data / data — and carries the flag on top). Character
+# vector, possibly empty. This is a LABEL source, never a drop.
+crosswalk_annexation_ids <- function(cw = load_crosswalk()) {
+  cw |>
+    dplyr::filter(relation == "annexation_area") |>
     dplyr::pull(variant_id)
 }

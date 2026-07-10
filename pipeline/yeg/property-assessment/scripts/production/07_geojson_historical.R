@@ -77,12 +77,18 @@ boundary_sf <- boundary_raw |>
   select(`Neighbourhood ID`, display_name,
          `Neighbourhood Name`, `Civic Ward`, `Planning District`)
 
-# Drop annexation-container umbrella rows (crosswalk relation==container_exclude,
-# ids 8885-8888) so they never render as polygons.
-exclude_ids <- crosswalk_exclude_ids()
-boundary_sf <- boundary_sf |> filter(!`Neighbourhood ID` %in% exclude_ids)
+# Annexation-area polygons (8885-8888) are KEPT and LABELLED, not dropped
+# (DECISION_container_universe_20260710.md). In historical years they carry no
+# aggregate (they postdate most years) -> polygon_state "no_data" + the orthogonal
+# is_annexation_area flag. Genuine drops still route through crosswalk_exclude_ids
+# (empty today).
+annexation_ids <- crosswalk_annexation_ids()
+exclude_ids    <- crosswalk_exclude_ids()   # empty today; reserved for true drops
+if (length(exclude_ids)) boundary_sf <- boundary_sf |> filter(!`Neighbourhood ID` %in% exclude_ids)
 
-cat("Boundary polygons after WKT parse + container-exclude: ", nrow(boundary_sf), "\n\n")
+cat("Boundary polygons after WKT parse: ", nrow(boundary_sf),
+    sprintf(" (annexation-area kept+flagged: %d)\n\n",
+            sum(boundary_sf$`Neighbourhood ID` %in% annexation_ids)))
 
 # ============================================================
 # 3. Auto-discover aggregate CSVs
@@ -161,15 +167,18 @@ for (agg_path in sort(agg_candidates)) {
         !is.na(suppressed) & suppressed            ~ "suppressed_low_n",
         !is.na(n_properties) & n_properties >= 100 ~ "aggregated",
         TRUE                                        ~ "no_data"
-      )
+      ),
+      # Orthogonal to polygon_state: the City's annexation-area tiles (kept + labelled).
+      is_annexation_area = `Neighbourhood ID` %in% annexation_ids
     )
-  
+
   # Select columns for GeoJSON output — schema matches 2026 production file
   geojson_ready <- joined |>
     transmute(
       `Neighbourhood ID`           = `Neighbourhood ID`,
       display_name                 = display_name,
       polygon_state                = polygon_state,
+      is_annexation_area           = is_annexation_area,
       n_properties                 = n_properties,
       median_assessvalue           = median_assessvalue,
       avall_public                 = avall_public,

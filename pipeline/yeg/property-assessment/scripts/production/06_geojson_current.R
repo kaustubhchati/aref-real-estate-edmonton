@@ -102,13 +102,20 @@ nbhd_polygons <- boundary_raw |>
 # crosswalk relation=="container_exclude" (ids 8885-8888): aggregation polygons
 # that are NOT real neighbourhoods. Drop them from BOTH the boundary and any
 # aggregate rows attributed to them, BEFORE the join, so they never render.
-exclude_ids <- crosswalk_exclude_ids()
-n_poly_before <- nrow(nbhd_polygons)
-nbhd_polygons <- nbhd_polygons |> filter(!`Neighbourhood ID` %in% exclude_ids)
-aggregates    <- aggregates    |> filter(!`Neighbourhood ID` %in% exclude_ids)
-cat(sprintf("Container-excluded %d umbrella polygon(s): %s\n",
-            n_poly_before - nrow(nbhd_polygons),
-            if (length(exclude_ids)) paste(exclude_ids, collapse = ", ") else "(none)"))
+# Annexation-area polygons (8885-8888) are KEPT and LABELLED, not dropped
+# (DECISION_container_universe_20260710.md): they are real standalone tiles over
+# the annexed-but-unsubdivided south, carrying suppressed residential data. The
+# is_annexation_area flag below is ORTHOGONAL to polygon_state — the container
+# keeps its natural state (here suppressed_low_n, N<100) and gains the flag. Any
+# genuine future drop still routes through crosswalk_exclude_ids() (empty today).
+annexation_ids <- crosswalk_annexation_ids()
+exclude_ids    <- crosswalk_exclude_ids()   # empty today; reserved for true drops
+if (length(exclude_ids)) {
+  nbhd_polygons <- nbhd_polygons |> filter(!`Neighbourhood ID` %in% exclude_ids)
+  aggregates    <- aggregates    |> filter(!`Neighbourhood ID` %in% exclude_ids)
+}
+cat(sprintf("Annexation-area polygons kept + labelled: %s\n",
+            if (length(annexation_ids)) paste(annexation_ids, collapse = ", ") else "(none)"))
 
 
 # The aggregate already carries canonical Neighbourhood IDs — 05 (the aggregate
@@ -138,6 +145,8 @@ joined <- joined |>
       !is.na(n_properties) & n_properties >= 100 ~ "aggregated",
       TRUE ~ "no_data"
     ),
+    # Orthogonal to polygon_state: the City's annexation-area tiles (kept + labelled).
+    is_annexation_area = `Neighbourhood ID` %in% annexation_ids,
     display_name = coalesce(Neighbourhood, `Neighbourhood Name`)
   )
 
@@ -178,6 +187,7 @@ geojson_ready <- joined |>
     shapefile_name               = `Neighbourhood Name`,
     district                     = `Planning District`,
     polygon_state                = polygon_state,
+    is_annexation_area           = is_annexation_area,
     n_properties                 = n_properties,
     median_assessvalue           = median_assessvalue,
     avall_public                 = avall_public,
@@ -208,7 +218,7 @@ cat(sprintf("\nWrote %s (%.2f MB, %d polygons)\n",
 
 # --- Final run summary --------------------------------------
 cat("\n--- Run summary ---\n")
-cat(sprintf("Container-excluded:     %d\n", length(exclude_ids)))
+cat(sprintf("Annexation-area (kept, flagged): %d\n", sum(joined$is_annexation_area)))
 cat(sprintf("Total polygons:         %d\n", nrow(joined)))
 cat(sprintf("  aggregated:           %d\n",
             sum(joined$polygon_state == "aggregated")))
@@ -239,7 +249,7 @@ cat(sprintf("  Max:    $%s\n", comma(round(max(agg_vals, na.rm = TRUE)))))
 # --- Run metrics (Tier 0: durable per-run counts the runner persists to JSONL) ---
 # RUN_METRICS is the runner-provided sink; the guard keeps standalone runs working.
 if (!exists("RUN_METRICS")) RUN_METRICS <- list()
-RUN_METRICS[["container_excluded"]] <- length(exclude_ids)
+RUN_METRICS[["annexation_area"]]    <- sum(joined$is_annexation_area)
 RUN_METRICS[["total_polygons"]]     <- nrow(joined)
 RUN_METRICS[["aggregated"]]         <- sum(joined$polygon_state == "aggregated")
 RUN_METRICS[["non_residential"]]    <- sum(joined$polygon_state == "non_residential")
