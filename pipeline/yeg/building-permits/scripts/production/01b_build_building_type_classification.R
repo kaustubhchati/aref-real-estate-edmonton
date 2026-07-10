@@ -33,19 +33,23 @@ residential <- c(
   "Backyard House (110)", "Apartments (310)", "Apartment (310)", "Apartment Condos (315)",
   "Row House (330)", "Row Houses (330)", "Row House Condo (335)", "Row House Condos (335)",
   "Semi-Detached House (210)", "Semi Detached House (210)", "Semi Detached House",
-  "Semi-Detached Condo (215)", "Duplex (210)", "Mobile Home (130)", "Mixed Use (522)"
+  "Semi-Detached Condo (215)", "Duplex (210)", "Mobile Home (130)", "Mixed Use (522)",
+  # Reclassified drift (2026-07-10): residential-code condo spelling variants the
+  # old whitelist missed and silently excluded. 38 rows / 0 units on the 20260629
+  # snapshot — dwelling condos of already-residential codes (215/315). Adding them
+  # is a deliberate +38-row n_permits change (0 units); see the reclass commit.
+  "Semi Detached Condo (215)", "Duplex Condo (215)", "Apartment Condo (315)"
 )
 
 # --- Non-residential structure / use types (excluded from the dwelling universe) ---
-# The three "* Condo (215/315)" residential-code variants sit here in THIS neutral
-# table (byte-neutral: they stay excluded exactly as the old whitelist excluded
-# them). A follow-on reclass commit moves those three to `residential`.
+# (The three "* Condo (215/315)" residential-code variants were reclassified to
+# `residential` on 2026-07-10 — dwelling condos the old whitelist missed.)
 non_residential <- c(
-  "Animal and Plant Services (410)", "Apartment Condo (315)", "Carport (090)",
+  "Animal and Plant Services (410)", "Carport (090)",
   "Clinics, Health Units (642)", "Communication Buildings (470)", "Convention Centres (536)",
   "Day Cares, Nursing Homes (650)", "Detached Deck (020)", "Detached Garage (010)",
   "Detached Greenhouse (030)", "Detached Misc. Structure (090)", "Detached Shed (040)",
-  "Duplex Condo (215)", "Elementary Schools (620)", "Engineering (490)",
+  "Elementary Schools (620)", "Engineering (490)",
   "Funeral Homes (590)", "Gazebo (090)", "Government Legislative/Admin (610)",
   "Greenhouse (030)", "Hoarding (910)", "Hospitals (640)", "Hotels (530)",
   "Indoor Recreational Buildings (560)", "Laboratory/Research Centres (580)",
@@ -56,7 +60,7 @@ non_residential <- c(
   "Outdoor Recreational Buildings (562)", "Parkade (490)", "Play Structure (090)",
   "Post-secondary Institutions (624)", "Religious Buildings (660)",
   "Restaurants and Bars (540)", "Retail - Motor Vehicle (570)", "Retail and Shops (510)",
-  "Secondary Schools (622)", "Semi Detached Condo (215)",
+  "Secondary Schools (622)",
   "Service Stations, Repair Garages (572)", "Shed (040)",
   "Storage Buildings, Warehouses (460)", "Temporary Structure (099)",
   "Temporary Structures (999)", "Theatre and Performing Arts Ctrs (550)",
