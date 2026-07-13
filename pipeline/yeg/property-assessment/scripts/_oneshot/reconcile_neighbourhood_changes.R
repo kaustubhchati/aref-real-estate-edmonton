@@ -69,6 +69,9 @@
 #     places 619/620 properties in 5472. Combined aggregates must be
 #     RECOMPUTED from the pooled rows before aggregation, never
 #     averaged from two summaries (this is why it is a `merge`, not a
+#     suffix_drift). Heritage Valley AREA (a distinct developing-area name,
+#     ~1 prop) folds into 5472 the same way — also a merge (reclassified
+#     from suffix_drift 2026-07-13; see its row note).
 #     `suffix_drift`: it changes which rows aggregate together).
 #
 # SUFFIX_DRIFT (City drops a developing-area "AREA" suffix)
@@ -129,9 +132,10 @@
 #     mappings_*  WESTBROOK ESTATE      -> row 9  (typo)
 #     merges_*    HERITAGE VALLEY TC AREA-> row 5 (merge)
 #   Also migrated from the BP rescue oracle (Tier 2): HERITAGE VALLEY AREA
-#   -> row 6 (suffix_drift), so the crosswalk is a superset of the oracle's
-#   names. New facts not in any legacy file: the Oliver rename (row 1) and
-#   the four annexation areas (rows 12-15).
+#   -> row 6 (merge — reclassified from suffix_drift 2026-07-13 so PA pools it
+#   pre-aggregation; see the row note), so the crosswalk is a superset of the
+#   oracle's names. New facts not in any legacy file: the Oliver rename (row 1)
+#   and the four annexation areas (rows 12-15).
 # ============================================================
 
 library(tidyverse)
@@ -168,8 +172,9 @@ crosswalk <- tribble(
   "5472",        "HERITAGE VALLEY TOWN CENTRE",  "5464",      "HERITAGE VALLEY TOWN CENTRE",    "renumber",        NA,               NA,             SRC_BOUNDARY, "2026-06-22",  "Old id 5464 absent from current boundary; renumber to 5472.",
   # 5 MERGE Heritage Valley Town Centre Area
   "5472",        "HERITAGE VALLEY TOWN CENTRE",  NA,          "HERITAGE VALLEY TOWN CENTRE AREA","merge",          NA,               NA,             SRC_BOUNDARY, "2026-06-22",  "AREA (NA-id, ~577 props) + native TOWN CENTRE (5472, ~15) are one City polygon; point-in-polygon 619/620 in 5472. Pool rows then re-aggregate; do not average two summaries.",
-  # 6 SUFFIX_DRIFT Heritage Valley Area (Tier 2: crosswalk absorbs the BP oracle name)
-  "5472",        "HERITAGE VALLEY TOWN CENTRE",  NA,          "HERITAGE VALLEY AREA",           "suffix_drift",    NA,               NA,             SRC_HVA,      "2026-07-10",  "Building-permit + assessment source data carry the developing-area name 'HERITAGE VALLEY AREA' (distinct from 'HERITAGE VALLEY TOWN CENTRE AREA'); the oracle mapped it to 5472. Added so the crosswalk is a true superset of the oracle's names and BP's NA-name recovery does not regress on 'HERITAGE VALLEY TOWN CENTRE, HERITAGE VALLEY AREA' pairs.",
+  # 6 MERGE Heritage Valley Area (Tier 2: crosswalk absorbs the BP oracle name; MUST be
+  #   a merge, not suffix_drift — see the reclassification note below)
+  "5472",        "HERITAGE VALLEY TOWN CENTRE",  NA,          "HERITAGE VALLEY AREA",           "merge",           NA,               NA,             SRC_HVA,      "2026-07-13",  "Building-permit + assessment source data carry the developing-area name 'HERITAGE VALLEY AREA' (distinct from 'HERITAGE VALLEY TOWN CENTRE AREA'); the oracle mapped it to 5472. Added so the crosswalk is a true superset of the oracle's names and BP's NA-name recovery does not regress on 'HERITAGE VALLEY TOWN CENTRE, HERITAGE VALLEY AREA' pairs. Reclassified suffix_drift -> merge 2026-07-13 (KC): PA 05 pools merge rows PRE-aggregation (line 96, before group_by) but applies the full crosswalk POST-aggregation (line 184); as suffix_drift this 1-property group survived aggregation then collapsed onto 5472, colliding with the 592-prop merged group -> dup-ID stop in 06. As a merge it pools pre-aggregation like HERITAGE VALLEY TOWN CENTRE AREA. BP name recovery is unchanged (merge is in the resolve set crosswalk_name_canon reads).",
   # 7 TYPO Rapperswil(l)
   "3370",        "RAPPERSWILL",                  NA,          "RAPPERSWIL",                     "typo",            NA,               NA,             SRC_LEGACY,   "2026-06-22",  "Assessment single-L is the typo; canonical double-L per boundary 3370.",
   # 8 TYPO Windemere/Windermere
