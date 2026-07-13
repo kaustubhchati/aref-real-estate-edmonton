@@ -25,10 +25,15 @@ sections, agent pipeline, and infrastructure.
       Tableau parity check. Low priority.
 - [ ] **R3b** — ~104 building-and-land manufactured home
       FNs. Probably unnecessary; confirm and close.
-- [ ] **08b rescue table** — CHAPPELLE AREA → ID 5471,
-      HERITAGE VALLEY TOWN CENTRE AREA → ID 5472 in new
-      407-polygon boundary. Old IDs 5462/5464 no longer
-      exist. Resolve before next pipeline refresh.
+- [x] **08b rescue table — RESOLVED (Tier 2 canonical crosswalk).**
+      CHAPPELLE AREA→5471, HERITAGE VALLEY TOWN CENTRE AREA→5472,
+      HERITAGE VALLEY AREA→5472, and the 5462→5471 / 5464→5472
+      renumbers (old IDs absent from the 407 boundary) are now rows
+      in `neighbourhood_crosswalk_20260622.csv`, consumed by the
+      current PA pipeline via `apply_crosswalk()`. The standalone
+      08b rescue script is retired — restructured into 05/06 (the
+      rescue oracle is no longer a live input). Verified: the
+      2026-07-13 refresh ran clean on these mappings.
 - [ ] **R1 scoreboard notes backfill** — rejected R1'
       variant note still missing from scoreboard CSV.
 - [x] **assess_2026_with_flags.csv producer — RESOLVED.** Confirmed empirically
@@ -165,13 +170,16 @@ run records) shipped (`e67a658`).
       to the 2026-07-13 snapshot.
 - [ ] Tiers 1, 3–5 — remain open (see hardening notes).
 
-### Boundary file migration (in progress)
-- [ ] Scripts 08 + 08b fully migrated to new
-      City of Edmonton Neighbourhoods CSV (65fr-66s6,
-      407 rows). Parallel non-destructive GeoJSONs
-      confirmed. Resolve 08b rescue table IDs (above).
+### Boundary file migration
+- [x] **407-boundary migration DONE.** The PA pipeline reads the
+      407-row City of Edmonton Neighbourhoods CSV (65fr-66s6) via
+      the guarded `load_boundary()`. The old 08/08b build+rescue
+      scripts were restructured into 05/06/07 (there is no 08b);
+      rescue IDs resolved through the canonical crosswalk (above),
+      and the 403→407 annexation universe shipped 2026-07-13 (Tier 2).
 - [ ] Mature Neighbourhoods CSV (111-row subset) —
       add as boolean attribute lookup only, not boundary.
+      [STILL OPEN — not yet wired; independent of the boundary migration.]
 
 ### Repository / infrastructure
 - [ ] Add Olivia (Write) + Prof as GitHub collaborators.
@@ -237,8 +245,10 @@ run records) shipped (`e67a658`).
 
 ## 4. Immediate next actions (priority order)
 
-1. Resolve 08b rescue table (CHAPPELLE / HERITAGE VALLEY IDs) — blocks next
-   pipeline refresh.
+1. ~~Resolve 08b rescue table (CHAPPELLE / HERITAGE VALLEY IDs) — blocks next
+   pipeline refresh.~~ — **DONE (Tier 2).** Folded into the canonical crosswalk
+   (`neighbourhood_crosswalk_20260622.csv`); 08b retired into 05/06. The
+   2026-07-13 refresh ran clean, so it no longer blocks anything.
 2. ~~Migrate building-permits to the portability pattern~~ — **DONE** (7-commit
    campaign; see Backend/pipeline above). Both sections now expose a uniform
    `production/` + `eda/`. Calgary city-layer prereq #1 MET.
