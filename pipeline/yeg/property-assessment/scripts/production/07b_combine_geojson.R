@@ -62,7 +62,13 @@ VALUE_COLS <- c(
 # (max) year's file. Only 06's current-year file carries shapefile_name/district;
 # the historical files (07) omit them, which is why identity is sourced from the
 # current year, not back-derived per year.
-IDENTITY_COLS <- c("Neighbourhood ID", "display_name", "shapefile_name", "district")
+# is_annexation_area is likewise year-invariant (the crosswalk's annexation ids are
+# the same every year) — carried here as a flat identity field so the frontend can
+# filter on it directly (["get","is_annexation_area"]); without this the combiner
+# drops it and the annexation outline renders nowhere on PA (Tier 2 · sub-concern E,
+# closing 3d43d02's gate — 06/07 emit the flag but the combiner never carried it).
+IDENTITY_COLS <- c("Neighbourhood ID", "display_name", "shapefile_name", "district",
+                   "is_annexation_area")
 
 OUT_PATH <- "output/neighbourhoods_all_years.geojson"
 
