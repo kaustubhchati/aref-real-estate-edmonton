@@ -143,6 +143,28 @@ sections, agent pipeline, and infrastructure.
 - [ ] Agent runs table — `agent_runs` logging
       (in/out/tools/tokens/cost/duration) from day one.
 
+### Evaluation remediation — hardening program (post-eval 2026-07-08)
+Tiered remediation from the July 2026 evaluation. Tier 0 (durable
+run records) shipped (`e67a658`).
+- [x] **Tier 2 — container-universe reconciliation: COMPLETE
+      end-to-end (2026-07-13, `3d43d02`→`c6b3d93`).** The
+      three-encoding / three-universe finding is closed. 8885–8888
+      are kept-and-labelled **annexation areas** (relation
+      `annexation_area` + orthogonal `is_annexation_area` flag),
+      not dropped — geometry-confirmed standalone tiles, not
+      umbrella containers (directive-00b; ruling
+      `DECISION_container_universe_20260710.md`). All three
+      sections (PA/BP/BC) reconcile through **one canonical
+      crosswalk** on **one 407-polygon universe** (rescue oracle
+      retired), and the flag now **renders** — teal annexation
+      outline + legend row on every map (first `greyStates` pass,
+      also closing finding 13f) + an About-page methods line.
+      Flag-driven, no hardcoded ids. Two latent cross-section bugs
+      fixed en route (HVA `suffix_drift`→`merge` `e6265f8`; `07b`
+      combiner carries the flag `e7e23e7`). BP/PA data also advanced
+      to the 2026-07-13 snapshot.
+- [ ] Tiers 1, 3–5 — remain open (see hardening notes).
+
 ### Boundary file migration (in progress)
 - [ ] Scripts 08 + 08b fully migrated to new
       City of Edmonton Neighbourhoods CSV (65fr-66s6,
