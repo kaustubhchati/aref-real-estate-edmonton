@@ -1656,10 +1656,17 @@ p  { margin: 0 0 0.75rem; }
    shell; these mirror the retired .pa-column overrides). */
 .pa-tune-instrument .pa-slider::-webkit-slider-runnable-track { background: var(--pa-hair); }
 .pa-tune-instrument .pa-slider::-moz-range-track { background: var(--pa-hair); }
-.pa-tune-instrument .pa-slider::-webkit-slider-thumb { background: var(--pa-up); border-color: var(--pa-shell); }
-.pa-tune-instrument .pa-slider::-moz-range-thumb { background: var(--pa-up); border-color: var(--pa-shell); }
+/* Handles read as grabbable KNOBS — a light fill with a coloured ring (mockup),
+   not a solid dot. A GREEN ring on Year (the active-value control); a NEUTRAL grey
+   ring on the Metric range (a filter, not a value — that green is Year's alone). */
+.pa-tune-instrument .pa-slider::-webkit-slider-thumb { background: #e9ebed; border-color: var(--pa-mut); }
+.pa-tune-instrument .pa-slider::-moz-range-thumb { background: #e9ebed; border-color: var(--pa-mut); }
+.pa-tune-instrument .pa-year-slider::-webkit-slider-thumb { border-color: var(--pa-up); }
+.pa-tune-instrument .pa-year-slider::-moz-range-thumb { border-color: var(--pa-up); }
 .pa-tune-instrument .pa-dual-track { background: var(--pa-hair); }
-.pa-tune-instrument .pa-dual-fill { background: var(--pa-up); }
+/* Range fill = a NEUTRAL band (mockup #3a3d42), NOT green: the metric range is the
+   VIEW-only filter, not an active green value. Keeps Year's green as the sole accent. */
+.pa-tune-instrument .pa-dual-fill { background: #3a3d42; }
 .pa-tune-instrument .pa-year-slider::-webkit-slider-runnable-track {
   background: linear-gradient(to right,
     var(--pa-up) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
@@ -1679,7 +1686,9 @@ p  { margin: 0 0 0.75rem; }
   background: var(--pa-dim); transform: translateX(-50%);
 }
 .pa-tune-calib i.major { height: 7px; background: var(--pa-mut); }
-.pa-tune-calib.ruler i { height: 4px; background: var(--pa-hair); }
+/* ruler marks (continuous metric) — visible but quieter than Year's year-ticks
+   (mockup #4a4e54; was --pa-hair = the track colour, so they vanished). */
+.pa-tune-calib.ruler i { height: 4px; background: #4a4e54; }
 
 /* Data-bound endpoints — the static edges of what exists (muted / reference tier,
    distinct from the accent active readout above). */
