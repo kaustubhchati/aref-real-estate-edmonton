@@ -35,6 +35,16 @@
 #   data    — 2025 businesses + employees present
 #   no_data — polygon in boundary but absent from 2025 census
 #
+# Annexation-area flag (column `is_annexation_area`, ORTHOGONAL to census_state):
+#   TRUE on the City's four annexation-area tiles 8885-8888 (kept + labelled, not
+#   dropped; they keep their natural data/no_data state). Sourced from the canonical
+#   crosswalk (crosswalk_annexation_ids); ruled in DECISION_container_universe_20260710.md.
+#
+# Neighbourhood reconciliation (§3b): the ONE canonical crosswalk (read
+#   cross-section from property-assessment, READ-only; Tier 2 — retires BC's
+#   former inline ID_REMAP tribble) supplies the id remap (variant -> canonical)
+#   and the annexation-area label. One table, all sections.
+#
 # PROVENANCE NOTE (must appear in frontend section header):
 #   Source migrated from StatCan Business Register (Census Tract level)
 #   to Edmonton Business Census (neighbourhood level, City of Edmonton
@@ -67,6 +77,7 @@ library(sf)
 source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
 source(shared_path("fetch_helpers.R"))
 source(shared_path("boundary_helpers.R"))
+source(shared_path("reconcile_helpers.R"))
 
 OUT_DIR <- "output"
 dir.create(OUT_DIR,                  recursive = TRUE, showWarnings = FALSE)
@@ -141,49 +152,55 @@ census_2024 <- census_raw |>
 cat("2025 rows:", nrow(census_2025), "\n")
 cat("2024 rows:", nrow(census_2024), "\n\n")
 
-# ── 3b. ID remapping — stale neighbourhood_numbers in source ────────────────
+# ── 3b. ID remapping — crosswalk-derived (Tier 2: the ONE canonical table) ──
 #
-# WHY: the 2026 boundary file (65fr-66s6) renumbered two neighbourhoods
-# that the Business Census still reports under their old IDs.
-# Remapping here keeps all downstream logic (join, guard, sanity) clean.
+# WHY: neighbourhood renumbers/renames are authored ONCE in the canonical
+# crosswalk, whose home is the property-assessment section; every section
+# CONSUMES it, none re-derives reconciliation (reconcile_helpers.R contract).
+# This RETIRES BC's former inline ID_REMAP tribble — its two renumbers
+# (5462->5471 CHAPPELLE, 5464->5472 HERITAGE VALLEY TOWN CENTRE) are now two
+# rows in the crosswalk, alongside the rest of the resolve vocabulary. BC reads
+# the crosswalk cross-section via section_path(), exactly as BP 02 does.
 #
-# Evidence: step 7 unmatched check surfaced both IDs on first run (2026-06-19).
-# Cross-reference: same remaps applied in 08b for property assessment data.
-#
-# Table: old_id -> new_id  (boundary 2026 canonical)
-#   5462 CHAPPELLE                -> 5471  (1:1 renumber in 2026 file)
-#   5464 HERITAGE VALLEY TOWN CENTRE -> 5472  (merged into combined polygon)
-#
-# If a future refresh surfaces new unmatched IDs, add rows here and note
-# the evidence source in the comment.
+# BC joins on neighbourhood_id, so only the id-remap (variant_id -> canonical_id)
+# is needed here — no name-keyed recovery (BC has no NA-id rows). remap_vec
+# rewrites any stale source id to its canonical boundary id; ids with no crosswalk
+# row pass through unchanged (idempotent — a no-op on already-canonical data).
+# Character throughout (BC keys are character).
 
-ID_REMAP <- tribble(
-  ~old_id,  ~new_id,  ~note,
-  "5462",   "5471",   "Chappelle renumbered 5462->5471 in 2026 boundary",
-  "5464",   "5472",   "Heritage Valley Town Centre merged to 5472 in 2026 boundary"
-)
+cw <- load_crosswalk(section_path("property-assessment", "data", "reference"))
 
-remap_ids <- function(df, remap) {
-  for (i in seq_len(nrow(remap))) {
-    df <- df |> mutate(
-      neighbourhood_id = if_else(
-        neighbourhood_id == remap$old_id[i],
-        remap$new_id[i],
-        neighbourhood_id
-      )
+# variant_id -> canonical_id for every resolve relation (rename/renumber/typo/…).
+remap_rows <- cw |>
+  filter(relation %in% RECON_RESOLVE_RELATIONS,
+         !is.na(variant_id), !is.na(canonical_id))
+remap_vec <- setNames(remap_rows$canonical_id, remap_rows$variant_id)
+
+# Annexation-area ids (8885-8888): KEPT + LABELLED via the orthogonal
+# is_annexation_area flag on the polygon output (§6/§9) — not dropped, not a
+# special census_state. Per DECISION_container_universe_20260710.md.
+annexation_ids <- crosswalk_annexation_ids(cw)
+
+remap_ids <- function(df) {
+  df |> mutate(
+    neighbourhood_id = if_else(
+      neighbourhood_id %in% names(remap_vec),
+      unname(remap_vec[neighbourhood_id]),
+      neighbourhood_id
     )
-  }
-  df
+  )
 }
 
-census_2025 <- remap_ids(census_2025, ID_REMAP)
-census_2024 <- remap_ids(census_2024, ID_REMAP)
+census_2025 <- remap_ids(census_2025)
+census_2024 <- remap_ids(census_2024)
 
-cat("ID remaps applied:\n")
-for (i in seq_len(nrow(ID_REMAP))) {
-  cat("  ", ID_REMAP$old_id[i], "->", ID_REMAP$new_id[i], ":", ID_REMAP$note[i], "\n")
+cat("ID remaps available from crosswalk (variant -> canonical):\n")
+for (i in seq_len(nrow(remap_rows))) {
+  cat("  ", remap_rows$variant_id[i], "->", remap_rows$canonical_id[i],
+      ":", remap_rows$relation[i], remap_rows$canonical_name[i], "\n")
 }
-cat("\n")
+cat("Annexation-area ids (kept + labelled):",
+    paste(annexation_ids, collapse = ", "), "\n\n")
 
 # ── 4. YoY metrics ──────────────────────────────────────────
 
@@ -228,7 +245,11 @@ cat("Duplicate-ID guard: OK\n")
 joined_sf <- boundary_sf |>
   left_join(census_joined, by = "neighbourhood_id") |>
   mutate(
-    census_state = if_else(!is.na(n_businesses_2025), "data", "no_data")
+    census_state = if_else(!is.na(n_businesses_2025), "data", "no_data"),
+    # Orthogonal to census_state: the City's annexation-area tiles (8885-8888),
+    # kept + labelled — they keep their natural data/no_data state and carry the
+    # flag on top (§6/§9; DECISION_container_universe_20260710.md).
+    is_annexation_area = neighbourhood_id %in% annexation_ids
   )
 
 n_data    <- sum(joined_sf$census_state == "data")
@@ -248,14 +269,16 @@ if (nrow(unmatched) > 0) {
   # Tier 1: fail-closed stop (was a Tier-0 warning). An unmatched census row is a
   # neighbourhood number carrying business data that matches no boundary polygon —
   # the BC twin of BP's stranded-ID stop. Halt with the id/name/count dump so a
-  # human can rule it (an ID_REMAP row, or a boundary reconciliation). The two known
-  # old ids (5462/5464) are already remapped upstream (0 unmatched today); the kept
-  # annexation containers 8885-8888 are valid boundary ids and do NOT trip this.
+  # human can rule it (a crosswalk row, or a boundary reconciliation). The two known
+  # old ids (5462/5464) are already remapped upstream via the crosswalk (0 unmatched
+  # today); the kept annexation containers 8885-8888 are valid boundary ids and do
+  # NOT trip this.
   print(unmatched |> select(neighbourhood_id, source_name_2025,
                             n_businesses_2025, n_employees_2025))
   stop(nrow(unmatched), " census row(s) matched no boundary polygon (see the dump ",
-       "above) — their businesses would be absent from the map. Add an ID_REMAP row ",
-       "or reconcile the boundary, then re-run. Unmatched ids: ",
+       "above) — their businesses would be absent from the map. Add a crosswalk ",
+       "renumber/rename row (property-assessment/data/reference) or reconcile the ",
+       "boundary, then re-run. Unmatched ids: ",
        paste(unmatched$neighbourhood_id, collapse = ", "))
 } else {
   cat("Sanity check: all 2025 rows matched to a polygon. OK\n\n")
@@ -278,6 +301,7 @@ geojson_ready <- joined_sf |>
     civic_ward,
     planning_district,
     census_state,
+    is_annexation_area,
     n_businesses_2025,
     n_employees_2025,
     n_businesses_2024,
@@ -312,6 +336,7 @@ RUN_METRICS[["census_rows_2025"]]  <- nrow(census_2025)
 RUN_METRICS[["census_rows_2024"]]  <- nrow(census_2024)
 RUN_METRICS[["polygons_data"]]     <- n_data
 RUN_METRICS[["polygons_no_data"]]  <- n_no_data
+RUN_METRICS[["annexation_polygons"]] <- sum(joined_sf$is_annexation_area)
 RUN_METRICS[["yoy_coverage"]]      <- sum(!is.na(joined_sf$yoy_businesses_pct))
 RUN_METRICS[["unmatched_rows"]]    <- nrow(unmatched)
 RUN_METRICS[["geojson_mb"]]        <- file_mb
@@ -329,6 +354,7 @@ log_lines <- c(
   paste("2024 census rows:    ", nrow(census_2024)),
   paste("Polygons — data:     ", n_data),
   paste("Polygons — no_data:  ", n_no_data),
+  paste("Annexation-area flag:", sum(joined_sf$is_annexation_area), "polygons (8885-8888, kept + labelled)"),
   paste("YoY coverage:        ", sum(!is.na(joined_sf$yoy_businesses_pct)), "neighbourhoods"),
   paste("Unmatched 2025 rows: ", nrow(unmatched)),
   paste("GeoJSON size (MB):   ", file_mb),
