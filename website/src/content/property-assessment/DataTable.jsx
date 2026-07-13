@@ -74,7 +74,7 @@ import ExportMenu from "./ExportMenu.jsx";
 import SegmentedControl from "../../components/SegmentedControl.jsx";
 import Sparkline from "../../components/Sparkline.jsx";
 import { DUR_BASE, reduceMotion } from "../../components/motion.js";
-import { METRICS, STATE_STYLE, COLOUR_LEVEL_DELTAS } from "./choroplethStyle.js";
+import { METRICS, COLOUR_LEVEL_DELTAS } from "./choroplethStyle.js";
 import {
   fmtArea,
   fmtCurrencyShort,
@@ -504,9 +504,9 @@ export default function DataTable({
 
   // Console-header scope title (contract §4): the entity the console describes.
   //   N=0 → "All M neighbourhoods" (or "K of M" when a search filter narrows it)
-  //   N=1 → "<Name>" + a muted "rank · parcels · state" sub-line
+  //   N=1 → "<Name>" (name only — the rank · parcels · state detail lives in the
+  //         InfoRail, not repeated here; Fix 3, frees the header slot for Fix 4)
   //   N≥2 → "N neighbourhoods selected"
-  const stateWord = (st) => (st === "aggregated" ? "reportable" : STATE_STYLE[st]?.label ?? st);
   const scopeTitle = selectionMode
     ? `${aggregate.nSelected} Neighbourhoods Selected`
     : singleRow
@@ -514,9 +514,6 @@ export default function DataTable({
     : viewRows.length < rows.length
     ? `${viewRows.length} Of ${rows.length} Neighbourhoods`
     : `All ${rows.length} Neighbourhoods`;
-  const scopeSub = !selectionMode && singleRow
-    ? `rank ${singleRow.rank ?? "—"} · ${singleRow.n_properties != null ? fmtNumber(singleRow.n_properties) : "—"} parcels · ${stateWord(singleRow.state)}`
-    : null;
 
   // --- Categorical facets (D6) — VIEW-only; the controls live in the dock header
   // and read/write the hidden facet columns through TanStack. Each helper is generic
@@ -652,7 +649,6 @@ export default function DataTable({
             <div className="dt-head">
               <div className="dt-head-l">
                 <span className="dt-scope">{scopeTitle}</span>
-                {scopeSub && <span className="dt-scope-sub">{scopeSub}</span>}
                 {metrics && onMetricChange && (
                   <div className="dt-metric">
                     <SegmentedControl

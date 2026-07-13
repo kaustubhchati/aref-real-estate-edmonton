@@ -68,7 +68,6 @@ import {
   CENTROID_SOURCE,
   centroidNameLayer,
   centroidFocusLayer,
-  LEGEND_STATES,
 } from "./choroplethStyle.js";
 import {
   CITIES,
@@ -1358,8 +1357,6 @@ export default function PropertyAssessmentMap() {
                     format={selectedMetric.fmt}
                     horizontal
                     diverging={isYoy}
-                    greyTitle="Neighbourhood status"
-                    greyStates={LEGEND_STATES}
                   />
                 </div>
 
