@@ -105,6 +105,15 @@ export default function InfoRail({
         {parcels != null ? `${fmtNumber(parcels)} parcels` : "— parcels"} · {stateWord}
       </p>
 
+      {/* Annexation-area note (Tier 2 · sub-concern E) — orthogonal to the state
+          above; a polygon can be annexation-area AND aggregated. Agrees with the
+          legend's teal outline row. */}
+      {feature.is_annexation_area && (
+        <p className="pa-detail-note">
+          Annexation area — annexed, not yet subdivided into neighbourhoods; shown with its own outline.
+        </p>
+      )}
+
       {aggregated && sparkValues && (
         <Sparkline values={sv} stroke={stroke} width={196} height={26}
                    activeIndex={activeIndex} ariaLabel={`${activeMetric.label} trend`} />

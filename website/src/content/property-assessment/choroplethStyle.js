@@ -368,6 +368,32 @@ export const GREY_STATES = [
   "no_data",
 ];
 
+// ---- Annexation-area overlay (Tier 2 · sub-concern E) ----------------------
+// ORTHOGONAL to polygon_state, NOT a sixth state: a polygon can be an annexation
+// area AND aggregated (such a polygon keeps its ramp fill AND gains this border). It is a
+// SECOND outline composed on top of the state outline, driven purely by the
+// is_annexation_area flag (a flat, non-year-keyed boolean) — no hardcoded ids, so
+// it clears itself when the City subdivides these tiles and the flag clears via the
+// crosswalk. Teal + long-dash: distinct from every state outline above and from the
+// violet selection highlight; legible on the dark PA column.
+export const ANNEXATION_STYLE = {
+  label:        "Annexation area (annexed, not yet subdivided)",
+  fillColor:    "rgba(255,255,255,0.08)",   // glass → legend swatch is outline-only
+  pattern:      null,
+  outlineColor: "#12a8bd",
+  outlineWidth: 1.8,
+  outlineDash:  [4, 2],
+};
+
+// Rows for <Legend greyStates>: the four non-aggregated states (from GREY_STATES,
+// resolved to their style objects) + the annexation overlay. PA computes GREY_STATES
+// but had never passed it to the legend (finding 13f) — wiring it here also surfaces
+// the four grey states for the first time.
+export const LEGEND_STATES = [
+  ...GREY_STATES.map((k) => STATE_STYLE[k]),
+  ANNEXATION_STYLE,
+];
+
 // ---- Popup rows ------------------------------------------------------------
 // One row per aggregate column shown for an `aggregated` polygon. The first
 // entry is the headline (border-emphasised) and matches the choropleth
@@ -636,6 +662,27 @@ export function choroplethLayers(stops = STOPS, metricKey = "median_assessvalue"
           13, STATE_STYLE.no_data.outlineWidth,
         ],
         "line-dasharray": STATE_STYLE.no_data.outlineDash,
+      },
+    },
+    // 5a. Annexation-area outline (Tier 2 · sub-concern E) — ORTHOGONAL to
+    //     polygon_state, so its filter is the flat is_annexation_area flag (NOT
+    //     year-keyed). Above the state outlines so the teal border wins where a
+    //     polygon is both annexation-area AND aggregated (that polygon keeps its ramp fill
+    //     + gains this border); below the selection casing so a pin still reads on
+    //     top. Flag-driven — no hardcoded ids.
+    {
+      id: "nbhd-outline-annexation",
+      type: "line",
+      filter: ["==", ["get", "is_annexation_area"], true],
+      paint: {
+        "line-color": ANNEXATION_STYLE.outlineColor,
+        // Same zoom ramp shape as the sibling outlines: thin out, full in.
+        "line-width": [
+          "interpolate", ["linear"], ["zoom"],
+          8,  0.5,
+          13, ANNEXATION_STYLE.outlineWidth,
+        ],
+        "line-dasharray": ANNEXATION_STYLE.outlineDash,
       },
     },
     // 5b. Selection CASING — a light cream under-stroke drawn BENEATH the violet

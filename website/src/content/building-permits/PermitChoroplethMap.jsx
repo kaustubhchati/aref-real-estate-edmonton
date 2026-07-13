@@ -47,6 +47,7 @@ import {
   buildPopupHtml,
   FILL_OPACITY_EXPR,
   FILL_LAYER_IDS,
+  LEGEND_STATES,
 } from "./permitChoroplethStyle.js";
 import { fmtNumber } from "../../utils/format.js";
 import { DUR_SLOW, DUR_FAST } from "../../components/motion.js";
@@ -479,6 +480,8 @@ export default function PermitChoroplethMap() {
               title={activeSub.legendLabel}
               stops={stops}
               format={activeSub.fmt}
+              greyTitle="Neighbourhood status"
+              greyStates={LEGEND_STATES}
             />
           </div>
         </section>
@@ -501,11 +504,17 @@ export default function PermitChoroplethMap() {
                 <span className="sb-hover-v">{fmtNumber(hoveredFeature.n_permits)}</span>
               </div>
             </div>
+            {hoveredFeature.is_annexation_area && (
+              <p className="sb-hover-district">Annexation area — annexed, not yet subdivided.</p>
+            )}
           </section>
         ) : (
           <section className="sb-section sb-hover-panel sb-hover-muted">
             <p className="sb-hover-name">{hoveredFeature.display_name}</p>
             <p className="sb-hover-district sb-hover-state">No data</p>
+            {hoveredFeature.is_annexation_area && (
+              <p className="sb-hover-district">Annexation area — annexed, not yet subdivided.</p>
+            )}
           </section>
         )}
 

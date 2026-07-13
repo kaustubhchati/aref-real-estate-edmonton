@@ -34,6 +34,7 @@ import {
   bcensusFillColor,
   bcensusLayers,
   buildBusinessCensusPopupHtml,
+  LEGEND_STATES,
 } from "./businessCensusStyle.js";
 import { fmtNumber } from "../../utils/format.js";
 import { sidebarLeftPad } from "../../components/mapPadding.js";
@@ -319,6 +320,8 @@ export default function BusinessCensusMap() {
             title={selectedMetric.label}
             stops={stops}
             format={selectedMetric.fmt}
+            greyTitle="Neighbourhood status"
+            greyStates={LEGEND_STATES}
           />
         </section>
 

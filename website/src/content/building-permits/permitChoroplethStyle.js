@@ -65,6 +65,30 @@ export const STATE_STYLE = {
   },
 };
 
+// ---- Annexation-area overlay (Tier 2 · sub-concern E) ------------------
+// ORTHOGONAL to polygon_state, NOT a fourth state: a polygon can be an annexation
+// area AND aggregate permits. It is a SECOND outline composed on top of the state
+// outline, driven purely by the is_annexation_area flag — no hardcoded ids, so it
+// clears itself when the City subdivides these tiles and the flag clears via the
+// crosswalk. Same teal + long-dash treatment as BC and PA.
+export const ANNEXATION_STYLE = {
+  label:        "Annexation area (annexed, not yet subdivided)",
+  fillColor:    "rgba(255,255,255,0.08)",   // glass → legend swatch is outline-only
+  pattern:      null,
+  outlineColor: "#12a8bd",
+  outlineWidth: 1.8,
+  outlineDash:  [4, 2],
+};
+
+// Categorical (non-ramp) legend rows, passed to <Legend greyStates>. The ramp
+// represents "aggregated"; the block shows the suppressed + no_data states + the
+// annexation overlay (also fixes finding 13f — these were absent from the legend).
+export const LEGEND_STATES = [
+  STATE_STYLE.suppressed_low_n,
+  STATE_STYLE.no_data,
+  ANNEXATION_STYLE,
+];
+
 const fmtInt = (v) =>
   v == null || !Number.isFinite(+v) ? "—"
   : Math.round(+v).toLocaleString();
@@ -335,6 +359,19 @@ export function choroplethLayers(stops, sub) {
         "line-color": STATE_STYLE.no_data.outlineColor,
         "line-width": STATE_STYLE.no_data.outlineWidth,
         "line-dasharray": STATE_STYLE.no_data.outlineDash,
+      },
+    },
+    // 4b. Annexation-area outline (Tier 2 · sub-concern E) — ORTHOGONAL to
+    //     polygon_state. Above the state outlines so the teal border wins where a
+    //     polygon is both annexation-area AND aggregates permits. Flag-driven.
+    {
+      id: "pnbhd-outline-annexation",
+      type: "line",
+      filter: ["==", ["get", "is_annexation_area"], true],
+      paint: {
+        "line-color":     ANNEXATION_STYLE.outlineColor,
+        "line-width":     ANNEXATION_STYLE.outlineWidth,
+        "line-dasharray": ANNEXATION_STYLE.outlineDash,
       },
     },
     // 5. Hover / pinned highlight outline

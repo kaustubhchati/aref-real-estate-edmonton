@@ -57,6 +57,32 @@ export const STATE_STYLE = {
   },
 };
 
+// ---- Annexation-area overlay (Tier 2 · sub-concern E) ------------------
+// ORTHOGONAL to census_state, NOT a third state: a polygon can be an annexation
+// area AND carry data (a data polygon keeps its business-count fill AND gains this border).
+// So it is a SECOND outline composed on top of the state outline, driven purely
+// by the is_annexation_area flag — no hardcoded ids, so it clears itself when the
+// City subdivides these tiles and the flag clears via the crosswalk.
+// Teal + long-dash: distinct from the data (white solid) and no_data (grey dotted)
+// outlines, legible on the light BC/BP themes and the dark PA column.
+export const ANNEXATION_STYLE = {
+  label:        "Annexation area (annexed, not yet subdivided)",
+  fillColor:    "rgba(255,255,255,0.08)",   // glass → legend swatch is outline-only (composes, not a fill state)
+  pattern:      null,
+  outlineColor: "#12a8bd",
+  outlineWidth: 1.8,
+  outlineDash:  [4, 2],
+};
+
+// Categorical (non-ramp) legend rows, passed to <Legend greyStates>. The colour
+// ramp above already represents the "data" state, so the categorical block shows
+// the no_data state + the annexation overlay (this also fixes finding 13f — no_data
+// was previously absent from the legend, reachable only via the popup).
+export const LEGEND_STATES = [
+  STATE_STYLE.no_data,
+  ANNEXATION_STYLE,
+];
+
 // ---- Metrics ----------------------------------------------------------
 const fmtInt = (v) =>
   v == null || !Number.isFinite(+v) ? "—"
@@ -212,6 +238,20 @@ export function bcensusLayers(stops, metricKey = "n_businesses_2025") {
         "line-dasharray": STATE_STYLE.no_data.outlineDash,
       },
     },
+    // 3b. Annexation-area outline (Tier 2 · sub-concern E) — ORTHOGONAL to
+    //     census_state. Drawn ABOVE the data/no_data outlines so the teal border
+    //     wins where a polygon is both annexation-area AND has data (that polygon keeps its
+    //     ramp fill + gains this border). Flag-driven — no hardcoded ids.
+    {
+      id: "bcensus-outline-annexation",
+      type: "line",
+      filter: ["==", ["get", "is_annexation_area"], true],
+      paint: {
+        "line-color":     ANNEXATION_STYLE.outlineColor,
+        "line-width":     ANNEXATION_STYLE.outlineWidth,
+        "line-dasharray": ANNEXATION_STYLE.outlineDash,
+      },
+    },
     // 4. Hover / pinned highlight outline
     {
       id: "bcensus-highlight",
@@ -326,6 +366,16 @@ export function buildBusinessCensusPopupHtml(p, detail) {
   // ---- Tier 3 — full pinned detail ----
   const meta = STATE_STYLE[p.census_state] || { label: p.census_state };
   parts.push(`<div class="pop-state ${p.census_state}">${escapeHtml(meta.label)}</div>`);
+
+  // Annexation-area note — orthogonal to the state badge (the polygon can be
+  // annexation-area AND carry data). Agrees with the legend's teal outline row.
+  if (p.is_annexation_area) {
+    parts.push(
+      `<div class="pop-reason">Annexation area — annexed but not yet subdivided ` +
+        `into neighbourhoods; shown with its own outline. Any business counts it ` +
+        `carries are real and included.</div>`
+    );
+  }
 
   if (p.census_state === "data") {
     parts.push(

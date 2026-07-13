@@ -17,6 +17,15 @@ export default function About() {
         Public, refreshed from City of Edmonton open data on a quarterly
         cadence. Full team and methodology pages will appear here.
       </p>
+
+      <h2>Data notes</h2>
+      <p>
+        <strong>Annexation areas.</strong> A few polygons cover Edmonton&rsquo;s
+        annexed-but-not-yet-subdivided south. They appear on every map with a
+        distinct outline and label. They are not neighbourhoods in the ordinary
+        sense, but any business, permit, or assessment figures they carry are
+        real and included &mdash; not dropped.
+      </p>
     </article>
   );
 }
