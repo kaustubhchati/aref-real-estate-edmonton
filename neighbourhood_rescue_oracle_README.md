@@ -46,7 +46,7 @@ adds a row here (after a human ruling) rather than handling it locally.
 | `rename` | same polygon, name and/or id changed (Oliver → Wîhkwêntôwin) | yes |
 | `renumber` | id changed in the boundary file (Chappelle 5462 → 5471) | yes |
 | `merge` | folded into another neighbourhood pre-aggregation (Heritage Valley AREA → TOWN CENTRE) | yes |
-| `drop` | no live polygon — annexation container, placeless sentinel, or target the City has not published | **no (blank)** |
+| `drop` | no live polygon — placeless sentinel, or target the City has not published (note: annexation areas are **no longer** `drop` — they are `annexation_area`, kept + labelled; see the container bullet) | **no (blank)** |
 
 The enum is the key design choice: it replaces the free-text `reason` overload in
 the legacy PA tables (where rename/renumber/typo/merge were distinguished only by
@@ -108,12 +108,23 @@ Seeded 2026-06-22 from the established Property Assessment reconciliation facts
 - **Lewis Farms (4485, `drop`)** — surfaced by 08b's TARGET-EXISTS guard as
   `unresolved_target_missing`; recorded as drop until the City publishes a
   polygon. Revisit if a future boundary file adds one.
-- **Annexation containers (8885–8888, `drop`)** — the PA audit identifies these id
-  numbers as umbrella containers that should be excluded, but their exact
-  `old_name` strings here are **inferred, not confirmed against the boundary
-  file**. Verify the names (and that all four ids exist) before relying on them;
-  correct in place if the boundary file disagrees.
+- **Annexation areas (8885–8888, `annexation_area`)** — **[CORRECTED 2026-07-10]**
+  an earlier belief (from the PA audit) held these to be *umbrella containers*
+  geographically overlapping real neighbourhoods, to be *excluded* as double-counts.
+  A spatial test (directive-00b: projected-CRS intersection, 1 m² tolerance)
+  **falsified this**: all four are **standalone tiles** — 0.0% overlap, zero
+  real-neighbourhood centroids inside — occupying the annexed-but-unsubdivided south.
+  Their business counts are **unique, not double-counted**. Per
+  `DECISION_container_universe_20260710.md` they are **kept and labelled** as
+  annexation areas (relation `annexation_area`, orthogonal `is_annexation_area`
+  flag), **not dropped**. Names are now confirmed boundary-correct in the canonical
+  crosswalk (`SOUTH CENTRAL / SOUTH CENTRAL EAST / SOUTH EAST / SOUTH WEST`; the
+  earlier inferred `EDMONTON CENTRAL/NORTH` strings do not exist in the boundary and
+  were removed). 8889 Crossroads is a real annexed neighbourhood (kept normal).
 
-Building Permits has NOT yet contributed rows — its permit-only unmatched numbers
-(the ~76 demolished / stranded-added units found in the 03 join diagnostic) are
-pending KC's ruling and will be added under `first_seen_section = BP/03`.
+**[UPDATED 2026-07-10]** Building Permits now resolves reconciliation through the
+canonical crosswalk (Tier 2), not oracle rows; the previously-anticipated `BP/03`
+rows were never authored and are not needed. The ~76 permit-only unmatched numbers
+from the old 03 join diagnostic are handled by the crosswalk + the Tier-1
+stranded-ID stop (any unresolved id halts the run for a ruling rather than being
+pre-listed here).
