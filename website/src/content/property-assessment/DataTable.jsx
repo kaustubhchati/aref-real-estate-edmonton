@@ -249,6 +249,8 @@ export default function DataTable({
   activeIndex,
   year,
   years,
+  sliderYear,       // Fix 4 — live year thumb (throttled commit via slideYear); the Year
+  slideYear,        // slider now docks in the console (this spine), not the instrument column
   selectedIds,
   onSelectRow,
   onHoverRow,
@@ -259,7 +261,6 @@ export default function DataTable({
   onBrush,
   open,
   onToggle,
-  rangeSlot,
   globalFilter,          // CONTROLLED by the parent's unified SearchPeek (D5) — the
   onGlobalFilterChange,  // dock's own .dt-filter input is gone; this is the sole driver
 }) {
@@ -619,8 +620,35 @@ export default function DataTable({
     row?.scrollIntoView({ block: "start" });   // top-align the selected row (D4, note 27) — was "nearest"
   }, [selectedIds, open, sorting, globalFilter, data, panelMounted]);
 
+  // ── The Tuning instrument (Fix 4) — ONE fixed frame: Year (single) + a hairline
+  // divider + Metric range (dual). Rendered in TWO docks below (a strip above the handle
+  // in View; the console header in Analysis) — never both at once, so one instance. The
+  // frame is constant; only the slot it occupies changes (grid-structured / dynamic-in).
+  const yMin = years?.length ? Math.min(...years) : 0;
+  const yMax = years?.length ? Math.max(...years) : 1;
+  const tuningInstrument = (
+    <div className="pa-tune-instrument" role="group" aria-label="Year and value range">
+      <YearSliderRow
+        year={year} sliderYear={sliderYear} slideYear={slideYear} yMin={yMin} yMax={yMax}
+      />
+      <div className="pa-tune-divider" aria-hidden="true" />
+      <RangeFacet
+        label={activeCol?.header ?? metricLabel}
+        fmt={activeCol?.fmt ?? ((v) => v)}
+        bounds={rangeBounds}
+        value={rangeValue}
+        onChange={setRange}
+        disabled={selectionMode}
+      />
+    </div>
+  );
+
   return (
     <section className="dt" aria-label="Neighbourhood data table">
+      {/* VIEW dock (Fix 4) — the Tuning instrument rides as a strip ABOVE the pull-up
+          handle when the console is DOWN. In Analysis it relocates into the console
+          header (below), so it renders here only while collapsed. */}
+      {!open && <div className="pa-tune-dock pa-tune-dock-strip">{tuningInstrument}</div>}
       <button
         type="button"
         className="dt-handle"
@@ -663,6 +691,10 @@ export default function DataTable({
                   </div>
                 )}
               </div>
+              {/* ANALYSIS dock (Fix 4) — the SAME instrument, relocated right of the
+                  metric chips into the header slot Fix 3 freed. Renders only while the
+                  console is up (the View strip above holds it when down). */}
+              {open && <div className="pa-tune-dock pa-tune-dock-console">{tuningInstrument}</div>}
               <div className="dt-head-r">
                 {/* District facet (VIEW-only, brush-fenced) — normal mode only. */}
                 {!selectionMode && (
@@ -834,25 +866,10 @@ export default function DataTable({
         )}
       </div>
 
-      {/* RANGE slider → TUNING RACK. The slider's brain stays in THIS component
-          (TanStack faceted bounds + setRange + the VIEW-only brush, all
-          unchanged); only its UI is PORTALED into the rack's slot (owned by
-          PropertyAssessmentMap) so every slider sits together. Rendered OUTSIDE
-          the {open} block so it's present whether the dock is open or not.
-          Disabled in selection mode (no filterable view). rangeSlot is null
-          until the rack mounts, so the portal simply waits. */}
-      {rangeSlot &&
-        createPortal(
-          <RangeFacet
-            label={activeCol?.header ?? metricLabel}
-            fmt={activeCol?.fmt ?? ((v) => v)}
-            bounds={rangeBounds}
-            value={rangeValue}
-            onChange={setRange}
-            disabled={selectionMode}
-          />,
-          rangeSlot
-        )}
+      {/* The metric-range slider's brain stays in THIS component (TanStack faceted
+          bounds + setRange + the VIEW-only brush, all unchanged). Fix 4: it now renders
+          INLINE inside the Tuning instrument (both docks above) instead of being portaled
+          into the instrument column — the portal + its rack slot are retired. */}
     </section>
   );
 }
@@ -1100,27 +1117,73 @@ function FacetToggles({ label, options, selected, labelOf, onToggle }) {
   );
 }
 
-// The metric-RANGE facet: a min + a max thumb over the active metric's bounds, with
-// a live readout. One track, two thumbs overlaid (D2) — each thumb clamps against the
-// other so lo never passes hi, and z-index is position-aware so a coincident pair
-// stays grabbable (see the render).
-// `value` is the column's [lo, hi] filter (undefined = full range); `bounds` is
-// [min, max] from getFacetedMinMaxValues.
-//
-// FORM (P2): a fixed two-row grid — a name header row (.pa-rack-label) then the slider row
-// [min · fixed track · max] (.pa-rack-min / .pa-dual / .pa-rack-max). The track is a FIXED
-// width at a fixed x (Principle 0); it uses the SAME column template as the Year row (see
-// .pa-col-tuning in index.css) so the two tracks pin to the same x + length, retiring the
-// old below-track line. The dual handle is two range inputs OVERLAID on one track
-// (.pa-dual): each input's native track is transparent and only its thumb catches
-// pointer events, so both thumbs sit on the single .pa-dual-track with a green
-// .pa-dual-fill segment between them.
-//
-// Lives in the TUNING RACK (portaled there from the dock — see createPortal below),
-// so it holds a FIXED slot: when there's no filterable view (`disabled`, i.e.
-// selection mode) or bounds are null/degenerate, it renders an INERT (dimmed)
-// placeholder rather than null — the slot never appears/disappears. The TanStack
-// wiring (onChange → setFilterValue → brush) is unchanged from the stacked version.
+// =============================================================================
+// The Tuning instrument (Fix 4) — horizontal Year (single) + Metric range (dual),
+// docked in the Data Table spine (strip above the handle in View; console header in
+// Analysis). Unmistakably-operable controls: end-labelled data bounds, calibration
+// ticks below the track, an accent active-readout in a fixed slot. Honest affordance:
+// Year snaps to discrete year ticks; the continuous metric glides over a ruler.
+// =============================================================================
+
+// ── Calibration ticks below a track — the "this axis has positions, drag it" signal
+// (Fix 4). `count` marks spaced evenly 0→100%; `majorEvery` (0 = none) thickens every
+// Nth. Data-driven count (year count for Year; a fixed ruler for the continuous metric).
+function CalibTicks({ count, majorEvery = 0, ruler = false }) {
+  const marks = [];
+  for (let i = 0; i < count; i++) {
+    const left = count === 1 ? 50 : (i / (count - 1)) * 100;
+    marks.push(
+      <i
+        key={i}
+        className={majorEvery && i % majorEvery === 0 ? "major" : undefined}
+        style={{ left: `${left}%` }}
+      />
+    );
+  }
+  return <div className={`pa-tune-calib${ruler ? " ruler" : ""}`} aria-hidden="true">{marks}</div>;
+}
+
+// ── Year — SINGLE handle, snaps to discrete year ticks (step 1). Honest affordance:
+// discrete years exist, so it snaps. Two-tier readout: the active year (accent, in a
+// FIXED slot up top) vs the data-bound endpoints (muted, below the track). One tick per
+// year — the ticks ARE the selectable values; the count is manifest-driven (a 2027
+// refresh grows the track by one tick, no code change). slideYear throttle unchanged.
+function YearSliderRow({ year, sliderYear, slideYear, yMin, yMax }) {
+  const val = sliderYear ?? year ?? yMin;
+  const pct = ((val - yMin) / ((yMax - yMin) || 1)) * 100;
+  const nYears = Math.max(1, yMax - yMin + 1);
+  return (
+    <div className="pa-tune-ctrl">
+      <div className="pa-tune-ctrl-head">
+        <span className="pa-tune-ctrl-name">Year</span>
+        <strong className="pa-tune-active">{val}</strong>
+      </div>
+      <div className="pa-tune-track-wrap">
+        <input
+          type="range"
+          className="pa-slider pa-year-slider"
+          aria-label="Year"
+          min={yMin}
+          max={yMax}
+          step={1}
+          value={val}
+          style={{ "--pct": pct }}
+          onChange={(e) => slideYear(Number(e.target.value))}
+        />
+        <CalibTicks count={nYears} majorEvery={5} />
+      </div>
+      <div className="pa-tune-ends"><span>{yMin}</span><span>{yMax}</span></div>
+    </div>
+  );
+}
+
+// ── Metric range — DUAL handle, continuous glide (NO snapping). Honest affordance: the
+// metric is continuous, so the marks below are an evenly-spaced RULER (reference only) —
+// they must NOT imply discrete stops. Two-tier readout: the active range (accent, FIXED
+// slot) vs the data-bound min/max (muted, below). FIXED slot: when the range doesn't
+// apply (selection mode) or bounds are degenerate, it renders INERT (dimmed) rather than
+// null — the frame never reflows. The TanStack wiring (onChange → setFilterValue → the
+// VIEW-only brush) is unchanged from the vertical version.
 function RangeFacet({ label, fmt, bounds, value, onChange, disabled = false }) {
   const usable = bounds && bounds[0] !== bounds[1];
   const off = disabled || !usable;
@@ -1129,35 +1192,37 @@ function RangeFacet({ label, fmt, bounds, value, onChange, disabled = false }) {
   const step = (max - min) / 100 || 1;
   const pct = (v) => `${((v - min) / (max - min || 1)) * 100}%`;
   return (
-    <div className={`pa-range-slot${off ? " is-off" : ""}`}>
-      {/* P2 — a fixed two-row grid: name header (.pa-rack-label) + slider row
-          [min · fixed track · max]. min/max flank the FIXED track as fixed cells; when the
-          range is inapplicable (selection mode) BOTH cells show an honest em-dash. */}
-      <span className="pa-rack-label">{label}</span>
-      <span className="pa-rack-min">{off ? "—" : fmt(lo)}</span>
-      <div className="pa-dual" style={{ "--lo": pct(lo), "--hi": pct(hi) }}>
-        <div className="pa-dual-track" />
-        <div className="pa-dual-fill" />
-        {/* When the thumbs COINCIDE, only the top one is grabbable, so raise whichever
-            must move to separate them: `lo` clamps to ≤ hi (can only go DOWN), `hi`
-            clamps to ≥ lo (can only go UP). So raise lo in the upper half (recovers a
-            stuck [max,max]) and leave hi on top otherwise (recovers [min,min]). */}
-        <input
-          type="range" className="pa-slider pa-dual-input"
-          min={min} max={max} step={step} value={lo} disabled={off}
-          style={{ zIndex: lo > (min + max) / 2 ? 3 : 1 }}
-          aria-label={`${label} minimum`}
-          onChange={(e) => onChange([Math.min(+e.target.value, hi), hi])}
-        />
-        <input
-          type="range" className="pa-slider pa-dual-input"
-          min={min} max={max} step={step} value={hi} disabled={off}
-          style={{ zIndex: 2 }}
-          aria-label={`${label} maximum`}
-          onChange={(e) => onChange([lo, Math.max(+e.target.value, lo)])}
-        />
+    <div className={`pa-tune-ctrl${off ? " is-off" : ""}`}>
+      <div className="pa-tune-ctrl-head">
+        <span className="pa-tune-ctrl-name">{label}</span>
+        <strong className="pa-tune-active">{off ? "—" : `${fmt(lo)} – ${fmt(hi)}`}</strong>
       </div>
-      <strong className="pa-rack-max">{off ? "—" : fmt(hi)}</strong>
+      <div className="pa-tune-track-wrap">
+        <div className="pa-dual" style={{ "--lo": pct(lo), "--hi": pct(hi) }}>
+          <div className="pa-dual-track" />
+          <div className="pa-dual-fill" />
+          {/* When the thumbs COINCIDE, only the top one is grabbable, so raise whichever
+              must move to separate them: `lo` clamps to ≤ hi (can only go DOWN), `hi`
+              clamps to ≥ lo (can only go UP). So raise lo in the upper half (recovers a
+              stuck [max,max]) and leave hi on top otherwise (recovers [min,min]). */}
+          <input
+            type="range" className="pa-slider pa-dual-input"
+            min={min} max={max} step={step} value={lo} disabled={off}
+            style={{ zIndex: lo > (min + max) / 2 ? 3 : 1 }}
+            aria-label={`${label} minimum`}
+            onChange={(e) => onChange([Math.min(+e.target.value, hi), hi])}
+          />
+          <input
+            type="range" className="pa-slider pa-dual-input"
+            min={min} max={max} step={step} value={hi} disabled={off}
+            style={{ zIndex: 2 }}
+            aria-label={`${label} maximum`}
+            onChange={(e) => onChange([lo, Math.max(+e.target.value, lo)])}
+          />
+        </div>
+        <CalibTicks count={11} ruler />
+      </div>
+      <div className="pa-tune-ends"><span>{off ? "—" : fmt(min)}</span><span>{off ? "—" : fmt(max)}</span></div>
     </div>
   );
 }

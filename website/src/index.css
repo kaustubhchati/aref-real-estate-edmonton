@@ -1601,6 +1601,97 @@ p  { margin: 0 0 0.75rem; }
 .pa-range-slot.is-off > * { opacity: 0.45; }
 .pa-range-slot.is-off .pa-slider { cursor: not-allowed; }
 
+/* ==========================================================================
+   Fix 4 — the Tuning instrument (Year + Metric range), docked in the DataTable
+   spine. Two docks, ONE fixed frame (internal geometry identical; only the slot +
+   the outer surface change): a carded strip ABOVE the pull-up handle in View, and
+   an inline band in the console header in Analysis. Horizontal, end-labelled,
+   tick-calibrated — "unmistakably operable". Reuses the shared .pa-slider / .pa-dual
+   mechanics; adds the two-tier readout (accent active value + muted data bounds).
+   ========================================================================== */
+:root { --pa-tune-w: 500px; }
+
+.pa-tune-dock { pointer-events: auto; }
+.pa-tune-dock-strip { align-self: center; margin-bottom: 6px; }   /* above the handle, centred in .pa-foot */
+.pa-tune-dock-console { display: flex; align-items: center; flex: 0 1 auto; min-width: 0; }
+
+/* The frame — Year | hairline divider | Metric, side by side. */
+.pa-tune-instrument {
+  display: flex; align-items: flex-start; gap: 18px;
+  width: var(--pa-tune-w); max-width: calc(100vw - 24px);
+  background: var(--pa-card); border: 1px solid var(--pa-hair);
+  border-radius: 10px; padding: 8px 15px 7px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+}
+/* In the console header the panel already carries depth — drop the standalone card
+   surface so the frame reads as part of the header band (same internal geometry). */
+.pa-tune-dock-console .pa-tune-instrument {
+  background: transparent; border: 0; box-shadow: none; padding: 0;
+  flex: 0 1 var(--pa-tune-w);
+}
+.pa-tune-divider { align-self: stretch; width: 1px; background: var(--pa-hair); flex: 0 0 auto; }
+
+/* Each control: head (name + active readout) · track+ticks · data-bound ends. */
+.pa-tune-ctrl { flex: 1 1 0; min-width: 0; }
+.pa-tune-ctrl-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px;
+}
+.pa-tune-ctrl-name {
+  font-size: var(--t-xs); letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--pa-mut); white-space: nowrap;
+}
+/* Active readout — the LIVE value (selected year / bounded range). Accent-shaded, in a
+   FIXED-width right-aligned slot so a wider value ("$1.09M") never nudges the name. */
+.pa-tune-active {
+  font-size: var(--t-md); font-weight: 600; color: var(--pa-up);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+  flex: 0 0 auto; min-width: 84px; text-align: right;
+}
+
+.pa-tune-track-wrap { position: relative; }
+.pa-tune-track-wrap .pa-slider,
+.pa-tune-track-wrap .pa-dual { width: 100%; }
+
+/* Green thumb + track on the dark spine (the base .pa-slider is themed for the light
+   shell; these mirror the retired .pa-column overrides). */
+.pa-tune-instrument .pa-slider::-webkit-slider-runnable-track { background: var(--pa-hair); }
+.pa-tune-instrument .pa-slider::-moz-range-track { background: var(--pa-hair); }
+.pa-tune-instrument .pa-slider::-webkit-slider-thumb { background: var(--pa-up); border-color: var(--pa-shell); }
+.pa-tune-instrument .pa-slider::-moz-range-thumb { background: var(--pa-up); border-color: var(--pa-shell); }
+.pa-tune-instrument .pa-dual-track { background: var(--pa-hair); }
+.pa-tune-instrument .pa-dual-fill { background: var(--pa-up); }
+.pa-tune-instrument .pa-year-slider::-webkit-slider-runnable-track {
+  background: linear-gradient(to right,
+    var(--pa-up) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
+    var(--pa-hair) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100));
+}
+.pa-tune-instrument .pa-year-slider::-moz-range-track {
+  background: linear-gradient(to right,
+    var(--pa-up) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
+    var(--pa-hair) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100));
+}
+
+/* Calibration marks below the track — the "this axis has positions" signal. Year: one
+   per year (major every 5th). Metric: an evenly-spaced ruler, reference-only. */
+.pa-tune-calib { position: relative; height: 8px; margin-top: 2px; }
+.pa-tune-calib i {
+  position: absolute; top: 0; width: 1px; height: 4px;
+  background: var(--pa-dim); transform: translateX(-50%);
+}
+.pa-tune-calib i.major { height: 7px; background: var(--pa-mut); }
+.pa-tune-calib.ruler i { height: 4px; background: var(--pa-hair); }
+
+/* Data-bound endpoints — the static edges of what exists (muted / reference tier,
+   distinct from the accent active readout above). */
+.pa-tune-ends {
+  display: flex; justify-content: space-between; margin-top: 2px;
+  font-size: var(--t-2xs); color: var(--pa-mut); font-variant-numeric: tabular-nums;
+}
+
+/* Inert (selection mode / degenerate bounds) — dim the control; the frame stays put. */
+.pa-tune-ctrl.is-off { opacity: 0.5; }
+.pa-tune-ctrl.is-off .pa-slider { cursor: not-allowed; }
+
 /* Bottom-right legend card (default view), lifted above the map's corner controls. */
 .pa-legend {
   position: absolute; right: 12px; bottom: 34px; z-index: 12;

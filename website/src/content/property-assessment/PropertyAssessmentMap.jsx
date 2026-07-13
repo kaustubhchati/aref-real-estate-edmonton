@@ -390,11 +390,6 @@ export default function PropertyAssessmentMap() {
   const [dockOpen, setDockOpen] = useState(false);
 
   // The tuning rack's range slot — its DOM node, captured by a ref-callback so
-  // DataTable can PORTAL its metric-range slider into the rack (the slider's
-  // TanStack wiring stays in the dock; only its UI moves). null until the rack
-  // mounts; setting it re-renders so the portal finds its target. [tuning-bay]
-  const [rangeSlot, setRangeSlot] = useState(null);
-
   // The floating "About & tips" popover (open/closed). Holds the box-select tip +
   // the provenance/naming note — rehomed here from the removed left panel. [D1]
   const [infoOpen, setInfoOpen] = useState(false);
@@ -1193,14 +1188,7 @@ export default function PropertyAssessmentMap() {
 
   const empty = url ? null : describeEmpty(manifest, city, year);
 
-  // Year-slider fill %, for the shared .pa-slider gradient track (green up to the
-  // thumb) — mirrors how the dual-handle range fills between its thumbs, so the two
-  // sliders read as one instrument. [D2]
-  const yMin = years.length ? Math.min(...years) : 0;
-  const yMax = years.length ? Math.max(...years) : 1;
-  // C1 — UNITLESS 0–100 (not a "%" string) so the track fill can be thumb-width-aware in
-  // CSS (calc), keeping the fill's right edge at the thumb centre instead of overshooting.
-  const yearPct = ((sliderYear ?? year ?? yMin) - yMin) / ((yMax - yMin) || 1) * 100;
+  // (Year-slider bounds + fill % moved into DataTable with the instrument — Fix 4.)
 
   // The S-b single-select DETAIL instrument (contract §4/C9): the right-side float,
   // shown only when the console is DOWN and exactly one neighbourhood is selected.
@@ -1309,40 +1297,11 @@ export default function PropertyAssessmentMap() {
                   </div>
                 )}
 
-                {/* TUNING module — year slider (same slideYear/sliderYear throttle)
-                    + the metric-range slot. DataTable PORTALS its RangeFacet into
-                    .pa-rack-range-slot (ref below); its TanStack wiring + the
-                    VIEW-only brush stay in the dock. Fixed slot: the range is
-                    disabled (not removed) in selection mode. */}
-                <div className="pa-col-mod pa-col-tuning" role="group" aria-label="Tuning">
-                  {/* The "⚙ Tuning" module banner (annex:73) so every module reads as a
-                      labelled frame. P2 — each control is its own fixed two-row grid (name
-                      header + [min · fixed track · max]); the Year row and the portaled range
-                      row share the SAME column template, so their tracks pin to the same x +
-                      length regardless of value (see .pa-col-tuning in CSS). */}
-                  <span className="pa-col-lab">⚙ Tuning</span>
-                  {year != null && (
-                    <div className="pa-tune-row">
-                      <span className="pa-tune-name">Year</span>
-                      {/* reserved empty min cell — holds the Year track's LEFT edge at the same
-                          x as the range track (single-value = value-right, min-left empty). */}
-                      <span className="pa-tune-min" aria-hidden="true" />
-                      <input
-                        type="range"
-                        className="pa-slider pa-year-slider pa-tune-slider"
-                        aria-label="Year"
-                        min={yMin}
-                        max={yMax}
-                        step={1}
-                        value={sliderYear ?? year}
-                        style={{ "--pct": yearPct }}
-                        onChange={(e) => slideYear(Number(e.target.value))}
-                      />
-                      <strong className="pa-tune-year">{sliderYear ?? year}</strong>
-                    </div>
-                  )}
-                  <div className="pa-rack-range-slot" ref={setRangeSlot} />
-                </div>
+                {/* TUNING module removed from the column (Fix 4). The Year + metric-range
+                    sliders re-home into the Data Table spine as ONE horizontal instrument:
+                    a strip above the pull-up handle in View, the console header in Analysis.
+                    Year state (sliderYear/slideYear) is passed to <DataTable> below; the
+                    range keeps its TanStack wiring + the VIEW-only brush there. */}
 
                 {/* LEGEND module — relocated from the bottom-right .pa-legend float
                     into the column (a real relocation, §4). Legend.jsx internals
@@ -1441,6 +1400,8 @@ export default function PropertyAssessmentMap() {
                 activeIndex={activeYearIndex}
                 year={year}
                 years={years}
+                sliderYear={sliderYear}
+                slideYear={slideYear}
                 selectedIds={selectedIds}
                 onSelectRow={selectNeighbourhood}
                 onHoverRow={setHoveredRowId}
@@ -1451,7 +1412,6 @@ export default function PropertyAssessmentMap() {
                 onBrush={setBrushedIds}
                 open={dockOpen}
                 onToggle={() => setDockOpen((d) => !d)}
-                rangeSlot={rangeSlot}
                 globalFilter={searchQuery}                 /* controlled by the unified SearchPeek (D5) */
                 onGlobalFilterChange={setSearchQuery}
               />
