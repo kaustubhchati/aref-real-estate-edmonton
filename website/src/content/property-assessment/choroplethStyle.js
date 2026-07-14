@@ -295,21 +295,24 @@ export function yoyStopsFromValues(values) {
 //   icon  = a single SVG <path d="…"> (Lucide-style, stroke-based, 24×24 viewBox)
 //           drawn by the segmented metric control (SegmentedControl.jsx). Adding
 //           a metric stays a ONE-PLACE change — add its row here, icon included.
+// ORDER (ratified 2026-07-13): value → change → composition → structural. LABELS are
+// full Title Case + a trailing (unit) where one exists — the one place they live (§6);
+// every consumer (rail chips, legend title) reads label/order FROM HERE. Each icon is
+// keyed WITH its metric object, so reordering keeps glyph↔metric in sync.
 const METRICS = [
-  { key: "median_assessvalue", label: "Median Assessed Value",   fmt: fmtCurrency,
+  { key: "median_assessvalue", label: "Median Assessed Value",     fmt: fmtCurrency,
     icon: "M12 2v20 M17 7H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" },             // dollar
-  { key: "avall_public",       label: "Mean Assessed Value",     fmt: fmtCurrency,
+  { key: "avall_public",       label: "Mean Assessed Value",       fmt: fmtCurrency,
     icon: "M3 3v18h18 M8 17V9 M13 17V5 M18 17v-7" },                                  // distribution / mean
-  { key: "avg_lotsize",        label: "Mean Lot Size",           fmt: fmtArea,
-    icon: "M15 3h6v6 M9 21H3v-6 M21 3l-7 7 M3 21l7-7" },                              // area / extent
-  // D1 — %Condo promoted to a MAP metric (varies spatially, informative) on its own
-  // 0–100 share ramp; Year built demoted from the metric row (near-flat, uninformative
-  // choropleth) but KEPT as a table column. %Condo = share of individually-titled
-  // condominium parcels (Plan/Unit); label "% Condo", never "% apartments".
-  { key: "pct_with_unit",      label: "% Condo",                 fmt: fmtPct,
-    icon: "M3 21h18 M5 21V7l7-4 7 4v14 M9 9h.01 M9 13h.01 M9 17h.01 M15 9h.01 M15 13h.01 M15 17h.01" }, // building / units
-  { key: "yoy_pct_change",     label: "Year-Over-Year Change %", fmt: fmtPct,
+  { key: "yoy_pct_change",     label: "Year over Year Change (%)", fmt: fmtPct,
     icon: "M3 17l6-6 4 4 8-8 M21 7v6 M21 7h-6" },                                     // trending up
+  // %Condo (D1) — promoted to a MAP metric (varies spatially) on its own 0–100 share
+  // ramp (Year built demoted from the metric row but KEPT as a table column). = share
+  // of individually-titled condominium parcels (Plan/Unit); never "% apartments".
+  { key: "pct_with_unit",      label: "Condominium (%)",           fmt: fmtPct,
+    icon: "M3 21h18 M5 21V7l7-4 7 4v14 M9 9h.01 M9 13h.01 M9 17h.01 M15 9h.01 M15 13h.01 M15 17h.01" }, // building / units
+  { key: "avg_lotsize",        label: "Mean Lot Size (m²)",        fmt: fmtArea,
+    icon: "M15 3h6v6 M9 21H3v-6 M21 3l-7 7 M3 21l7-7" },                              // area / extent
 ];
 export { METRICS };
 

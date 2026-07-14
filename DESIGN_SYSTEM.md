@@ -68,14 +68,14 @@ Space scale (4px base): `--s1:4 --s2:8 --s3:12 --s4:16 --s5:20 --s6:24`. Radius:
 
 ## 2. Typography rules (written down = enforceable)
 - **Font:** house sans stack (Inter/system). Sans only. No serifs in chrome.
-- **Capitalization — THE RULE (enforced, recurring drift ends here):** "Initial Alphabet Is Always Capital Case For Every Word." **Title Case for every product label and header.** No sentence case, no ALL-CAPS, no lowercase in chrome. Applies to metric buttons, legend titles, table headers, KPI labels, console headers, dropdown items, buttons — everything the user reads that isn't data. Exact transformations (apply verbatim):
-  - Metric buttons: `Median Assessed Value` · `Mean Assessed Value` · `Mean Lot Size` · `% Condo` · `Year-Over-Year Change %`
-  - Legend title: matches the active metric in Title Case (e.g. `Median Assessed Value`, `% Condo`)
-  - Table headers: `Neighbourhood` · `Median` · `Mean` · `Lot m²` · `Built` · `% Condo` · `YoY` · `Trend`
-  - KPI labels: `Median` · `YoY` · `Condo` · `Distribution` (+ honesty tags Title Case: `≈ Of Medians`, `Parcel-Weighted · Exact`, `Excluding Condos`)
-  - Console header scope: `All 403 Neighbourhoods` · `6 Neighbourhoods Selected` · `<Name>` (name as delivered)
-  - Handle/affordances: `Data Table` · `Analyst View` · `Press T`
-  - Acronyms stay upper (YoY, m²); the leading article/word of each label is capitalized. Map labels follow the data's own casing (Title Case as delivered).
+- **Capitalization — THE RULE (amended 2026-07-13, recurring drift ends here):** Title Case with **lowercase minor words**. Capitalize every word EXCEPT minor connecting words when they fall **mid-phrase**: articles (*a, an, the*), coordinating conjunctions (*and, but, or, nor*), short prepositions ≤4 letters (*of, in, on, to, by, as, at, off, per, over*), and *vs*. **Always capitalize the FIRST and LAST word**, regardless. Acronyms stay upper (YoY, m²); a unit in parens keeps its own case (`(%)`, `(m²)`). No sentence case, no ALL-CAPS, no arbitrary lowercase in chrome. Applies to metric buttons, legend titles, table headers, KPI labels, console headers, dropdown items, buttons — everything the user reads that isn't data. Exact transformations (apply verbatim):
+  - Metric buttons (full labels; order = value → change → composition → structural): `Median Assessed Value` · `Mean Assessed Value` · `Year over Year Change (%)` · `Condominium (%)` · `Mean Lot Size (m²)`  — note "over" lowercased mid-phrase, "Year" (first word) capital.
+  - Legend title: matches the active metric verbatim (e.g. `Median Assessed Value`, `Condominium (%)`).
+  - Table headers (SHORT tier — space-constrained; a deliberate separate tier from the full metric-button labels above): `Neighbourhood` · `Median` · `Mean` · `Lot m²` · `Built` · `% Condo` · `YoY` · `Trend`. (The console-header metric chips use these short labels for the same space reason.)
+  - KPI labels: `Median` · `YoY` · `Condo` · `Distribution` (+ honesty tags: `≈ Of Medians` — "Of" is the first word after the `≈` symbol so it stays capital; `Parcel-Weighted · Exact`; `Excluding Condos`).
+  - Console header scope: `All 407 Neighbourhoods` · `6 Neighbourhoods Selected` · `<Name>` (name as delivered).
+  - Handle/affordances: `Data Table` · `Analyst View` · `Press T`.
+  - Map labels follow the data's own casing (Title Case as delivered).
 - **Numerals:** `font-variant-numeric: tabular-nums` on ALL numbers (tables, cards, readouts, sliders).
 - **One number formatter, everywhere chrome-side:** compact — `$448k`, `≈$425k`, `611 m²`, `+7.3%`, `+72pp`. Full precision is Export's job ONLY. The `$448,000` vs `$731k` vs `≈$425,125` inconsistency is a defect.
 - **Approximation mark `≈`** prefixes any median-of-medians or estimated aggregate. Never dropped.
