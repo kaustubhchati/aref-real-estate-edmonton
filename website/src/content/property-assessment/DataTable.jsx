@@ -702,10 +702,22 @@ export default function DataTable({
               {open && <div className="pa-tune-dock pa-tune-dock-console">{tuningInstrument}</div>}
               <div className="dt-head-r">
                 {/* FIXED-SLOT strip (Principle 0 — grid-structured external, dynamic
-                    internal): District, Clear filters, Clear selection, Export each hold a
-                    PERMANENT slot. State toggles their ENABLED state in place (dimmed but
-                    present when inert, §4 disabled-may-drop-floor-but-readable); it never
-                    adds/removes an element, so nothing reflows. */}
+                    internal): Clear filters, Clear selection, District, Export each hold a
+                    PERMANENT slot in that reading order (§6 regroup: the two clears sit
+                    together, then the District brush, then Export). State toggles their
+                    ENABLED state in place (dimmed but present when inert, §4
+                    disabled-may-drop-floor-but-readable); it never adds/removes an element,
+                    so nothing reflows. Every control shares the §6 console-button chassis. */}
+                {/* Two DISTINCT clears (Bug 2 / §6): FILTER (range or District, `anyFacet`)
+                    vs SELECTION — disambiguated labels, identical pill treatment, each
+                    disabled in place when its target is empty. `Clear filters` also clears
+                    the metric-range narrowing (both are columnFilters). */}
+                <button type="button" className="dt-facets-clear" onClick={clearFacets} disabled={!anyFacet}>
+                  Clear filters
+                </button>
+                <button type="button" className="dt-clear" onClick={onClearSelection} disabled={!(selectionMode || singleRow)}>
+                  Clear selection
+                </button>
                 {/* District facet (VIEW-only brush) — inert while a selection is active. */}
                 <div className="dt-facets" role="group" aria-label="Filter the table">
                   {FACETS.map((f) => {
@@ -722,16 +734,6 @@ export default function DataTable({
                       : <FacetToggles key={f.id} {...shared} />;
                   })}
                 </div>
-                {/* Two DISTINCT clears (Bug 2 / §6): FILTER (range or District, `anyFacet`)
-                    vs SELECTION — disambiguated labels, each disabled in place when its
-                    target is empty. `Clear filters` also clears the metric-range narrowing
-                    (both are columnFilters). */}
-                <button type="button" className="dt-facets-clear" onClick={clearFacets} disabled={!anyFacet}>
-                  Clear filters
-                </button>
-                <button type="button" className="dt-clear" onClick={onClearSelection} disabled={!(selectionMode || singleRow)}>
-                  Clear selection
-                </button>
                 <ExportMenu onExport={onExport} year={year} years={years} selectedCount={selectedIds.length} />
               </div>
             </div>
@@ -1045,10 +1047,18 @@ function FacetDropdown({ label, options, selected, labelOf, onToggle, disabled =
       // Flip UP when a full-height menu would overflow the console bottom (the trigger
       // sits in the shallow console header). Opening upward puts the menu over the map,
       // clear of the console's stacking context, so it always reads.
+      const MENU_W = 180; // .dt-facet-list min-width
       const flipUp = window.innerHeight - r.bottom < 340;
-      setPos(flipUp
-        ? { left: r.left, bottom: window.innerHeight - r.top + 6 }
-        : { left: r.left, top: r.bottom + 6 });
+      // Right-anchor (open leftward) when a left-anchored menu would spill off the
+      // right edge — District sits near the console's right edge after the regroup.
+      const spillsRight = r.left + MENU_W > window.innerWidth - 8;
+      const horiz = spillsRight
+        ? { right: Math.round(window.innerWidth - r.right) }
+        : { left: Math.round(r.left) };
+      const vert = flipUp
+        ? { bottom: Math.round(window.innerHeight - r.top + 6) }
+        : { top: Math.round(r.bottom + 6) };
+      setPos({ ...horiz, ...vert });
     }
     setOpen(true);
   }

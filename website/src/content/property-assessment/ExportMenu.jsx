@@ -39,12 +39,19 @@ export default function ExportMenu({ onExport, year, years = [], selectedCount =
   function openMenu() {
     const r = triggerRef.current?.getBoundingClientRect();
     if (r) {
+      const MENU_W = 232; // .export-menu-list min-width — the widest the menu opens
       const flipUp = window.innerHeight - r.bottom < 260; // not enough room below
-      setPos(
-        flipUp
-          ? { left: r.left, bottom: window.innerHeight - r.top + 6 }
-          : { left: r.left, top: r.bottom + 6 }
-      );
+      // Export sits at the console's RIGHT edge, so a left-anchored menu would spill
+      // off the viewport. Right-anchor (menu's right edge → trigger's right edge, so it
+      // opens leftward) whenever a left-anchored menu wouldn't clear the right margin.
+      const spillsRight = r.left + MENU_W > window.innerWidth - 8;
+      const horiz = spillsRight
+        ? { right: Math.round(window.innerWidth - r.right) }
+        : { left: Math.round(r.left) };
+      const vert = flipUp
+        ? { bottom: Math.round(window.innerHeight - r.top + 6) }
+        : { top: Math.round(r.bottom + 6) };
+      setPos({ ...horiz, ...vert });
     }
     setOpen(true);
   }

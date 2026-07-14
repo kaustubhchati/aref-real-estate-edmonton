@@ -922,14 +922,9 @@ p  { margin: 0 0 0.75rem; }
 .dt-facet-chip.is-on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); }
 /* The metric-range facet now renders as a one-line dual-handle in the tuning rack
    (RangeFacet → .pa-range-slot / .pa-dual, styled near the rack CSS below). */
-/* Reset the facets (distinct from "Clear selection") — pushed to the row's end. */
-.dt-facets-clear {
-  font-family: inherit; font-size: 0.72rem; font-weight: 600;   /* margin-left:auto removed — now a fixed slot in the dt-head-r grid, not floated to the end */
-  color: var(--accent-dark); background: transparent; border: 0; cursor: pointer;
-  text-decoration: underline; padding: 3px 4px; white-space: nowrap;
-}
-.dt-facets-clear:hover { color: var(--text); }
-.dt-facets-clear:disabled { opacity: 0.4; cursor: default; pointer-events: none; text-decoration: none; }   /* inert in place (Principle 0 / §4) */
+/* "Clear filters" (distinct from "Clear selection") — now a console pill sharing the
+   §6 chassis + the identical-clears treatment (see the chassis block below), not the
+   old text-link. Both surface/geometry live there; nothing button-specific here. */
 
 /* Scrolls BOTH axes: vertically through the rows, and horizontally on a narrow
    (mobile) dock so the fixed chassis keeps its full column widths and SCROLLS
@@ -1068,8 +1063,7 @@ p  { margin: 0 0 0.75rem; }
 .dt-panel .dt-metric .seg-options { background: transparent; border: 0; padding: 0; }
 .dt-panel .dt-metric .seg-label { color: var(--pa-mut); }
 .dt-panel .dt-metric .seg-btn {
-  color: #c7cacd; background: transparent;
-  border: 1px solid var(--pa-hair); border-radius: 999px;
+  color: #c7cacd; background: transparent;   /* geometry (radius/pad/border) from the §6 chassis */
 }
 .dt-panel .dt-metric .seg-btn.active {
   background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); box-shadow: none;
@@ -1081,8 +1075,7 @@ p  { margin: 0 0 0.75rem; }
    <body>, no longer a .dt-panel descendant.) */
 .dt-panel .dt-facet-chip { background: var(--pa-card); border-color: var(--pa-hair); color: #c7cacd; }
 .dt-panel .dt-facet-chip.is-on { background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); }
-.dt-panel .dt-facets-clear { color: var(--pa-mut); }
-.dt-panel .dt-facets-clear:hover { color: var(--pa-ink); }
+/* (Clear-filters color/hover now live in the §6 identical-clears rule.) */
 
 /* Table — basic dark skin (C7 re-cuts columns + adds the TREND sparkcol). */
 .dt-panel .dt-table { color: var(--pa-ink); }
@@ -1193,15 +1186,37 @@ p  { margin: 0 0 0.75rem; }
 .dt-head .dt-metric { margin-left: 6px; }
 .dt-head .dt-metric .seg-label { display: none; }
 .dt-head .dt-metric .seg, .dt-head .dt-metric .seg-options { margin: 0; }
-/* × Clear — a header pill; hovers to the selection coral. */
-.dt-clear {
-  font-family: inherit; font-size: 11px; color: #e8eaec; cursor: pointer;
-  background: var(--pa-card); border: 1px solid var(--pa-hair); border-radius: 8px; padding: 4px 11px;
+/* ============================================================================
+   §6 CONSOLE-BUTTON CHASSIS — ONE shape for every control in the console.
+   Metric chips, both Clears, District, Export share ONE geometry: radius, height,
+   padding, text-size, weight, hairline border. Only the STATE LAYER differs (below):
+     · metric chip     → transparent; .active paints GREEN (the selected metric)
+     · both Clears      → transparent outline; identical; :disabled dims inert-in-place
+     · District/Export  → filled surface (--card) + an icon/caret
+   Ratified tokens (DESIGN_SYSTEM §6): radius --r-md · padding 4px 10px ·
+   font --t-sm/500 · border 1px solid --hair · gap 5px.
+   ============================================================================ */
+.dt-panel .dt-metric .seg-btn,
+.dt-head-r .dt-facets-clear,
+.dt-head-r .dt-clear,
+.dt-head-r .dt-facet-summary,
+.dt-head-r .pa-tools-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: inherit; font-size: var(--t-sm); font-weight: 500;
+  padding: 4px 10px; border-radius: var(--r-md);
+  border: 1px solid var(--hair); white-space: nowrap; cursor: pointer;
 }
-.dt-clear:hover { border-color: var(--pa-sel); color: var(--pa-sel); }
-/* Disabled = inert IN PLACE (Principle 0 — the slot holds; never absent). Dimmed but
-   readable (§4 — disabled states may drop below the floor but stay legible). */
-.dt-clear:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
+/* Both clears — ONE identical outline treatment (Fix 1). Enabled = outline;
+   disabled = inert IN PLACE (Principle 0 — the slot holds, never absent), dimmed but
+   readable (§4 — disabled may drop below the contrast floor but stays legible). */
+.dt-head-r .dt-facets-clear,
+.dt-head-r .dt-clear {
+  background: transparent; color: var(--pa-mut);
+}
+.dt-head-r .dt-facets-clear:hover:not(:disabled),
+.dt-head-r .dt-clear:hover:not(:disabled) { border-color: var(--pa-sel); color: var(--pa-sel); }
+.dt-head-r .dt-facets-clear:disabled,
+.dt-head-r .dt-clear:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
 
 /* TREND sparkcol cell (C7) — the sparkline sits inline; suppressed rows show "—". */
 .dt-panel .dt-table td .sparkline { display: inline-block; vertical-align: middle; }
@@ -1736,26 +1751,84 @@ p  { margin: 0 0 0.75rem; }
    shell; these mirror the retired .pa-column overrides). */
 .pa-tune-instrument .pa-slider::-webkit-slider-runnable-track { background: var(--pa-hair); }
 .pa-tune-instrument .pa-slider::-moz-range-track { background: var(--pa-hair); }
-/* Handles read as grabbable KNOBS — a light fill with a coloured ring (mockup),
-   not a solid dot. A GREEN ring on Year (the active-value control); a NEUTRAL grey
-   ring on the Metric range (a filter, not a value — that green is Year's alone). */
-.pa-tune-instrument .pa-slider::-webkit-slider-thumb { background: #e9ebed; border-color: var(--pa-mut); }
-.pa-tune-instrument .pa-slider::-moz-range-thumb { background: #e9ebed; border-color: var(--pa-mut); }
+/* ==========================================================================
+   RAISED THUMB (thumbs-only skeuomorphism — DESIGN_SYSTEM §3). The ONE thing
+   skeuomorphism did best — telegraphing "grab me" through DEPTH — applied to the
+   draggable thumbs ONLY. Same physics as the glass panels: ONE top light source,
+   a convex fill, a lit crown edge, an underside shade, and a contact shadow that
+   lifts the knob off the flat track. Tracks / ticks / panels / buttons stay FLAT.
+   The thumb is a CSS SKIN on a real <input type=range> (keyboard + value intact);
+   the identity RING (green Year / grey Metric) doubles as the forced-colors border,
+   and the knob's real elevation (contact shadow + border) keeps it ON TOP of the
+   track/fill by construction — the root-fix of the min-knob-behind-track bug.
+   Tokens are single-source below — one nudge re-tunes BOTH thumb types.
+   Starting values — TUNE ON-DEVICE (highlight alpha + gradient = the tactile /
+   wet-plastic line; do not lock from a screenshot).
+   ========================================================================== */
+:root {
+  --knob-size:            15px;                                                /* > 4px track, so it pops */
+  --knob-fill:            linear-gradient(180deg, #f6f8fa 0%, #cfd4d9 100%);   /* convex: lit crown → shaded base */
+  --knob-fill-press:      linear-gradient(180deg, #e4e8ec 0%, #c0c5cb 100%);   /* depressed */
+  --knob-highlight:       rgba(255, 255, 255, 0.75);                          /* inset top crown — THE key "raised" cue */
+  --knob-shade:           rgba(0, 0, 0, 0.30);                                /* inset underside shadow */
+  --knob-contact:         0 2px 4px rgba(0, 0, 0, 0.45);                      /* outer lift (dark-mode-bumped) */
+  --knob-border-w:        2px;                                                /* the identity ring = the real border */
+  --knob-highlight-press: rgba(255, 255, 255, 0.35);
+  --knob-shade-press:     rgba(0, 0, 0, 0.45);
+}
+/* The raised look — shared by BOTH thumb types (Year single + Metric dual); only the
+   ring COLOUR differs (grey default here, GREEN for Year below). -webkit + -moz can't
+   share a selector (one unknown pseudo drops the whole rule), so they're twinned. */
+.pa-tune-instrument .pa-slider::-webkit-slider-thumb {
+  width: var(--knob-size); height: var(--knob-size);
+  margin-top: calc((4px - var(--knob-size)) / 2);   /* re-centre the taller knob on the 4px track */
+  background: var(--knob-fill); border: var(--knob-border-w) solid var(--pa-mut);
+  box-shadow: inset 0 1px 0 var(--knob-highlight), inset 0 -1px 1px var(--knob-shade), var(--knob-contact);
+  transition: box-shadow 80ms ease, transform 80ms ease;
+}
+.pa-tune-instrument .pa-slider::-moz-range-thumb {
+  width: var(--knob-size); height: var(--knob-size);
+  background: var(--knob-fill); border: var(--knob-border-w) solid var(--pa-mut);
+  box-shadow: inset 0 1px 0 var(--knob-highlight), inset 0 -1px 1px var(--knob-shade), var(--knob-contact);
+  transition: box-shadow 80ms ease, transform 80ms ease;
+}
+/* Year = the active-value control → GREEN ring; Metric range = a filter → grey (above). */
 .pa-tune-instrument .pa-year-slider::-webkit-slider-thumb { border-color: var(--pa-up); }
 .pa-tune-instrument .pa-year-slider::-moz-range-thumb { border-color: var(--pa-up); }
+/* Press (drag) — depressed: dim the crown, deepen the underside, sink 0.5px. GPU-cheap
+   (transform + shadow only; NO blur animation — glass performance rule). */
+.pa-tune-instrument .pa-slider:active::-webkit-slider-thumb {
+  background: var(--knob-fill-press);
+  box-shadow: inset 0 1px 0 var(--knob-highlight-press), inset 0 -1px 2px var(--knob-shade-press), 0 1px 2px rgba(0,0,0,0.4);
+  transform: translateY(0.5px);
+}
+.pa-tune-instrument .pa-slider:active::-moz-range-thumb {
+  background: var(--knob-fill-press);
+  box-shadow: inset 0 1px 0 var(--knob-highlight-press), inset 0 -1px 2px var(--knob-shade-press), 0 1px 2px rgba(0,0,0,0.4);
+  transform: translateY(0.5px);
+}
+/* Reduced motion — no press animation (honours the setting; the state still applies). */
+@media (prefers-reduced-motion: reduce) {
+  .pa-tune-instrument .pa-slider::-webkit-slider-thumb,
+  .pa-tune-instrument .pa-slider::-moz-range-thumb { transition: none; }
+  .pa-tune-instrument .pa-slider:active::-webkit-slider-thumb,
+  .pa-tune-instrument .pa-slider:active::-moz-range-thumb { transform: none; }
+}
 .pa-tune-instrument .pa-dual-track { background: var(--pa-hair); }
 /* Range fill = a NEUTRAL band (mockup #3a3d42), NOT green: the metric range is the
    VIEW-only filter, not an active green value. Keeps Year's green as the sole accent. */
 .pa-tune-instrument .pa-dual-fill { background: #3a3d42; }
+/* Fill's right edge tracks the thumb CENTRE — keyed off --knob-size so a re-tuned knob
+   keeps the fill aligned (offset = half a knob; travel = track − one knob). */
 .pa-tune-instrument .pa-year-slider::-webkit-slider-runnable-track {
   background: linear-gradient(to right,
-    var(--pa-up) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
-    var(--pa-hair) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100));
+    var(--pa-up) calc(var(--knob-size) / 2 + var(--pct, 0) * (100% - var(--knob-size)) / 100),
+    var(--pa-hair) calc(var(--knob-size) / 2 + var(--pct, 0) * (100% - var(--knob-size)) / 100));
 }
 .pa-tune-instrument .pa-year-slider::-moz-range-track {
   background: linear-gradient(to right,
-    var(--pa-up) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
-    var(--pa-hair) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100));
+    var(--pa-up) calc(var(--knob-size) / 2 + var(--pct, 0) * (100% - var(--knob-size)) / 100),
+    var(--pa-hair) calc(var(--knob-size) / 2 + var(--pct, 0) * (100% - var(--knob-size)) / 100));
 }
 
 /* Calibration marks below the track — the "this axis has positions" signal. Year: one
