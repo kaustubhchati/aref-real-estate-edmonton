@@ -126,6 +126,19 @@
   --card:  #16181b;   /* KPI / detail tiles — one step DARKER than panel, so tiles read raised */
   --panel: #1a1c1f;   /* inner panel surfaces (table frame, trend frame) */
   --hair:  #2a2d31;   /* hairline borders / dividers */
+
+  /* Glass instrument layer (Fix B) — the floating chrome reads as frosted glass over
+     the map. The barrier FILL holds §4 contrast over the worst-case cream basemap
+     (recon math: 0.88 → --tx-mut ≈ 5.5:1 over #f7f1df); depth comes from the 1px light
+     RIM + the backdrop BLUR, NOT from lightening the fill (§1.1 darker-recedes). Opaque
+     --shell/--panel stay as the fallback barrier (see the @supports upgrade). ON-DEVICE
+     TUNED — Directive C codifies the ratified values into DESIGN_SYSTEM.md §1.1. */
+  --glass-panel-fill:   rgba(13,14,16,0.88);   /* lower tier — sidebar, slider console */
+  --glass-panel-blur:   12px;
+  --glass-panel-rim:    rgba(255,255,255,0.08);
+  --glass-overlay-fill: rgba(13,14,16,0.90);   /* higher tier — InfoRail, popover (float above) */
+  --glass-overlay-blur: 16px;
+  --glass-overlay-rim:  rgba(255,255,255,0.12);
   /* §1.2 text (all clear the §4 ≥4.5:1 floor on their surface) */
   --tx:     #f5f6f7;  /* primary text / values */
   --tx-mut: #9ba1a8;  /* secondary / labels — RAISED from #8b8f94 to clear 4.5:1 on --shell */
@@ -645,8 +658,10 @@ p  { margin: 0 0 0.75rem; }
   position: absolute; right: 12px; top: 208px; z-index: 14;
   width: 224px; max-width: calc(100vw - 24px);
   padding: 11px 13px;
-  background: var(--pa-shell); border-radius: 10px; color: var(--pa-ink);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  background: var(--pa-shell);                        /* opaque barrier = the fallback (glass in @supports) */
+  border: 1px solid var(--glass-overlay-rim);        /* brighter rim — higher elevation tier */
+  border-radius: 10px; color: var(--pa-ink);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);            /* higher-tier lift (floats above nav) */
   animation: rail-fade-in var(--dur-base) var(--ease);
   pointer-events: auto;
 }
@@ -1208,7 +1223,10 @@ p  { margin: 0 0 0.75rem; }
    single chassis used to carry lives here now; both read as raised surfaces. */
 .pa-card {
   display: flex; flex-direction: column; box-sizing: border-box;
-  background: var(--pa-shell); border-radius: var(--r-lg); padding: var(--s3);
+  background: var(--pa-shell);                       /* opaque barrier = the fallback (glass in @supports) */
+  border: 1px solid var(--glass-panel-rim);          /* light rim = the elevation edge (§1.1 depth-from-edge) */
+  border-radius: var(--r-lg); padding: var(--s3);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.32);           /* lower-tier lift */
 }
 /* The first module of the instrument card sits directly under the card's top edge:
    no leading separator (the hairlines DIVIDE modules, they don't cap the card). */
@@ -1361,7 +1379,9 @@ p  { margin: 0 0 0.75rem; }
 .pa-column .pa-info-btn:hover { color: var(--pa-ink); }
 .pa-column .pa-info-pop {
   position: static; width: 100%; max-width: 100%; padding: 9px 10px;
-  background: var(--pa-card); border: 1px solid var(--pa-hair); border-radius: 6px;
+  background: var(--pa-card);                          /* opaque barrier = the fallback */
+  border: 1px solid var(--glass-overlay-rim);          /* higher-tier rim (glass in @supports) */
+  border-radius: 6px;
   box-shadow: none; color: var(--pa-mut);
 }
 .pa-column .pa-hint { color: var(--pa-mut); }
@@ -1630,6 +1650,33 @@ p  { margin: 0 0 0.75rem; }
   flex: 0 1 var(--pa-tune-w);
 }
 .pa-tune-divider { align-self: stretch; width: 1px; background: var(--pa-hair); flex: 0 0 auto; }
+/* Slider-console STRIP only (floats over the map) — swap the hairline for the light
+   glass rim. The console-dock instance stays flat inside the opaque console (rule above),
+   so glass never lands there (KC: console opaque). */
+.pa-tune-dock-strip .pa-tune-instrument { border-color: var(--glass-panel-rim); }
+
+/* ==========================================================================
+   Glass upgrade (Fix B). Where backdrop-filter is supported, the four floating
+   instruments get the translucent barrier fill + blur (a frosted panel over the
+   map). Where it is NOT supported, the opaque base fills above are the fallback —
+   fully legible, §4 holds. Map + console + buttons/rows/tiles stay flat (selective
+   use; GPU budget). No blur animation anywhere — Fix-4 mode transitions move
+   position/opacity, never the blur.
+   ========================================================================== */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .pa-card,
+  .pa-tune-dock-strip .pa-tune-instrument {
+    background: var(--glass-panel-fill);
+    -webkit-backdrop-filter: blur(var(--glass-panel-blur));
+    backdrop-filter: blur(var(--glass-panel-blur));
+  }
+  .pa-detail,
+  .pa-column .pa-info-pop {
+    background: var(--glass-overlay-fill);
+    -webkit-backdrop-filter: blur(var(--glass-overlay-blur));
+    backdrop-filter: blur(var(--glass-overlay-blur));
+  }
+}
 
 /* Each control: head (name + active readout) · track+ticks · data-bound ends. */
 .pa-tune-ctrl { flex: 1 1 0; min-width: 0; }
