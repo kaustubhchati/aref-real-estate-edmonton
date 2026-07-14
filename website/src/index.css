@@ -1213,7 +1213,10 @@ p  { margin: 0 0 0.75rem; }
      internal scroll + the column's default text tier. A --s3 gap separates the
      two cards (the map shows through it — that gap IS what reads them as two). */
   position: absolute; left: 10px; top: 10px; z-index: 15;
-  width: 228px; max-height: calc(100% - 20px); box-sizing: border-box;
+  /* Fixed frame at the width that one-lines the LONGEST metric label ("Year over Year
+     Change (%)" = 227px natural) at the governed 14px (§1.5a — widen, never shrink text;
+     Principle 0 — frozen, not fluid). Identity card + metric panel + legend all share it. */
+  width: 268px; max-height: calc(100% - 20px); box-sizing: border-box;
   overflow-y: auto; overflow-x: hidden;
   display: flex; flex-direction: column; gap: var(--s3);
   color: var(--pa-mut); font-size: 11px;
@@ -1237,7 +1240,9 @@ p  { margin: 0 0 0.75rem; }
    Hairline-separated modules top→bottom; the footer pins to the bottom via
    margin-top:auto. The base light identity/info/slider/legend rules are
    overridden here by the more-specific .pa-column selectors. */
-.pa-col-mod { border-top: 1px solid var(--pa-hair); margin-top: 9px; padding-top: 8px; }
+/* Module separators — trim the old ad-hoc 9px to the §1.6 scale (--s2 = 8px); the
+   hairline + this governed gap ARE the inter-module rhythm (kept, not crammed). */
+.pa-col-mod { border-top: 1px solid var(--pa-hair); margin-top: var(--s2); padding-top: var(--s2); }
 .pa-col-lab {
   /* C2 — module labels at the --t-xs floor (was 10px, below the DESIGN_SYSTEM §1.5 min);
      --pa-mut now resolves to the raised --tx-mut, clearing 4.5:1 on --shell. */
@@ -1263,7 +1268,7 @@ p  { margin: 0 0 0.75rem; }
 .pa-column .opt-toggle-btn.active { background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); }
 
 /* METRIC module — vertical chip list, active green-bordered. */
-.pa-col-metric .seg { display: flex; flex-direction: column; gap: 5px; margin: 0; }
+.pa-col-metric .seg { display: flex; flex-direction: column; gap: var(--s2); margin: 0; }   /* label→buttons gap to §1.6 scale (was ad-hoc 5px) */
 .pa-col-metric .seg-label {
   /* D-F1 — the METRIC module banner: lifted off the sub-floor 10px onto --t-2xs (11px),
      matching the shared .pa-col-lab used by the ⚙ Tuning + Legend banners. */
@@ -1281,7 +1286,7 @@ p  { margin: 0 0 0.75rem; }
 .pa-col-metric .seg-icon { display: inline-flex; width: 15px; height: 15px; flex: 0 0 auto; }   /* glyph proportional to the 14px text, not oversized (§6) */
 .pa-col-metric .seg-btn {
   width: 100%; display: flex; align-items: center; justify-content: flex-start; gap: var(--s1);
-  font-family: inherit; text-align: left;
+  font-family: inherit; text-align: left; white-space: nowrap;   /* one line — the column is widened to fit the longest label at 14px */
   /* Physical box grows (taller, more internal padding = more presence); the TEXT is
      brought to the GOVERNED --t-sm/14px (§1.5a) — it was a hardcoded 12px, below spec.
      Not an amendment (14px IS the metric-button role size); NOT enlarged past 14px. */
@@ -1385,7 +1390,7 @@ p  { margin: 0 0 0.75rem; }
    in-flow lets the column's own scroll contain it). */
 /* B2 — footer flows right after the legend (no margin-top:auto pinning) since the
    column is now fit-content, so there's no void between the legend and the footer. */
-.pa-col-foot { display: flex; flex-direction: column; gap: 6px; }
+.pa-col-foot { display: flex; flex-direction: column; gap: var(--s2); }   /* foot gap to §1.6 scale (was ad-hoc 6px) */
 .pa-foot-line { display: flex; align-items: baseline; gap: 8px; }
 .pa-column .pa-info-btn {
   background: transparent; border: 0; box-shadow: none; border-radius: 0;
