@@ -1224,14 +1224,14 @@ function RangeFacet({ label, fmt, bounds, value, onChange, disabled = false }) {
               clamps to ≥ lo (can only go UP). So raise lo in the upper half (recovers a
               stuck [max,max]) and leave hi on top otherwise (recovers [min,min]). */}
           <input
-            type="range" className="pa-slider pa-dual-input"
+            type="range" className="pa-slider pa-dual-input pa-dual-lo"
             min={min} max={max} step={step} value={lo} disabled={off}
             style={{ zIndex: lo > (min + max) / 2 ? 3 : 1 }}
             aria-label={`${label} minimum`}
             onChange={(e) => onChange([Math.min(+e.target.value, hi), hi])}
           />
           <input
-            type="range" className="pa-slider pa-dual-input"
+            type="range" className="pa-slider pa-dual-input pa-dual-hi"
             min={min} max={max} step={step} value={hi} disabled={off}
             style={{ zIndex: 2 }}
             aria-label={`${label} maximum`}

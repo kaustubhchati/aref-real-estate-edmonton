@@ -1753,6 +1753,13 @@ p  { margin: 0 0 0.75rem; }
    shell; these mirror the retired .pa-column overrides). */
 .pa-tune-instrument .pa-slider::-webkit-slider-runnable-track { background: var(--pa-hair); }
 .pa-tune-instrument .pa-slider::-moz-range-track { background: var(--pa-hair); }
+/* R2 Fix 2/4 — the dual-INPUT runnable tracks MUST stay transparent so the
+   .pa-dual-track groove + the green .pa-dual-fill show through (the rule above paints
+   every instrument .pa-slider track grey; the .pa-dual-input override near the dual CSS
+   ties on specificity and loses on source order, so scope-beat it here — this is why the
+   range band read grey until now). */
+.pa-tune-instrument .pa-dual-input.pa-slider::-webkit-slider-runnable-track { background: transparent; }
+.pa-tune-instrument .pa-dual-input.pa-slider::-moz-range-track { background: transparent; }
 /* ==========================================================================
    RAISED THUMB (thumbs-only skeuomorphism — DESIGN_SYSTEM §3). The ONE thing
    skeuomorphism did best — telegraphing "grab me" through DEPTH — applied to the
@@ -1768,15 +1775,23 @@ p  { margin: 0 0 0.75rem; }
    wet-plastic line; do not lock from a screenshot).
    ========================================================================== */
 :root {
-  --knob-size:            15px;                                                /* > 4px track, so it pops */
-  --knob-fill:            linear-gradient(180deg, #f6f8fa 0%, #cfd4d9 100%);   /* convex: lit crown → shaded base */
-  --knob-fill-press:      linear-gradient(180deg, #e4e8ec 0%, #c0c5cb 100%);   /* depressed */
-  --knob-highlight:       rgba(255, 255, 255, 0.75);                          /* inset top crown — THE key "raised" cue */
-  --knob-shade:           rgba(0, 0, 0, 0.30);                                /* inset underside shadow */
-  --knob-contact:         0 2px 4px rgba(0, 0, 0, 0.45);                      /* outer lift (dark-mode-bumped) */
-  --knob-border-w:        2px;                                                /* the identity ring = the real border */
-  --knob-highlight-press: rgba(255, 255, 255, 0.35);
-  --knob-shade-press:     rgba(0, 0, 0, 0.45);
+  --knob-size:            18px;                                                /* R2 Fix 3: bigger = grabbier + harder to occlude (was 15px) */
+  --knob-fill:            linear-gradient(180deg, #f6f8fa 0%, #cfd4d9 100%);   /* convex: lit crown → shaded base [on-device tuning] */
+  --knob-fill-press:      linear-gradient(180deg, #e4e8ec 0%, #c0c5cb 100%);   /* depressed [on-device tuning] */
+  --knob-highlight:       rgba(255, 255, 255, 0.75);                          /* inset top crown — THE key "raised" cue [on-device tuning] */
+  --knob-shade:           rgba(0, 0, 0, 0.30);                                /* inset underside shadow [on-device tuning] */
+  --knob-contact:         0 2px 4px rgba(0, 0, 0, 0.45);                      /* outer lift (dark-mode-bumped) [on-device tuning] */
+  --knob-border-w:        2px;                                                /* the identity ring = the real border (§4 forced-colors) */
+  --knob-highlight-press: rgba(255, 255, 255, 0.35);                          /* [on-device tuning] */
+  --knob-shade-press:     rgba(0, 0, 0, 0.45);                                /* [on-device tuning] */
+  /* R2 Fix 6 — Median min/max ring IDENTITY (§1.3 kept clean: NEW control-identity
+     tokens, NOT the data colours). Deliberately separable from --city #60a5fa (soft
+     baseline blue) and --data-down #f88b6b (salmon) so rings never read as data. */
+  --knob-min-ring:        #2f6bff;   /* min = low → vivid blue (distinct from --city) */
+  --knob-max-ring:        #ef4444;   /* max = high → solid red (distinct from --data-down); matches ramp: higher = redder */
+  /* R2 Fix 4 — recessed track: a shallow inset groove the raised thumb rides in
+     (§3 DEPTH, not texture — same reasoning as the glass rim). Subtle, not a trench. */
+  --track-recess:         inset 0 1px 1.5px rgba(0, 0, 0, 0.38);
 }
 /* The raised look — shared by BOTH thumb types (Year single + Metric dual); only the
    ring COLOUR differs (grey default here, GREEN for Year below). -webkit + -moz can't
@@ -1797,40 +1812,74 @@ p  { margin: 0 0 0.75rem; }
 /* Year = the active-value control → GREEN ring; Metric range = a filter → grey (above). */
 .pa-tune-instrument .pa-year-slider::-webkit-slider-thumb { border-color: var(--pa-up); }
 .pa-tune-instrument .pa-year-slider::-moz-range-thumb { border-color: var(--pa-up); }
+/* R2 Fix 6 — Median dual: MIN thumb = blue ring, MAX thumb = red ring, so the two
+   handles are unambiguous (blue=low, red=high — the ramp direction). Control-identity
+   tokens, NOT data colours (§1.3). Same specificity as the base thumb rule → source
+   order wins, so these must sit AFTER it. */
+.pa-tune-instrument .pa-dual-lo::-webkit-slider-thumb { border-color: var(--knob-min-ring); }
+.pa-tune-instrument .pa-dual-lo::-moz-range-thumb { border-color: var(--knob-min-ring); }
+.pa-tune-instrument .pa-dual-hi::-webkit-slider-thumb { border-color: var(--knob-max-ring); }
+.pa-tune-instrument .pa-dual-hi::-moz-range-thumb { border-color: var(--knob-max-ring); }
+/* R2 Fix 5 — HOVER (invite): the knob grows slightly, telegraphing "drag me" BEFORE
+   the press. Three states now: rest → hover (grow) → active (press, below). GPU-cheap
+   (transform only; no blur). Reduced-motion disables it (block at the end). */
+.pa-tune-instrument .pa-slider:hover::-webkit-slider-thumb { transform: scale(1.12); }
+.pa-tune-instrument .pa-slider:hover::-moz-range-thumb { transform: scale(1.12); }
 /* Press (drag) — depressed: dim the crown, deepen the underside, sink 0.5px. GPU-cheap
-   (transform + shadow only; NO blur animation — glass performance rule). */
+   (transform + shadow only; NO blur animation — glass performance rule). Listed AFTER
+   :hover (same specificity) so a dragged-and-hovered thumb reads as pressed, not grown. */
 .pa-tune-instrument .pa-slider:active::-webkit-slider-thumb {
   background: var(--knob-fill-press);
   box-shadow: inset 0 1px 0 var(--knob-highlight-press), inset 0 -1px 2px var(--knob-shade-press), 0 1px 2px rgba(0,0,0,0.4);
-  transform: translateY(0.5px);
+  transform: translateY(0.5px) scale(1.04);   /* pressed-and-held (stays engaged from the hover grow) */
 }
 .pa-tune-instrument .pa-slider:active::-moz-range-thumb {
   background: var(--knob-fill-press);
   box-shadow: inset 0 1px 0 var(--knob-highlight-press), inset 0 -1px 2px var(--knob-shade-press), 0 1px 2px rgba(0,0,0,0.4);
-  transform: translateY(0.5px);
+  transform: translateY(0.5px) scale(1.04);
 }
-/* Reduced motion — no press animation (honours the setting; the state still applies). */
+/* Reduced motion — no hover/press animation (honours the setting; states still apply
+   their non-transform cues so the thumb stays legible). */
 @media (prefers-reduced-motion: reduce) {
   .pa-tune-instrument .pa-slider::-webkit-slider-thumb,
   .pa-tune-instrument .pa-slider::-moz-range-thumb { transition: none; }
+  .pa-tune-instrument .pa-slider:hover::-webkit-slider-thumb,
+  .pa-tune-instrument .pa-slider:hover::-moz-range-thumb,
   .pa-tune-instrument .pa-slider:active::-webkit-slider-thumb,
   .pa-tune-instrument .pa-slider:active::-moz-range-thumb { transform: none; }
 }
-.pa-tune-instrument .pa-dual-track { background: var(--pa-hair); }
-/* Range fill = a NEUTRAL band (mockup #3a3d42), NOT green: the metric range is the
-   VIEW-only filter, not an active green value. Keeps Year's green as the sole accent. */
-.pa-tune-instrument .pa-dual-fill { background: #3a3d42; }
+/* R2 Fix 4 — recessed groove (§3 depth, not texture). R2 Fix 1 — track + fill sit BELOW
+   the thumbs (z-index 0 + pointer-events none) so the z-indexed inputs (1–3) always win;
+   the min knob can no longer be occluded by the active-range fill. */
+.pa-tune-instrument .pa-dual-track {
+  background: var(--pa-hair); box-shadow: var(--track-recess);
+  z-index: 0; pointer-events: none;
+}
+/* R2 Fix 2 — active range shaded in the ACCENT (the same --pa-up Year's fill uses): a
+   control-state "your range" band, matching Year. NOT a data colour — it's the shared
+   control accent on both sliders (§1.3 stays clean; the min/max IDENTITY is the rings).
+   (Was a neutral grey band.) */
+.pa-tune-instrument .pa-dual-fill {
+  background: var(--pa-up); z-index: 0; pointer-events: none;
+}
+/* R2 Fix 1 — room for the bigger knob: a taller interactive band + overflow visible so
+   the raised thumb is never cropped by the track box, at rest or while dragging. */
+.pa-tune-instrument .pa-slider { height: 20px; }
+.pa-tune-instrument .pa-dual { height: 20px; overflow: visible; }
+.pa-tune-track-wrap { overflow: visible; }
 /* Fill's right edge tracks the thumb CENTRE — keyed off --knob-size so a re-tuned knob
    keeps the fill aligned (offset = half a knob; travel = track − one knob). */
 .pa-tune-instrument .pa-year-slider::-webkit-slider-runnable-track {
   background: linear-gradient(to right,
     var(--pa-up) calc(var(--knob-size) / 2 + var(--pct, 0) * (100% - var(--knob-size)) / 100),
     var(--pa-hair) calc(var(--knob-size) / 2 + var(--pct, 0) * (100% - var(--knob-size)) / 100));
+  box-shadow: var(--track-recess);   /* R2 Fix 4 — recessed groove (§3 depth) */
 }
 .pa-tune-instrument .pa-year-slider::-moz-range-track {
   background: linear-gradient(to right,
     var(--pa-up) calc(var(--knob-size) / 2 + var(--pct, 0) * (100% - var(--knob-size)) / 100),
     var(--pa-hair) calc(var(--knob-size) / 2 + var(--pct, 0) * (100% - var(--knob-size)) / 100));
+  box-shadow: var(--track-recess);
 }
 
 /* Calibration marks below the track — the "this axis has positions" signal. Year: one
