@@ -21,11 +21,15 @@ import { CITY_BOUNDS } from "../../config/cityBounds.js";
 // ---- Map view defaults (Edmonton, matches 09_build_choropleth.html) --------
 // (Data URL no longer lives here — single source of truth is dataSources.js,
 // which the page resolves from the (city, year) controls.)
-// C10 (optional; KC to veto in review) — colour policy for LEVEL-metric ($ / lot /
-// year) deltas. true = coloured green/coral (the annex default, no visual change);
-// false = neutral white, reserving colour for the signed RATE deltas (YoY / pp). ONE
-// switch, read by both the console KPI cards (DataTable) and the detail float (InfoRail).
-export const COLOUR_LEVEL_DELTAS = false;
+// Colour policy for LEVEL-metric ($ / lot / year) deltas vs city. ONE switch, read by
+// both the console KPI cards (DataTable) and the detail float (InfoRail).
+// AMENDED 2026-07-13 (KC ratified, DESIGN_SYSTEM §1.3): true — ALL signed deltas colour
+// by sign (green/coral), retiring the old level/rate distinction. A signed delta reads
+// by direction whether it compares a level or a rate; only the SIGN matters, not the
+// unit. Zero stays neutral (signCls returns "" at 0). The +/− glyph is the colour-blind-
+// safe redundant channel (§4). The city BASELINE stays --city blue (a reference datum,
+// not a delta) — the sign-colour applies to the delta only.
+export const COLOUR_LEVEL_DELTAS = true;
 
 export const MAP_VIEW = {
   // center/zoom are only the CONSTRUCTION FALLBACK (the map must build with some

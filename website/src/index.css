@@ -1142,9 +1142,11 @@ p  { margin: 0 0 0.75rem; }
   font-size: var(--t-2xs); font-variant-numeric: tabular-nums; min-width: 0;
 }
 .dt-tile-city { color: var(--city); white-space: normal; }   /* own line, wraps if long — never clips */
-/* P3 — the delta is a DATA VALUE, never grey/secondary. Level deltas (median/mean/lot
-   vs city) are white --tx EXPLICITLY (was inherited, fragile; COLOUR_LEVEL_DELTAS=false);
-   rate deltas (YoY/pp) override to semantic --data-up/--data-down via .dt-up/.dt-dn below. */
+/* P3 — the delta is a DATA VALUE, never grey/secondary. --tx is the BASE (only exactly-
+   zero deltas keep it — no sign, no colour); ALL signed deltas override to semantic
+   --data-up/--data-down via .dt-up/.dt-dn below (§1.3 amended 2026-07-13 —
+   COLOUR_LEVEL_DELTAS=true; level AND rate deltas colour by sign). The +/− glyph is the
+   colour-blind-safe redundant channel (§4). Baseline stays --city blue (.dt-tile-city). */
 .dt-tile-d { font-weight: 500; white-space: nowrap; color: var(--tx); }
 /* Shared bits — the distribution card frame + the CONDO secondary block + sign colours. */
 .dt-card { background: var(--card); border: 1px solid var(--hair); border-radius: var(--r-md); padding: 7px 10px; }
