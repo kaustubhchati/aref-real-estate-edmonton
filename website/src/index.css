@@ -1269,17 +1269,25 @@ p  { margin: 0 0 0.75rem; }
      matching the shared .pa-col-lab used by the ⚙ Tuning + Legend banners. */
   margin: 0; font-size: var(--t-2xs); letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut);
 }
-.pa-col-metric .seg-options { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; background: transparent; border: 0; padding: 0; }
+/* Metric buttons grow PHYSICALLY (kill-the-void redistribution): full-width uniform
+   blocks in a stacked list (long labels wrap consistently in the narrow column, no
+   uneven auto-width chips) + more vertical rhythm (--s2) for presence; §1.6 steps only. */
+.pa-col-metric .seg-options { display: flex; flex-direction: column; align-items: stretch; gap: var(--s2); background: transparent; border: 0; padding: 0; }
 /* P5 — surface the per-metric glyph in the LEFT RAIL only (the console-header re-home
    stays text-only via .dt-metric .seg-icon). The SegmentedControl SVG uses
    stroke="currentColor", so the glyph greens with the label on the active chip — the
    green border stays the ONLY selected signal, no per-metric colour. CSS width/height wins
    over the SVG's intrinsic 16px, sizing it to sit with the chip text. */
-.pa-col-metric .seg-icon { display: inline-flex; width: 14px; height: 14px; flex: 0 0 auto; }
+.pa-col-metric .seg-icon { display: inline-flex; width: 15px; height: 15px; flex: 0 0 auto; }   /* glyph proportional to the 14px text, not oversized (§6) */
 .pa-col-metric .seg-btn {
-  width: auto; display: inline-flex; align-items: center;
-  font-family: inherit; font-size: 12px; color: #c7cacd; cursor: pointer;
-  background: transparent; border: 1px solid var(--pa-hair); border-radius: 6px; padding: 3px 10px;
+  width: 100%; display: flex; align-items: center; justify-content: flex-start; gap: var(--s1);
+  font-family: inherit; text-align: left;
+  /* Physical box grows (taller, more internal padding = more presence); the TEXT is
+     brought to the GOVERNED --t-sm/14px (§1.5a) — it was a hardcoded 12px, below spec.
+     Not an amendment (14px IS the metric-button role size); NOT enlarged past 14px. */
+  font-size: var(--t-sm); color: #c7cacd; cursor: pointer;
+  background: transparent; border: 1px solid var(--pa-hair); border-radius: 7px;
+  padding: var(--s2) var(--s3);
 }
 .pa-col-metric .seg-btn.active { background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); }
 
@@ -1359,6 +1367,13 @@ p  { margin: 0 0 0.75rem; }
 }
 
 /* LEGEND module — flat dark (strip the gel frame; Legend.jsx internals untouched). */
+/* Anchored LOWER (kill-the-void redistribution): extra breathing room above the legend
+   so it sits near the footer after the grown metric panel, absorbing the trailing void
+   by repositioning — NOT by resizing the ramp (its intrinsic size is untouched, so the
+   colour scale never reads as changed). §1.6 named step; Principle 0 (frame unchanged).
+   Works in both modes: View (after the metric panel) and console (after identity, where
+   the metric is dormant — a modest gap, no huge gutter). */
+.pa-card-instrument .pa-col-legend { margin-top: var(--s6); }
 .pa-col-legend .legend { background: transparent; border: 0; box-shadow: none; border-radius: 0; padding: 0; }
 .pa-col-legend .legend-title { color: var(--pa-mut); font-size: var(--t-xs); }
 /* C2 — the ramp min/max end labels lift to the raised --tx-mut at the --t-2xs floor so
