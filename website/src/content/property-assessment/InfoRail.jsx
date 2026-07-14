@@ -55,7 +55,6 @@ export default function InfoRail({
 }) {
   const state = feature.polygon_state;
   const meta = STATE_STYLE[state] || { label: state };
-  const stateWord = state === "aggregated" ? "reportable" : meta.label;
   const activeMetric = METRICS.find((m) => m.key === metric) ?? METRICS[0];
   const activeVal = num(feature[activeMetric.key]);
   // C2 — the chrome shows COMPACT figures (full precision is for Export): the $ metrics
@@ -100,10 +99,12 @@ export default function InfoRail({
         <button type="button" className="pa-detail-clear" onClick={onClear}
                 aria-label="Clear selection" title="Clear selection">✕</button>
       </div>
-      <p className="pa-detail-sub">
-        {rank != null ? `Rank ${rank} · ` : ""}
-        {parcels != null ? `${fmtNumber(parcels)} parcels` : "— parcels"} · {stateWord}
-      </p>
+      {/* Rank in a FIXED SLOT under the name (Principle 0) — rank ONLY. The parcel
+          count moves into the stat stack below (Fix A1); the `reportable` status
+          descriptor is dropped as noise. Suppressed / non-residential / no-data states
+          still surface their honesty label via STATE_NOTE below (§6 — honesty labels
+          never stripped), so nothing meaningful is lost by removing `reportable` here. */}
+      <p className="pa-detail-sub">Rank {rank != null ? rank : "—"}</p>
 
       {/* Annexation-area note (Tier 2 · sub-concern E) — orthogonal to the state
           above; a polygon can be annexation-area AND aggregated. Agrees with the
@@ -143,12 +144,25 @@ export default function InfoRail({
 
       {aggregated ? (
         <div className="pa-detail-condo">
+          {/* Parcels (N) leads the stat stack (Fix A1) — relocated from the old name/rank
+              chip line into the governed stack: label --tx-mut, value --tx + tabular-nums. */}
+          <div className="pa-kv"><span className="pa-kv-k">Parcels (N)</span><span className="pa-kv-v">{parcels != null ? fmtNumber(parcels) : "—"}</span></div>
           <div className="pa-kv"><span className="pa-kv-k">Condo share</span><span className="pa-kv-v">{pctText(condo)}</span></div>
           <div className="pa-kv"><span className="pa-kv-k">Mean excl. condo</span><span className="pa-kv-v">{mexcl != null ? fmtCurrencyShort(mexcl) : "—"}</span></div>
           <div className="pa-kv"><span className="pa-kv-k">Lot (non-condo)</span><span className="pa-kv-v">{lot != null ? `${Math.round(lot)} m²` : "—"}</span></div>
         </div>
       ) : (
-        <p className="pa-detail-note">{STATE_NOTE[state] ?? meta.label}</p>
+        <>
+          {/* Non-aggregated: keep the parcel count when the neighbourhood has one
+              (suppressed_low_n) so it isn't lost with the chip line; the state's honesty
+              note follows. Non-residential / no-data have no residential parcels → note only. */}
+          {parcels != null && parcels > 0 && (
+            <div className="pa-detail-condo">
+              <div className="pa-kv"><span className="pa-kv-k">Parcels (N)</span><span className="pa-kv-v">{fmtNumber(parcels)}</span></div>
+            </div>
+          )}
+          <p className="pa-detail-note">{STATE_NOTE[state] ?? meta.label}</p>
+        </>
       )}
     </div>
   );

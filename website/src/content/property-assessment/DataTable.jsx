@@ -656,11 +656,16 @@ export default function DataTable({
         aria-expanded={open}
       >
         <span className="dt-handle-title">Data Table</span>
-        <span className={`dt-handle-meta${selectionMode ? " dt-handle-sel" : ""}`}>
-          {selectionMode
-            ? `${aggregate.nSelected} selected`
-            : `${rows.length} · ${open ? "Analyst View" : "Analyst View · Press T"}`}
-        </span>
+        {/* Fix A2 — "Data Table" + its pull-up affordance only. The universe count (·407)
+            and the "Analyst View" chip are removed (dropping the count also retires the
+            stale-403/407 maintenance — no literal to keep in sync). The SELECTION count
+            stays (live state feedback, contract §3.1); a light "Press T" discoverability
+            hint stays while collapsed. */}
+        {selectionMode ? (
+          <span className="dt-handle-meta dt-handle-sel">{aggregate.nSelected} selected</span>
+        ) : (
+          !open && <span className="dt-handle-meta">Press T</span>
+        )}
         <span className="dt-handle-caret" aria-hidden="true">{open ? "▾" : "▴"}</span>
       </button>
 
