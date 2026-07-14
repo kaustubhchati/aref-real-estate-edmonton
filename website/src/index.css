@@ -895,6 +895,7 @@ p  { margin: 0 0 0.75rem; }
 }
 .dt-facet-summary:hover { border-color: var(--tx-mut); }
 .dt-facet-summary.is-open { border-color: var(--sel); }
+.dt-facet-summary:disabled { opacity: 0.45; cursor: default; pointer-events: none; }   /* District inert while a selection is active — slot held (Principle 0 / §4) */
 .dt-facet-caret { color: var(--tx-mut); font-size: 0.9em; }
 /* Portaled menu (role=menu on <body>) — its OWN dark surface (no longer a .dt-panel
    descendant), elevated above the console. */
@@ -923,11 +924,12 @@ p  { margin: 0 0 0.75rem; }
    (RangeFacet → .pa-range-slot / .pa-dual, styled near the rack CSS below). */
 /* Reset the facets (distinct from "Clear selection") — pushed to the row's end. */
 .dt-facets-clear {
-  margin-left: auto; font-family: inherit; font-size: 0.72rem; font-weight: 600;
+  font-family: inherit; font-size: 0.72rem; font-weight: 600;   /* margin-left:auto removed — now a fixed slot in the dt-head-r grid, not floated to the end */
   color: var(--accent-dark); background: transparent; border: 0; cursor: pointer;
-  text-decoration: underline; padding: 3px 4px;
+  text-decoration: underline; padding: 3px 4px; white-space: nowrap;
 }
 .dt-facets-clear:hover { color: var(--text); }
+.dt-facets-clear:disabled { opacity: 0.4; cursor: default; pointer-events: none; text-decoration: none; }   /* inert in place (Principle 0 / §4) */
 
 /* Scrolls BOTH axes: vertically through the rows, and horizontally on a narrow
    (mobile) dock so the fixed chassis keeps its full column widths and SCROLLS
@@ -1180,7 +1182,11 @@ p  { margin: 0 0 0.75rem; }
 }
 .dt-head-l { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-wrap: wrap; }
 .dt-head-r { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
-.dt-scope { font-size: var(--t-md); font-weight: 500; color: var(--pa-ink); white-space: nowrap; }
+/* Count/name in a FIXED-WIDTH slot (Principle 0) — sized for the widest expected count
+   ("260 Of 407 Neighbourhoods" / "6 Neighbourhoods Selected"); the value changes inside,
+   the slot doesn't resize, so the metric chips beside it never shift. tabular-nums so
+   digit-width changes (46 → 131 → 260) don't nudge either. */
+.dt-scope { flex: 0 0 auto; min-width: 210px; font-size: var(--t-md); font-weight: 500; color: var(--pa-ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .dt-scope-sub { font-size: var(--t-2xs); color: var(--pa-mut); white-space: nowrap; }
 /* Header metric chips — no "METRIC" label (the chips read clearly next to the scope
    title); a small gap sets them off. */
@@ -1193,6 +1199,9 @@ p  { margin: 0 0 0.75rem; }
   background: var(--pa-card); border: 1px solid var(--pa-hair); border-radius: 8px; padding: 4px 11px;
 }
 .dt-clear:hover { border-color: var(--pa-sel); color: var(--pa-sel); }
+/* Disabled = inert IN PLACE (Principle 0 — the slot holds; never absent). Dimmed but
+   readable (§4 — disabled states may drop below the floor but stay legible). */
+.dt-clear:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
 
 /* TREND sparkcol cell (C7) — the sparkline sits inline; suppressed rows show "—". */
 .dt-panel .dt-table td .sparkline { display: inline-block; vertical-align: middle; }
@@ -1379,7 +1388,11 @@ p  { margin: 0 0 0.75rem; }
    Works in both modes: View (after the metric panel) and console (after identity, where
    the metric is dormant — a modest gap, no huge gutter). */
 .pa-card-instrument .pa-col-legend { margin-top: var(--s6); }
-.pa-col-legend .legend { background: transparent; border: 0; box-shadow: none; border-radius: 0; padding: 0; }
+/* color: the horizontal ramp's min/max bound labels use `color: inherit` (Legend.jsx);
+   without this they inherited a light-theme near-black (#1a1f2e) and vanished on the
+   dark/glass panel. Set the governed muted tier so the bounds clear §4 on the panel
+   surface, in their own row BELOW the ramp — never over the gradient (§5). */
+.pa-col-legend .legend { background: transparent; border: 0; box-shadow: none; border-radius: 0; padding: 0; color: var(--pa-mut); }
 .pa-col-legend .legend-title { color: var(--pa-mut); font-size: var(--t-xs); }
 /* C2 — the ramp min/max end labels lift to the raised --tx-mut at the --t-2xs floor so
    they clear 4.5:1 on --shell (were failing at the old muted grey). */

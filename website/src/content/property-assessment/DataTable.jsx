@@ -701,35 +701,37 @@ export default function DataTable({
                   console is up (the View strip above holds it when down). */}
               {open && <div className="pa-tune-dock pa-tune-dock-console">{tuningInstrument}</div>}
               <div className="dt-head-r">
-                {/* District facet (VIEW-only, brush-fenced) — normal mode only. */}
-                {!selectionMode && (
-                  <div className="dt-facets" role="group" aria-label="Filter the table">
-                    {FACETS.map((f) => {
-                      const shared = {
-                        label: f.label,
-                        options: facetOptions(f.id),
-                        selected: facetValue(f.id),
-                        labelOf: f.labelOf,
-                        onToggle: (v) => toggleFacet(f.id, v),
-                      };
-                      return f.control === "dropdown"
-                        ? <FacetDropdown key={f.id} {...shared} />
-                        : <FacetToggles key={f.id} {...shared} />;
-                    })}
-                    {anyFacet && (
-                      <button type="button" className="dt-facets-clear" onClick={clearFacets}>
-                        Clear filters
-                      </button>
-                    )}
-                  </div>
-                )}
-                {/* × Clear — empties the selection ONLY; the console stays up
-                    (S-e → S-c in place, §5). Shown when there's a selection. */}
-                {(selectionMode || singleRow) && (
-                  <button type="button" className="dt-clear" onClick={onClearSelection}>
-                    × Clear
-                  </button>
-                )}
+                {/* FIXED-SLOT strip (Principle 0 — grid-structured external, dynamic
+                    internal): District, Clear filters, Clear selection, Export each hold a
+                    PERMANENT slot. State toggles their ENABLED state in place (dimmed but
+                    present when inert, §4 disabled-may-drop-floor-but-readable); it never
+                    adds/removes an element, so nothing reflows. */}
+                {/* District facet (VIEW-only brush) — inert while a selection is active. */}
+                <div className="dt-facets" role="group" aria-label="Filter the table">
+                  {FACETS.map((f) => {
+                    const shared = {
+                      label: f.label,
+                      options: facetOptions(f.id),
+                      selected: facetValue(f.id),
+                      labelOf: f.labelOf,
+                      onToggle: (v) => toggleFacet(f.id, v),
+                      disabled: selectionMode,
+                    };
+                    return f.control === "dropdown"
+                      ? <FacetDropdown key={f.id} {...shared} />
+                      : <FacetToggles key={f.id} {...shared} />;
+                  })}
+                </div>
+                {/* Two DISTINCT clears (Bug 2 / §6): FILTER (range or District, `anyFacet`)
+                    vs SELECTION — disambiguated labels, each disabled in place when its
+                    target is empty. `Clear filters` also clears the metric-range narrowing
+                    (both are columnFilters). */}
+                <button type="button" className="dt-facets-clear" onClick={clearFacets} disabled={!anyFacet}>
+                  Clear filters
+                </button>
+                <button type="button" className="dt-clear" onClick={onClearSelection} disabled={!(selectionMode || singleRow)}>
+                  Clear selection
+                </button>
                 <ExportMenu onExport={onExport} year={year} years={years} selectedCount={selectedIds.length} />
               </div>
             </div>
@@ -1026,7 +1028,7 @@ function KpiCard({ label, city, value, valueCls, delta, cityScope, cityName, foo
 // A multi-select facet dropdown built on a native <details> disclosure — legible
 // and accessible with no custom open/close state. Options are data-driven; ticking
 // one toggles it in/out of the column filter. Selected count shows on the summary.
-function FacetDropdown({ label, options, selected, labelOf, onToggle }) {
+function FacetDropdown({ label, options, selected, labelOf, onToggle, disabled = false }) {
   // A1 — a PORTALED dark menu (was a native <details> trapped in the console's
   // overflow:hidden with invisible light-shell option text). Mirrors ExportMenu: the
   // menu is portaled to <body> as position:fixed, anchored under the trigger and
@@ -1076,6 +1078,7 @@ function FacetDropdown({ label, options, selected, labelOf, onToggle }) {
         ref={triggerRef}
         type="button"
         className={`dt-facet-summary${open ? " is-open" : ""}`}
+        disabled={disabled}
         onClick={() => (open ? setOpen(false) : openMenu())}
         aria-haspopup="menu"
         aria-expanded={open}
