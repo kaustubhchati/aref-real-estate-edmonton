@@ -1,4 +1,4 @@
-Neighbourhood ID,Neighbourhood,n_properties,avall_public,median_assessvalue,sd_assessedvalue,median_yearbuilt,pct_with_unit,avg_assessvalue_without_unit,avg_lotsize,suppressed,yoy_pct_change
+Neighbourhood ID,Neighbourhood,n_properties,avall_public,median_assessvalue,sd_assessedvalue,median_yearbuilt,pct_with_unit,avg_assessvalue_without_unit,avg_lotsize,suppressed,yoy_log_points
 1010,ALBERTA AVENUE,2289,284745.9589340327,264000,90340.55983050787,1943,6.509392747924858,281055.6074766355,384.039426635514,FALSE,7.878087785311438
 1020,BOYLE STREET,1077,170430.36211699137,103500,591299.0061405369,1981,93.87186629526462,707219.6969696968,497.2472727272728,FALSE,6.4860634202040925
 1030,CENTRAL MCDOUGALL,944,172190.67796610168,108750,186139.16610990628,1978,88.02966101694916,427818.58407079644,688.0883628318584,FALSE,5.688737440205142
