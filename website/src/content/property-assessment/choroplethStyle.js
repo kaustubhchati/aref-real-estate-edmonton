@@ -471,30 +471,29 @@ const yget = (field, year) => ["get", `${field}_${year}`];
 //       reading the chosen metric column (for `year`)
 // otherwise → that state's flat fillColor (or fallback grey).
 function buildFillColourExpression(metricKey, year, stops) {
-  const isYoy = metricKey === "yoy_pct_change";
+  // A null / absent value becomes the MISSING sentinel. -999 sits below every
+  // metric's real range (dollars, m², years, percentages, and the diverging ±E),
+  // so it can never be mistaken for data — and it is caught BEFORE the ramp, for
+  // EVERY metric.
+  //
+  // yoy always worked this way. The sequential metrics used to coerce a null to 0
+  // instead, and `interpolate` clamps below its first stop — so six aggregated
+  // polygons with no lot data painted as the ramp's MINIMUM colour, reading as
+  // "the smallest lots in the city", while the table honestly showed "—". A
+  // polygon we have no value for is no_data, whatever the metric is.
+  // See docs/recon/YOY_RECON_20260715.md YOY-10.
   const MISSING = -999;
-  const value = ["number", yget(metricKey, year), isYoy ? MISSING : 0];
+  const value = ["number", yget(metricKey, year), MISSING];
 
-  let aggregatedFill;
-  if (isYoy) {
-    // yoy INTERPOLATES over the diverging stops' VALUES (flat yellow plateau at ±1%,
-    // deepening to potent blue/red at ±E) — same continuous colour space as the
-    // sequential metrics (D6). A missing prior-year value (MISSING sentinel = -999,
-    // which sorts below -E) is caught FIRST and painted no_data grey — never the
-    // clamp blue. applyYearMetric still zeroes the tween for yoy, so a year change
-    // SNAPS to the new colour rather than sweeping through the ramp.
-    const interp = ["interpolate", ["linear"], value];
-    for (const s of stops) interp.push(s.v, s.c);
-    aggregatedFill = ["case", ["==", value, MISSING], STATE_STYLE.no_data.fillColor, interp];
-  } else {
-    // Every aggregated sequential metric INTERPOLATES over its per-year quantile
-    // stop VALUES (min/q25/median/q75/max) — a CONTINUOUS colour space (so the
-    // colour can tween on a year swap via fill-color-transition) with breaks still
-    // anchored at the quantile boundaries (no raw-value mid-plateau).
-    const interp = ["interpolate", ["linear"], value];
-    for (const s of stops) interp.push(s.v, s.c);
-    aggregatedFill = interp;
-  }
+  // Aggregated polygons INTERPOLATE over their stops' VALUES — a CONTINUOUS colour
+  // space, so the colour can tween on a year swap via fill-color-transition.
+  // Sequential metrics anchor their breaks at the per-year quantile boundaries
+  // (min/q25/median/q75/max), with no raw-value mid-plateau; yoy holds a flat
+  // plateau near zero and deepens to potent blue/red at ±E. applyYearMetric zeroes
+  // the tween for yoy, so a year change SNAPS rather than sweeping through the ramp.
+  const interp = ["interpolate", ["linear"], value];
+  for (const s of stops) interp.push(s.v, s.c);
+  const aggregatedFill = ["case", ["==", value, MISSING], STATE_STYLE.no_data.fillColor, interp];
 
   const state = yget("polygon_state", year);
   return [
