@@ -1862,14 +1862,13 @@ p  { margin: 0 0 0.75rem; }
    tick-calibrated — "unmistakably operable". Reuses the shared .pa-slider / .pa-dual
    mechanics; adds the two-tier readout (accent active value + muted data bounds).
    ========================================================================== */
-/* 500px. Briefly widened to 640 to seat the YoY readout, then reverted once the real
-   fixes landed: WEIGHTING the instrument's split toward the piecewise control
-   (.pa-tune-ctrl--piecewise) and reserving only the 132px that readout measures. Those
-   two fit it here at 500 — and they fix the CONSOLE dock too, which the wider bay never
-   reached (that dock shrinks to share the spine, so it ignored the extra width). The bay
-   floats over the map, so the 140px goes back to the map. max-width clamps narrow
-   viewports. */
-:root { --pa-tune-w: 500px; }
+/* 600px (2026-07-15, KC). Sized so the instrument's two controls can stay EQUAL and still
+   seat their heads: the widest head is YoY's (a unit-carrying name ~109px + 8px gap + the
+   132px readout slot ≈ 249px), so an even split needs ≈ 2×249 + the 37px of gaps/divider
+   ≈ 535 as its floor. 600 clears that with room, at 500 it did not — which is why the
+   split had briefly been weighted toward YoY instead. The bay floats over the map, so
+   this is the size of the bite it takes; max-width clamps narrow viewports. */
+:root { --pa-tune-w: 600px; }
 
 .pa-tune-dock { pointer-events: auto; }
 .pa-tune-dock-strip { align-self: center; margin-bottom: 6px; }   /* above the handle, centred in .pa-foot */
@@ -1962,17 +1961,15 @@ p  { margin: 0 0 0.75rem; }
 
 /* Each control: head (name + active readout) · track+ticks · data-bound ends. */
 .pa-tune-ctrl { flex: 1 1 0; min-width: 0; }
-/* The two controls in this instrument do NOT need the same room, so they no longer get
-   an equal split. Year's head is "YEAR" plus four digits; the piecewise (YoY) head must
-   seat a unit-carrying name (~109px) + an 8px gap + the 132px fixed readout slot = ~249.
-   An even split gave it ~190 and the readout overhung the bay — worst in the CONSOLE
-   dock, where the instrument SHRINKS (flex: 0 1) to share the spine with the console's
-   buttons and so never saw the wider bay at all.
-   Declared as a min-width rather than a tuned flex-grow ratio: the requirement really is
-   "this head needs 249px", and stating that lets flexbox hand Year whatever is left in
-   either dock. A ratio would encode the same number indirectly, silently drift if the
-   label or slot changed, and land 4px from clipping. */
-.pa-tune-ctrl--piecewise { min-width: 252px; }
+/* The two controls stay EQUAL at all times (KC, 2026-07-15) — `flex: 1 1 0` above is the
+   whole rule, and there is deliberately NO per-control width override here. Year needs
+   far less room than YoY does, so an even split is a choice, not an accident: the
+   instrument reads as one symmetrical rack rather than two differently-sized bays that
+   shift when the metric changes.
+   That symmetry is what SETS the bay's width: an even split has to be wide enough for the
+   WIDEST head, which is YoY's ≈249px, hence --pa-tune-w 600 (see above). If a future head
+   grows past half the instrument, widen the bay — do not re-weight the split, or the two
+   controls stop matching. */
 .pa-tune-ctrl-head {
   display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px;
 }
