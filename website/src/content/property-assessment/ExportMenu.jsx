@@ -39,7 +39,12 @@ export default function ExportMenu({ onExport, year, years = [], selectedCount =
   function openMenu() {
     const r = triggerRef.current?.getBoundingClientRect();
     if (r) {
-      const MENU_W = 232; // .export-menu-list min-width — the widest the menu opens
+      // Must be the menu's MAXIMUM width — this predicts the width before the menu
+      // exists, so an under-estimate silently defeats the spill test below. It read 232
+      // (the min-width) while the menu actually renders 407: a 175px error, and the
+      // comment claiming it was "the widest the menu opens" was simply untrue.
+      // .export-menu-list now caps at 420px; keep these two in sync.
+      const MENU_W = 420; // .export-menu-list max-width
       const flipUp = window.innerHeight - r.bottom < 260; // not enough room below
       // Export sits at the console's RIGHT edge, so a left-anchored menu would spill
       // off the viewport. Right-anchor (menu's right edge → trigger's right edge, so it
@@ -64,16 +69,30 @@ export default function ExportMenu({ onExport, year, years = [], selectedCount =
       if (!wrapRef.current?.contains(e.target) && !menuRef.current?.contains(e.target)) setOpen(false);
     };
     const onEsc = (e) => { if (e.key === "Escape") { setOpen(false); triggerRef.current?.focus(); } };
-    const onScroll = () => setOpen(false); // fixed menu doesn't track scroll — close instead of drift
+    // A PAGE scroll or resize must close the fixed menu (it cannot track its trigger),
+    // but capture:true also hears the menu's OWN list scrolling — and this list is
+    // max-height:340px + overflow-y:auto. Closing on that makes it unscrollable. Its
+    // content fits today (≈245px), so it never bit here; the District dropdown shares
+    // this pattern and its 15 options did NOT fit, which is how it surfaced. Guarded
+    // the same way so a sixth export format can never quietly reintroduce it.
+    // `instanceof Node` is load-bearing: a scroll targeted at WINDOW makes contains()
+    // throw, and the throw aborts the handler before it closes — leaving the menu hanging
+    // open on the very page scroll this exists to catch. A non-Node target IS the page.
+    const onScroll = (e) => {
+      const t = e.target;
+      if (t instanceof Node && menuRef.current?.contains(t)) return;   // the list scrolling itself
+      setOpen(false);
+    };
+    const onResize = () => setOpen(false);               // window event — no target to test
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onEsc);
     window.addEventListener("scroll", onScroll, true);
-    window.addEventListener("resize", onScroll);
+    window.addEventListener("resize", onResize);
     return () => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onEsc);
       window.removeEventListener("scroll", onScroll, true);
-      window.removeEventListener("resize", onScroll);
+      window.removeEventListener("resize", onResize);
     };
   }, [open]);
 

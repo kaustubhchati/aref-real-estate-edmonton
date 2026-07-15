@@ -1150,7 +1150,12 @@ function FacetDropdown({ label, options, selected, labelOf, onToggle, disabled =
       // Flip UP when a full-height menu would overflow the console bottom (the trigger
       // sits in the shallow console header). Opening upward puts the menu over the map,
       // clear of the console's stacking context, so it always reads.
-      const MENU_W = 180; // .dt-facet-list min-width
+      // Must be the menu's MAXIMUM width, not its minimum — this predicts the width
+      // before the menu exists, so an under-estimate silently defeats the spill test
+      // below. It read 180 (the min-width) while 15 districts actually rendered 195, so
+      // spillsRight never fired and the list sat flush against the window's right edge at
+      // every viewport. .dt-facet-list now caps at 240px; keep these two in sync.
+      const MENU_W = 240; // .dt-facet-list max-width
       const flipUp = window.innerHeight - r.bottom < 340;
       // Right-anchor (open leftward) when a left-anchored menu would spill off the
       // right edge — District sits near the console's right edge after the regroup.
@@ -1172,16 +1177,35 @@ function FacetDropdown({ label, options, selected, labelOf, onToggle, disabled =
       if (!wrapRef.current?.contains(e.target) && !menuRef.current?.contains(e.target)) setOpen(false);
     };
     const onEsc = (e) => { if (e.key === "Escape") { setOpen(false); triggerRef.current?.focus(); } };
-    const onScroll = () => setOpen(false);   // the fixed menu doesn't track scroll — close instead of drift
+    // The menu is position:fixed at coordinates measured once, so it cannot track its
+    // trigger — a PAGE scroll or a resize must close it rather than let it drift away.
+    //
+    // But capture:true is how we hear scrolls from any container, and that includes the
+    // menu's OWN list, which is max-height + overflow-y:auto. Closing on that made the
+    // list unscrollable: with 15 districts the content is ~492px inside a ~338px box, so
+    // every option past the fold was unreachable — reaching for them shut the menu.
+    // A scroll that STARTS inside the menu is the user reading it, not the page moving
+    // under it, so it is not a drift and must not close.
+    // `instanceof Node` is load-bearing, not defensive noise: a scroll event targeted at
+    // WINDOW rather than an element makes contains() throw ("parameter 1 is not of type
+    // 'Node'"), and the throw aborts the handler before it can close — so the menu would
+    // hang open on exactly the page scroll this exists to catch. A non-Node target IS the
+    // page moving, so it closes.
+    const onScroll = (e) => {
+      const t = e.target;
+      if (t instanceof Node && menuRef.current?.contains(t)) return;   // the list scrolling itself
+      setOpen(false);
+    };
+    const onResize = () => setOpen(false);               // window event — no target to test
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onEsc);
     window.addEventListener("scroll", onScroll, true);
-    window.addEventListener("resize", onScroll);
+    window.addEventListener("resize", onResize);
     return () => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onEsc);
       window.removeEventListener("scroll", onScroll, true);
-      window.removeEventListener("resize", onScroll);
+      window.removeEventListener("resize", onResize);
     };
   }, [open]);
 

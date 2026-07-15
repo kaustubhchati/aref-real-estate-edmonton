@@ -1006,6 +1006,43 @@ p  { margin: 0 0 0.75rem; }
   display: flex; flex-direction: column; gap: 1px; padding: var(--s2);
   background: var(--panel); border: 1px solid var(--hair); border-radius: var(--r-md);
   box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  /* max-width is LOAD-BEARING, not cosmetic: the JS spill guard (FacetDropdown's
+     MENU_W) has to predict this menu's width BEFORE it mounts, and min-width alone let
+     content decide it — 15 districts rendered 195px against a guessed 180, so the guard
+     under-detected and the list sat flush against the window's right edge with none of
+     its intended 8px gutter. Capping the width makes MENU_W a true upper bound. Keep the
+     two in sync. */
+  max-width: 240px;
+}
+
+/* SCROLLBARS on the portaled menus — always drawn, never overlay.
+   These lists are max-height + overflow-y:auto and DO overflow (15 districts ≈ 490px in
+   a ≈338px box). Left to the platform default they get an OVERLAY bar that fades out,
+   so on a dark panel there is nothing at rest to say four more districts exist below the
+   fold — and the fold itself is invisible.
+   ORDER MATTERS, and it is not stylistic: defining ::-webkit-scrollbar is what forces
+   Blink/WebKit to lay out a CLASSIC, always-drawn bar. Do NOT add `scrollbar-color` to
+   this shared rule — Chromium 121+ honours that property INSTEAD of these pseudo-
+   elements, and on an overlay platform it quietly reverts to the fading bar. That is
+   exactly how this was first "fixed" and stayed broken. Firefox, which has no
+   ::-webkit-*, is served the standard properties in its own @supports below. */
+.dt-facet-list::-webkit-scrollbar,
+.export-menu-list::-webkit-scrollbar { width: 11px; }
+.dt-facet-list::-webkit-scrollbar-track,
+.export-menu-list::-webkit-scrollbar-track { background: transparent; }
+.dt-facet-list::-webkit-scrollbar-thumb,
+.export-menu-list::-webkit-scrollbar-thumb {
+  background: var(--tx-dim); border-radius: 999px;
+  border: 3px solid transparent; background-clip: content-box;   /* inset from the edge */
+}
+.dt-facet-list::-webkit-scrollbar-thumb:hover,
+.export-menu-list::-webkit-scrollbar-thumb:hover { background: var(--tx-mut); background-clip: content-box; }
+/* Firefox only — it ignores ::-webkit-* and Chromium never reads this block. */
+@supports (-moz-appearance: none) {
+  .dt-facet-list, .export-menu-list {
+    scrollbar-width: thin;
+    scrollbar-color: var(--tx-dim) transparent;
+  }
 }
 .dt-facet-opt {
   display: flex; align-items: center; gap: 7px; cursor: pointer;
@@ -1691,6 +1728,11 @@ p  { margin: 0 0 0.75rem; }
   display: flex; flex-direction: column; padding: var(--s2); z-index: 200;
   background: var(--panel); border: 1px solid var(--hair); border-radius: var(--r-md);
   box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  /* LOAD-BEARING (see .dt-facet-list): ExportMenu's MENU_W has to predict this width
+     before the menu mounts, and min-width let the option descriptions decide it — the
+     menu renders 407px against a guessed 232. Capping it makes that guess a true upper
+     bound. Keep max-width and MENU_W in sync. */
+  max-width: 420px;
 }
 /* Two labelled groups (Data / Map); a hairline divides them. */
 .export-menu-group + .export-menu-group {
