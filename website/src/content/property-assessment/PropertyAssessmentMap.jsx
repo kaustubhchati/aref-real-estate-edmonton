@@ -1335,7 +1335,18 @@ export default function PropertyAssessmentMap() {
                   </div>
                   {infoOpen && (
                     <div className="pa-info-pop" role="group" aria-label="About and tips">
-                      <p className="pa-hint">Tip: shift-drag the map to select an area.</p>
+                      {/* Fix 4 — the canonical interaction reference: ALL interactions documented
+                          once, plain English, Title Case (§2). The inline "Press T" handle hint
+                          stays as the discoverable; this is the reference. */}
+                      <p className="pa-info-pop-h">How to Use This Map</p>
+                      <ul className="pa-info-list">
+                        <li><b>Click</b> a Neighbourhood to Select It.</li>
+                        <li><b>Shift + Drag</b> Across the Map to Box-Select Several at Once.</li>
+                        <li>Use the <b>Search</b> (Top Right) to Find and Fly to a Neighbourhood.</li>
+                        <li>Drag the <b>Year</b> Slider to Change the Year; Drag the <b>Median</b> Range to Narrow the Set to a Value Range.</li>
+                        <li>Press <b>T</b> (or the <b>Data Table</b> Handle) to Open the Analyst Table.</li>
+                        <li><b>Clear Filters</b> Resets the Range Filter; <b>Clear Selection</b> Deselects — Two Separate Undos.</li>
+                      </ul>
                       {/* D-F3 — the honest-aggregate disclosure, re-homed here from the per-KPI
                           methodology chips (surfaced ONCE, unobtrusively; §4/§9 never stripped). */}
                       <p className="pa-box-ref">

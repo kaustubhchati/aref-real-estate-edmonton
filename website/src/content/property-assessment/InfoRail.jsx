@@ -17,7 +17,7 @@
 
 import Sparkline from "../../components/Sparkline.jsx";
 import { METRICS, STATE_STYLE, COLOUR_LEVEL_DELTAS } from "./choroplethStyle.js";
-import { fmtNumber, fmtCurrencyShort } from "../../utils/format.js";
+import { fmtNumber, fmtCurrencyShort, fmtLogPts } from "../../utils/format.js";
 
 // Plain-language reason for a non-aggregated polygon, keyed by polygon_state.
 const STATE_NOTE = {
@@ -40,7 +40,8 @@ const TREND_METRICS = new Set(["median_assessvalue", "avall_public", "yoy_pct_ch
 const num = (v) => (v == null || !Number.isFinite(+v) || +v === -999 ? null : +v);
 const signCls = (n) => (n > 0 ? "dt-up" : n < 0 ? "dt-dn" : "");
 const signedPct = (r) => (r >= 0 ? "+" : "") + Math.round(r * 100) + "%";
-const signedPp = (d) => (d >= 0 ? "+" : "") + d.toFixed(1) + "pp";
+// (signedPp removed: YoY was its only caller, and a log-point gap is not a
+// percentage point — it now formats through fmtLogPts like the value it compares.)
 const pctText = (x) => (x == null ? "—" : `${Math.round(x)}%`);
 
 export default function InfoRail({
@@ -75,12 +76,16 @@ export default function InfoRail({
     stroke = dir > 0 ? "var(--pa-up)" : dir < 0 ? "var(--pa-dn)" : "var(--pa-dim)";
   }
 
-  // Active-metric triplet: value · city baseline · delta (level → relative %, YoY → pp;
-  // lot/built have no city baseline → value only).
+  // Active-metric triplet: value · city baseline · delta (level → relative %, YoY →
+  // log points; lot/built have no city baseline → value only).
   const cityVal = num(cityBaseline?.[CITY_KEY[metric]]);
   let delta = null;
   if (cityVal != null && activeVal != null) {
-    if (metric === "yoy_pct_change") delta = { txt: signedPp(activeVal - cityVal), cls: signCls(activeVal - cityVal) };
+    // YoY's delta is LOG POINTS, not "pp": a percentage point is the gap between two
+    // percentages, and log points are not percentages (METHODOLOGY.md D7). The value
+    // itself already renders through activeMetric.fmt = fmtLogPts, so the delta uses
+    // the same formatter and the same signed notation.
+    if (metric === "yoy_pct_change") delta = { txt: fmtLogPts(activeVal - cityVal), cls: signCls(activeVal - cityVal) };
     else if (cityVal !== 0) delta = { txt: signedPct((activeVal - cityVal) / cityVal), cls: COLOUR_LEVEL_DELTAS ? signCls(activeVal - cityVal) : "" };
   }
   const cityText = cityVal == null ? "—" : (APPROX.has(metric) ? "≈" : "") + chromeFmt(cityVal);

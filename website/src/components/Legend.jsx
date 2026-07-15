@@ -120,7 +120,12 @@ export default function Legend({
             color: "inherit",
           }}>
             <span>{format(hMin)}</span>
-            {diverging && <span style={{ color: "var(--text-subtle)" }}>±1%</span>}
+            {/* The held plateau. Unit-free on purpose: the legend TITLE carries the
+                unit (the only diverging caller is PA's YoY, whose unit is log points,
+                not "%" — METHODOLOGY.md D7). The ±1 bound itself is still a literal
+                here while the stops that draw it live in choroplethStyle — that
+                coupling is a separate finding, not fixed in this commit. */}
+            {diverging && <span style={{ color: "var(--text-subtle)" }}>±1</span>}
             <span>{format(hMax)}</span>
           </div>
         </div>

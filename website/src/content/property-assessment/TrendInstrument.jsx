@@ -7,17 +7,18 @@
 //   • a dashed muted CITY baseline (drawn when a `city` series is passed, N≥1)
 //   • the scope LINE (green): city mean (N=0) / neighbourhood (N=1) / sel mean (N≥2)
 //   • an active-year CORAL CURSOR tied to the tuning year
-// Below a hairline: the matched-sample YoY bar STRIP (green up / coral down). A
-// header carries the label + a top-right year·value readout; endpoints are labelled.
-// A local hover crosshair moves the readout (VIEW-only). EXCLUDED by contract:
-// click/drag-to-set-year, select-on-chart, axis grids, zoom/brush.
+// A header carries the metric label + a top-right year·value readout; endpoints are
+// labelled; the scope/city series are named ONCE in the bottom legend. A local hover
+// crosshair moves the readout (VIEW-only). EXCLUDED by contract: click/drag-to-set-year,
+// select-on-chart, axis grids, zoom/brush. (The matched-sample YoY bar strip was removed
+// 2026-07-14 — §3 essential-vs-non-essential: an axis-less 3px bar didn't help the user
+// decide; matched-sample YoY still lives in the table YoY column + the KPI YoY card.)
 //
 // Props:
-//   label       — frame label ("Median value · City")
+//   label       — frame label = the metric title only (the scope name is in the legend)
 //   main        — the scope line, one value per year (null / -999 = gap)
 //   city        — the dashed baseline per year, or null to omit (N=0)
 //   envelope    — per-year [min,max] (or null entry), or null to omit (N≤1)
-//   yoy         — the matched-sample YoY % per year (null = gap)
 //   years       — the manifest year list
 //   activeIndex — the tuning year's index (coral cursor)
 //   fmt         — the metric's value formatter
@@ -35,7 +36,6 @@ export default function TrendInstrument({
   main = [],
   city = null,
   envelope = null,
-  yoy = [],
   years = [],
   activeIndex = -1,
   fmt = (v) => v,
@@ -98,13 +98,6 @@ export default function TrendInstrument({
   // (no hover, and the active/tuning year IS the last year already labelled below).
   const showReadout = hoverI >= 0 || (activeOk && activeIndex !== lastI);
 
-  // YoY strip geometry — bars centred on a zero line, scaled to the max |YoY|.
-  const y = clean(yoy);
-  const yFinite = y.filter((v) => v != null).map((v) => Math.abs(v));
-  const yMax = yFinite.length ? Math.max(1, ...yFinite) : 1;
-  const SH = 22, SMID = SH / 2;
-  const barW = Math.max(3, ((W - 2 * PADX) / n) * 0.62);
-
   const onMove = (e) => {
     const r = e.currentTarget.getBoundingClientRect();
     const rel = (e.clientX - r.left) / r.width;
@@ -155,23 +148,6 @@ export default function TrendInstrument({
           {envelope && <span><i className="dt-sw dt-sw--band" />min–max</span>}
         </div>
       )}
-
-      <div className="dt-trend-yoy">
-        <span className="dt-trend-sub">YoY · Matched</span>
-        <svg viewBox={`0 0 ${W} ${SH}`} preserveAspectRatio="none" className="dt-trend-yoy-svg"
-             role="img" aria-label="Year-over-year change, matched sample">
-          <line x1="0" y1={SMID} x2={W} y2={SMID} stroke="var(--pa-hair)" vectorEffect="non-scaling-stroke" />
-          {y.map((v, i) => {
-            if (v == null) return null;
-            const h = (Math.abs(v) / yMax) * (SMID - 1);
-            const up = v >= 0;
-            return (
-              <rect key={i} x={xAt(i) - barW / 2} y={up ? SMID - h : SMID} width={barW} height={h}
-                    fill={up ? "var(--pa-up)" : "var(--pa-dn)"} />
-            );
-          })}
-        </svg>
-      </div>
     </div>
   );
 }

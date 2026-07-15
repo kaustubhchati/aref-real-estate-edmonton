@@ -121,11 +121,35 @@
   /* ===== DESIGN_SYSTEM.md §1 — canonical tokens (single source of truth; components
      read THESE, never raw hex/px). The --pa-* names below are retained as ALIASES so the
      as-built PA chrome keeps working while new work cites the DESIGN_SYSTEM names. ===== */
-  /* §1.1 surfaces (dark chrome) */
-  --shell: #0d0e10;   /* console / column chassis */
-  --card:  #16181b;   /* KPI / detail tiles — one step DARKER than panel, so tiles read raised */
-  --panel: #1a1c1f;   /* inner panel surfaces (table frame, trend frame) */
-  --hair:  #2a2d31;   /* hairline borders / dividers */
+  /* ===== TONAL-NEUTRAL CHROME SYSTEM (2026-07-14 directive — MOCK STAGE, tune on-device).
+     ONE warm-neutral hue, ALL dark chrome derived from it as LUMINANCE steps (Material You
+     tonal elevation + IBM Carbon layering + Primer neutral scale: "same hue value → surfaces
+     are siblings"). Fixes the two-temperatures collision (cold charcoal chrome vs warm accent)
+     by construction — surfaces cannot diverge in hue if derived from one token. The ≤8% sat
+     ceiling (ColorArchive "3–8% = invisible in isolation, clear at surface scale") prevents
+     the warm-dark→brown drift the literature flags for data terminals, and keeps chrome in a
+     SEPARATE saturation band from the fully-saturated data warmth (§1.3 / §4). Cool→warm shift
+     is hue-only; LIGHTNESS steps are preserved from the old cool tokens so §4 is unchanged
+     (verified: --tx 13–17:1, --tx-mut 5.6–7.5:1 on the new warm surfaces). ===== */
+  --neutral-hue: 34;         /* = the C2° accent amber hue (#f7c079 ≈ 34°); chrome shares the accent's TEMPERATURE, not its saturation */
+  --neutral-sat: 6%;         /* ≤8% ceiling — ALL chrome neutrals derive at this sat; tune on-device (3–8% band) */
+  /* §1.1 surfaces (dark chrome) — luminance steps off the ONE hue (Material tonal elevation).
+     Fix B move #4: the base RECEDES ~1% L (quieter → text pops, quiet zones exist → flow) while
+     keeping the hue+sat (quieter ≠ colder — warmth preserved, cohesion intact). Tune on-device. */
+  --shell: hsl(var(--neutral-hue) var(--neutral-sat) 5%);    /* console / column chassis (base) — receded */
+  --card:  hsl(var(--neutral-hue) var(--neutral-sat) 9%);    /* KPI / detail tiles */
+  --panel: hsl(var(--neutral-hue) var(--neutral-sat) 10%);   /* inner panel surfaces (table frame, trend frame) */
+  --hair:  hsl(var(--neutral-hue) var(--neutral-sat) 17%);   /* hairline borders / dividers */
+  /* Semantic surface ladder (DESIGN_SYSTEM §1.1 names — aliases onto the steps above; identity
+     card + metric panel + legend all resolve to --surface-raised = ONE token, no two-blacks). */
+  --surface-base:   var(--shell);
+  --surface-raised: var(--panel);
+  --surface-key:    var(--card);
+  /* --accent-soft — the active-key warm SPILL (Adminator/Primer `-soft` companion): a low-ALPHA
+     saturated amber halo so the active key emerges from a faintly-warm surround, not a cold pane.
+     Accent family (data-adjacent saturated warm), NOT a chrome neutral — the ≤8% ceiling is for
+     neutrals; at 0.12 alpha its effective contribution is tiny. */
+  --accent-soft: rgba(45,212,191,0.14);   /* active-key TEAL spill/halo (Option 1: cool interactive). Low-alpha teal so the active key emerges from a cool halo; the -soft companion pattern */
 
   /* Glass instrument layer (Fix B) — the floating chrome reads as frosted glass over
      the map. The barrier FILL holds §4 contrast over the worst-case cream basemap
@@ -133,16 +157,20 @@
      RIM + the backdrop BLUR, NOT from lightening the fill (§1.1 darker-recedes). Opaque
      --shell/--panel stay as the fallback barrier (see the @supports upgrade). ON-DEVICE
      TUNED — Directive C codifies the ratified values into DESIGN_SYSTEM.md §1.1. */
-  --glass-panel-fill:   rgba(13,14,16,0.88);   /* lower tier — sidebar, slider console */
+  --glass-panel-fill:   hsl(var(--neutral-hue) var(--neutral-sat) 5% / 0.88);   /* lower tier — derives from the ONE hue; receded to L5 (Fix B move #4) so text pops; barrier §4 verified (tx-mut 5.25:1) */
   --glass-panel-blur:   12px;
   --glass-panel-rim:    rgba(255,255,255,0.08);
-  --glass-overlay-fill: rgba(13,14,16,0.90);   /* higher tier — InfoRail, popover (float above) */
+  --glass-overlay-fill: hsl(var(--neutral-hue) var(--neutral-sat) 5% / 0.90);   /* higher tier — InfoRail, popover (float above); receded to match the base */
   --glass-overlay-blur: 16px;
   --glass-overlay-rim:  rgba(255,255,255,0.12);
-  /* §1.2 text (all clear the §4 ≥4.5:1 floor on their surface) */
-  --tx:     #f5f6f7;  /* primary text / values */
-  --tx-mut: #9ba1a8;  /* secondary / labels — RAISED from #8b8f94 to clear 4.5:1 on --shell */
-  --tx-dim: #6b7076;  /* tertiary / suppressed ONLY — never for text that must be read */
+  /* §1.2 text (all clear the §4 ≥4.5:1 floor on their surface). Primary stays near-neutral
+     white (values are temperature-neutral, §1.3); muted + dim + key inherit the warm neutral
+     so even quiet text belongs to ONE system (no cold-grey clash against the accent). */
+  --tx:     #f5f6f7;  /* primary text / values — neutral white (kept) */
+  --tx-mut: hsl(var(--neutral-hue) var(--neutral-sat) 60%);  /* secondary / labels — warm muted, RECEDED (Fix B move #1: widens the primary→muted luminance gap 2.55x→2.83x so labels recede & the eye lands on values); 5.25:1 on the receded glass barrier ✓§4 */
+  --tx-dim: hsl(var(--neutral-hue) var(--neutral-sat) 44%);  /* tertiary / suppressed ONLY — never for text that must be read */
+  --tx-key: hsl(var(--neutral-hue) var(--neutral-sat) 79%);  /* inactive console-key label (was raw cool #c7cacd); 10.4:1 on --panel */
+  --tx-read: #2dd4bf;  /* ZONE-SPLIT (Part 1, ratified): tuning-bay readouts = T1-BRIGHT teal — the darker/richer shade for the darker tuning-bay glass. Decoupled from the sidebar --accent-int-text (T2). §4 on the dark bay: 9.6:1 (pa-card) / 7.9:1 (glass-cream). YEAR/METRIC values + legend $bounds. */
   /* §1.3 semantic data roles (the ONLY places colour carries meaning) */
   --data-up:   #4ade80;  /* growth / increase (YoY +, pp +) */
   --data-down: #f88b6b;  /* decline / decrease (YoY −, pp −) */
@@ -174,12 +202,80 @@
   --pa-track-w: 80px;         /* tuning sliders' FIXED track width — one source of truth (P2 re-armed it) */
   --pa-tune-num-w: 54px;      /* tuning min/max value-cell width; flanks the fixed track (P2) */
 
+  /* ==========================================================================
+     INTERACTIVE ACCENT — RATIFIED (§1.3/§6). Option 1: COOL = interactive, WARM = data; green is
+     DATA-ONLY. Active console controls read as the DualSense material — dark teal-PETROL body +
+     a thin duochrome PEARL rim edge-light (teal→cyan→gold-green, luminance-flat, mask-constructed)
+     + teal-white TEXT (T2 sidebar / T1-bright tuning-bay readouts) + font-weight non-colour cue.
+     The gold-green is metallic-highlight-only (gold-shifted 67°, never data-green). Barrier
+     untouched. All values below are the ratified live values (the mock switcher was removed). */
+  --accent-int-specular: inset 0 1px 0 rgba(255,255,255,0.55);   /* active top-edge specular = material cue; STATIC */
+  /* ---- INTERACTIVE ACCENT = TEAL (2026-07-14, Option 1 ratified: cool = interactive, warm = data).
+     The warm C2° glow is RETIRED from all interactive chrome — it blinded out over the warm map.
+     Teal is cool (near-opposite the warm map), holds chroma through frost, and is tuned into the
+     GAP between --city blue (213°) and --data-up green (142°): teal 172° reads as neither city nor
+     growth. Distinct too from sel-violet 258° and YoY-indigo 229°. Green stays DATA-ONLY. ---- */
+  --accent-teal:      #2dd4bf;   /* bright interactive teal — 172°; rims / ticks / focus / slider fill */
+  --accent-teal-deep: #14b8a6;   /* teal-500, rim/glow depth */
+  /* ---- DUALSENSE MATERIAL (2026-07-14) — active chrome is a dark teal-PETROL base that
+     duochrome-SHIFTS to gold-green at the light-catching edge (satin metalflake, not gloss).
+     Petrol 185° = a DARK desaturated sibling of the bright teal (the deepest console surface).
+     Gold-green 67° is the metallic HIGHLIGHT only (rims/domes/fill-sheen) — gold-shifted 75° off
+     data-green (142°) so it reads as metal, NEVER data; it never becomes a flat fill or text. ---- */
+  --accent-petrol-base: #163639;   /* dark teal-petrol — deepest surface; at-rest DualSense colour */
+  --accent-petrol-lit:  #1e464c;   /* satin-lit top edge of the base */
+  --accent-goldgreen:   #bcc76e;   /* gold-green duochrome highlight — pearl-ONLY, gold-shifted (67°, ≠ data-green 142°) */
+  /* Interactive TEXT re-optimized for the DARK-petrol body (was bright teal on neutral glass):
+     t2 whiter-teal is the default (pops on dark petrol, §4 7.5:1 lit; even under a stray sheen 4.9:1).
+     Switcher offers t1 bright-teal / t3 near-white. Readouts follow (--tx-read = --accent-int-text). */
+  --accent-int-text:      #7defe0;   /* ZONE-SPLIT (Part 1, ratified): SIDEBAR interactive text (metric buttons, toggle) = T2 teal-white — legible on the dark-petrol bodies. (Tuning-bay readouts use T1 via --tx-read.) §4 7.5:1 on petrol-lit. */
+  --accent-int-track:     var(--accent-teal);   /* slider Year fill / thumb (solid teal; dual-fill uses the band below) */
+  --accent-int-text-glow: 0 0 6px rgba(45,212,191,0.45);   /* teal glow — static text-shadow (no animation) */
+  --accent-int-wash:   rgba(45,212,191,0.10);      /* active-metric table-column tint (teal) */
+  --accent-int-glow:   0 0 0 1px rgba(45,212,191,0.30), 0 3px 14px var(--accent-soft);  /* active-key teal spill/halo */
+  /* ONE duochrome sweep — the DualSense raking-light strip (deep teal→teal→cyan→gold-green→deep
+     teal). Shared source (Part 2): the slider active-fill, the metric-button rim edge-light, AND
+     the sidebar framing edge all reference this, so the slider line and the trim are the same light. */
+  /* FIXED-PERIOD (~132px) repeating sweep so the flip reads at the SAME scale on long + short
+     elements; CYCLIC (first colour == last) so the repeat boundary is seamless (no mid-run seam).
+     LUMINANCE-FLAT rule (the checkable law): only HUE travels (teal 173°→cyan 176°→gold-green 65°),
+     luminance stays even (all stops L≈0.53–0.62, no dark stop) — a lit edge whose COLOUR travels,
+     never a dark middle/warp. The old #10464a (L=0.05) landing mid-run was the warp; removed. */
+  --accent-duochrome: repeating-linear-gradient(100deg, #35d6c4 0px, #46e0d6 30px, #cdd486 66px, #46e0d6 102px, #35d6c4 132px);
+  --accent-fill-band:  var(--accent-duochrome);   /* slider active-range = the lit grip edge */
+  --accent-edge-image: var(--accent-duochrome);   /* sidebar framing edge-light (Part 2; --none in "plain") */
+  /* ---- Metric-KEY BODY. INACTIVE = calm neutral-glass key (unchanged — preserves flow hierarchy).
+     ACTIVE = the DualSense material: dark petrol base + a faint gold-green satin sheen at the TOP
+     EDGE ONLY (the light-catching angle, ABOVE the centred glyph so it never crosses the text →
+     text stays on dark petrol, §4 safe). The fuller duochrome lives on the RIM (--accent-rim-image)
+     + domes + slider band. ---- */
+  --btn-body-grad:  linear-gradient(180deg, rgba(255,255,255,0.075) 0%, rgba(255,255,255,0.02) 100%);  /* inactive convex top-lit */
+  --btn-body-rim:   rgba(255,255,255,0.16);        /* inactive specular light-rim (replaces the dead-grey border) */
+  --btn-body-hi:    inset 0 1px 0 rgba(255,255,255,0.10);   /* inactive top-highlight (knob-crown echo) */
+  --btn-body-hover: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 100%);   /* hover lifts brighter */
+  --accent-int-fill:
+     linear-gradient(180deg, rgba(188,199,110,0.10) 0%, rgba(188,199,110,0) 24%),   /* faint gold-green satin sheen — TOP edge only, above the glyph */
+     linear-gradient(178deg, var(--accent-petrol-lit) 0%, var(--accent-petrol-base) 100%);  /* dark teal-petrol base (the rich "selected" material) */
+  --accent-int-border: rgba(45,212,191,0.55);      /* ACTIVE rim base = teal — the SOLID FALLBACK under the pearl (masks/gradients unsupported) */
+  /* Active-glass RIM = a thin duochrome EDGE-LIGHT (Part 2) — the SAME sweep as the slider line,
+     run along the button's 1px rim (masked ::after ring). Body stays dark petrol, text stays on
+     top; the sweep just frames the key. Default ON; "plain" (switcher) → none = solid teal rim. */
+  --accent-rim-image: var(--accent-duochrome);
+  /* Knob DOME = a faint conic oil-sheen over the convex crown (petrol/teal/gold-green); the
+     functional min/max ring (blue/red) is separate + untouched. */
+  --knob-dome-sheen: conic-gradient(from 210deg at 50% 30%,
+     rgba(45,212,191,0.20), rgba(188,199,110,0.20), rgba(30,70,76,0.16), rgba(45,212,191,0.20));
+
   font: 16px/1.5 var(--font-sans);
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* The duochrome edge-light (button rims + sidebar framing edge) is RATIFIED ON (the mock
+   switcher's "plain" off-state was removed with the switcher). --accent-rim-image /
+   --accent-edge-image live at their ratified values in :root. */
 
 * { box-sizing: border-box; }
 
@@ -502,15 +598,21 @@ p  { margin: 0 0 0.75rem; }
   position: absolute; top: 10px; right: 10px; z-index: 20;
   display: flex; align-items: flex-start; gap: 5px;
 }
-/* Magnifier button — sized + styled to read as the top of the zoom stack. */
+/* Magnifier button — Fix 4+5: the dark tonal-glass key, matching the map-control stack it tops
+   (was a white pill with a green open-state). Uniform 30px slot; teal open-state (interactive). */
 .pa-search-peek-btn {
-  flex: 0 0 auto; width: 29px; height: 29px;
+  flex: 0 0 auto; width: 30px; height: 30px;
   display: flex; align-items: center; justify-content: center;
-  background: #fff; border: 1px solid var(--sidebar-edge); border-radius: 4px;
-  color: var(--text); cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  background: var(--glass-panel-fill);
+  -webkit-backdrop-filter: blur(var(--glass-panel-blur)); backdrop-filter: blur(var(--glass-panel-blur));
+  border: 1px solid var(--glass-panel-rim); border-radius: var(--r-md);
+  color: var(--tx-key); cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.34);
+  transition: background 120ms ease, transform 80ms ease;
 }
-.pa-search-peek-btn:hover { background: var(--bg-soft); }
-.pa-search-peek.is-open .pa-search-peek-btn { color: var(--accent-dark); border-color: var(--accent); }
+.pa-search-peek-btn:hover { background: var(--btn-body-hover); color: var(--pa-ink); transform: translateY(-0.5px); }   /* HOVER — invite lift (uniform with the map controls) */
+.pa-search-peek-btn:active { transform: translateY(0.5px); background: var(--pa-card); }   /* PRESSED */
+.pa-search-peek.is-open .pa-search-peek-btn { color: var(--accent-teal); border-color: var(--accent-teal); }   /* teal open-state (was green --accent — a chrome-green violation) */
+.pa-search-peek-btn:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }
 /* Panel: kept mounted (value + coordinated filter persist), hidden when collapsed. */
 .pa-search-peek:not(.is-open) .pa-search-peek-panel { display: none; }
 .pa-search-peek-panel { flex: 0 0 auto; width: min(240px, 60vw); }
@@ -666,7 +768,7 @@ p  { margin: 0 0 0.75rem; }
   pointer-events: auto;
 }
 .pa-detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.pa-detail-name { margin: 0; font-size: var(--t-xs); font-weight: 600; color: var(--pa-ink); line-height: 1.2; }
+.pa-detail-name { margin: 0; font-size: var(--t-md); font-weight: 700; color: var(--pa-ink); line-height: 1.2; }   /* Fix 3 — card title to the governed --t-md (was sub-spec --t-xs); §1.5a, matches the console title tier */
 .pa-detail-clear {
   flex: 0 0 auto; width: 20px; height: 20px; border: 0; border-radius: 6px;
   background: var(--pa-card); color: var(--pa-mut); font-size: var(--t-2xs); line-height: 1; cursor: pointer;
@@ -676,16 +778,16 @@ p  { margin: 0 0 0.75rem; }
 .pa-detail .sparkline { display: block; width: 100%; height: 26px; margin: 7px 0 2px; }
 .pa-detail-trip { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; margin-top: 7px; text-align: center; }
 .pa-trip-l { font-size: var(--t-2xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--pa-mut); }
-.pa-trip-v { font-size: var(--t-xs); font-weight: 500; color: var(--pa-ink); font-variant-numeric: tabular-nums; }
+.pa-trip-v { font-size: var(--t-md); font-weight: 600; color: var(--pa-ink); font-variant-numeric: tabular-nums; }   /* InfoRail parity — the THREE triplet values (Value/City/Delta) are EQUAL to each other at --t-md (headline role) */
 /* D-F5 — the active metric's Value leads: one size step up + bold (WEIGHT+SIZE emphasis;
    colour stays white — §1.3 keeps blue for City and up/down for Delta, not the lead). */
-.pa-trip-lead { font-size: var(--t-md); font-weight: 700; }
+.pa-trip-lead { font-weight: 600; }   /* InfoRail parity — the lead no longer overrides SIZE (was --t-lg); the three triplet values are equal (§1.5a parity-within-role) */
 .pa-trip-muted { color: var(--pa-dim); }
 .pa-trip-city { color: var(--city); }   /* the CITY triplet value = blue (§1.3, mandatory) */
 .pa-detail-condo { border-top: 1px solid var(--pa-hair); margin-top: 8px; padding-top: 6px; }
-.pa-detail .pa-kv { display: flex; justify-content: space-between; font-size: var(--t-2xs); margin-top: 2px; }
-.pa-kv-k { color: var(--pa-mut); }
-.pa-kv-v { color: var(--pa-ink); font-weight: 500; font-variant-numeric: tabular-nums; }   /* D-F5 — was raw #c7cacd */
+.pa-detail .pa-kv { display: flex; justify-content: space-between; font-size: var(--t-sm); margin-top: 3px; }   /* InfoRail parity — ALL stat-stack VALUES one size (--t-sm, inherited by .pa-kv-v) */
+.pa-kv-k { font-size: var(--t-xs); color: var(--pa-mut); }   /* ALL stat-stack LABELS one size (--t-xs muted) */
+.pa-kv-v { color: var(--pa-ink); font-weight: 600; font-variant-numeric: tabular-nums; }   /* value = --t-sm/600 (from the row), uniform across all four rows */
 .pa-detail-note { margin: 7px 0 0; font-size: var(--t-xs); color: var(--pa-mut); line-height: 1.5; }
 @keyframes rail-fade-in { from { opacity: 0; } to { opacity: 1; } }
 .rail-inner { width: 100%; }
@@ -946,8 +1048,8 @@ p  { margin: 0 0 0.75rem; }
 .dt-table thead th {
   position: sticky; top: 0; z-index: 2;
   background: var(--sidebar-bg);
-  text-align: left; font-size: var(--t-2xs); font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);
+  text-align: left; font-size: var(--t-xs); font-weight: 600;   /* Fix 1 — console label tier (one step up from --t-2xs; wraps within the fixed column, widths unchanged) */
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted);
   padding: 6px 8px; border-bottom: 1px solid var(--border);
   /* Headers WRAP to a fixed (2-line) height so the full labels survive the narrow
      fixed columns — body rows stay one line (nowrap above). Bottom-align so 1- and
@@ -996,21 +1098,19 @@ p  { margin: 0 0 0.75rem; }
    legend · YoY strip. Dark; data flat, per §9. */
 .dt-trend { display: flex; flex-direction: column; gap: 3px; width: 100%; height: 100%; min-height: 0; }
 .dt-trend-head { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.dt-trend-label { font-size: var(--t-2xs); letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut); }
+.dt-trend-label { font-size: var(--t-xs); font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--pa-mut); }   /* Fix 1 — console label tier: one step up (--t-xs) + bolder, uniform with KPI/table */
 /* P3 — the trend instrument's readout / axis-ends / legend were rendering below the
    §1.5 floor (9px / 8px / 8px) — the real "impossible to read" defect (contrast on the
    tokens already clears §4). Lift them to --t-2xs (11px, the floor) and tier by role:
    the readout + the axis-ends carry $ VALUES → primary --tx (§1.5a values); the legend
    entries are series LABELS → secondary --pa-mut. Also retires the raw #c7cacd literal (§1). */
-.dt-trend-readout { font-size: var(--t-2xs); color: var(--tx); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.dt-trend-svg { display: block; width: 100%; flex: 1 1 0; min-height: 44px; }
-.dt-trend-ends { flex: 0 0 auto; display: flex; justify-content: space-between; font-size: var(--t-2xs); color: var(--tx); font-variant-numeric: tabular-nums; }
-.dt-trend-leg { flex: 0 0 auto; display: flex; gap: 12px; font-size: var(--t-2xs); color: var(--pa-mut); }
+.dt-trend-readout { font-size: var(--t-xs); color: var(--tx); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dt-trend-svg { display: block; width: 100%; flex: 1 1 0; min-height: 64px; }   /* Fix 2c — the chart absorbs the space freed by the removed YoY strip (flex:1) + a taller floor */
+.dt-trend-ends { flex: 0 0 auto; display: flex; justify-content: space-between; font-size: var(--t-xs); color: var(--tx); font-variant-numeric: tabular-nums; }
+.dt-trend-leg { flex: 0 0 auto; display: flex; gap: 12px; font-size: var(--t-xs); color: var(--pa-mut); }
 .dt-trend-leg .dt-sw { display: inline-block; width: 10px; height: 2px; vertical-align: middle; margin-right: 3px; }
-.dt-trend-leg .dt-sw--band { height: 6px; background: var(--pa-up); opacity: 0.2; }
-.dt-trend-yoy { flex: 0 0 auto; border-top: 1px solid var(--pa-hair); padding-top: 4px; margin-top: 1px; }
-.dt-trend-sub { font-size: var(--t-2xs); letter-spacing: 0.09em; text-transform: uppercase; color: var(--pa-mut); }
-.dt-trend-yoy-svg { display: block; width: 100%; height: 20px; margin-top: 2px; }
+.dt-trend-leg .dt-sw--band { height: 6px; background: var(--data-up); opacity: 0.2; }  /* DATA (trend band), not chrome — points at --data-up directly, not the migrated console accent */
+/* (The .dt-trend-yoy / .dt-trend-sub / .dt-trend-yoy-svg rules were removed with the YoY·Matched strip, 2026-07-14.) */
 .dt-trend--empty { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--pa-mut); font-style: italic; }
 
 /* DISTRIBUTION — the citywide histogram with the selection marked (DistributionStrip.jsx). */
@@ -1063,34 +1163,43 @@ p  { margin: 0 0 0.75rem; }
 .dt-panel .dt-metric .seg-options { background: transparent; border: 0; padding: 0; }
 .dt-panel .dt-metric .seg-label { color: var(--pa-mut); }
 .dt-panel .dt-metric .seg-btn {
-  color: #c7cacd; background: transparent;   /* geometry (radius/pad/border) from the §6 chassis */
+  color: var(--tx-key); background: var(--btn-body-grad); border-color: var(--btn-body-rim);
+  box-shadow: var(--btn-body-hi);   /* glass key body (geometry radius/pad from the §6 chassis) */
 }
 .dt-panel .dt-metric .seg-btn.active {
-  background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); box-shadow: none;
+  background: var(--accent-int-fill); border-color: var(--accent-int-border); color: var(--accent-int-text);
+  box-shadow: var(--accent-int-specular), var(--accent-int-glow); text-shadow: var(--accent-int-text-glow); font-weight: 600;
 }
-.dt-panel .dt-metric .seg-btn:hover:not(.active) { background: var(--pa-card); color: var(--pa-ink); }
+.dt-panel .dt-metric .seg-btn:hover:not(.active) { background: var(--btn-body-hover); color: var(--pa-ink); }
 
 /* Facets — dark. (A1: the District dropdown trigger + portaled menu now carry their own
    dark styling above; the summary/list/opt overrides here are retired — the menu is on
    <body>, no longer a .dt-panel descendant.) */
-.dt-panel .dt-facet-chip { background: var(--pa-card); border-color: var(--pa-hair); color: #c7cacd; }
-.dt-panel .dt-facet-chip.is-on { background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); }
+.dt-panel .dt-facet-chip { background: var(--pa-card); border-color: var(--pa-hair); color: var(--tx-key); }
+.dt-panel .dt-facet-chip.is-on {
+  background: var(--accent-int-fill); border-color: var(--accent-int-border); color: var(--accent-int-text);
+  box-shadow: var(--accent-int-specular), var(--accent-int-glow); text-shadow: var(--accent-int-text-glow); font-weight: 600;
+}
 /* (Clear-filters color/hover now live in the §6 identical-clears rule.) */
 
 /* Table — basic dark skin (C7 re-cuts columns + adds the TREND sparkcol). */
 .dt-panel .dt-table { color: var(--pa-ink); }
 .dt-panel .dt-table thead th { color: var(--pa-mut); background: var(--pa-shell); border-color: var(--pa-hair); }
 .dt-panel .dt-table th.is-active-metric,
-.dt-panel .dt-table td.is-active-metric { background: rgba(74,222,128,0.09); }
+.dt-panel .dt-table td.is-active-metric { background: var(--accent-int-wash); }
+/* Fix B move #2 — the active metric is the table's DOMINANT column: its value cells lift to
+   primary weight + brightest ink so the eye LANDS on the selected metric and flows down it,
+   instead of scanning every column at equal volume (supporting columns stay --pa-ink/500). */
+.dt-panel .dt-table td.is-active-metric { font-weight: 600; color: var(--tx); }
 /* A1 — the sticky active-metric HEADER cell must stay OPAQUE, else scrolled row
-   values ghost through the translucent tint. Composite the 9% tint over the shell. */
+   values ghost through the translucent tint. Composite the wash over the shell. */
 .dt-panel .dt-table thead th.is-active-metric {
-  background: linear-gradient(rgba(74,222,128,0.09), rgba(74,222,128,0.09)), var(--pa-shell);
+  background: linear-gradient(var(--accent-int-wash), var(--accent-int-wash)), var(--pa-shell);
 }
 .dt-panel .dt-th-btn { color: var(--pa-mut); }
 .dt-panel .dt-th-btn:hover { color: var(--pa-ink); }
 .dt-panel .dt-sort { color: var(--pa-dim); }
-.dt-panel .dt-sort.active { color: var(--pa-up); }
+.dt-panel .dt-sort.active { color: var(--accent-int-text); text-shadow: var(--accent-int-text-glow); }
 .dt-panel .dt-row { color: var(--pa-ink); }
 .dt-panel .dt-row td { border-bottom-color: rgba(255,255,255,0.06); }
 .dt-panel .dt-row:hover { background: var(--pa-card); }
@@ -1108,7 +1217,7 @@ p  { margin: 0 0 0.75rem; }
 .dt-panel .dt-vs-v { color: var(--pa-ink); }
 .dt-panel .dt-vs-cmp { color: var(--pa-mut); }
 .dt-panel .dt-vs-note { color: var(--pa-mut); }
-.dt-panel .dt-vs-row.is-approx .dt-vs-v { color: var(--pa-up); }
+.dt-panel .dt-vs-row.is-approx .dt-vs-v { color: var(--tx); }  /* §1.3 — a VALUE stays white; the ≈ glyph is the "approximate" channel (green here was redundant editorializing) */
 .dt-panel .dt-vs-clear { color: var(--pa-mut); }
 .dt-panel .dt-vs-clear:hover { color: var(--pa-ink); }
 
@@ -1128,7 +1237,7 @@ p  { margin: 0 0 0.75rem; }
 .dt-tile-l {
   /* Small-caps muted card label. (D-F3: the per-card honesty TAG was removed — the
      honest-aggregate note now lives once in the About & tips popover.) */
-  font-size: var(--t-2xs); letter-spacing: 0.08em; text-transform: uppercase;
+  font-size: var(--t-xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;   /* Fix 1 — console label tier (one step up + bolder, uniform with table/trend) */
   color: var(--tx-mut); white-space: normal; overflow: visible; line-height: 1.2;
 }
 .dt-tile-v {
@@ -1151,7 +1260,7 @@ p  { margin: 0 0 0.75rem; }
 /* Shared bits — the distribution card frame + the CONDO secondary block + sign colours. */
 .dt-card { background: var(--card); border: 1px solid var(--hair); border-radius: var(--r-md); padding: 7px 10px; }
 .dt-card-hd { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
-.dt-card-l { font-size: var(--t-2xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--tx-mut); }
+.dt-card-l { font-size: var(--t-xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tx-mut); }   /* Fix 1 — console label tier */
 .dt-up { color: var(--data-up); }
 .dt-dn { color: var(--data-down); }
 .dt-card-note { font-size: var(--t-2xs); color: var(--tx-mut); margin-top: 2px; }
@@ -1161,7 +1270,7 @@ p  { margin: 0 0 0.75rem; }
    --tx-dim-on-must-read-text violation, DESIGN_SYSTEM §1.2.) */
 /* Distribution card — a full-width tile with a taller floor (A5) so the histogram reads as
    a real distribution; never clips (A3). */
-.dt-card--dist { min-height: 96px; display: flex; flex-direction: column; }
+.dt-card--dist { min-height: 130px; display: flex; flex-direction: column; }   /* Fix 3 — more room for the histogram within the fixed column frame (was 96px); SVG fills via flex, proportions honest (no stretch) */
 /* A3 — the histogram body carries NO extra padding (the card already pads); the doubled
    card+body padding was eating the floor and clipping the SVG. With padding:0 + the
    svg's 10px shrink floor, the full histogram (bars + end labels) fits the min-height by
@@ -1208,17 +1317,19 @@ p  { margin: 0 0 0.75rem; }
   padding: 4px 10px; border-radius: var(--r-md);
   border: 1px solid var(--hair); white-space: nowrap; cursor: pointer;
 }
-/* Both clears — ONE identical outline treatment (Fix 1). Enabled = outline;
-   disabled = inert IN PLACE (Principle 0 — the slot holds, never absent), dimmed but
-   readable (§4 — disabled may drop below the contrast floor but stays legible). */
+/* Both clears — ONE identical treatment (Fix 1, ratified 2026-07-14): ENABLED = coral
+   (`--sel`, "this clear is actionable") outline + coral text, ALWAYS (not only on hover);
+   DISABLED = muted grey, inert IN PLACE (Principle 0 — the slot holds, never absent). The two
+   clears are identical to each other; only the label differs. Coral = the table/rail selection
+   accent (§1.3), distinct from the map's violet selection outline. */
 .dt-head-r .dt-facets-clear,
 .dt-head-r .dt-clear {
-  background: transparent; color: var(--pa-mut);
+  background: transparent; color: var(--pa-sel); border-color: var(--pa-sel);
 }
 .dt-head-r .dt-facets-clear:hover:not(:disabled),
-.dt-head-r .dt-clear:hover:not(:disabled) { border-color: var(--pa-sel); color: var(--pa-sel); }
+.dt-head-r .dt-clear:hover:not(:disabled) { background: rgba(232,115,74,0.10); }   /* coral already; hover adds a faint fill for feedback */
 .dt-head-r .dt-facets-clear:disabled,
-.dt-head-r .dt-clear:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
+.dt-head-r .dt-clear:disabled { color: var(--pa-mut); border-color: var(--pa-hair); opacity: 0.55; cursor: default; pointer-events: none; }
 
 /* TREND sparkcol cell (C7) — the sparkline sits inline; suppressed rows show "—". */
 .dt-panel .dt-table td .sparkline { display: inline-block; vertical-align: middle; }
@@ -1251,11 +1362,19 @@ p  { margin: 0 0 0.75rem; }
 /* P1 — the two instrument cards: fixed dark frames (Principle 0). The paint the
    single chassis used to carry lives here now; both read as raised surfaces. */
 .pa-card {
+  position: relative;                                /* containing block for the ::before edge-light (Part 2) */
   display: flex; flex-direction: column; box-sizing: border-box;
   background: var(--pa-shell);                       /* opaque barrier = the fallback (glass in @supports) */
   border: 1px solid var(--glass-panel-rim);          /* light rim = the elevation edge (§1.1 depth-from-edge) */
   border-radius: var(--r-lg); padding: var(--s3);
   box-shadow: 0 6px 20px rgba(0,0,0,0.32);           /* lower-tier lift */
+}
+/* PART 2 — sidebar framing EDGE-LIGHT: a single thin duochrome line along the instrument card's
+   TOP edge (the same sweep as the slider line). Default ON; "plain" sets --accent-edge-image:none
+   → background:none → invisible (Part-2 off). Inset from the rounded corners; non-text, pure trim. */
+.pa-card-instrument::before {
+  content: ""; position: absolute; top: 0; left: 14px; right: 14px; height: 2px;
+  background: var(--accent-edge-image); border-radius: 0 0 2px 2px; pointer-events: none;
 }
 /* The first module of the instrument card sits directly under the card's top edge:
    no leading separator (the hairlines DIVIDE modules, they don't cap the card). */
@@ -1286,12 +1405,22 @@ p  { margin: 0 0 0.75rem; }
    the year readout they styled is gone; the tuning slider owns the live year.) */
 /* City switcher → dark chips (active = green border), matching the annex. */
 .pa-column .opt-toggle-label { display: none; }
-.pa-column .opt-toggle-buttons { display: flex; gap: 5px; }
+/* A1 — kill the pale pill-in-pill: the base .opt-toggle-buttons paints --bg-soft and the
+   .opt-toggle-gel wrapper paints #dedad4 (light-shell track). Reset the container to bare
+   glass so the two buttons ARE the glass keys (one family with the metric buttons, no third
+   surface). Specificity (0,3,0) beats .opt-toggle-gel .opt-toggle-buttons (0,2,0). */
+.pa-column .opt-toggle-gel .opt-toggle-buttons,
+.pa-column .opt-toggle-buttons { background: transparent; border: 0; padding: 0; gap: 5px; }
 .pa-column .opt-toggle-btn {
-  font-family: inherit; font-size: 12px; color: #c7cacd; cursor: pointer;
-  background: transparent; border: 1px solid var(--pa-hair); border-radius: 6px; padding: 2px 9px;
+  font-family: inherit; font-size: 12px; color: var(--tx-key); cursor: pointer;
+  background: var(--btn-body-grad); border: 1px solid var(--btn-body-rim); border-radius: 6px; padding: 2px 9px;
+  box-shadow: var(--btn-body-hi);   /* glass key body, matching the metric chips */
 }
-.pa-column .opt-toggle-btn.active { background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); }
+.pa-column .opt-toggle-btn:hover:not(.active) { background: var(--btn-body-hover); color: var(--pa-ink); }
+.pa-column .opt-toggle-btn.active {
+  background: var(--accent-int-fill); border-color: var(--accent-int-border); color: var(--accent-int-text);
+  box-shadow: var(--accent-int-specular), var(--accent-int-glow); text-shadow: var(--accent-int-text-glow); font-weight: 600;
+}
 
 /* METRIC module — vertical chip list, active green-bordered. */
 .pa-col-metric .seg { display: flex; flex-direction: column; gap: var(--s2); margin: 0; }   /* label→buttons gap to §1.6 scale (was ad-hoc 5px) */
@@ -1309,18 +1438,42 @@ p  { margin: 0 0 0.75rem; }
    stroke="currentColor", so the glyph greens with the label on the active chip — the
    green border stays the ONLY selected signal, no per-metric colour. CSS width/height wins
    over the SVG's intrinsic 16px, sizing it to sit with the chip text. */
-.pa-col-metric .seg-icon { display: inline-flex; width: 15px; height: 15px; flex: 0 0 auto; }   /* glyph proportional to the 14px text, not oversized (§6) */
+.pa-col-metric .seg-icon { display: inline-flex; width: 18px; height: 18px; flex: 0 0 auto; }   /* Fix B move #3 — larger glyph (was 15px) so the eye RECOGNISES the metric (the $ one / the % one) before reading the label; recognition-before-reading = flow (§3: clearer, not noisier) */
 .pa-col-metric .seg-btn {
   width: 100%; display: flex; align-items: center; justify-content: flex-start; gap: var(--s1);
   font-family: inherit; text-align: left; white-space: nowrap;   /* one line — the column is widened to fit the longest label at 14px */
   /* Physical box grows (taller, more internal padding = more presence); the TEXT is
      brought to the GOVERNED --t-sm/14px (§1.5a) — it was a hardcoded 12px, below spec.
      Not an amendment (14px IS the metric-button role size); NOT enlarged past 14px. */
-  font-size: var(--t-sm); color: #c7cacd; cursor: pointer;
-  background: transparent; border: 1px solid var(--pa-hair); border-radius: 7px;
+  font-size: var(--t-sm); color: var(--tx-key); cursor: pointer;
+  background: var(--btn-body-grad); border: 1px solid var(--btn-body-rim); border-radius: 7px;
+  box-shadow: var(--btn-body-hi);   /* glass key: top-lit gradient + specular light-rim + crown highlight (not flat grey) */
   padding: var(--s2) var(--s3);
 }
-.pa-col-metric .seg-btn.active { background: var(--pa-card); border-color: var(--pa-up); color: var(--pa-up); }
+.pa-column .pa-col-metric .seg-btn:hover:not(.active) { background: var(--btn-body-hover); color: var(--pa-ink); }
+/* Liquid-Glass active: illumination (brighter glass fill) + specular + light border/ink,
+   + font-weight as the non-colour cue (a11y — active must read without colour). */
+.pa-col-metric .seg-btn.active {
+  background: var(--accent-int-fill); border-color: var(--accent-int-border); color: var(--accent-int-text);
+  box-shadow: var(--accent-int-specular), var(--accent-int-glow); text-shadow: var(--accent-int-text-glow); font-weight: 600;
+}
+/* LAYER 2 (pearl, mocked) — pearlescent RIM on active glass, painted by a masked ::after as a
+   rounded 1px ring (border-radius:inherit; the mask punches the interior so only the border shows).
+   Default OFF: --accent-rim-image is `none` → background:none → invisible pseudo → the solid teal
+   border (Layer 1) shows through unchanged. Pearl ON → the desaturated non-uniform teal↔cyan↔
+   periwinkle band. Static, GPU-cheap (only the 1–2 active elements), text/fill untouched. */
+.pa-col-metric .seg-btn.active,
+.pa-column .opt-toggle-btn.active,
+.dt-panel .dt-metric .seg-btn.active { position: relative; }
+.pa-col-metric .seg-btn.active::after,
+.pa-column .opt-toggle-btn.active::after,
+.dt-panel .dt-metric .seg-btn.active::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+  background: var(--accent-rim-image); pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
 
 /* TUNING module (P2) — Principle 0 made literal: the slider TRACK is a FIXED width at a
    FIXED x on EVERY control and EVERY state; only the handle + the flanking numbers move.
@@ -1352,8 +1505,8 @@ p  { margin: 0 0 0.75rem; }
    LEFT edge (right-aligned in its cell); max + the single Year value hug the RIGHT edge. */
 .pa-tune-min, .pa-rack-min { grid-row: track; grid-column: min; text-align: right; }
 .pa-tune-year, .pa-rack-max { grid-row: track; grid-column: max; text-align: left; }
-.pa-tune-year { font-size: var(--t-md); font-weight: 600; color: var(--pa-up); }
-.pa-rack-min, .pa-rack-max { font-size: var(--t-xs); font-weight: 600; color: var(--pa-ink); }
+.pa-tune-year { font-size: var(--t-md); font-weight: 600; color: var(--tx-read); }  /* A3 — value readout → WARM-WHITE (was neutral --tx): high-luminance so it separates from the warm ramp/map by luminance while belonging to the warm system; contained on the glass bay (§4 ≥11:1) */
+.pa-rack-min, .pa-rack-max { font-size: var(--t-xs); font-weight: 600; color: var(--tx-read); }  /* A3 — range value readouts → warm-white (was --pa-ink neutral) */
 .pa-tune-min, .pa-tune-year, .pa-rack-min, .pa-rack-max { white-space: nowrap; font-variant-numeric: tabular-nums; }
 /* The FIXED track — fills the fixed [track] column (= --pa-track-w) on both rows. */
 .pa-tune-slider,
@@ -1365,21 +1518,21 @@ p  { margin: 0 0 0.75rem; }
    at the extremes. --pct is unitless 0–100 (set by the JSX). */
 .pa-column .pa-year-slider::-webkit-slider-runnable-track {
   background: linear-gradient(to right,
-    var(--pa-up) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
+    var(--accent-int-track) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
     var(--pa-hair) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100));
 }
 .pa-column .pa-year-slider::-moz-range-track {
   background: linear-gradient(to right,
-    var(--pa-up) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
+    var(--accent-int-track) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
     var(--pa-hair) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100));
 }
-.pa-column .pa-slider::-webkit-slider-thumb { background: var(--pa-up); border-color: var(--pa-shell); }
-.pa-column .pa-slider::-moz-range-thumb { background: var(--pa-up); border-color: var(--pa-shell); }
+.pa-column .pa-slider::-webkit-slider-thumb { background: var(--accent-int-track); border-color: var(--pa-shell); }
+.pa-column .pa-slider::-moz-range-thumb { background: var(--accent-int-track); border-color: var(--pa-shell); }
 /* Range control — the portaled RangeFacet is its OWN two-row grid (name header +
    [min · fixed track · max], same template as the Year row so the tracks align).
    These rules only skin the dual-slider track. */
 .pa-column .pa-dual-track { background: var(--pa-hair); }
-.pa-column .pa-dual-fill { background: var(--pa-up); }
+.pa-column .pa-dual-fill { background: var(--accent-fill-band); }   /* active-range metallic band (DualSense grip edge) */
 
 /* D1 (DESIGN_SYSTEM §2) — Title Case, NOT ALL-CAPS: the PA chrome LABEL roles were rendering
    their Title-cased strings uppercased by text-transform + wide tracking. Retire that so the
@@ -1387,7 +1540,7 @@ p  { margin: 0 0 0.75rem; }
    Placed after the label rules + scoped to match their specificity so it governs. */
 .dt-table thead th,
 .dt-tile-l, .dt-card-l,
-.dt-trend-label, .dt-trend-sub,
+.dt-trend-label,
 .pa-trip-l,
 .pa-column .pa-col-lab,
 .pa-col-metric .seg-label, .dt-metric .seg-label,
@@ -1411,9 +1564,11 @@ p  { margin: 0 0 0.75rem; }
    surface, in their own row BELOW the ramp — never over the gradient (§5). */
 .pa-col-legend .legend { background: transparent; border: 0; box-shadow: none; border-radius: 0; padding: 0; color: var(--pa-mut); }
 .pa-col-legend .legend-title { color: var(--pa-mut); font-size: var(--t-xs); }
-/* C2 — the ramp min/max end labels lift to the raised --tx-mut at the --t-2xs floor so
-   they clear 4.5:1 on --shell (were failing at the old muted grey). */
-.pa-col-legend .legend-lab, .pa-col-legend .legend-lab small { color: var(--pa-mut); font-size: var(--t-xs); }
+/* C2 — the ramp min/max end labels lift to the raised muted tier so they clear 4.5:1.
+   A3 — these are the ramp's bound VALUES sitting in the warm legend context; step them to
+   --tx-read warm-white (high luminance) so they read as readouts separated from the warm
+   ramp, matching the slider value readouts. (Legend TITLE stays muted — labels vs values.) */
+.pa-col-legend .legend-lab, .pa-col-legend .legend-lab small { color: var(--tx-read); font-size: var(--t-xs); font-variant-numeric: tabular-nums; }   /* Principle-0 audit fix — the ramp bound $values are numeric; tabular-nums stops width shift as min/max change per year/metric */
 
 /* FOOTER module — About & tips + parcel count on one line; the popover is
    IN-FLOW below (an absolute popover would be clipped by the column's overflow;
@@ -1436,7 +1591,7 @@ p  { margin: 0 0 0.75rem; }
 }
 .pa-column .pa-hint { color: var(--pa-mut); }
 .pa-column .pa-box-ref { color: var(--pa-mut); }
-.pa-column .pa-box-ref a { color: var(--pa-up); }
+.pa-column .pa-box-ref a { color: var(--accent-int-text); text-decoration: underline; }  /* console link → accent ink + standing underline (the underline, not colour, is the affordance; ice near-white needs it) */
 .pa-col-count { font-size: 11px; color: var(--pa-mut); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* About&tips popover — the box-select tip + provenance/naming note, rehomed off the
@@ -1459,8 +1614,13 @@ p  { margin: 0 0 0.75rem; }
   padding: 10px 12px; max-width: 288px;
 }
 .pa-hint { font-size: 10.5px; color: var(--text-muted); font-style: italic; margin: 0; }
-.pa-box-ref { font-size: 10px; color: var(--text-muted); line-height: 1.45; margin: 8px 0 0; }
+.pa-box-ref { font-size: var(--t-2xs); color: var(--text-muted); line-height: 1.45; margin: 8px 0 0; }   /* Fix 4 — to the --t-2xs floor (was sub-spec 10px) */
 .pa-box-ref a { color: var(--accent); }
+/* Fix 4 — the canonical interaction reference (governed type) */
+.pa-info-pop-h { margin: 0 0 6px; font-size: var(--t-xs); font-weight: 600; color: var(--pa-ink); }
+.pa-info-list { margin: 0 0 8px; padding-left: 16px; font-size: var(--t-xs); color: var(--pa-mut); line-height: 1.5; }
+.pa-info-list li { margin: 3px 0; }
+.pa-info-list b { color: var(--pa-ink); font-weight: 600; }
 
 /* ----- Identity card (top of the floating .pa-float cluster) ----- */
 /* Floating card holding the section title + city switcher + green year readout +
@@ -1625,13 +1785,14 @@ p  { margin: 0 0 0.75rem; }
 .dt-clear:focus-visible,
 .dt-handle:focus-visible,
 .dt-facet-summary:focus-visible,
-.dt-th-btn:focus-visible { outline: 2px solid var(--pa-dn); outline-offset: 2px; border-radius: 4px; }
+.dt-th-btn:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; border-radius: 4px; }
 /* The metric chips + option toggles live ONLY in dark PA chrome (instrument column +
-   console header); give their ring the same coral there. The --accent rule above stays
-   as the light-shell fallback in case either control is ever reused outside the console. */
+   console header); focus rings are TEAL — the interactive accent (Option 1). The old coral
+   --pa-dn was a DATA hue (data-down); focus is interactive, so it joins the teal family. The
+   --accent rule above stays as the light-shell fallback if either control is reused off-console. */
 .pa-column .seg-btn:focus-visible,
 .pa-column .opt-toggle-btn:focus-visible,
-.dt-panel .seg-btn:focus-visible { outline-color: var(--pa-dn); }
+.dt-panel .seg-btn:focus-visible { outline-color: var(--accent-teal); }
 /* YEAR: green fill to the thumb CENTRE via unitless --pct + a thumb-width-aware calc (C1),
    so the fill never overshoots the 13px thumb at the extremes. */
 .pa-year-slider::-webkit-slider-runnable-track {
@@ -1728,6 +1889,42 @@ p  { margin: 0 0 0.75rem; }
   }
 }
 
+/* ==========================================================================
+   LIQUID-GLASS ACCENT — accessibility (inherits Apple's own guidance).
+   Reduce Transparency → chrome goes SOLID (barrier at full opacity, no blur, no
+   specular illumination relying on translucency). Forced-colors → the active state
+   must NOT rely on illumination alone; it takes the system Highlight so active still
+   reads without our colour. (Reduce Motion: the specular is STATIC — no drift added —
+   so no motion rule is needed; documented here so a future tuner keeps it static.)
+   ========================================================================== */
+@media (prefers-reduced-transparency: reduce) {
+  .pa-card,
+  .pa-tune-dock-strip .pa-tune-instrument { background: var(--pa-shell);
+    -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .pa-detail,
+  .pa-column .pa-info-pop { background: var(--pa-card);
+    -webkit-backdrop-filter: none; backdrop-filter: none; }
+  /* Active controls: drop the translucent lighten + glow; keep a solid readable
+     border + weight so active still reads (the barrier carries §4 contrast). */
+  .pa-col-metric .seg-btn.active,
+  .pa-column .opt-toggle-btn.active,
+  .dt-panel .dt-metric .seg-btn.active,
+  .dt-panel .dt-facet-chip.is-on {
+    background: var(--pa-card); box-shadow: none;
+  }
+}
+@media (forced-colors: active) {
+  /* System-colour override strips our box-shadows/tints; steer active to Highlight so it
+     stays distinguishable from inactive (which keeps the default ButtonText border). */
+  .pa-col-metric .seg-btn.active,
+  .pa-column .opt-toggle-btn.active,
+  .dt-panel .dt-metric .seg-btn.active,
+  .dt-panel .dt-facet-chip.is-on,
+  .dt-panel .dt-sort.active {
+    border-color: Highlight; color: Highlight;
+  }
+}
+
 /* Each control: head (name + active readout) · track+ticks · data-bound ends. */
 .pa-tune-ctrl { flex: 1 1 0; min-width: 0; }
 .pa-tune-ctrl-head {
@@ -1740,7 +1937,7 @@ p  { margin: 0 0 0.75rem; }
 /* Active readout — the LIVE value (selected year / bounded range). Accent-shaded, in a
    FIXED-width right-aligned slot so a wider value ("$1.09M") never nudges the name. */
 .pa-tune-active {
-  font-size: var(--t-md); font-weight: 600; color: var(--pa-up);
+  font-size: var(--t-md); font-weight: 600; color: var(--tx-read);   /* A3 — live VALUE readout → warm-white (matches .pa-tune-year; separates from warm ramp by luminance) */
   font-variant-numeric: tabular-nums; white-space: nowrap;
   flex: 0 0 auto; min-width: 84px; text-align: right;
 }
@@ -1799,19 +1996,21 @@ p  { margin: 0 0 0.75rem; }
 .pa-tune-instrument .pa-slider::-webkit-slider-thumb {
   width: var(--knob-size); height: var(--knob-size);
   margin-top: calc((4px - var(--knob-size)) / 2);   /* re-centre the taller knob on the 4px track */
-  background: var(--knob-fill); border: var(--knob-border-w) solid var(--pa-mut);
+  background: var(--knob-dome-sheen), var(--knob-fill);   /* LAYER 2 (pearl): conic oil-sheen OVER the convex crown; default `none` layer → identical to before (freeze-core) */
+  border: var(--knob-border-w) solid var(--pa-mut);
   box-shadow: inset 0 1px 0 var(--knob-highlight), inset 0 -1px 1px var(--knob-shade), var(--knob-contact);
   transition: box-shadow 80ms ease, transform 80ms ease;
 }
 .pa-tune-instrument .pa-slider::-moz-range-thumb {
   width: var(--knob-size); height: var(--knob-size);
-  background: var(--knob-fill); border: var(--knob-border-w) solid var(--pa-mut);
+  background: var(--knob-dome-sheen), var(--knob-fill);   /* LAYER 2 (pearl): sheen over crown; default `none` = unchanged */
+  border: var(--knob-border-w) solid var(--pa-mut);
   box-shadow: inset 0 1px 0 var(--knob-highlight), inset 0 -1px 1px var(--knob-shade), var(--knob-contact);
   transition: box-shadow 80ms ease, transform 80ms ease;
 }
 /* Year = the active-value control → GREEN ring; Metric range = a filter → grey (above). */
-.pa-tune-instrument .pa-year-slider::-webkit-slider-thumb { border-color: var(--pa-up); }
-.pa-tune-instrument .pa-year-slider::-moz-range-thumb { border-color: var(--pa-up); }
+.pa-tune-instrument .pa-year-slider::-webkit-slider-thumb { border-color: var(--accent-int-border); }
+.pa-tune-instrument .pa-year-slider::-moz-range-thumb { border-color: var(--accent-int-border); }
 /* R2 Fix 6 — Median dual: MIN thumb = blue ring, MAX thumb = red ring, so the two
    handles are unambiguous (blue=low, red=high — the ramp direction). Control-identity
    tokens, NOT data colours (§1.3). Same specificity as the base thumb rule → source
@@ -1860,7 +2059,7 @@ p  { margin: 0 0 0.75rem; }
    control accent on both sliders (§1.3 stays clean; the min/max IDENTITY is the rings).
    (Was a neutral grey band.) */
 .pa-tune-instrument .pa-dual-fill {
-  background: var(--pa-up); z-index: 0; pointer-events: none;
+  background: var(--accent-fill-band); z-index: 0; pointer-events: none;   /* active-range = the lit DualSense grip edge (petrol→teal→gold-green band) */
 }
 /* R2 Fix 1 — room for the bigger knob: a taller interactive band + overflow visible so
    the raised thumb is never cropped by the track box, at rest or while dragging. */
@@ -1871,13 +2070,13 @@ p  { margin: 0 0 0.75rem; }
    keeps the fill aligned (offset = half a knob; travel = track − one knob). */
 .pa-tune-instrument .pa-year-slider::-webkit-slider-runnable-track {
   background: linear-gradient(to right,
-    var(--pa-up) calc(var(--knob-size) / 2 + var(--pct, 0) * (100% - var(--knob-size)) / 100),
+    var(--accent-int-track) calc(var(--knob-size) / 2 + var(--pct, 0) * (100% - var(--knob-size)) / 100),
     var(--pa-hair) calc(var(--knob-size) / 2 + var(--pct, 0) * (100% - var(--knob-size)) / 100));
   box-shadow: var(--track-recess);   /* R2 Fix 4 — recessed groove (§3 depth) */
 }
 .pa-tune-instrument .pa-year-slider::-moz-range-track {
   background: linear-gradient(to right,
-    var(--pa-up) calc(var(--knob-size) / 2 + var(--pct, 0) * (100% - var(--knob-size)) / 100),
+    var(--accent-int-track) calc(var(--knob-size) / 2 + var(--pct, 0) * (100% - var(--knob-size)) / 100),
     var(--pa-hair) calc(var(--knob-size) / 2 + var(--pct, 0) * (100% - var(--knob-size)) / 100));
   box-shadow: var(--track-recess);
 }
@@ -1889,10 +2088,10 @@ p  { margin: 0 0 0.75rem; }
   position: absolute; top: 0; width: 1px; height: 4px;
   background: var(--pa-dim); transform: translateX(-50%);
 }
-.pa-tune-calib i.major { height: 7px; background: var(--pa-mut); }
+.pa-tune-calib i.major { height: 7px; background: var(--accent-teal); }   /* major-tick emphasis = teal (interactive accent, Option 1); minor ticks stay muted */
 /* ruler marks (continuous metric) — visible but quieter than Year's year-ticks
    (mockup #4a4e54; was --pa-hair = the track colour, so they vanished). */
-.pa-tune-calib.ruler i { height: 4px; background: #4a4e54; }
+.pa-tune-calib.ruler i { height: 4px; background: hsl(var(--neutral-hue) var(--neutral-sat) 31%); }  /* warm-neutral ruler (was raw cool #4a4e54) */
 
 /* Data-bound endpoints — the static edges of what exists (muted / reference tier,
    distinct from the accent active readout above). */
@@ -2389,53 +2588,89 @@ p  { margin: 0 0 0.75rem; }
 }
 .pop-copy-btn:hover { background: var(--surface-3); }
 
-/* ---- Map controls (zoom / attribution / scale) -------------------------- */
-/* Zoom controls */
+/* ---- Map controls — DARK tonal-glass system (Fix 4+5, 2026-07-14). The last un-themed
+   elements: zoom / fullscreen / geolocate / scale / attribution were light gel pills. Now they
+   share the console's language — glass-panel body, neutral-glass key buttons, teal on interaction,
+   uniform 30px slots (SIZE KEPT: the .pa-detail top:208px offset is derived from these heights —
+   changing size would break it; this is a re-skin only). Default dark SVG icons are inverted to
+   light on the dark glass. Behaviour (zoom/fullscreen/geolocate/scale) unchanged. -------------- */
 .maplibregl-ctrl-group {
-  border-radius: var(--radius-md) !important;
-  box-shadow: var(--gel-lift) !important;
-  border: var(--gel-border) !important;
+  border-radius: var(--r-md) !important;
+  border: 1px solid var(--glass-panel-rim) !important;
+  background: var(--glass-panel-fill);
+  -webkit-backdrop-filter: blur(var(--glass-panel-blur)); backdrop-filter: blur(var(--glass-panel-blur));
+  box-shadow: 0 4px 16px rgba(0,0,0,0.34) !important;
   overflow: hidden;
 }
+/* Full interaction-state set (Fix 4), uniform with the sidebar/console buttons:
+   REST (neutral-glass key) · HOVER (rim-brighten + slight lift) · PRESSED (depress) ·
+   SELECTED/on (fullscreen active → petrol body + teal ring, the active material) · DISABLED
+   (muted, in place). Transform-only motion, reduced-motion-gated below; no blur animation. */
 .maplibregl-ctrl-group button {
-  width: 30px !important;
-  height: 30px !important;
-  background: var(--gel-grad) !important;
-  box-shadow: var(--gel-bevel);
+  width: 30px !important; height: 30px !important;
+  background: var(--btn-body-grad) !important;   /* REST — inactive/available = neutral-glass key */
+  box-shadow: var(--btn-body-hi); border: 0 !important;
+  color: var(--tx-key);   /* the reset control's inline currentColor glyph → light */
+  transition: background 120ms ease, transform 80ms ease;
 }
-.maplibregl-ctrl-group button:hover {
-  background: var(--gel-grad-gloss) !important;
+.maplibregl-ctrl-group button + button { border-top: 1px solid var(--pa-hair) !important; }   /* uniform hairline between stacked slots */
+/* ICON FAMILY (Fix 2) — replace MapLibre's default zoom/fullscreen glyphs with custom Feather-style
+   icons (stroke 2, round, light #c9ccd0) matching the reset (fit-frame) + search (magnifier) so the
+   whole set is ONE family at ONE size (18px). No default MapLibre icons left; no invert filter. */
+.maplibregl-ctrl-group .maplibregl-ctrl-icon {
+  background-size: 18px 18px !important; background-position: center !important; background-repeat: no-repeat !important;
+  filter: none;
+}
+.maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23c9ccd0' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='12' y1='5' x2='12' y2='19'/%3E%3Cline x1='5' y1='12' x2='19' y2='12'/%3E%3C/svg%3E") !important;
+}
+.maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23c9ccd0' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='5' y1='12' x2='19' y2='12'/%3E%3C/svg%3E") !important;
+}
+.maplibregl-ctrl-fullscreen .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23c9ccd0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cpolyline points='9 21 3 21 3 15'/%3E%3Cline x1='21' y1='3' x2='14' y2='10'/%3E%3Cline x1='3' y1='21' x2='10' y2='14'/%3E%3C/svg%3E") !important;
+}
+.maplibregl-ctrl-shrink .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23c9ccd0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 14 10 14 10 20'/%3E%3Cpolyline points='20 10 14 10 14 4'/%3E%3Cline x1='14' y1='10' x2='21' y2='3'/%3E%3Cline x1='3' y1='21' x2='10' y2='14'/%3E%3C/svg%3E") !important;
+}
+.maplibregl-ctrl-group button:hover { background: var(--btn-body-hover) !important; transform: translateY(-0.5px); color: var(--pa-ink); }   /* HOVER — invite lift */
+.maplibregl-ctrl-group button:hover .maplibregl-ctrl-icon { filter: brightness(1.3); }
+.maplibregl-ctrl-group button:active { transform: translateY(0.5px); background: var(--pa-card) !important; }   /* PRESSED — depress */
+/* SELECTED/on — fullscreen active (MapLibre swaps the button to .maplibregl-ctrl-shrink): the
+   active material — dark petrol body + a teal inset ring — matching the sidebar active buttons. */
+.maplibregl-ctrl-group button.maplibregl-ctrl-shrink {
+  background: var(--accent-petrol-base) !important;
+  box-shadow: inset 0 0 0 1px var(--accent-teal);
+}
+.maplibregl-ctrl-group button:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: -2px; }   /* teal focus (interactive accent) */
+.maplibregl-ctrl-group button:disabled .maplibregl-ctrl-icon { opacity: 0.5; }   /* DISABLED — zoom-limit reached → muted in place (Principle 0); icon already light */
+.maplibregl-ctrl-group button:disabled { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .maplibregl-ctrl-group button, .maplibregl-ctrl-group button:hover, .maplibregl-ctrl-group button:active { transition: none; transform: none; }
 }
 
-/* Attribution — compact and unobtrusive */
+/* Attribution — compact, dark, unobtrusive */
 .maplibregl-ctrl-attrib {
-  background: rgba(255,255,255,0.72) !important;
-  backdrop-filter: blur(4px);
-  font-size: 10px !important;
-  border-radius: var(--radius-sm) 0 0 0 !important;
-  padding: 2px 6px !important;
+  background: var(--glass-panel-fill) !important;
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  color: var(--pa-mut); font-size: 10px !important;
+  border-radius: var(--r-sm) 0 0 0 !important; padding: 2px 6px !important;
 }
-.maplibregl-ctrl-attrib a { color: var(--text-muted) !important; }
-/* Compact attribution "i" button — minor gel for consistency (keep its default
-   "i" icon background-image; only add the bevel + lift). */
-.maplibregl-ctrl-attrib-button {
-  box-shadow: var(--gel-bevel), var(--gel-lift);
-  border-radius: 50% !important;
-}
+.maplibregl-ctrl-attrib a { color: var(--pa-mut) !important; }
+.maplibregl-ctrl-attrib-button { filter: invert(0.82); border-radius: 50% !important; }
 /* C7 — deliberate bottom-right placement on the PA map: stack the attribution + scale
    flush in the corner with a small gap, so nothing floats loose mid-edge. */
 .pa-canvas .maplibregl-ctrl-bottom-right {
   display: flex; flex-direction: column; align-items: flex-end; gap: 4px; margin: 0 4px 4px 0;
 }
 
-/* Scale bar — minor convex consistency (subtle lift; stays legible). */
+/* Scale bar — dark glass to match (was a light pill). Light text + muted ruler border. */
 .maplibregl-ctrl-scale {
-  background: rgba(255,255,255,0.72) !important;
-  backdrop-filter: blur(4px);
-  border-color: var(--slate-500) !important;
-  font-size: 10px !important;
-  border-radius: 0 0 var(--radius-sm) var(--radius-sm) !important;
-  box-shadow: var(--gel-lift);
+  background: var(--glass-panel-fill) !important;
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  border: 1px solid var(--pa-hair) !important; border-top: 0 !important;
+  color: var(--pa-ink) !important; font-size: 10px !important;
+  border-radius: 0 0 var(--r-sm) var(--r-sm) !important;
 }
 
 /* ---- Report Card --------------------------------------------------------- */
@@ -2617,3 +2852,4 @@ p  { margin: 0 0 0.75rem; }
     scroll-behavior: auto !important;
   }
 }
+

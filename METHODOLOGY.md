@@ -190,3 +190,73 @@ uses the data bbox, so it reframes automatically as data/boundaries change.
 Each new city needs its **own** `HOME_VIEW` entry (Calgary when it arrives); without one,
 that city has no tuned home until it is captured. `maxBounds` likewise becomes per-city at
 that point (today it is Edmonton-pinned, harmless because Calgary has no map yet).
+
+---
+
+## D7 — YoY is a matched-sample log change, published in log points
+
+### Decision
+Property Assessment's year-over-year metric is a **matched-sample log change**: take the
+parcels present in **both** years (matched by `Account Number`), take the median assessed
+value of that same set in each year, and report `log(median_now / median_prior) * 100`
+(`04_aggregate_historical.R:274`, `05_aggregate_current.R:273`). The per-year **level**
+median stays full-population; only the *change* is matched. It is published, labelled and
+formatted in **log points** — never `%`, and its deltas never `pp`. The column is still
+named `yoy_pct_change` on disk (a frontend/GeoJSON field contract); the exported CSV
+header is `yoy_log_points`.
+
+### Why
+Two separate choices, both deliberate.
+
+**Matched-sample**, because a growing neighbourhood's new houses would otherwise
+masquerade as price change. This is the standard mix-adjustment (RPPI Handbook; StatCan
+matched-model; FHFA "same physical units").
+
+**Log points**, per `b3c8fb4` (2026-06-26), which changed the estimator from a raw percent
+and recorded why:
+
+> *"Log is symmetric about 0 (an x% rise and the offsetting fall have equal magnitude) and
+> additive across periods — the scale repeat-sales / Case-Shiller estimate on — and it tames
+> the long right tail of raw percent (unbounded above, floored at -100%)."*
+
+Measured: skew **11.51 → 7.72**, kurtosis **160 → 78**. Log is also the well-behaved scale
+for a median on skewed data, and the log-return convention in asset pricing.
+
+That same commit kept the `%` label, reasoning *"For small changes log ~= raw percent, so
+the displayed '%' stays meaningful for the vast majority of neighbourhoods."* The estimator
+was right; the label was not, and 2026-07-15 retired it (below).
+
+### Example
+**ROSENTHAL 2014 = `159.7` log pts.** As a percent that is **+393.8%** — the label was
+understating the move by 234 points. It is also not price change: 38.5% of its matched
+parcels went from a **$77,250** serviced lot to a **$479,750** finished house, while the
+already-built parcels moved **+18.8**. That is greenfield buildout, and the value is
+correct — the tail stays (`docs/recon/YOY_TAIL_MECHANISM_20260715.md`, Mechanism A).
+Below about ±14 log points — 98% of the panel — log and percent agree to within 1.2 points,
+which is why the mislabel survived every eyeball check for three weeks.
+
+### Rejected
+- **Raw percent** (`(median_now − median_prior)/median_prior * 100`) — the pre-`b3c8fb4`
+  estimator. Skew 11.51, kurtosis 160; unbounded above and floored at −100%, so it is
+  asymmetric about zero and not additive. Retired on the evidence above.
+- **Converting to percent for display** (compute in log, `exp()` at the edge) — makes the
+  old `%` label true, but reverses `b3c8fb4` in everything but name: it restores the skew
+  the log was adopted to tame, changes all 3,473 published values, and re-fits the
+  data-derived ramp. Rejected 2026-07-15: **relabel, do not convert.**
+- **Log-compute / percent-display** — the as-built state until 2026-07-15, and the reason
+  this entry exists: two units live in the system at once and nothing marks the seam.
+- **`Δln` as the notation** — one notation everywhere; `Log Pts` is it.
+
+### When-this-changes
+**`b3c8fb4` accepted an error bounded by the data it could then see. That bound was
+empirical, not structural — and the greenfield tail widened it.** The reasoning was sound
+and the arithmetic was checked; it was still wrong within a month, because the panel grew a
+tail the check had not seen. A future panel — more greenfield, a second city, a
+reassessment shock — can widen it again. So: **an approximation justified by "the current
+data makes this close enough" is a standing liability, not a settled decision.** Either the
+label states the actual unit (what we now do), or the bound is re-tested every refresh and
+recorded here. Do not re-derive the `%` label from "log ≈ percent for most rows" — that
+argument has already been made once, correctly, and has already failed.
+
+The estimator itself is stable: `04:274` / `05:273` and the N<100 gate are frozen cores.
+Changing either changes every published YoY value and needs a STOP-gate.

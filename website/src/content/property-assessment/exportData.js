@@ -23,14 +23,23 @@ import { siteConfig } from "../../config/siteConfig.js";
 // Year-invariant identity columns carried once (mirrors 07b's IDENTITY_COLS).
 const IDENTITY = ["Neighbourhood ID", "display_name", "district"];
 
+// Export column NAMES, where the exported name differs from the pipeline field
+// name. yoy_pct_change holds log(median_now/median_prior)*100 — log points, NOT a
+// percent (METHODOLOGY.md D7) — so "pct_change" would state the wrong unit in a
+// file that leaves the site with no legend attached to explain it. The pipeline
+// field name is unchanged; only the exported header is renamed. ASCII only: this
+// is a CSV header, parsed by other people's tools.
+const EXPORT_COL = { yoy_pct_change: "yoy_log_points" };
+const exportName = (field) => EXPORT_COL[field] ?? field;
+
 // The timeseries long-panel column contract (LOCKED order): identity, the year
 // key, then the per-year metrics. DERIVED from IDENTITY + PER_YEAR_FIELDS so a new
 // pipeline metric flows through with no edit here (refresh-by-design). This equals
 // the locked contract: Neighbourhood ID, display_name, district, year,
 // polygon_state, n_properties, median_assessvalue, avall_public, sd_assessedvalue,
 // median_yearbuilt, pct_with_unit, avg_assessvalue_without_unit, avg_lotsize,
-// yoy_pct_change.
-const TIMESERIES_HEADER = [...IDENTITY, "year", ...PER_YEAR_FIELDS];
+// yoy_log_points.
+const TIMESERIES_HEADER = [...IDENTITY, "year", ...PER_YEAR_FIELDS.map(exportName)];
 
 // The combined file encodes "no value" as the sentinel -999 (a suppressed nbhd, or
 // no prior-year YoY) or JSON null. Map both — and any non-finite — to null so the
@@ -76,7 +85,7 @@ export function buildProvenanceText({ file, shape, city, metric, scope, coverage
 // identity cells, then each PER_YEAR_FIELD pulled for `year` (numeric fields
 // sentinel-guarded → empty when suppressed; polygon_state is a label).
 export function buildSnapshotCsv(features, year) {
-  const header = [...IDENTITY, ...PER_YEAR_FIELDS];
+  const header = [...IDENTITY, ...PER_YEAR_FIELDS.map(exportName)];
   const lines = [header.join(",")];
   for (const f of features) {
     const p = f.properties;
@@ -144,8 +153,11 @@ export function buildAggregateCsv(aggregate, cityBaseline) {
       r2(rel(a.parcelMean, cb.parcelMean)), "relative_pct", "parcel-weighted (exact)"],
     ["median_assessed", r2(a.medianOfMedians), r2(cb.medianOfMedians),
       r2(rel(a.medianOfMedians, cb.medianOfMedians)), "relative_pct", "median of neighbourhood medians (approx)"],
-    ["yoy_pct_change", r2(a.areaYoY), r2(cb.areaYoY),
-      r2(pp(a.areaYoY, cb.areaYoY)), "percentage_points", "parcel-weighted (approx)"],
+    // Log points, not percent (METHODOLOGY.md D7) — so the delta_unit is log_points
+    // too: the gap between two log-point figures is log points, never "percentage
+    // points" (which is the gap between two PERCENTAGES).
+    ["yoy_log_points", r2(a.areaYoY), r2(cb.areaYoY),
+      r2(pp(a.areaYoY, cb.areaYoY)), "log_points", "parcel-weighted (approx)"],
   ];
   return rows.map((row) => row.map(csvCell).join(",")).join("\n");
 }

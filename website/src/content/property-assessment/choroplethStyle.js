@@ -13,7 +13,7 @@
 // domain is kept only as the fallback when a year has no usable scale.
 // =============================================================================
 
-import { fmtCurrency, fmtNumber, fmtPct, fmtYear, fmtArea } from "../../utils/format.js";
+import { fmtCurrency, fmtNumber, fmtPct, fmtLogPts, fmtYear, fmtArea } from "../../utils/format.js";
 import { polyOutline, rampFloor, RAMP_FLOOR, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
 import { paintTransition, DUR_BASE } from "../../components/motion.js";
 import { CITY_BOUNDS } from "../../config/cityBounds.js";
@@ -308,7 +308,10 @@ const METRICS = [
     icon: "M12 2v20 M17 7H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" },             // dollar
   { key: "avall_public",       label: "Mean Assessed Value",       fmt: fmtCurrency,
     icon: "M3 3v18h18 M8 17V9 M13 17V5 M18 17v-7" },                                  // distribution / mean
-  { key: "yoy_pct_change",     label: "Year over Year Change (%)", fmt: fmtPct,
+  // LOG POINTS, not percent — the backend emits log(median_now/median_prior)*100
+  // (04_aggregate_historical.R:274). See METHODOLOGY.md D7. The legend title reads
+  // this label, so the unit is stated here once for both.
+  { key: "yoy_pct_change",     label: "Year over Year Change (Log Pts)", fmt: fmtLogPts,
     icon: "M3 17l6-6 4 4 8-8 M21 7v6 M21 7h-6" },                                     // trending up
   // %Condo (D1) — promoted to a MAP metric (varies spatially) on its own 0–100 share
   // ramp (Year built demoted from the metric row but KEPT as a table column). = share

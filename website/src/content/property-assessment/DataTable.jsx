@@ -78,6 +78,8 @@ import { METRICS, COLOUR_LEVEL_DELTAS } from "./choroplethStyle.js";
 import {
   fmtArea,
   fmtCurrencyShort,
+  fmtLogPts,
+  fmtLogPtsBare,
   fmtNumber,
   fmtPct,
   fmtYear,
@@ -124,8 +126,13 @@ const PRESENTATION = {
   median_yearbuilt:   { label: "Year Built",   header: "Built", fmt: fmtYear },
   pct_with_unit:      { label: "% Condo",      header: "% Condo", fmt: fmtPct,
                         cellFmt: (v) => (v == null || isNaN(+v) ? "—" : `${Math.round(+v)}%`) },  // D1 — also a map metric now
-  yoy_pct_change:     { label: "YoY %",        header: "YoY",   fmt: fmtPct,
-                        cellFmt: (v) => (v == null || isNaN(+v) ? "—" : (+v).toFixed(1)) }, // bare — "%" is in the header
+  // LOG POINTS, not percent (METHODOLOGY.md D7). The unit is stated ONCE in the
+  // header — which the range-slider label also reads — so both `fmt` and `cellFmt`
+  // are bare here. That is deliberate: for every other metric `fmt` is the FULL
+  // unit-carrying formatter, but a slider readout of "+7.3 log pts – +15.5 log pts"
+  // says the unit twice in a slot sized for neither.
+  yoy_pct_change:     { label: "YoY (Log Pts)", header: "YoY (Log Pts)", fmt: fmtLogPtsBare,
+                        cellFmt: fmtLogPtsBare },
 };
 
 // Fixed-chassis column widths (table-layout: fixed) — proportions by column ROLE,
@@ -358,21 +365,8 @@ export default function DataTable({
     });
   }, [selectionMode, data, years]);
   // The matched-sample YoY per year for the scope (single nbhd / selection mean / city
-  // mean of the per-nbhd yoy_pct_change series) — the trend instrument's YoY strip.
-  const trendYoy = useMemo(() => {
-    const src = singleRow ? [singleRow] : selectionMode ? data : rows;
-    return years.map((_, i) => {
-      const vals = src.map((r) => r.yoySeries?.[i]).filter((v) => v != null);
-      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-    });
-  }, [singleRow, selectionMode, data, rows, years]);
-
-  // TIMESERIES scope label — the entity the trend/distribution describe.
-  const scopeLabel = singleRow
-    ? singleRow.name
-    : selectionMode
-    ? `${aggregate.nSelected} Selected · Mean`
-    : "City · Mean";
+  // (The trendYoy mean-series + scopeLabel were removed 2026-07-14 with the YoY·Matched strip
+  // and the header scope-name dedupe — both were their sole consumers.)
 
   // Column defs (data-driven, STATIC). accessorFn maps null → undefined so TanStack's
   // sortUndefined keeps blanks last in BOTH directions; the cell renders "—".
@@ -426,17 +420,19 @@ export default function DataTable({
       ),
       meta: { numeric: true, width: COL_WIDTH.trend },
     };
-    // YoY (C3) — the only SIGNED rate in the table: render it signed, 1-decimal, %,
-    // and coloured up/down (green/coral) so it reads like a rate, not a bare number.
+    // YoY (C3) — the only SIGNED rate in the table: render it signed, 1-decimal, and
+    // coloured up/down (green/coral) so it reads like a rate, not a bare number. The
+    // cell carries NO unit: the header says "(Log Pts)". fmtLogPtsBare supplies the
+    // sign, so every YoY surface now uses one notation (it previously printed "%"
+    // here while the KPI rail two functions away printed none).
     const yoyCol = {
       id: "yoy_pct_change",
       accessorFn: (r) => r.yoy_pct_change ?? undefined,
-      header: "YoY",
+      header: COLS_BY_KEY.yoy_pct_change.header,
       cell: (info) => {
         const v = info.getValue();
         if (v == null) return "—";
-        const txt = (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(+v).toFixed(1) + "%";
-        return <span className={signCls(v)}>{txt}</span>;
+        return <span className={signCls(v)}>{fmtLogPtsBare(v)}</span>;
       },
       sortUndefined: "last",
       enableGlobalFilter: false,
@@ -857,11 +853,10 @@ export default function DataTable({
                   year cursor + labelled endpoints + YoY strip). ===== */}
               <div className="dt-slot dt-slot--trend">
                 <TrendInstrument
-                  label={`${activeCol?.label ?? metricLabel} · ${scopeLabel}`}
+                  label={activeCol?.label ?? metricLabel}
                   main={plotSeries}
                   city={selectionMode || singleRow ? cityLine : null}
                   envelope={trendEnvelope}
-                  yoy={trendYoy}
                   years={years}
                   activeIndex={activeIndex}
                   fmt={activeCol?.fmt ?? ((v) => v)}
@@ -961,10 +956,15 @@ function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, 
         city: cityTxt(city.parcelMean, fmtCurrencyShort),
         value: s.mean != null ? fmtCurrencyShort(s.mean) : "—",
         delta: rel(s.mean, city.parcelMean) }
+    // YoY carries its unit in the VALUE (this card's label is just "YoY", with no
+    // room for "(Log Pts)"). The delta is log points too, NOT "pp": a percentage
+    // point is the gap between two percentages, and these are not percentages
+    // (METHODOLOGY.md D7). fmtLogPts is already signed, so it serves both.
     : { key: "yoy", label: "YoY", cityScope: s.isCity,
-        city: cityTxt(city.areaYoY, fmtPct),
-        value: s.yoy != null ? fmtPct(s.yoy) : "—", valueCls: signCls(s.yoy),
-        delta: pp(s.yoy, city.areaYoY) });
+        city: cityTxt(city.areaYoY, fmtLogPts),
+        value: s.yoy != null ? fmtLogPts(s.yoy) : "—", valueCls: signCls(s.yoy),
+        delta: (!s.isCity && s.yoy != null && city.areaYoY != null)
+          ? { txt: fmtLogPts(s.yoy - city.areaYoY), cls: signCls(s.yoy - city.areaYoY) } : null });
   // A4 — the CONDO card splits into two EQUAL square tiles (matching Median/Mean): the
   // vs-city SHARE (lens a) and the condo-stripped view (lens b, "Excluding Condos": the
   // mean value + lot), so neither is a wide rectangle.
