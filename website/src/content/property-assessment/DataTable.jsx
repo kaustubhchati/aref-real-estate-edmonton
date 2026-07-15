@@ -75,6 +75,7 @@ import SegmentedControl from "../../components/SegmentedControl.jsx";
 import Sparkline from "../../components/Sparkline.jsx";
 import { DUR_BASE, reduceMotion } from "../../components/motion.js";
 import { METRICS, COLOUR_LEVEL_DELTAS, YOY_CORE, YOY_OVERFLOW_SHARE } from "./choroplethStyle.js";
+import { useScrollFade } from "./useScrollFade.js";
 import {
   fmtArea,
   fmtCurrencyShort,
@@ -1143,6 +1144,10 @@ function FacetDropdown({ label, options, selected, labelOf, onToggle, disabled =
   const wrapRef = useRef(null);
   const triggerRef = useRef(null);
   const menuRef = useRef(null);
+
+  // Fade the bottom edge while options remain below the fold — 15 districts do not fit
+  // this list. Keyed on `open`: the menu only exists then.
+  useScrollFade(menuRef, [open]);
 
   function openMenu() {
     const r = triggerRef.current?.getBoundingClientRect();

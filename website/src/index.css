@@ -1044,6 +1044,34 @@ p  { margin: 0 0 0.75rem; }
     scrollbar-color: var(--tx-dim) transparent;
   }
 }
+
+/* BOTTOM FADE — the at-rest cue that the list continues past the fold. macOS draws its
+   scrollbar as a fading overlay and no CSS can pin it open, so without this there is
+   nothing on a resting list to say four more districts exist below. The last visible
+   row dissolving into the panel says it in the one language that needs no scrollbar.
+   Gated on data-more (useScrollFade): drawn ONLY while there is more below, so the end
+   of the list is crisp and never implies a phantom row.
+   STICKY, not absolute: these lists ARE the scroll container, and an absolutely-
+   positioned child would anchor to the scrollable CONTENT and slide out of view. As the
+   last flex item, a sticky pseudo pins to the visible bottom edge instead. The negative
+   bottom cancels the container's own padding so the fade reaches the true edge, and the
+   negative margin-top keeps it out of layout — it overlays the last row rather than
+   adding a row of its own. */
+.dt-facet-list::after,
+.export-menu-list::after {
+  content: ""; position: sticky; flex: 0 0 auto;
+  bottom: calc(var(--s2) * -1);
+  height: 30px; margin-top: -30px;
+  pointer-events: none;                       /* never eats a click on the last option */
+  background: linear-gradient(to top, var(--panel), rgba(0, 0, 0, 0));
+  opacity: 0; transition: opacity 120ms linear;
+}
+.dt-facet-list[data-more="1"]::after,
+.export-menu-list[data-more="1"]::after { opacity: 1; }
+/* (No local prefers-reduced-motion guard: the mandatory app-wide one at the bottom of
+   this file already curtails every transition to 0.01ms !important — a local rule here
+   would be dead code that the global !important overrides anyway. Verified: this
+   transition measures 1e-05s under reduced motion.) */
 .dt-facet-opt {
   display: flex; align-items: center; gap: 7px; cursor: pointer;
   font-size: var(--t-xs); padding: 5px 7px; border-radius: var(--r-sm); color: var(--tx);

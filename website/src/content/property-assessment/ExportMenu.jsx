@@ -23,6 +23,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useScrollFade } from "./useScrollFade.js";
 
 const ICON_EXPORT = "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3";
 
@@ -32,6 +33,10 @@ export default function ExportMenu({ onExport, year, years = [], selectedCount =
   const wrapRef = useRef(null);
   const triggerRef = useRef(null);
   const menuRef = useRef(null);
+
+  // Fade the bottom edge while options remain below the fold (the list is
+  // max-height + overflow-y:auto). Keyed on `open`: the menu only exists then.
+  useScrollFade(menuRef, [open]);
 
   // Open ABOVE or BELOW the trigger by available room. The menu is PORTALED to
   // <body> (not nested in the toolbar) so the console's overflow:hidden can't clip
