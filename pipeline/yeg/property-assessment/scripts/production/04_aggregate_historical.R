@@ -322,7 +322,7 @@ all_agg <- map_dfr(years_present, function(yr) {
   # the prior year's medians are both shown (median is NA when N<100-suppressed or
   # first year), so the NA pattern is identical to the old full-pop yoy. Only the
   # VALUE changes (matched vs full-pop differenced) for non-suppressed years.
-  mutate(yoy_pct_change = if_else(
+  mutate(yoy_log_points = if_else(
     is.na(median_assessvalue) | is.na(lag(median_assessvalue)),
     NA_real_, .matched_yoy)) |>
   ungroup() |>
@@ -334,7 +334,7 @@ for (yr in years_present) {
     sprintf("output/hist_aggregates/neighbourhood_aggregates_%d.csv", yr))
 }
 
-cat(sprintf("Matched-sample yoy_pct_change written back into all %d aggregate CSVs.\n\n",
+cat(sprintf("Matched-sample yoy_log_points written back into all %d aggregate CSVs.\n\n",
             length(years_present)))
 
 # ============================================================

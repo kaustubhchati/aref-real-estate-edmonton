@@ -187,7 +187,7 @@ for (agg_path in sort(agg_candidates)) {
       pct_with_unit                = pct_with_unit,
       avg_assessvalue_without_unit = avg_assessvalue_without_unit,
       avg_lotsize                  = avg_lotsize,
-      yoy_pct_change               = yoy_pct_change
+      yoy_log_points               = yoy_log_points
     ) |>
     st_set_precision(1e6) |>
     st_make_valid()

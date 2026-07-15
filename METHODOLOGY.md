@@ -201,9 +201,21 @@ parcels present in **both** years (matched by `Account Number`), take the median
 value of that same set in each year, and report `log(median_now / median_prior) * 100`
 (`04_aggregate_historical.R:274`, `05_aggregate_current.R:273`). The per-year **level**
 median stays full-population; only the *change* is matched. It is published, labelled and
-formatted in **log points** — never `%`, and its deltas never `pp`. The column is still
-named `yoy_pct_change` on disk (a frontend/GeoJSON field contract); the exported CSV
-header is `yoy_log_points`.
+formatted in **log points** — never `%`, and its deltas never `pp`. The column is named
+`yoy_log_points` everywhere it is written, published or downloaded: the aggregate CSVs
+(04/05), the per-year and combined GeoJSONs (06/07/07b), the per-neighbourhood download
+CSV, and the map's own CSV export.
+
+**Renamed 2026-07-15** (was `yoy_pct_change`). The rename landed in two steps, and the
+intermediate state is the reason the second was needed: `0cbdbaf` renamed only the
+combined GeoJSON, via a publish-time map inside 07b, leaving 04/05 writing the old name.
+The map then said `yoy_log_points` while the per-neighbourhood download CSV said
+`yoy_pct_change` — one statistic under two names, with the *wrong* one on the
+researcher-facing download. The name is now honest at the point of writing, so every
+reader inherits it and the 07b bridge is deleted rather than left as a no-op. **A column
+called `pct_change` holding a log change is the exact misreading D7 exists to end**, so
+the rule is: fix a wrong published name where it is written, never by translating it on
+the way out.
 
 ### Why
 Two separate choices, both deliberate.

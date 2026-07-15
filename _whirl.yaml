@@ -25,9 +25,9 @@ sections:
       # --- 04_aggregate_historical MUST run BEFORE 05_aggregate_current (dependency) ---
       # 05 reads 04's prior-year output
       #   output/hist_aggregates/neighbourhood_aggregates_2025.csv
-      # to compute the yoy_pct_change column. If 05 ran first, that file would not
+      # to compute the yoy_log_points column. If 05 ran first, that file would not
       # yet exist on a clean run, so 05's file.exists guard falls through to a
-      # warning and SILENTLY nulls yoy_pct_change. Keep 04 ahead of 05.
+      # warning and SILENTLY nulls yoy_log_points. Keep 04 ahead of 05.
       - scripts/production/04_aggregate_historical.R
       - scripts/production/05_aggregate_current.R
       # 08_build_geojson.R removed 2026-06-22: it built a pre-rescue geojson the

@@ -232,7 +232,7 @@ cat(sprintf("Rows: %s neighbourhoods (incl. %s NA-id developing areas)\n",
 
 
 # --- Year-over-year change: 2026 vs 2025 --------------------
-# Match the historical pipeline's yoy_pct_change (04_aggregate_historical) so the 2026 production
+# Match the historical pipeline's yoy_log_points (04_aggregate_historical) so the 2026 production
 # aggregate carries the same column. yoy is keyed on canonical_id, NOT name, so a
 # rename (e.g. OLIVER -> WÎHKWÊNTÔWIN) no longer nulls the change across the
 # rename year. Both the 2025 historical aggregate (04_aggregate_historical) and the 2026 aggregate
@@ -307,15 +307,15 @@ if (file.exists(prev_path)) {
     left_join(matched_2026, by = ".canon_id", na_matches = "never") |>
     # Preserve the suppression gate EXACTLY (NA where 2026 or 2025 suppressed);
     # only the VALUE is matched-sample instead of full-pop differenced.
-    mutate(yoy_pct_change = if_else(is.na(median_assessvalue) | is.na(median_2025),
+    mutate(yoy_log_points = if_else(is.na(median_assessvalue) | is.na(median_2025),
                                     NA_real_, .matched_yoy)) |>
     select(-.canon_id, -median_2025, -.matched_yoy)
   write_csv(nbhd_agg_gated, out_path)
-  cat(sprintf("Added matched-sample yoy_pct_change (2026 vs 2025, canonical_id); %s neighbourhoods have a value. Re-wrote %s\n",
-              comma(sum(!is.na(nbhd_agg_gated$yoy_pct_change))), out_path))
+  cat(sprintf("Added matched-sample yoy_log_points (2026 vs 2025, canonical_id); %s neighbourhoods have a value. Re-wrote %s\n",
+              comma(sum(!is.na(nbhd_agg_gated$yoy_log_points))), out_path))
 } else {
   warning("2025 historical aggregate not found at ", prev_path,
-          " — yoy_pct_change not added. Run 04_aggregate_historical first.")
+          " — yoy_log_points not added. Run 04_aggregate_historical first.")
 }
 
 
