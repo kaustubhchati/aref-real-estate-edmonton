@@ -1817,6 +1817,26 @@ p  { margin: 0 0 0.75rem; }
   position: absolute; top: 50%; height: 4px; margin-top: -2px; border-radius: 999px;
   background: var(--accent); left: var(--lo, 0%); right: calc(100% - var(--hi, 100%));
 }
+/* Detent — where YoY's fixed core ends and its compressed overflow begins. The track is
+   physically INTERRUPTED here, because the scale genuinely changes at this point (≈0.4
+   log pts per % inside the core, ≈7.2 outside it). A broken track is the honest way to
+   say "different thing over here"; a tick would imply one continuous axis. Painted in
+   the bay's own colour so it reads as an ABSENCE rather than a mark, and it sits after
+   .pa-dual-fill in the DOM so the active range breaks with it — while the thumbs (which
+   carry an explicit z-index) still ride over the top. */
+.pa-dual-detent {
+  position: absolute; top: 50%; margin-top: -5px; height: 10px; width: 9px;
+  left: var(--detent); transform: translateX(-50%);
+  background: var(--pa-card);
+  border-left: 1px solid var(--pa-hair); border-right: 1px solid var(--pa-hair);
+  pointer-events: none;
+}
+/* A piecewise readout carries the widest string this slot ever shows ("−159.7 – +159.7").
+   min-width alone let a longer value push the control's name; Principle 0 says size the
+   FRAME for the worst case and let only the content change. tabular-nums already fixes
+   the digit widths — this fixes the slot they sit in. */
+.pa-tune-ctrl--piecewise .pa-tune-active { min-width: 15ch; }
+
 /* Both inputs overlay the same track; the track is transparent (the .pa-dual-track
    div shows through) and only the THUMB catches pointer events so both are grabbable. */
 .pa-dual-input { position: absolute; top: 0; left: 0; }
@@ -1840,7 +1860,13 @@ p  { margin: 0 0 0.75rem; }
    tick-calibrated — "unmistakably operable". Reuses the shared .pa-slider / .pa-dual
    mechanics; adds the two-tier readout (accent active value + muted data bounds).
    ========================================================================== */
-:root { --pa-tune-w: 500px; }
+/* Widened 500 → 640 (2026-07-15, KC). The range control gets ~290px of this, and it has
+   to seat BOTH its name and its readout on one row: "YOY (LOG PTS)" is 109px and the
+   widest range this slot ever shows ("−159.7 – +159.7") is 129px at --t-md. At 500 the
+   control was 216px and the readout spilled outside the bay. The alternatives each gave
+   something up — a label with no unit, a mismatched text size, or a taller bay — so the
+   bay took the ~140px instead. max-width still clamps it on narrow viewports. */
+:root { --pa-tune-w: 640px; }
 
 .pa-tune-dock { pointer-events: auto; }
 .pa-tune-dock-strip { align-self: center; margin-bottom: 6px; }   /* above the handle, centred in .pa-foot */

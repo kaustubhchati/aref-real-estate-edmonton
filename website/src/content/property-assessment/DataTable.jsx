@@ -74,7 +74,7 @@ import ExportMenu from "./ExportMenu.jsx";
 import SegmentedControl from "../../components/SegmentedControl.jsx";
 import Sparkline from "../../components/Sparkline.jsx";
 import { DUR_BASE, reduceMotion } from "../../components/motion.js";
-import { METRICS, COLOUR_LEVEL_DELTAS } from "./choroplethStyle.js";
+import { METRICS, COLOUR_LEVEL_DELTAS, YOY_CORE, YOY_OVERFLOW_SHARE } from "./choroplethStyle.js";
 import {
   fmtArea,
   fmtCurrencyShort,
@@ -200,6 +200,50 @@ const EMPTY_COLUMN_FILTERS = [];
 function multiSelectFilter(row, columnId, selected) {
   return !selected?.length || selected.includes(row.getValue(columnId));
 }
+
+// ── Range SCALES — how a value maps to a position on the track, and back ──────
+// A scale is {min, max, toPct, toVal, detentPct, detentVal}. Two kinds exist:
+//
+//   linear     — every metric but YoY. The track spans that column's own min..max, so
+//                it necessarily re-scales when the data changes. Unchanged behaviour.
+//   piecewise  — YoY only. A FIXED core (±YOY_CORE) that does not move when the year
+//                changes, plus a compressed overflow out to the panel-wide maximum,
+//                with a detent where they meet.
+//
+// WHY YoY needs its own: its per-year extremes swing from +51.8 (2018) to +159.7
+// (2014). A track scaled to those moved every year — the same thumb position meant a
+// different number in a different year, and a filter set in one year silently changed
+// meaning in the next. A frame that moves with its data is not a frame
+// (DESIGN_SYSTEM Principle 0). The core is fixed; only the overflow's extent adapts.
+const linearScale = (min, max) => {
+  const span = (max - min) || 1;
+  return {
+    min, max, detentPct: null, detentVal: null,
+    toPct: (v) => ((v - min) / span) * 100,
+    toVal: (p) => min + (p / 100) * span,
+  };
+};
+// `ceiling` is the PANEL-WIDE max (every year), never this year's max — a per-year
+// ceiling would move the overflow's scale on each year change, reintroducing the drift
+// one level up. It is data-derived, so a bigger tail next refresh simply stretches the
+// overflow; the core stays put.
+const yoyScale = (ceiling) => {
+  const c = YOY_CORE;
+  const corePct = 100 - YOY_OVERFLOW_SHARE;
+  const top = Math.max(ceiling, c);       // a panel with no tail ⇒ an empty overflow
+  const overSpan = top - c;
+  return {
+    min: -c, max: top, detentPct: corePct, detentVal: c,
+    toPct: (v) => (v <= c
+      ? ((v + c) / (2 * c)) * corePct
+      : corePct + (overSpan ? (v - c) / overSpan : 0) * YOY_OVERFLOW_SHARE),
+    toVal: (p) => (p <= corePct
+      ? -c + (p / corePct) * (2 * c)
+      : c + ((p - corePct) / YOY_OVERFLOW_SHARE) * overSpan),
+  };
+};
+// How close (in % of track) a thumb must come before the detent grabs it.
+const DETENT_GRAB = 2;
 
 // Numeric RANGE filter (D7 metric-range facet) — a row passes when its value is in
 // [lo, hi]. Set on the metric columns; the slider targets the ACTIVE metric's column.
@@ -533,16 +577,47 @@ export default function DataTable({
   const activeCol = COLS_BY_KEY[metric];   // resolves any active metric (incl. %Condo / YoY)
   const rangeBounds = table.getColumn(metric)?.getFacetedMinMaxValues();
   const rangeValue = table.getColumn(metric)?.getFilterValue();
+
+  // YoY's overflow ceiling — the largest YoY in the WHOLE panel, not this year's. Every
+  // row carries yoySeries (all years), so this is year-invariant by construction: the
+  // track cannot move when the year does. Data-derived, so no literal to go stale.
+  const yoyCeiling = useMemo(() => {
+    let m = YOY_CORE;
+    for (const r of rows) for (const v of r.yoySeries ?? []) if (v != null && v > m) m = v;
+    return m;
+  }, [rows]);
+
+  const rangeScale = useMemo(() => {
+    if (metric === "yoy_pct_change") return yoyScale(yoyCeiling);
+    return rangeBounds ? linearScale(rangeBounds[0], rangeBounds[1]) : null;
+    // rangeBounds is a fresh array each render; key off its CONTENTS, not its identity.
+  }, [metric, yoyCeiling, rangeBounds?.[0], rangeBounds?.[1]]);
+
   const setRange = ([lo, hi]) => {
-    if (!rangeBounds) return;
-    const full = lo <= rangeBounds[0] && hi >= rangeBounds[1];
+    if (!rangeScale) return;
+    // Spanning the whole track = no filter. For YoY that means the thumb has been pulled
+    // all the way through the overflow to the ceiling — the deliberate "show me the
+    // buildout too" gesture.
+    const full = lo <= rangeScale.min && hi >= rangeScale.max;
     table.getColumn(metric)?.setFilterValue(full ? undefined : [lo, hi]);
   };
   // On a metric switch, drop any range filter left on a DIFFERENT metric (its units
   // no longer apply). Categorical facets (non-metric ids) are metric-independent and
   // persist untouched.
+  //
+  // YoY additionally ARMS at the core boundary (D3, KC 2026-07-15). Its max thumb rests
+  // where price change ends, so selecting YoY shows price change — the 73 buildout
+  // neighbourhood-years are one deliberate drag through the detent away, not mixed into
+  // the first thing you see. Note this IS an active filter on selecting YoY, unlike
+  // every other metric, whose range starts open.
   useEffect(() => {
-    setColumnFilters((prev) => prev.filter((cf) => !METRIC_KEYS.has(cf.id) || cf.id === metric));
+    setColumnFilters((prev) => {
+      const kept = prev.filter((cf) => !METRIC_KEYS.has(cf.id) || cf.id === metric);
+      if (metric === "yoy_pct_change" && !kept.some((cf) => cf.id === metric)) {
+        kept.push({ id: metric, value: [-YOY_CORE, YOY_CORE] });
+      }
+      return kept;
+    });
   }, [metric]);
 
   // "Clear filters" resets the FACETS only — distinct from the selection-mode
@@ -631,7 +706,7 @@ export default function DataTable({
       <RangeFacet
         label={activeCol?.header ?? metricLabel}
         fmt={activeCol?.fmt ?? ((v) => v)}
-        bounds={rangeBounds}
+        scale={rangeScale}
         value={rangeValue}
         onChange={setRange}
         disabled={selectionMode}
@@ -1202,40 +1277,70 @@ function YearSliderRow({ year, sliderYear, slideYear, yMin, yMax }) {
 // apply (selection mode) or bounds are degenerate, it renders INERT (dimmed) rather than
 // null — the frame never reflows. The TanStack wiring (onChange → setFilterValue → the
 // VIEW-only brush) is unchanged from the vertical version.
-function RangeFacet({ label, fmt, bounds, value, onChange, disabled = false }) {
-  const usable = bounds && bounds[0] !== bounds[1];
+function RangeFacet({ label, fmt, scale, value, onChange, disabled = false }) {
+  const usable = scale && scale.min !== scale.max;
   const off = disabled || !usable;
-  const [min, max] = usable ? bounds : [0, 1];
+  const { min, max } = usable ? scale : { min: 0, max: 1 };
   const [lo, hi] = usable && value ? value : [min, max];
-  const step = (max - min) / 100 || 1;
-  const pct = (v) => `${((v - min) / (max - min || 1)) * 100}%`;
+  const piecewise = usable && scale.detentPct != null;
+
+  // The thumbs ride the track in PERCENT space, not value space. A piecewise scale has
+  // no single step size — one % is 0.4 log pts inside the core and 7.2 outside — and a
+  // native range input only does linear. Percent is the one axis that is linear on ANY
+  // scale, so the input stays native (keyboard, focus, a11y all free) and the scale does
+  // the interpreting. aria-valuetext then announces the VALUE, since the raw input value
+  // is now a position, which is not what a screen reader should read out.
+  const toPct = usable ? scale.toPct : (v) => v;
+  const toVal = usable ? scale.toVal : (p) => p;
+  const clampP = (p) => Math.min(100, Math.max(0, p));
+  // The detent GRABS: within DETENT_GRAB of the break the thumb sticks to exactly the
+  // boundary, so crossing it takes a second, deliberate push. That resistance is the
+  // felt half of the break; the gap in the track is the seen half.
+  const snap = (p) => (piecewise && Math.abs(p - scale.detentPct) < DETENT_GRAB ? scale.detentPct : p);
+  const commit = (which, rawPct) => {
+    const p = clampP(snap(clampP(rawPct)));
+    // Values commit at 1 decimal (what the readout shows) — EXCEPT at the two ends,
+    // which commit the scale's exact bound. Rounding there would leave the thumb a hair
+    // inside the track (the ceiling is 159.70153…, which rounds to 159.7), so "the range
+    // spans everything" would never be true, the filter would stay silently armed at the
+    // far right, and every null-value row would drop out of the table with nothing on
+    // screen to explain why.
+    const v = p >= 100 ? scale.max : p <= 0 ? scale.min : Math.round(toVal(p) * 10) / 10;
+    onChange(which === "lo" ? [Math.min(v, hi), hi] : [lo, Math.max(v, lo)]);
+  };
+
   return (
-    <div className={`pa-tune-ctrl${off ? " is-off" : ""}`}>
+    <div className={`pa-tune-ctrl${off ? " is-off" : ""}${piecewise ? " pa-tune-ctrl--piecewise" : ""}`}>
       <div className="pa-tune-ctrl-head">
         <span className="pa-tune-ctrl-name">{label}</span>
         <strong className="pa-tune-active">{off ? "—" : `${fmt(lo)} – ${fmt(hi)}`}</strong>
       </div>
       <div className="pa-tune-track-wrap">
-        <div className="pa-dual" style={{ "--lo": pct(lo), "--hi": pct(hi) }}>
+        <div className="pa-dual" style={{ "--lo": `${toPct(lo)}%`, "--hi": `${toPct(hi)}%` }}>
           <div className="pa-dual-track" />
           <div className="pa-dual-fill" />
+          {/* The break, drawn AFTER the fill so the active range breaks with it and
+              BEFORE the inputs so the thumbs still ride over it. */}
+          {piecewise && (
+            <div className="pa-dual-detent" style={{ "--detent": `${scale.detentPct}%` }} aria-hidden="true" />
+          )}
           {/* When the thumbs COINCIDE, only the top one is grabbable, so raise whichever
               must move to separate them: `lo` clamps to ≤ hi (can only go DOWN), `hi`
               clamps to ≥ lo (can only go UP). So raise lo in the upper half (recovers a
               stuck [max,max]) and leave hi on top otherwise (recovers [min,min]). */}
           <input
             type="range" className="pa-slider pa-dual-input pa-dual-lo"
-            min={min} max={max} step={step} value={lo} disabled={off}
-            style={{ zIndex: lo > (min + max) / 2 ? 3 : 1 }}
-            aria-label={`${label} minimum`}
-            onChange={(e) => onChange([Math.min(+e.target.value, hi), hi])}
+            min={0} max={100} step={0.1} value={toPct(lo)} disabled={off}
+            style={{ zIndex: toPct(lo) > 50 ? 3 : 1 }}
+            aria-label={`${label} minimum`} aria-valuetext={off ? undefined : fmt(lo)}
+            onChange={(e) => commit("lo", +e.target.value)}
           />
           <input
             type="range" className="pa-slider pa-dual-input pa-dual-hi"
-            min={min} max={max} step={step} value={hi} disabled={off}
+            min={0} max={100} step={0.1} value={toPct(hi)} disabled={off}
             style={{ zIndex: 2 }}
-            aria-label={`${label} maximum`}
-            onChange={(e) => onChange([lo, Math.max(+e.target.value, lo)])}
+            aria-label={`${label} maximum`} aria-valuetext={off ? undefined : fmt(hi)}
+            onChange={(e) => commit("hi", +e.target.value)}
           />
         </div>
         <CalibTicks count={11} ruler />

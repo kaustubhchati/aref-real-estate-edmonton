@@ -290,6 +290,29 @@ export function yoyStopsFromValues(values) {
   return yoyDivergingStops(E);
 }
 
+// ---- YoY range-control geometry (the fixed core) ---------------------------
+// The YoY range slider's track is PIECEWISE: a fixed core that never moves, plus a
+// compressed overflow beyond it. These two constants are the whole geometry; the
+// scale itself is built in DataTable (its only consumer).
+//
+// YOY_CORE — the boundary between price change and buildout, in log points.
+// DERIVATION (approved by KC 2026-07-15 — recorded because a bare magic number in the
+// design law is exactly what D7's lesson warns against): the core must contain EVERY
+// price-change observation we have ever seen, so it spans the full observed range of
+// MATURE neighbourhoods (Built ≤ 1990; n = 2,213; min −15.04, max +15.52) rounded out
+// to a round number. It is a CONTAINMENT guarantee, not a percentile — ±12 (the mature
+// p1/p99) and ±15 were both rejected because each pushes real mature price change into
+// the overflow, which would make the detent mean two different things. Everything past
+// it is greenfield buildout, not price change (docs/recon/YOY_TAIL_MECHANISM_20260715.md).
+// It is deliberately a CONSTANT, not runtime-derived: it is the control's fixed frame
+// (DESIGN_SYSTEM Principle 0), and a frame that re-fits itself on every refresh is not
+// a frame. Re-derive it by hand if the mature range ever outgrows it.
+export const YOY_CORE = 16;
+// The overflow's share of the track's pixels. One linear track would hand the core just
+// 18% of the width to hold 98% of the data; at 20% the core keeps 4/5 of the track
+// (≈0.40 log pts per %) and the tail stays wide enough to land a thumb in (≈7.2 per %).
+export const YOY_OVERFLOW_SHARE = 20;
+
 // ---- Choropleth metrics ----------------------------------------------------
 // The columns the user can colour the map by. ONE source of truth (the metric
 // control, the legend, the default, and the URL all read this):
