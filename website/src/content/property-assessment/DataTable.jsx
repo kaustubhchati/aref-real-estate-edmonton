@@ -560,10 +560,29 @@ export default function DataTable({
   // and read/write the hidden facet columns through TanStack. Each helper is generic
   // over a facet id, so the two facets share one code path (no copy-pasted blocks). --
   const facetValue = (id) => table.getColumn(id)?.getFilterValue() ?? [];
-  const facetOptions = (id) =>
-    Array.from(table.getColumn(id)?.getFacetedUniqueValues()?.keys() ?? [])
-      .filter((v) => v != null)
-      .sort();
+  // A facet's options are read from the FULL row set, NOT from
+  // getFacetedUniqueValues() — which returns only the values still reachable given
+  // the OTHER active filters.
+  //
+  // WHY: District's options are the city's districts — a fact about Edmonton, not a
+  // function of the active metric. Once YoY arms its range at the core boundary, the
+  // range filter drops every null-valued row, and "Rabbit Hill" — whose only three
+  // neighbourhoods (CROSSROADS + two annexation-area polygons) are all suppressed and
+  // so carry no YoY — fell to zero rows and SILENTLY VANISHED from the dropdown.
+  // Switching metric changed which districts existed, and the user could no longer
+  // even ask for that one.
+  //
+  // Picking a district with nothing in range now returns an honest empty table, which
+  // the user can see and undo. Hiding the option instead told them the district does
+  // not exist. Generic over FACETS, like the helpers around it.
+  const facetOptionsAll = useMemo(() => {
+    const out = {};
+    for (const f of FACETS) {
+      out[f.id] = [...new Set(rows.map((r) => r[f.id]).filter((v) => v != null))].sort();
+    }
+    return out;
+  }, [rows]);
+  const facetOptions = (id) => facetOptionsAll[id] ?? [];
   function toggleFacet(id, v) {
     const cur = facetValue(id);
     table.getColumn(id)?.setFilterValue(
@@ -885,7 +904,14 @@ export default function DataTable({
                 {viewRows.length === 0 ? (
                   <tr>
                     <td colSpan={table.getVisibleLeafColumns().length} className="dt-empty">
-                      No neighbourhoods match “{globalFilter}”.
+                      {/* Name the ACTUAL cause. This always read `No neighbourhoods match
+                          “{globalFilter}”.`, so an empty table caused by a FACET — a District
+                          with nothing in the active range, say — rendered `No neighbourhoods
+                          match “”.`: empty quotes, blaming a search the user never typed and
+                          naming nothing they could undo. */}
+                      {globalFilter
+                        ? <>No neighbourhoods match “{globalFilter}”.</>
+                        : "No neighbourhoods match the current filters."}
                     </td>
                   </tr>
                 ) : (
