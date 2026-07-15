@@ -1093,9 +1093,15 @@ export default function PropertyAssessmentMap() {
     const base = `property-assessment_${city}_${selectedIds.length ? `${scoped.length}-selected` : "all"}`;
     // Provenance context for the CSV sidecars — all from state, no literals. The
     // CSV bodies are pure data; provenance rides alongside as a _provenance.txt.
+    //
+    // The metric is named as the user SAW it, not by its internal key. The key
+    // `yoy_pct_change` claims "pct" of a value that is log points — the claim
+    // METHODOLOGY D7 retired — so the sidecar was stating the wrong unit while
+    // sitting next to a CSV whose own column already says `yoy_log_points`. The
+    // label is what the map, legend and table showed, and it carries the unit.
     const meta = {
       city,
-      metric,
+      metric: selectedMetric.label,
       scope: selectedIds.length ? `${scoped.length} selected neighbourhoods` : "all neighbourhoods",
     };
     if (format === "csv-current") {
