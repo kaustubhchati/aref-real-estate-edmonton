@@ -263,7 +263,18 @@ acct_year <- pa_clean |>
 # For each account, its value in the IMMEDIATELY prior year (NA if last year is a
 # gap); the matched set for (nbhd, year) is the accounts with a value in both.
 # matched yoy = % change of the median over that constant set.
+#
+# UNRESOLVED IDS ARE DROPPED FIRST. A row whose name matched neither the crosswalk
+# nor the boundary keeps `Neighbourhood ID` = NA (step 3b above). R's group_by()
+# collapses EVERY NA key into ONE group, so without this filter every unresolved
+# neighbourhood pools into a single matched set — and the join below then hands
+# that one pooled number back to each of them (dplyr matches NA to NA by default).
+# That is how GLENRIDDING AREA, MCCONACHIE AREA and RURAL SOUTH EAST all came to
+# report the same 2014 change of 15.3668. An unresolved id names no neighbourhood
+# to compute a change FOR, so it gets NA — never a number borrowed from elsewhere.
+# See docs/recon/YOY_TAIL_MECHANISM_20260715.md §3-§E.
 matched_yoy <- acct_year |>
+  filter(!is.na(`Neighbourhood ID`)) |>
   arrange(`Neighbourhood ID`, `Account Number`, `Assessment Year`) |>
   group_by(`Neighbourhood ID`, `Account Number`) |>
   mutate(.val_prev = if_else(`Assessment Year` - lag(`Assessment Year`) == 1L,
@@ -274,6 +285,20 @@ matched_yoy <- acct_year |>
   summarise(.matched_yoy = log(median(.val, na.rm = TRUE) / median(.val_prev, na.rm = TRUE)) * 100,
             n_matched = n(), .groups = "drop")
 
+# FAIL-CLOSED GUARD: the matched table must carry RESOLVED ids only.
+# Unreachable on a healthy run — the filter above guarantees it. It exists so that
+# if that filter is ever dropped, or a new unresolved-id path appears upstream, the
+# run STOPS loudly instead of silently pooling every unresolved neighbourhood into
+# one group and giving each a change that belongs to none of them. Silent collapse
+# on an NA group key is the failure class; this is the tripwire. Same pattern as
+# the JOB_CATEGORY / stranded-id stops.
+if (anyNA(matched_yoy$`Neighbourhood ID`)) {
+  stop("matched_yoy carries an NA `Neighbourhood ID`. Unresolved ids would pool ",
+       "into ONE group and each inherit the pooled change (they name no ",
+       "neighbourhood to compute a change for). Resolve the id upstream (step 3b) ",
+       "or exclude it. See docs/recon/YOY_TAIL_MECHANISM_20260715.md §3-§E.")
+}
+
 all_agg <- map_dfr(years_present, function(yr) {
   read_csv(sprintf("output/hist_aggregates/neighbourhood_aggregates_%d.csv", yr),
            show_col_types = FALSE) |>
@@ -283,9 +308,14 @@ all_agg <- map_dfr(years_present, function(yr) {
   # table without altering the written `Neighbourhood ID` column's type.
   mutate(.yoy_key  = coalesce(as.character(`Neighbourhood ID`), Neighbourhood),
          .join_id  = as.character(`Neighbourhood ID`)) |>
+  # na_matches = "never": an aggregate row with an unresolved id (.join_id = NA)
+  # must match NOTHING. dplyr's DEFAULT is na_matches = "na" — NA joins to NA —
+  # which was the second half of the pooling bug (the filter above is the first).
+  # Either alone stops it; both together state the intent at the line where the
+  # hazard actually lives, so a future reader sees it here too.
   left_join(matched_yoy |>
               transmute(.join_id = as.character(`Neighbourhood ID`), year, .matched_yoy),
-            by = c(".join_id", "year")) |>
+            by = c(".join_id", "year"), na_matches = "never") |>
   arrange(.yoy_key, year) |>
   group_by(.yoy_key) |>
   # Preserve the suppression gate EXACTLY: yoy exists only where this year's and

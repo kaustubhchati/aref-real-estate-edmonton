@@ -265,13 +265,30 @@ if (file.exists(prev_path)) {
     filter(`Assessment Year` == 2025) |>
     group_by(.acct = as.character(`Account Number`)) |>
     summarise(.val_2025 = median(`Assessed Value`, na.rm = TRUE), .groups = "drop")
+  # Unresolved ids are dropped first — same reason as 04_aggregate_historical:
+  # group_by() collapses EVERY NA key into ONE group, so an unresolved row would
+  # pool with every other unresolved row and then be handed the pooled change by
+  # the join below (dplyr matches NA to NA by default). 2026 currently resolves
+  # fully (crosswalk_unresolved = 0), so this drops nothing today — it stops the
+  # collapse the first year a name arrives that the crosswalk and boundary both
+  # miss. See docs/recon/YOY_TAIL_MECHANISM_20260715.md §3-§E.
   matched_2026 <- apply_crosswalk(assess_clean) |>
+    filter(!is.na(`Neighbourhood ID`)) |>
     group_by(`Neighbourhood ID`, .acct = as.character(`Account Number`)) |>
     summarise(.val_2026 = median(`Assessed Value`, na.rm = TRUE), .groups = "drop") |>
     inner_join(val_2025, by = ".acct") |>
     group_by(.canon_id = as.character(`Neighbourhood ID`)) |>
     summarise(.matched_yoy = log(median(.val_2026, na.rm = TRUE) / median(.val_2025, na.rm = TRUE)) * 100,
               .groups = "drop")
+
+  # FAIL-CLOSED GUARD (mirrors 04_aggregate_historical): resolved ids only.
+  # Unreachable while the filter above stands; trips loudly if it is ever dropped
+  # or a new unresolved-id path appears, rather than pooling silently.
+  if (anyNA(matched_2026$.canon_id)) {
+    stop("matched_2026 carries an NA .canon_id. Unresolved ids would pool into ONE ",
+         "group and each inherit the pooled change. Resolve the id upstream or ",
+         "exclude it. See docs/recon/YOY_TAIL_MECHANISM_20260715.md §3-§E.")
+  }
 
   # Temp canonical key for the 2026 aggregate side (does not mutate output ids).
   canon_id_2026 <- nbhd_agg_gated |>
@@ -282,8 +299,12 @@ if (file.exists(prev_path)) {
 
   nbhd_agg_gated <- nbhd_agg_gated |>
     mutate(.canon_id = as.character(canon_id_2026)) |>
-    left_join(prev_2025,    by = ".canon_id") |>
-    left_join(matched_2026, by = ".canon_id") |>
+    # na_matches = "never" on both: an unresolved aggregate row (.canon_id = NA)
+    # must match nothing. dplyr's default ("na") would join NA to NA — the second
+    # half of the pooling bug. prev_2025 already drops NA ids at its own filter
+    # above; this makes the same intent explicit at the join.
+    left_join(prev_2025,    by = ".canon_id", na_matches = "never") |>
+    left_join(matched_2026, by = ".canon_id", na_matches = "never") |>
     # Preserve the suppression gate EXACTLY (NA where 2026 or 2025 suppressed);
     # only the VALUE is matched-sample instead of full-pop differenced.
     mutate(yoy_pct_change = if_else(is.na(median_assessvalue) | is.na(median_2025),
