@@ -2,25 +2,31 @@
 // DistributionStrip.jsx
 //
 // The console's DISTRIBUTION slot (D3): a real HISTOGRAM of the CITYWIDE spread of
-// the active metric, with a marker showing where the SELECTION sits within it — so a
-// glance places the selected neighbourhood(s) against the whole city (low / typical /
+// the active metric, with a marker showing where the SCOPE sits within it — so a
+// glance places the scoped neighbourhood(s) against the whole city (low / typical /
 // high, in the tail or the mode). Promoted from the earlier faint selection-only
-// strip: the bars are the city; the marker(s) are the selection.
+// strip: the bars are the city; the marker(s) are the scope.
+//
+// The bars are ALWAYS the city — that is the point, not an oversight. Re-binning them
+// over the scope's own values would show that scope's shape and delete the placement
+// this card exists to give.
 //
 //   • bars    — the city distribution, binned (√n bins, clamped) over [min, max]
-//   • markers — the selection's active-metric value(s): one line at N=1, a tick per
-//               neighbourhood at N≥2 (low opacity = density) + a bold median anchor.
-//               None at N=0 (the city histogram alone).
+//   • markers — the scope's active-metric value(s) — a selection, or a facet view such
+//               as one District: one line at N=1, a tick per neighbourhood at N≥2 (low
+//               opacity = density) + a bold median anchor. None at N=0 (city bars alone).
 //
 // Wide-but-shallow shape reader (the accepted consequence of the shallow band): hand-
 // rolled SVG, no dependency, nothing animates (reduced-motion honoured by construction).
 // Self-guards below 2 city values (no distribution to show).
 //
 // Props:
-//   values  — the CITYWIDE active-metric values (nulls already excluded upstream ok)
-//   markers — the SELECTION's active-metric values (0 → city only; 1 → single; ≥2 → set)
-//   label   — active-metric label (accessible name)
-//   fmt     — the metric's formatter (end labels + a11y readout)
+//   values    — the CITYWIDE active-metric values (nulls already excluded upstream ok)
+//   markers   — the SCOPE's active-metric values (0 → city only; 1 → single; ≥2 → set)
+//   scopeKind — "selected" | "filtered" | null — WHICH scope those marks are, so the
+//               accessible name can say so. Same vocabulary as ExportMenu.
+//   label     — active-metric label (accessible name)
+//   fmt       — the metric's formatter (end labels + a11y readout)
 // =============================================================================
 
 function medianOf(arr) {
@@ -32,6 +38,7 @@ function medianOf(arr) {
 export default function DistributionStrip({
   values,
   markers = [],
+  scopeKind = null,
   label = "Value",
   fmt = (v) => v,
 }) {
@@ -59,9 +66,13 @@ export default function DistributionStrip({
   const mk = (markers ?? []).filter((v) => v != null && Number.isFinite(+v)).map(Number);
   const med = mk.length ? medianOf(mk) : null;
 
+  // Name the marks for what they ARE: a screen reader told "selection of 19" over a
+  // District filter is told the wrong thing. "In view" matches the export menu's cue
+  // for this same scope, so the two surfaces use one vocabulary.
+  const markNoun = scopeKind === "filtered" ? `${mk.length} in view` : `selection of ${mk.length}`;
   const a11y =
     `${label} distribution across ${city.length} neighbourhoods, ${fmt(min)} to ${fmt(max)}` +
-    (mk.length ? `; selection of ${mk.length}, median ${fmt(med)}` : "");
+    (mk.length ? `; ${markNoun}, median ${fmt(med)}` : "");
 
   const binW = (W - 2 * PAD) / nb;
   return (
@@ -87,7 +98,7 @@ export default function DistributionStrip({
             />
           );
         })}
-        {/* selection marker(s): a line per selected value (density via opacity) */}
+        {/* scope marker(s): a line per scoped value (density via opacity) */}
         {mk.map((v, i) => (
           <line
             key={i}
@@ -97,7 +108,7 @@ export default function DistributionStrip({
             vectorEffect="non-scaling-stroke"
           />
         ))}
-        {/* selection median anchor (bold) when there's a set to summarise */}
+        {/* scope median anchor (bold) when there's a set to summarise */}
         {mk.length >= 2 && (
           <line
             x1={xAt(med)} y1={0} x2={xAt(med)} y2={H}

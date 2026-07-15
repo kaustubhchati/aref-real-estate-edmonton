@@ -349,6 +349,18 @@ export default function DataTable({
   // Selection mode = a multi-neighbourhood box-select is active (aggregate set):
   // the table shows the aggregate header + only the constituent rows.
   const selectionMode = !!aggregate;
+  // Facet mode = a District / metric-range filter is narrowing the table. Declared
+  // beside selectionMode because it is the same kind of thing — a mode the console's
+  // slots read (§122 as amended: a facet is a SCOPE) — and both are needed above them.
+  const anyFacet = columnFilters.length > 0;
+  // Is a CATEGORICAL facet active? (The FACETS table — District today.) Narrower than
+  // anyFacet, which also counts the metric-range filter: that one is keyed on the metric
+  // COLUMN, so an id test separates them. Only the distribution needs the distinction —
+  // see `scopeMarks` for why.
+  const districtFacet = useMemo(
+    () => columnFilters.some((f) => FACETS.some((d) => d.id === f.id)),
+    [columnFilters]
+  );
   const selectedSet = useMemo(() => new Set(selectedIds.map(String)), [selectedIds]);
 
   // In selection mode the table data is just the constituents (the auditable
@@ -374,17 +386,13 @@ export default function DataTable({
   // (The TIMESERIES memo lives further down, below `viewRows` — it now plots the FACET
   // view when nothing is selected, and that row set is the table's own filtered model.)
 
-  // DISTRIBUTION: the CITY values (all reportable) as the histogram; the SELECTION's
-  // values as the marker(s) within it (none at N=0 → the city histogram alone).
+  // DISTRIBUTION: the CITY values (all reportable) are the histogram BARS, always. The
+  // scope is marked INSIDE them — see `scopeMarks` below (declared after the table,
+  // because the facet view is the table's own row model).
   const cityValues = useMemo(
     () => rows.map((r) => r[metric]).filter((v) => v != null),
     [rows, metric]
   );
-  const selMarkers = useMemo(() => {
-    if (singleRow) return singleRow[metric] != null ? [singleRow[metric]] : [];
-    if (selectionMode) return data.map((r) => r[metric]).filter((v) => v != null);
-    return [];
-  }, [singleRow, selectionMode, data, metric]);
 
   // ---- Trend instrument data (C8) --------------------------------------------
   // The dashed CITY baseline — the city's active-metric mean per year (drawn for the
@@ -556,6 +564,34 @@ export default function DataTable({
     });
   }, [singleRow, selectionMode, data, viewRows, years]);
 
+  // DISTRIBUTION markers: the SCOPE's values, marked inside the CITY histogram. Same
+  // precedence as the cards and the trend — selection (N≥2) → this neighbourhood (N=1)
+  // → the DISTRICT view → nothing (the city bars alone).
+  //
+  // The bars stay the city on purpose. This card's job is to PLACE the scope against the
+  // whole distribution (low / typical / high, tail or mode), so re-binning them over a
+  // district's 19 values would delete the comparison the card exists to make — you'd see
+  // the district's own shape and lose where it sits.
+  //
+  // The metric-RANGE facet deliberately does NOT raise marks (it still narrows what a
+  // district marks — viewRows is the intersection). It filters on the histogram's OWN
+  // axis, so its marks are a contiguous band between the slider handles: the very thing
+  // the slider draws, one slot away. And arming YoY passes 272 of 278 values, so 272
+  // ticks would wash out the bars — the card going noisy on a bare metric switch, having
+  // been asked nothing. A District is an ORTHOGONAL (geographic) cut, and projecting it
+  // onto the value axis is exactly the placement this card exists for.
+  //
+  // `kind` rides along rather than being re-derived at the call site, so the marks and
+  // the name for them ("17 in view" vs "selection of 17") come from ONE branch and can
+  // never describe different sets.
+  const scopeMarks = useMemo(() => {
+    const valuesOf = (src) => src.map((r) => r[metric]).filter((v) => v != null);
+    if (singleRow) return { marks: valuesOf([singleRow]), kind: "selected" };
+    if (selectionMode) return { marks: valuesOf(data), kind: "selected" };
+    if (districtFacet) return { marks: valuesOf(viewRows.map((vr) => vr.original)), kind: "filtered" };
+    return { marks: [], kind: null };
+  }, [singleRow, selectionMode, data, districtFacet, viewRows, metric]);
+
   // Console-header scope title (contract §4): the entity the console describes.
   //   N=0 → "All M neighbourhoods" (or "K of M" when a search filter narrows it)
   //   N=1 → "<Name>" (name only — the rank · parcels · state detail lives in the
@@ -656,7 +692,6 @@ export default function DataTable({
   // "Clear selection" (which empties the selected set). The two never co-exist
   // (facets show in normal mode; Clear-selection in the AggregateHeader), so the
   // labels keep them unambiguous.
-  const anyFacet = columnFilters.length > 0;
   const clearFacets = () => setColumnFilters([]);
 
   // --- Brush (D7) -------------------------------------------------------------
@@ -667,7 +702,7 @@ export default function DataTable({
   // the map dim. The SAME id set now also scopes the KPI/trend/export via the map's
   // facetAggregate (§122, amended 2026-07-15) — brushedIds is the one channel, so the
   // dim and the figures can never describe different sets.
-  const brushActive = !selectionMode && columnFilters.length > 0;
+  const brushActive = !selectionMode && anyFacet;
   const brushedIds = useMemo(
     () => (brushActive ? viewRows.map((r) => r.original.id) : null),
     [brushActive, viewRows]
@@ -867,7 +902,8 @@ export default function DataTable({
                   cityName={cityName}
                   dist={{
                     values: cityValues,
-                    markers: selMarkers,
+                    markers: scopeMarks.marks,
+                    scopeKind: scopeMarks.kind,
                     label: activeCol?.label ?? metricLabel,
                     fmt: activeCol?.fmt ?? ((v) => v),
                   }}
@@ -1115,14 +1151,21 @@ function KpiRail({ selectionMode, aggregate: a, facetAggregate: fa, singleRow: r
   return (
     <div className="dt-cards">
       {cards.map((c) => <KpiCard key={c.key} {...c} cityName={cityName} />)}
-      {/* DISTRIBUTION — the 4th card: the citywide histogram with the selection marked. */}
+      {/* DISTRIBUTION — the 4th card: the citywide histogram with the SCOPE marked
+          (a selection, or a facet view such as one District). */}
       <div className="dt-card dt-card--dist">
         <div className="dt-card-hd">
           <span className="dt-card-l">Distribution{dist ? ` · ${dist.label}` : ""}</span>
         </div>
         <div className="dt-slot-body">
           {dist && (
-            <DistributionStrip values={dist.values} markers={dist.markers} label={dist.label} fmt={dist.fmt} />
+            <DistributionStrip
+              values={dist.values}
+              markers={dist.markers}
+              scopeKind={dist.scopeKind}
+              label={dist.label}
+              fmt={dist.fmt}
+            />
           )}
         </div>
       </div>
