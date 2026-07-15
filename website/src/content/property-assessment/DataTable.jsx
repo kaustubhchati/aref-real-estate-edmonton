@@ -1031,15 +1031,17 @@ function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, 
         city: cityTxt(city.parcelMean, fmtCurrencyShort),
         value: s.mean != null ? fmtCurrencyShort(s.mean) : "—",
         delta: rel(s.mean, city.parcelMean) }
-    // YoY carries its unit in the VALUE (this card's label is just "YoY", with no
-    // room for "(Log Pts)"). The delta is log points too, NOT "pp": a percentage
-    // point is the gap between two percentages, and these are not percentages
-    // (METHODOLOGY.md D7). fmtLogPts is already signed, so it serves both.
-    : { key: "yoy", label: "YoY", cityScope: s.isCity,
-        city: cityTxt(city.areaYoY, fmtLogPts),
-        value: s.yoy != null ? fmtLogPts(s.yoy) : "—", valueCls: signCls(s.yoy),
+    // The LABEL carries the unit and the numbers stay bare — the same rule as the table
+    // header and the range-slider label. Spelling "log pts" after each of the three
+    // figures wrapped the tile's dominant value onto two lines ("+10.2 log" / "pts")
+    // in a 128px tile, which no other tile does ($166k and 100% both sit on one line).
+    // The delta is log points too, NOT "pp": a percentage point is the gap between two
+    // percentages, and these are not percentages (METHODOLOGY.md D7).
+    : { key: "yoy", label: "YoY (Log Pts)", cityScope: s.isCity,
+        city: cityTxt(city.areaYoY, fmtLogPtsBare),
+        value: s.yoy != null ? fmtLogPtsBare(s.yoy) : "—", valueCls: signCls(s.yoy),
         delta: (!s.isCity && s.yoy != null && city.areaYoY != null)
-          ? { txt: fmtLogPts(s.yoy - city.areaYoY), cls: signCls(s.yoy - city.areaYoY) } : null });
+          ? { txt: fmtLogPtsBare(s.yoy - city.areaYoY), cls: signCls(s.yoy - city.areaYoY) } : null });
   // A4 — the CONDO card splits into two EQUAL square tiles (matching Median/Mean): the
   // vs-city SHARE (lens a) and the condo-stripped view (lens b, "Excluding Condos": the
   // mean value + lot), so neither is a wide rectangle.

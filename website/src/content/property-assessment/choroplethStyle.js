@@ -334,7 +334,10 @@ const METRICS = [
   // LOG POINTS, not percent — the backend emits log(median_now/median_prior)*100
   // (04_aggregate_historical.R:274). See METHODOLOGY.md D7. The legend title reads
   // this label, so the unit is stated here once for both.
-  { key: "yoy_pct_change",     label: "Year over Year Change (Log Pts)", fmt: fmtLogPts,
+  // "YoY" not "Year over Year": with the unit appended, the full phrase ran 217px in a
+  // 207px chip and clipped its own closing bracket. YoY is an established acronym and §2
+  // keeps acronyms upper, so the short form is the label — the unit is what earns the room.
+  { key: "yoy_pct_change",     label: "YoY Change (Log Pts)",      fmt: fmtLogPts,
     icon: "M3 17l6-6 4 4 8-8 M21 7v6 M21 7h-6" },                                     // trending up
   // %Condo (D1) — promoted to a MAP metric (varies spatially) on its own 0–100 share
   // ramp (Year built demoted from the metric row but KEPT as a table column). = share

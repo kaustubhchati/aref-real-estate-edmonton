@@ -1831,11 +1831,13 @@ p  { margin: 0 0 0.75rem; }
   border-left: 1px solid var(--pa-hair); border-right: 1px solid var(--pa-hair);
   pointer-events: none;
 }
-/* A piecewise readout carries the widest string this slot ever shows ("−159.7 – +159.7").
-   min-width alone let a longer value push the control's name; Principle 0 says size the
-   FRAME for the worst case and let only the content change. tabular-nums already fixes
-   the digit widths — this fixes the slot they sit in. */
-.pa-tune-ctrl--piecewise .pa-tune-active { min-width: 15ch; }
+/* A piecewise readout carries the widest string this slot ever shows ("−159.7 – +159.7"),
+   which measures 129px at --t-md/600. Principle 0 says size the FRAME for that worst case
+   and let only the content change inside it — tabular-nums fixes the digit widths, this
+   fixes the slot they sit in. Sized to the MEASURED need + a little slack: 15ch (158px)
+   was 29px more than the content ever needs, and those 29px were enough to push the
+   readout out of the bay in the console dock. Reserve what it takes, not more. */
+.pa-tune-ctrl--piecewise .pa-tune-active { min-width: 132px; }
 
 /* Both inputs overlay the same track; the track is transparent (the .pa-dual-track
    div shows through) and only the THUMB catches pointer events so both are grabbable. */
@@ -1953,6 +1955,14 @@ p  { margin: 0 0 0.75rem; }
 
 /* Each control: head (name + active readout) · track+ticks · data-bound ends. */
 .pa-tune-ctrl { flex: 1 1 0; min-width: 0; }
+/* The two controls in this instrument do NOT need the same room, so they no longer get
+   an equal split. Year's head is "YEAR" + four digits; the piecewise (YoY) head is a
+   unit-carrying name (109px) + a fixed slot sized for a two-ended range (129px). The
+   even split starved it and the readout overhung the bay — worst in the CONSOLE dock,
+   where the instrument shrinks (flex: 0 1) to share the spine with the console buttons,
+   so widening the bay alone never reached that state. Weighting the split fixes BOTH
+   docks at once, which a wider bay could not. */
+.pa-tune-ctrl--piecewise { flex-grow: 1.5; }
 .pa-tune-ctrl-head {
   display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px;
 }

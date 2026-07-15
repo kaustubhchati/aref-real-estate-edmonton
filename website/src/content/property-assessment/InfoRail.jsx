@@ -17,7 +17,7 @@
 
 import Sparkline from "../../components/Sparkline.jsx";
 import { METRICS, STATE_STYLE, COLOUR_LEVEL_DELTAS } from "./choroplethStyle.js";
-import { fmtNumber, fmtCurrencyShort, fmtLogPts } from "../../utils/format.js";
+import { fmtNumber, fmtCurrencyShort, fmtLogPtsBare } from "../../utils/format.js";
 
 // Plain-language reason for a non-aggregated polygon, keyed by polygon_state.
 const STATE_NOTE = {
@@ -41,7 +41,7 @@ const num = (v) => (v == null || !Number.isFinite(+v) || +v === -999 ? null : +v
 const signCls = (n) => (n > 0 ? "dt-up" : n < 0 ? "dt-dn" : "");
 const signedPct = (r) => (r >= 0 ? "+" : "") + Math.round(r * 100) + "%";
 // (signedPp removed: YoY was its only caller, and a log-point gap is not a
-// percentage point — it now formats through fmtLogPts like the value it compares.)
+// percentage point — it now formats through fmtLogPtsBare like the value it compares.)
 const pctText = (x) => (x == null ? "—" : `${Math.round(x)}%`);
 
 export default function InfoRail({
@@ -59,10 +59,20 @@ export default function InfoRail({
   const activeMetric = METRICS.find((m) => m.key === metric) ?? METRICS[0];
   const activeVal = num(feature[activeMetric.key]);
   // C2 — the chrome shows COMPACT figures (full precision is for Export): the $ metrics
-  // use the short currency formatter, everything else keeps its own formatter.
+  // use the short currency formatter, YoY drops its "log pts" suffix, and everything
+  // else keeps its own formatter.
+  //
+  // YoY: the triplet cells are ~70px and their labels are ROLES ("Value" / city /
+  // "Delta"), so there is nowhere to hoist the unit to and "+10.2 log pts" simply wrapped
+  // onto two lines. The bare number is safe HERE specifically: this rail only renders
+  // with the console DOWN, and in that state both the active metric chip and the legend
+  // are on screen reading "YoY Change (Log Pts)". Same compaction rule as the $ metrics
+  // above — the chrome states the number, the surrounding chrome states the unit.
   const chromeFmt = (v) =>
     (metric === "median_assessvalue" || metric === "avall_public")
       ? fmtCurrencyShort(v)
+      : metric === "yoy_pct_change"
+      ? fmtLogPtsBare(v)
       : activeMetric.fmt(v);
   const parcels = num(feature.n_properties);
 
@@ -82,10 +92,9 @@ export default function InfoRail({
   let delta = null;
   if (cityVal != null && activeVal != null) {
     // YoY's delta is LOG POINTS, not "pp": a percentage point is the gap between two
-    // percentages, and log points are not percentages (METHODOLOGY.md D7). The value
-    // itself already renders through activeMetric.fmt = fmtLogPts, so the delta uses
-    // the same formatter and the same signed notation.
-    if (metric === "yoy_pct_change") delta = { txt: fmtLogPts(activeVal - cityVal), cls: signCls(activeVal - cityVal) };
+    // percentages, and log points are not percentages (METHODOLOGY.md D7). Bare, for the
+    // same reason chromeFmt is — it shares the same ~70px cell.
+    if (metric === "yoy_pct_change") delta = { txt: fmtLogPtsBare(activeVal - cityVal), cls: signCls(activeVal - cityVal) };
     else if (cityVal !== 0) delta = { txt: signedPct((activeVal - cityVal) / cityVal), cls: COLOUR_LEVEL_DELTAS ? signCls(activeVal - cityVal) : "" };
   }
   const cityText = cityVal == null ? "—" : (APPROX.has(metric) ? "≈" : "") + chromeFmt(cityVal);
