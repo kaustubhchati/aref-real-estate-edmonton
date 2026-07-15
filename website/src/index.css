@@ -1862,17 +1862,24 @@ p  { margin: 0 0 0.75rem; }
    tick-calibrated — "unmistakably operable". Reuses the shared .pa-slider / .pa-dual
    mechanics; adds the two-tier readout (accent active value + muted data bounds).
    ========================================================================== */
-/* Widened 500 → 640 (2026-07-15, KC). The range control gets ~290px of this, and it has
-   to seat BOTH its name and its readout on one row: "YOY (LOG PTS)" is 109px and the
-   widest range this slot ever shows ("−159.7 – +159.7") is 129px at --t-md. At 500 the
-   control was 216px and the readout spilled outside the bay. The alternatives each gave
-   something up — a label with no unit, a mismatched text size, or a taller bay — so the
-   bay took the ~140px instead. max-width still clamps it on narrow viewports. */
-:root { --pa-tune-w: 640px; }
+/* 500px. Briefly widened to 640 to seat the YoY readout, then reverted once the real
+   fixes landed: WEIGHTING the instrument's split toward the piecewise control
+   (.pa-tune-ctrl--piecewise) and reserving only the 132px that readout measures. Those
+   two fit it here at 500 — and they fix the CONSOLE dock too, which the wider bay never
+   reached (that dock shrinks to share the spine, so it ignored the extra width). The bay
+   floats over the map, so the 140px goes back to the map. max-width clamps narrow
+   viewports. */
+:root { --pa-tune-w: 500px; }
 
 .pa-tune-dock { pointer-events: auto; }
 .pa-tune-dock-strip { align-self: center; margin-bottom: 6px; }   /* above the handle, centred in .pa-foot */
-.pa-tune-dock-console { display: flex; align-items: center; flex: 0 1 auto; min-width: 0; }
+/* flex-shrink 0: the instrument is a fixed-geometry control (Principle 0) and its two
+   heads have hard minimums — a unit-carrying name plus a fixed readout slot. It used to
+   shrink alongside .dt-head-l, which starved it below those minimums on narrower
+   viewports and pushed the readout out of the bay. .dt-head-l is a WRAPPING list of
+   chips (flex-wrap above) and .dt-head-r is already 0 0 auto, so the spine's give now
+   comes from the one child designed to reflow rather than from the one that must not. */
+.pa-tune-dock-console { display: flex; align-items: center; flex: 0 0 auto; min-width: 0; }
 
 /* The frame — Year | hairline divider | Metric, side by side. */
 .pa-tune-instrument {
@@ -1956,13 +1963,16 @@ p  { margin: 0 0 0.75rem; }
 /* Each control: head (name + active readout) · track+ticks · data-bound ends. */
 .pa-tune-ctrl { flex: 1 1 0; min-width: 0; }
 /* The two controls in this instrument do NOT need the same room, so they no longer get
-   an equal split. Year's head is "YEAR" + four digits; the piecewise (YoY) head is a
-   unit-carrying name (109px) + a fixed slot sized for a two-ended range (129px). The
-   even split starved it and the readout overhung the bay — worst in the CONSOLE dock,
-   where the instrument shrinks (flex: 0 1) to share the spine with the console buttons,
-   so widening the bay alone never reached that state. Weighting the split fixes BOTH
-   docks at once, which a wider bay could not. */
-.pa-tune-ctrl--piecewise { flex-grow: 1.5; }
+   an equal split. Year's head is "YEAR" plus four digits; the piecewise (YoY) head must
+   seat a unit-carrying name (~109px) + an 8px gap + the 132px fixed readout slot = ~249.
+   An even split gave it ~190 and the readout overhung the bay — worst in the CONSOLE
+   dock, where the instrument SHRINKS (flex: 0 1) to share the spine with the console's
+   buttons and so never saw the wider bay at all.
+   Declared as a min-width rather than a tuned flex-grow ratio: the requirement really is
+   "this head needs 249px", and stating that lets flexbox hand Year whatever is left in
+   either dock. A ratio would encode the same number indirectly, silently drift if the
+   label or slot changed, and land 4px from clipping. */
+.pa-tune-ctrl--piecewise { min-width: 252px; }
 .pa-tune-ctrl-head {
   display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px;
 }
