@@ -134,7 +134,7 @@ const METRIC_RAMP = {
   // retired) so a share reads visually consistent with the level metrics; it is CLASSED by
   // the actual condo-share quantiles (condoStops) rather than an even 0–100 ramp that read flat.
   pct_with_unit:      RAMP_ASSESSED,
-  // yoy_pct_change is not a sequential ramp — it uses the continuous diverging scale
+  // yoy_log_points is not a sequential ramp — it uses the continuous diverging scale
   // built by yoyDivergingStops (flat yellow plateau + potent blue/red), not this table.
 };
 
@@ -224,7 +224,8 @@ function quantile(sorted, p) {
 }
 
 // ---- Year-over-year DIVERGING ramp (continuous, flat yellow plateau) --------
-// yoy_pct_change is a signed % painted on a CONTINUOUS diverging ramp (D6): a FLAT
+// yoy_log_points is a signed LOG CHANGE (not a percent — METHODOLOGY.md D7) painted
+// on a CONTINUOUS diverging ramp (D6): a FLAT
 // YELLOW PLATEAU at the neutral centre [-1%, +1%] with potent outer shades. Yellow =
 // "no real change / base canvas"; movement is highlighted as it grows — deepening to
 // potent BLUE below -1% and potent RED above +1%. The washed near-zero shades of the
@@ -337,7 +338,7 @@ const METRICS = [
   // "YoY" not "Year over Year": with the unit appended, the full phrase ran 217px in a
   // 207px chip and clipped its own closing bracket. YoY is an established acronym and §2
   // keeps acronyms upper, so the short form is the label — the unit is what earns the room.
-  { key: "yoy_pct_change",     label: "YoY Change (Log Pts)",      fmt: fmtLogPts,
+  { key: "yoy_log_points",     label: "YoY Change (Log Pts)",      fmt: fmtLogPts,
     icon: "M3 17l6-6 4 4 8-8 M21 7v6 M21 7h-6" },                                     // trending up
   // %Condo (D1) — promoted to a MAP metric (varies spatially) on its own 0–100 share
   // ramp (Year built demoted from the metric row but KEPT as a table column). = share
@@ -890,7 +891,7 @@ export function applyYearMetric(map, metricKey, year, stops) {
   // cross-fade. Set the transition BEFORE the colour so it honours the new duration.
   map.setPaintProperty(
     "nbhd-fill", "fill-color-transition",
-    metricKey === "yoy_pct_change" ? { duration: 0, delay: 0 } : paintTransition(DUR_BASE)
+    metricKey === "yoy_log_points" ? { duration: 0, delay: 0 } : paintTransition(DUR_BASE)
   );
   map.setPaintProperty("nbhd-fill", "fill-color", buildFillColourExpression(metricKey, year, stops));
   map.setPaintProperty("nbhd-fill", "fill-opacity", fillOpacityExpr(year));

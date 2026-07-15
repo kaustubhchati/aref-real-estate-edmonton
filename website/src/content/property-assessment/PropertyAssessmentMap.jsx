@@ -285,7 +285,7 @@ function aggregateFeatures(features) {
       if (mean != null && n != null) { sumNV += n * mean; sumN += n; }
       const med = num(p.median_assessvalue);
       if (med != null) medians.push(med);
-      const yoy = num(p.yoy_pct_change);
+      const yoy = num(p.yoy_log_points);
       if (yoy != null && n != null) { sumNYoY += n * yoy; sumNYoYW += n; }
       const pct = num(p.pct_with_unit);       // % of parcels that are titled condo units
       if (pct != null && n != null) {
@@ -455,15 +455,16 @@ export default function PropertyAssessmentMap() {
 
   const selectedMetric = METRICS.find((m) => m.key === metric) ?? METRICS[0];
 
-  // yoy_pct_change is a signed % with no prior year for the earliest year in
+  // yoy_log_points is a signed LOG CHANGE (not a percent — METHODOLOGY.md D7) with
+  // no prior year for the earliest year in
   // the dataset, so that (year, metric) combination has no data to colour.
   // Derive "earliest" from the manifest's years — no year literal.
-  const isYoy = metric === "yoy_pct_change";
+  const isYoy = metric === "yoy_log_points";
   const earliestYear = years.length ? Math.min(...years) : null;
   const noPriorYear = isYoy && year != null && year === earliestYear;
 
   // Colour ramp for the current metric:
-  //   yoy_pct_change     → data-derived diverging scale (0-centred, robust ±E),
+  //   yoy_log_points     → data-derived diverging scale (0-centred, robust ±E),
   //                        same scale every year — see yoyStopsFromValues
   //   median_assessvalue → its locked per-year manifest scale
   //   everything else    → quantiles computed from the loaded polygons
@@ -487,7 +488,7 @@ export default function PropertyAssessmentMap() {
     const out = [];
     for (const f of gj.features) {
       for (const y of yrs) {
-        const v = f.properties[`yoy_pct_change_${y}`];
+        const v = f.properties[`yoy_log_points_${y}`];
         if (Number.isFinite(v) && v !== -999) out.push(v);
       }
     }
@@ -495,7 +496,7 @@ export default function PropertyAssessmentMap() {
   }, [gj, manifest, city]);
 
   const stops = useMemo(() => {
-    if (metric === "yoy_pct_change") return yoyStopsFromValues(yoyAllValues);
+    if (metric === "yoy_log_points") return yoyStopsFromValues(yoyAllValues);
     if (metric === "pct_with_unit") return condoStops(gjView);  // warm quantile share ramp (A3)
     return metric === "median_assessvalue"
       ? stopsFromScale(getColourScale(manifest, city, year), metric)
@@ -910,13 +911,13 @@ export default function PropertyAssessmentMap() {
         // condo it equals the overall mean; null ONLY at 100% condo (no non-condo).
         avg_assessvalue_without_unit: num(p.avg_assessvalue_without_unit),
         median_yearbuilt:   num(p.median_yearbuilt),
-        yoy_pct_change:     num(p.yoy_pct_change),
+        yoy_log_points:     num(p.yoy_log_points),
         n_properties:       num(p.n_properties),   // parcels — for the console's vs-city slot (D3)
         pct_with_unit:      num(p.pct_with_unit),  // condo share 0–100 — the spine's % Condo column (D4); real all years post D-BE1
         // The ACTIVE metric across every year — drives the console's trend instrument (D3/C8).
         series: years.map((y) => num(gp[`${metric}_${y}`])),
         // The matched-sample YoY across every year — the trend instrument's YoY strip (C8).
-        yoySeries: years.map((y) => num(gp[`yoy_pct_change_${y}`])),
+        yoySeries: years.map((y) => num(gp[`yoy_log_points_${y}`])),
         rank: null,
       };
     });
@@ -1095,7 +1096,7 @@ export default function PropertyAssessmentMap() {
     // CSV bodies are pure data; provenance rides alongside as a _provenance.txt.
     //
     // The metric is named as the user SAW it, not by its internal key. The key
-    // `yoy_pct_change` claims "pct" of a value that is log points — the claim
+    // `yoy_log_points` claims "pct" of a value that is log points — the claim
     // METHODOLOGY D7 retired — so the sidecar was stating the wrong unit while
     // sitting next to a CSV whose own column already says `yoy_log_points`. The
     // label is what the map, legend and table showed, and it carries the unit.

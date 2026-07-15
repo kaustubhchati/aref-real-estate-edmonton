@@ -24,7 +24,7 @@
 //
 // Props:
 //   rows         [{ id, name, state, median_assessvalue, avall_public,
-//                   avg_lotsize, median_yearbuilt, yoy_pct_change, series, rank }]
+//                   avg_lotsize, median_yearbuilt, yoy_log_points, series, rank }]
 //                numeric fields are null for non-reportable rows → rendered "—"
 //   metric       active metric key — highlights its column; Trend/Rank track it
 //   metricLabel  active metric label — Trend/Rank header tooltips
@@ -95,7 +95,7 @@ import {
 // not a storm; observed 806 in dev = 2× only from StrictMode's double-invoke). A re-sort
 // and a row hover each = 0 re-renders — the memo holds on every update that isn't a
 // metric/series change. Well within the storm guard.
-const TREND_METRICS = new Set(["median_assessvalue", "avall_public", "yoy_pct_change"]);
+const TREND_METRICS = new Set(["median_assessvalue", "avall_public", "yoy_log_points"]);
 const TrendSparkCell = memo(function TrendSparkCell({ series, metric }) {
   const nums = (series ?? []).map((v) => (v == null || !Number.isFinite(+v) || +v === -999 ? null : +v));
   const finite = nums.filter((v) => v != null);
@@ -131,7 +131,7 @@ const PRESENTATION = {
   // are bare here. That is deliberate: for every other metric `fmt` is the FULL
   // unit-carrying formatter, but a slider readout of "+7.3 log pts – +15.5 log pts"
   // says the unit twice in a slot sized for neither.
-  yoy_pct_change:     { label: "YoY (Log Pts)", header: "YoY (Log Pts)", fmt: fmtLogPtsBare,
+  yoy_log_points:     { label: "YoY (Log Pts)", header: "YoY (Log Pts)", fmt: fmtLogPtsBare,
                         cellFmt: fmtLogPtsBare },
 };
 
@@ -168,7 +168,7 @@ const METRIC_COLS = ["median_assessvalue", "avall_public", "avg_lotsize", "media
 // activeCol (trend/KPI label + fmt) and the range facet, which targets the active metric.
 // On a metric switch we drop any range filter left on a different metric (units differ).
 const COLS_BY_KEY = Object.fromEntries(
-  ["median_assessvalue", "avall_public", "avg_lotsize", "median_yearbuilt", "pct_with_unit", "yoy_pct_change"].map((k) => [k, colFor(k)]),
+  ["median_assessvalue", "avall_public", "avg_lotsize", "median_yearbuilt", "pct_with_unit", "yoy_log_points"].map((k) => [k, colFor(k)]),
 );
 const METRIC_KEYS = new Set(Object.keys(COLS_BY_KEY));
 
@@ -470,9 +470,9 @@ export default function DataTable({
     // sign, so every YoY surface now uses one notation (it previously printed "%"
     // here while the KPI rail two functions away printed none).
     const yoyCol = {
-      id: "yoy_pct_change",
-      accessorFn: (r) => r.yoy_pct_change ?? undefined,
-      header: COLS_BY_KEY.yoy_pct_change.header,
+      id: "yoy_log_points",
+      accessorFn: (r) => r.yoy_log_points ?? undefined,
+      header: COLS_BY_KEY.yoy_log_points.header,
       cell: (info) => {
         const v = info.getValue();
         if (v == null) return "—";
@@ -481,7 +481,7 @@ export default function DataTable({
       sortUndefined: "last",
       enableGlobalFilter: false,
       filterFn: rangeFilter,   // the metric-range facet targets YoY when it's active
-      meta: { numeric: true, metricKey: "yoy_pct_change", width: COL_WIDTH.metric },
+      meta: { numeric: true, metricKey: "yoy_log_points", width: COL_WIDTH.metric },
     };
     return [
       {
@@ -492,7 +492,7 @@ export default function DataTable({
         meta: { className: "dt-name", width: COL_WIDTH.name },
       },
       // Contract §4 order: MEDIAN · MEAN · LOT m² · BUILT · % CONDO · YOY · TREND.
-      ...METRIC_COLS.filter((m) => m.key !== "yoy_pct_change").map(metricCol),  // median · mean · lot · built
+      ...METRIC_COLS.filter((m) => m.key !== "yoy_log_points").map(metricCol),  // median · mean · lot · built
       condoCol,                                                                 // % Condo
       yoyCol,                                                                   // YoY (C3 — signed/%/coloured)
       trendCol,                                                                 // Trend
@@ -588,7 +588,7 @@ export default function DataTable({
   }, [rows]);
 
   const rangeScale = useMemo(() => {
-    if (metric === "yoy_pct_change") return yoyScale(yoyCeiling);
+    if (metric === "yoy_log_points") return yoyScale(yoyCeiling);
     return rangeBounds ? linearScale(rangeBounds[0], rangeBounds[1]) : null;
     // rangeBounds is a fresh array each render; key off its CONTENTS, not its identity.
   }, [metric, yoyCeiling, rangeBounds?.[0], rangeBounds?.[1]]);
@@ -613,7 +613,7 @@ export default function DataTable({
   useEffect(() => {
     setColumnFilters((prev) => {
       const kept = prev.filter((cf) => !METRIC_KEYS.has(cf.id) || cf.id === metric);
-      if (metric === "yoy_pct_change" && !kept.some((cf) => cf.id === metric)) {
+      if (metric === "yoy_log_points" && !kept.some((cf) => cf.id === metric)) {
         kept.push({ id: metric, value: [-YOY_CORE, YOY_CORE] });
       }
       return kept;
@@ -994,7 +994,7 @@ function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, 
           condo: a.condoShare, mexcl: a.meanExclCondo, lot: a.lotNonCondo };
   } else if (r) {
     s = { isCity: false,
-          median: num(r.median_assessvalue), mean: num(r.avall_public), yoy: num(r.yoy_pct_change),
+          median: num(r.median_assessvalue), mean: num(r.avall_public), yoy: num(r.yoy_log_points),
           condo: num(r.pct_with_unit), mexcl: num(r.avg_assessvalue_without_unit), lot: num(r.avg_lotsize) };
   } else if (cb) {
     s = { isCity: true,
@@ -1007,7 +1007,7 @@ function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, 
   const city = cb || {};
   // Second card: the aggregate scope surfaces the EXACT parcel-weighted MEAN; browse /
   // single surfaces YOY (growth) — unless the ACTIVE metric is itself mean or yoy.
-  const secondKey = metric === "yoy_pct_change" ? "yoy"
+  const secondKey = metric === "yoy_log_points" ? "yoy"
     : metric === "avall_public" ? "mean"
     : selectionMode ? "mean" : "yoy";
 

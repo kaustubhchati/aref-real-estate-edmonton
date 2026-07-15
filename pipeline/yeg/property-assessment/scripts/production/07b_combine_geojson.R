@@ -58,6 +58,27 @@ VALUE_COLS <- c(
   "avg_lotsize", "yoy_pct_change"
 )
 
+# PUBLISH-TIME RENAME. VALUE_COLS above are the names the per-year files (06/07)
+# carry — the pipeline's own. This maps a column to the name the COMBINED file
+# publishes, for the one case where the pipeline name mis-states the value:
+#
+#   yoy_pct_change holds log(median_now / median_prior) * 100 — log points, not a
+#   percent (METHODOLOGY.md D7). The combined GeoJSON is the frontend's data
+#   contract AND what a researcher downloads from the map, and it travels with no
+#   legend attached to explain it, so a column called "pct_change" tells that
+#   reader something the data does not support.
+#
+# Same principle as the handoff's yeg_ CSV rename (CLAUDE.md §6): the internal
+# frame keeps its working name, the published artifact carries the honest one.
+# Renamed HERE and not in 04/05 because their CSVs are the pipeline's own
+# intermediates — moving those would also move the published per-nbhd download CSV,
+# a separate contract. That seam is real and tracked; see the commit.
+PUBLISH_NAME <- c(yoy_pct_change = "yoy_log_points")
+publish_name <- function(x) {
+  hit <- match(x, names(PUBLISH_NAME))
+  ifelse(is.na(hit), x, unname(PUBLISH_NAME)[hit])
+}
+
 # Year-invariant identity, stored once. Geometry + these come from the current
 # (max) year's file. Only 06's current-year file carries shapefile_name/district;
 # the historical files (07) omit them, which is why identity is sourced from the
@@ -146,7 +167,9 @@ for (yr in years) {
 
   year_tbl <- attrs |>
     select(`Neighbourhood ID`, all_of(VALUE_COLS)) |>
-    rename_with(~ paste0(.x, "_", yr), all_of(VALUE_COLS))
+    # Publish name first, THEN the year suffix — so the reader sees yoy_log_points_2026,
+    # never yoy_pct_change_2026. Non-renamed columns pass through untouched.
+    rename_with(~ paste0(publish_name(.x), "_", yr), all_of(VALUE_COLS))
 
   combined <- combined |> left_join(year_tbl, by = "Neighbourhood ID")
 }

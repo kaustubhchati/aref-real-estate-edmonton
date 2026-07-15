@@ -33,9 +33,9 @@ const STATE_NOTE = {
 
 // Which cityBaseline field is the comparison baseline for each metric (lot/built have
 // none). The median & YoY baselines are approximate → prefixed "≈".
-const CITY_KEY = { median_assessvalue: "medianOfMedians", avall_public: "parcelMean", yoy_pct_change: "areaYoY" };
-const APPROX = new Set(["median_assessvalue", "yoy_pct_change"]);
-const TREND_METRICS = new Set(["median_assessvalue", "avall_public", "yoy_pct_change"]);
+const CITY_KEY = { median_assessvalue: "medianOfMedians", avall_public: "parcelMean", yoy_log_points: "areaYoY" };
+const APPROX = new Set(["median_assessvalue", "yoy_log_points"]);
+const TREND_METRICS = new Set(["median_assessvalue", "avall_public", "yoy_log_points"]);
 
 const num = (v) => (v == null || !Number.isFinite(+v) || +v === -999 ? null : +v);
 const signCls = (n) => (n > 0 ? "dt-up" : n < 0 ? "dt-dn" : "");
@@ -71,7 +71,7 @@ export default function InfoRail({
   const chromeFmt = (v) =>
     (metric === "median_assessvalue" || metric === "avall_public")
       ? fmtCurrencyShort(v)
-      : metric === "yoy_pct_change"
+      : metric === "yoy_log_points"
       ? fmtLogPtsBare(v)
       : activeMetric.fmt(v);
   const parcels = num(feature.n_properties);
@@ -94,7 +94,7 @@ export default function InfoRail({
     // YoY's delta is LOG POINTS, not "pp": a percentage point is the gap between two
     // percentages, and log points are not percentages (METHODOLOGY.md D7). Bare, for the
     // same reason chromeFmt is — it shares the same ~70px cell.
-    if (metric === "yoy_pct_change") delta = { txt: fmtLogPtsBare(activeVal - cityVal), cls: signCls(activeVal - cityVal) };
+    if (metric === "yoy_log_points") delta = { txt: fmtLogPtsBare(activeVal - cityVal), cls: signCls(activeVal - cityVal) };
     else if (cityVal !== 0) delta = { txt: signedPct((activeVal - cityVal) / cityVal), cls: COLOUR_LEVEL_DELTAS ? signCls(activeVal - cityVal) : "" };
   }
   const cityText = cityVal == null ? "—" : (APPROX.has(metric) ? "≈" : "") + chromeFmt(cityVal);

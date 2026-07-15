@@ -23,14 +23,11 @@ import { siteConfig } from "../../config/siteConfig.js";
 // Year-invariant identity columns carried once (mirrors 07b's IDENTITY_COLS).
 const IDENTITY = ["Neighbourhood ID", "display_name", "district"];
 
-// Export column NAMES, where the exported name differs from the pipeline field
-// name. yoy_pct_change holds log(median_now/median_prior)*100 — log points, NOT a
-// percent (METHODOLOGY.md D7) — so "pct_change" would state the wrong unit in a
-// file that leaves the site with no legend attached to explain it. The pipeline
-// field name is unchanged; only the exported header is renamed. ASCII only: this
-// is a CSV header, parsed by other people's tools.
-const EXPORT_COL = { yoy_pct_change: "yoy_log_points" };
-const exportName = (field) => EXPORT_COL[field] ?? field;
+// (There is no export-name mapping here any more. `yoy_log_points` used to be a
+// rename applied at THIS layer, over a field the data still called yoy_pct_change.
+// 07b now publishes the honest name in the combined GeoJSON itself, so the field and
+// the header agree at source — and the GeoJSON export, which passes the properties
+// through untouched, carries it too. One name, one place.)
 
 // The timeseries long-panel column contract (LOCKED order): identity, the year
 // key, then the per-year metrics. DERIVED from IDENTITY + PER_YEAR_FIELDS so a new
@@ -39,7 +36,7 @@ const exportName = (field) => EXPORT_COL[field] ?? field;
 // polygon_state, n_properties, median_assessvalue, avall_public, sd_assessedvalue,
 // median_yearbuilt, pct_with_unit, avg_assessvalue_without_unit, avg_lotsize,
 // yoy_log_points.
-const TIMESERIES_HEADER = [...IDENTITY, "year", ...PER_YEAR_FIELDS.map(exportName)];
+const TIMESERIES_HEADER = [...IDENTITY, "year", ...PER_YEAR_FIELDS];
 
 // The combined file encodes "no value" as the sentinel -999 (a suppressed nbhd, or
 // no prior-year YoY) or JSON null. Map both — and any non-finite — to null so the
@@ -85,7 +82,7 @@ export function buildProvenanceText({ file, shape, city, metric, scope, coverage
 // identity cells, then each PER_YEAR_FIELD pulled for `year` (numeric fields
 // sentinel-guarded → empty when suppressed; polygon_state is a label).
 export function buildSnapshotCsv(features, year) {
-  const header = [...IDENTITY, ...PER_YEAR_FIELDS.map(exportName)];
+  const header = [...IDENTITY, ...PER_YEAR_FIELDS];
   const lines = [header.join(",")];
   for (const f of features) {
     const p = f.properties;

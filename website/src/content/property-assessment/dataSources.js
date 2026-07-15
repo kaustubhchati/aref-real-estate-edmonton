@@ -106,7 +106,7 @@ export const PER_YEAR_FIELDS = [
   "pct_with_unit",
   "avg_assessvalue_without_unit",
   "avg_lotsize",
-  "yoy_pct_change",
+  "yoy_log_points",
 ];
 
 // Project a combined feature's properties to the BARE-named shape the rest of
