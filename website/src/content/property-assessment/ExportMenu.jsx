@@ -18,7 +18,10 @@
 //   onExport (format) => void  — fires the format string; absent = disabled
 //   year          — the active year (snapshot label)               [from state]
 //   years         — the full years array (drives the timeseries span) [manifest]
-//   selectedCount — # selected neighbourhoods (0 = whole city)      [scope cue]
+//   scopeCount    — # neighbourhoods these exports cover (0 = whole city)  [scope cue]
+//   scopeKind     — "selected" | "filtered" | null — WHICH scope that count is, so the
+//                   cue can say so. "filtered" = a facet (District / metric range) is
+//                   narrowing the view; the export follows it, as the KPI cards do.
 // =============================================================================
 
 import { useEffect, useRef, useState } from "react";
@@ -27,7 +30,7 @@ import { useScrollFade } from "./useScrollFade.js";
 
 const ICON_EXPORT = "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3";
 
-export default function ExportMenu({ onExport, year, years = [], selectedCount = 0 }) {
+export default function ExportMenu({ onExport, year, years = [], scopeCount = 0, scopeKind = null }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState(null); // fixed-position anchor for the PORTALED menu
   const wrapRef = useRef(null);
@@ -108,8 +111,13 @@ export default function ExportMenu({ onExport, year, years = [], selectedCount =
 
   // Live labels from state — no year literals (refresh-by-design).
   const span = years.length ? `${Math.min(...years)}–${Math.max(...years)}` : "";
-  // Scope these exports cover (mirrors the filename's N-selected vs all logic).
-  const scopeLabel = selectedCount > 0 ? `${selectedCount} Selected` : "All Neighbourhoods";
+  // Scope these exports cover — mirrors handleExport's precedence AND its filename
+  // (N-selected / N-filtered / all). This cue is the only thing on the menu that says
+  // what the file will hold, so it must never read "All Neighbourhoods" over an export
+  // that is actually scoped.
+  const scopeLabel = scopeCount > 0
+    ? `${scopeCount} ${scopeKind === "selected" ? "Selected" : "In View"}`
+    : "All Neighbourhoods";
 
   // Data-driven option table — rendered in a loop, not copy-pasted blocks.
   // `sidecar:true` items download a CSV + a provenance .txt.
@@ -123,7 +131,7 @@ export default function ExportMenu({ onExport, year, years = [], selectedCount =
           sub: "One row per neighbourhood × year — panel analysis.", sidecar: true },
         // Selection summary (item 7) — only with an aggregate (≥2 selected): the
         // honest rollup + city comparison, distinct from the per-neighbourhood rows.
-        ...(selectedCount >= 2
+        ...(scopeCount >= 2
           ? [{ format: "csv-aggregate", title: "Selection Summary",
               sub: "Aggregate figures + city comparison — one row per measure.", sidecar: true }]
           : []),

@@ -381,7 +381,8 @@ export default function PropertyAssessmentMap() {
   // Brush (D7): the ids currently passing the table's facet filters, reported up by
   // the DataTable. The map DIMS everything not in this set (a third feature-state
   // channel, distinct from selection/hover). null = no facet active → nothing dimmed.
-  // This drives ONLY the map dim — never the aggregate or export (D6 VIEW-only).
+  // This drives the map dim AND — via facetAggregate below — the console's scope and
+  // the export (§122, amended 2026-07-15: a facet is a scope, not just a lens).
   const [brushedIds, setBrushedIds] = useState(null);
   // The analysis dock (bottom data table) is RAISED. Two explicit RAISE drivers,
   // unchanged: a box-select of ≥2 auto-raises it (boxSelect), and the pill / T key
@@ -1058,8 +1059,7 @@ export default function PropertyAssessmentMap() {
 
   // Honest area aggregate over the SELECTION (C3) — the box-selected set rolled up by
   // aggregateFeatures (the shared parcel-weighted math). Null until ≥2 are selected.
-  // The aggregate reads the SELECTION channel only (selectedIds) — never brushedIds:
-  // brushing stays VIEW-only (D6/D7 fence). nSelected rides alongside for the header.
+  // nSelected rides alongside for the header.
   const selectionAggregate = useMemo(() => {
     if (selectedIds.length <= 1 || !gjView) return null;
     const set = new Set(selectedIds.map(String));
@@ -1068,6 +1068,28 @@ export default function PropertyAssessmentMap() {
     );
     return { nSelected: selectedIds.length, ...aggregateFeatures(selected) };
   }, [selectedIds, gjView]);
+
+  // Honest area aggregate over the FACET view (KC, 2026-07-15) — the same
+  // aggregateFeatures math, over the set the table is currently filtered to. This is the
+  // amendment to the old VIEW-only brush fence, which held that brushedIds may drive the
+  // map dim and NOTHING else: filtering to a district then reading city-wide KPIs above a
+  // district-filtered table was incoherent, so the facet is now a real scope. Export
+  // moves with it (see handleExport) — the fence's one sound instinct was that the
+  // figures on screen and the figures in the download must never disagree.
+  //
+  // A SEPARATE channel from selectionAggregate, deliberately: `selectionMode` is
+  // `!!aggregate` downstream and it DISABLES the facet controls. Feeding this into the
+  // same prop would let the facet switch itself off — a district you could not un-pick.
+  // Precedence is resolved in KpiRail: selection (N≥2) → single row (N=1) → facet → city.
+  // Any selection at all suppresses it; the two never both drive.
+  const facetAggregate = useMemo(() => {
+    if (selectedIds.length || !brushedIds?.length || !gjView) return null;
+    const set = new Set(brushedIds.map(String));
+    const inView = gjView.features.filter(
+      (f) => set.has(String(f.properties["Neighbourhood ID"]))
+    );
+    return inView.length ? { nSelected: inView.length, ...aggregateFeatures(inView) } : null;
+  }, [selectedIds, brushedIds, gjView]);
 
   // City baseline (D8 item 8): the SAME honest parcel-weighted aggregate over EVERY
   // polygon, so each selection figure can be read against the whole city. Derived once
@@ -1087,11 +1109,20 @@ export default function PropertyAssessmentMap() {
   // analysis happy — a forward ref into a useMemo trips preserve-manual-memoization).
   function handleExport(format) {
     if (!gj) return;
-    const set = selectedIds.length ? new Set(selectedIds.map(String)) : null;
+    // Export scope FOLLOWS the console's scope: the selection, else the facet view, else
+    // the whole city — the same precedence KpiRail reads. It used to honour the selection
+    // only, which was correct while the facet was VIEW-only; now that a district drives
+    // the KPI cards, an export that quietly shipped all 407 rows would contradict the
+    // figures the user is reading. The filename and the provenance sidecar both name the
+    // scope, so a file can never misrepresent what it holds.
+    const facetIds = !selectedIds.length && brushedIds?.length ? brushedIds : null;
+    const ids = selectedIds.length ? selectedIds : facetIds;
+    const set = ids ? new Set(ids.map(String)) : null;
     const scoped = set
       ? gj.features.filter((f) => set.has(String(f.properties["Neighbourhood ID"])))
       : gj.features;
-    const base = `property-assessment_${city}_${selectedIds.length ? `${scoped.length}-selected` : "all"}`;
+    const scopeKind = selectedIds.length ? "selected" : facetIds ? "filtered" : null;
+    const base = `property-assessment_${city}_${scopeKind ? `${scoped.length}-${scopeKind}` : "all"}`;
     // Provenance context for the CSV sidecars — all from state, no literals. The
     // CSV bodies are pure data; provenance rides alongside as a _provenance.txt.
     //
@@ -1103,7 +1134,9 @@ export default function PropertyAssessmentMap() {
     const meta = {
       city,
       metric: selectedMetric.label,
-      scope: selectedIds.length ? `${scoped.length} selected neighbourhoods` : "all neighbourhoods",
+      scope: scopeKind
+        ? `${scoped.length} ${scopeKind === "selected" ? "selected" : "filtered (table view)"} neighbourhoods`
+        : "all neighbourhoods",
     };
     if (format === "csv-current") {
       const csvName = `${base}_${year}.csv`;
@@ -1118,13 +1151,15 @@ export default function PropertyAssessmentMap() {
         buildProvenanceText({ ...meta, file: csvName, coverage: span,
           shape: `long panel — one row per neighbourhood × year, ${span}` }));
     } else if (format === "csv-aggregate") {
-      // Selection SUMMARY (item 7): the honest aggregate + city comparison (the
-      // item-8 figures), NOT the per-neighbourhood rows. Reads selectionAggregate /
-      // cityBaseline — the SELECTION channel — never brushedIds. Only meaningful with
-      // an aggregate (≥2 selected); the menu only offers it then, this guards anyway.
-      if (!selectionAggregate) return;
+      // Scope SUMMARY (item 7): the honest aggregate + city comparison (the item-8
+      // figures), NOT the per-neighbourhood rows. Reads whichever aggregate is driving
+      // the KPI cards — the selection, else the facet view — so the summary always
+      // describes the figures on screen. Only meaningful with an aggregate (≥2 in
+      // scope); the menu only offers it then, this guards anyway.
+      const scopeAggregate = selectionAggregate ?? facetAggregate;
+      if (!scopeAggregate) return;
       const csvName = `${base}_${year}_summary.csv`;
-      downloadCsvWithSidecar(csvName, buildAggregateCsv(selectionAggregate, cityBaseline),
+      downloadCsvWithSidecar(csvName, buildAggregateCsv(scopeAggregate, cityBaseline),
         buildProvenanceText({ ...meta, file: csvName, coverage: String(year),
           shape: "selection summary — one row per measure; selection figure vs city baseline" }));
     } else if (format === "geojson") {
@@ -1424,6 +1459,7 @@ export default function PropertyAssessmentMap() {
                 onSelectRow={selectNeighbourhood}
                 onHoverRow={setHoveredRowId}
                 aggregate={selectionAggregate}
+                facetAggregate={facetAggregate}
                 cityBaseline={cityBaseline}
                 onClearSelection={() => { keepDockOnClearRef.current = true; setSelectedIds([]); }}
                 onExport={handleExport}

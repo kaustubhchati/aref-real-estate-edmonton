@@ -173,14 +173,16 @@ const COLS_BY_KEY = Object.fromEntries(
 );
 const METRIC_KEYS = new Set(Object.keys(COLS_BY_KEY));
 
-// Categorical facets (D6) — VIEW-only table filters, data-driven from the rows.
+// Categorical facets (D6) — table filters, data-driven from the rows. No longer
+// VIEW-only: a facet is a SCOPE (§122, amended 2026-07-15) and drives the KPI cards,
+// the trend and the export as well as the map dim.
 // Each is a HIDDEN column (a faceting/filtering accessor that is never rendered) +
 // a control in the dock header, declared once here and mapped in a loop. `labelOf`
 // maps a raw value to its display label.
 // D4 removed the State (polygon_state) filter CHIPS — filter UI only. The map's
 // state COLOURING (STATE_STYLE + polygon_state in choroplethStyle.js) is untouched,
 // and the shared brush is unaffected (District + the metric-range still populate
-// columnFilters → the VIEW-only dim; the fence is intact).
+// columnFilters → the map dim AND the console's scope, per §122 as amended).
 const FACETS = [
   { id: "district", label: "District", control: "dropdown", labelOf: (v) => v },
 ];
@@ -307,6 +309,7 @@ export default function DataTable({
   onSelectRow,
   onHoverRow,
   aggregate,
+  facetAggregate,   // honest rollup of the FACET view (district etc.); null when anything is selected
   cityBaseline,
   onClearSelection,
   onExport,
@@ -356,9 +359,11 @@ export default function DataTable({
   }, [rows, selectionMode, selectedSet]);
 
   // ---- Console visual-slot data (D3) -----------------------------------------
-  // The four slots read the SELECTION channel only (singleRow / data / rows) — never
-  // brushedIds (the VIEW-only fence). Everything re-derives on selection AND metric
-  // switch, so the slots refresh by design (no literals).
+  // Scope precedence (PA_MODE_CONTRACT §122, amended 2026-07-15): selection (N≥2) →
+  // single row (N=1) → the FACET view → the city. The old VIEW-only fence kept the
+  // facet out of these slots entirely; it now scopes them, and the export moves with it
+  // so screen and download cannot disagree. Everything re-derives on selection, facet
+  // AND metric switch, so the slots refresh by design (no literals).
   //
   // The single-selected row (N=1) — the slots show THIS neighbourhood.
   const singleRow = useMemo(
@@ -366,18 +371,8 @@ export default function DataTable({
     [selectedIds, rows]
   );
 
-  // TIMESERIES: the active-metric trajectory to plot — the single row's series (N=1),
-  // else the per-year MEAN across the scope rows (selection mean at N≥2, city mean at
-  // N=0). `series` already carries the ACTIVE metric across every year.
-  const plotSeries = useMemo(() => {
-    if (!years.length) return [];
-    if (singleRow) return singleRow.series ?? [];
-    const src = selectionMode ? data : rows;
-    return years.map((_, i) => {
-      const vals = src.map((r) => r.series?.[i]).filter((v) => v != null);
-      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-    });
-  }, [singleRow, selectionMode, data, rows, years]);
+  // (The TIMESERIES memo lives further down, below `viewRows` — it now plots the FACET
+  // view when nothing is selected, and that row set is the table's own filtered model.)
 
   // DISTRIBUTION: the CITY values (all reportable) as the histogram; the SELECTION's
   // values as the marker(s) within it (none at N=0 → the city histogram alone).
@@ -518,7 +513,7 @@ export default function DataTable({
     columns,
     meta: { metric },   // read by the TREND sparkcol cell (avoids a stale-metric closure)
     // Name filter + categorical facets both suppress in selection mode, so every
-    // constituent row stays visible under the aggregate (the facets are VIEW-only,
+    // constituent row stays visible under the aggregate (the facets scope, they never
     // so they never desync from the selection aggregate — D6 recon #4).
     state: {
       sorting,
@@ -544,6 +539,23 @@ export default function DataTable({
 
   const viewRows = table.getRowModel().rows;
 
+  // TIMESERIES: the active-metric trajectory to plot — the single row's series (N=1),
+  // else the per-year MEAN across the scope rows. Scope order matches KpiRail's:
+  // selection (N≥2) → the FACET view → the city. `viewRows` IS the facet view, and it
+  // equals every row when no facet is active, so the N=0 city case is unchanged — the
+  // table you are looking at is the thing the graph describes. Declared HERE, after the
+  // table, because viewRows is its row model. `series` already carries the ACTIVE metric
+  // across every year.
+  const plotSeries = useMemo(() => {
+    if (!years.length) return [];
+    if (singleRow) return singleRow.series ?? [];
+    const src = selectionMode ? data : viewRows.map((vr) => vr.original);
+    return years.map((_, i) => {
+      const vals = src.map((r) => r.series?.[i]).filter((v) => v != null);
+      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    });
+  }, [singleRow, selectionMode, data, viewRows, years]);
+
   // Console-header scope title (contract §4): the entity the console describes.
   //   N=0 → "All M neighbourhoods" (or "K of M" when a search filter narrows it)
   //   N=1 → "<Name>" (name only — the rank · parcels · state detail lives in the
@@ -557,7 +569,7 @@ export default function DataTable({
     ? `${viewRows.length} Of ${rows.length} Neighbourhoods`
     : `All ${rows.length} Neighbourhoods`;
 
-  // --- Categorical facets (D6) — VIEW-only; the controls live in the dock header
+  // --- Categorical facets (D6) — the controls live in the dock header
   // and read/write the hidden facet columns through TanStack. Each helper is generic
   // over a facet id, so the two facets share one code path (no copy-pasted blocks). --
   const facetValue = (id) => table.getColumn(id)?.getFilterValue() ?? [];
@@ -652,7 +664,9 @@ export default function DataTable({
   // everything NOT in this set, so filtering the table visibly narrows the map.
   // Gated on a facet being active and not in selection mode (per D6's rule: no
   // facet → no dim). null = no brush. Reported UP to the map via onBrush; it feeds
-  // ONLY the dim channel — never the aggregate or export (the D6 VIEW-only ruling).
+  // the map dim. The SAME id set now also scopes the KPI/trend/export via the map's
+  // facetAggregate (§122, amended 2026-07-15) — brushedIds is the one channel, so the
+  // dim and the figures can never describe different sets.
   const brushActive = !selectionMode && columnFilters.length > 0;
   const brushedIds = useMemo(
     () => (brushActive ? viewRows.map((r) => r.original.id) : null),
@@ -809,7 +823,8 @@ export default function DataTable({
                 <button type="button" className="dt-clear" onClick={onClearSelection} disabled={!(selectionMode || singleRow)}>
                   Clear selection
                 </button>
-                {/* District facet (VIEW-only brush) — inert while a selection is active. */}
+                {/* District facet — scopes the table, map dim, KPI/trend and export
+                    (§122 as amended). Inert while a selection is active. */}
                 <div className="dt-facets" role="group" aria-label="Filter the table">
                   {FACETS.map((f) => {
                     const shared = {
@@ -825,7 +840,13 @@ export default function DataTable({
                       : <FacetToggles key={f.id} {...shared} />;
                   })}
                 </div>
-                <ExportMenu onExport={onExport} year={year} years={years} selectedCount={selectedIds.length} />
+                {/* The export scope cue mirrors handleExport: the selection, else the
+                    facet view (viewRows narrower than rows), else the whole city. */}
+                <ExportMenu
+                  onExport={onExport} year={year} years={years}
+                  scopeCount={selectedIds.length || (viewRows.length < rows.length ? viewRows.length : 0)}
+                  scopeKind={selectedIds.length ? "selected" : viewRows.length < rows.length ? "filtered" : null}
+                />
               </div>
             </div>
 
@@ -839,6 +860,7 @@ export default function DataTable({
                 <KpiRail
                   selectionMode={selectionMode}
                   aggregate={aggregate}
+                  facetAggregate={facetAggregate}
                   singleRow={singleRow}
                   cityBaseline={cityBaseline}
                   metric={metric}
@@ -988,7 +1010,7 @@ export default function DataTable({
 //   • level (mean / median $): relative delta (sel−city)/city → "+6.4%"
 //   • rate  (YoY, already a %): pp difference  sel−city        → "+1.1pp"
 //   • share (parcel count):     sel / city                     → "8% of city"
-// These read the SELECTION channel only — never brushedIds (the VIEW-only fence).
+// These read the scope KpiRail resolves (selection → single row → facet view → city).
 function fmtSignedPct(ratio) {            // ratio is a fraction (0.064 → "+6.4%")
   const pct = ratio * 100;
   return (pct >= 0 ? "+" : "") + pct.toFixed(1) + "%";
@@ -1004,25 +1026,30 @@ function fmtSignedPp(diff) {              // diff already in percentage points (
 // condo / Lot non-condo). Interiors by scope: N=0 city baselines (NO delta — the card
 // IS the baseline); N=1 this neighbourhood vs city; N≥2 the parcel-weighted aggregate
 // (§7); its honest-aggregate note lives once in About & tips. Deltas: level metrics
-// relative %, YoY & condo in pp. Reads
-// the SELECTION channel only — never brushedIds (the VIEW-only fence).
+// relative %, YoY & condo in pp. Scope precedence: selection → single row → facet view
+// → city (PA_MODE_CONTRACT §122, amended 2026-07-15).
 function signCls(n) { return n > 0 ? "dt-up" : n < 0 ? "dt-dn" : ""; }
 
-function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, metric, cityName, dist }) {
+function KpiRail({ selectionMode, aggregate: a, facetAggregate: fa, singleRow: r, cityBaseline: cb, metric, cityName, dist }) {
   const num = (v) => (v == null || !Number.isFinite(+v) || +v === -999 ? null : +v);
   const pctText = (x) => (x == null ? "—" : `${Math.round(x)}%`);
 
-  // Resolve the scope's figures + per-figure honesty tags (N≥2 aggregate / N=1
-  // this-nbhd / N=0 city baseline).
+  // Resolve the scope's figures + per-figure honesty tags. PRECEDENCE, and it is the
+  // whole contract: selection (N≥2) → this neighbourhood (N=1) → the FACET view → the
+  // city baseline. A facet aggregate only exists when nothing is selected (the map
+  // suppresses it otherwise), so the first three can never contend.
+  const rollup = (x) => ({ isCity: false,
+    median: x.medianOfMedians, mean: x.parcelMean, yoy: x.areaYoY,
+    condo: x.condoShare, mexcl: x.meanExclCondo, lot: x.lotNonCondo });
   let s;
   if (selectionMode && a) {
-    s = { isCity: false,
-          median: a.medianOfMedians, mean: a.parcelMean, yoy: a.areaYoY,
-          condo: a.condoShare, mexcl: a.meanExclCondo, lot: a.lotNonCondo };
+    s = rollup(a);
   } else if (r) {
     s = { isCity: false,
           median: num(r.median_assessvalue), mean: num(r.avall_public), yoy: num(r.yoy_log_points),
           condo: num(r.pct_with_unit), mexcl: num(r.avg_assessvalue_without_unit), lot: num(r.avg_lotsize) };
+  } else if (fa) {
+    s = rollup(fa);            // the facet view (e.g. one district) — same honest math
   } else if (cb) {
     s = { isCity: true,
           median: cb.medianOfMedians, mean: cb.parcelMean, yoy: cb.areaYoY,
@@ -1034,9 +1061,11 @@ function KpiRail({ selectionMode, aggregate: a, singleRow: r, cityBaseline: cb, 
   const city = cb || {};
   // Second card: the aggregate scope surfaces the EXACT parcel-weighted MEAN; browse /
   // single surfaces YOY (growth) — unless the ACTIVE metric is itself mean or yoy.
+  // An AGGREGATE scope (selection or facet) surfaces the exact parcel-weighted mean —
+  // its median is only a median-of-medians. Browse / single-nbhd surface YoY instead.
   const secondKey = metric === "yoy_log_points" ? "yoy"
     : metric === "avall_public" ? "mean"
-    : selectionMode ? "mean" : "yoy";
+    : (selectionMode || fa) ? "mean" : "yoy";
 
   // Deltas — null at city scope (the card IS the baseline). Level metrics: relative
   // %; YoY & condo share: percentage-point difference.
