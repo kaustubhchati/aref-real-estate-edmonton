@@ -133,3 +133,13 @@ export const ICON_CLEAR_SELECTION =
 // lucide: mouse-pointer-click
 export const ICON_MOUSE_CLICK =
   '<path d="M14 4.1 12 6"/> <path d="m5.1 8-2.9-.8"/> <path d="m6 12-1.9 2"/> <path d="M7.2 2.2 8 5.1"/> <path d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z"/>';
+
+// The DATA-SOURCE / attribution glyph — a database cylinder. Marks the "where this data
+// came from" control (bottom-right), DELIBERATELY a different silhouette from the circled-i
+// usage control (ICON_INFO) in the top-right rail: two info controls must not share a
+// glyph. Mounted on MapLibre's own AttributionControl button (MapLibre owns that DOM), so
+// like the zoom/fullscreen glyphs it is ALSO mirrored as a CSS data-URI in index.css
+// (.maplibregl-ctrl-attrib-button) — CSS cannot read this JS. Change it here, regenerate there.
+// lucide: database
+export const ICON_DATABASE =
+  '<ellipse cx="12" cy="5" rx="9" ry="3"/> <path d="M3 5V19A9 3 0 0 0 21 19V5"/> <path d="M3 12A9 3 0 0 0 21 12"/>';

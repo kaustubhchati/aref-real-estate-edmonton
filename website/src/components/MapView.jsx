@@ -47,6 +47,15 @@ export default function MapView({
   preserveDrawingBuffer = false,
   cooperativeGestures = true,
   className = "",
+  // Attribution shape (§6). Defaults reproduce the compact "i" every section had.
+  //   • attributionCompact — false = an always-visible inline strip (no toggle). PA
+  //     uses this for its bottom-edge links strip; the fuller record lives in PA's own
+  //     attribution panel. BP/BC keep the compact toggle (true).
+  //   • mapAttribution — the customAttribution entries (CARTO/OSM come from the TileJSON
+  //     automatically, on top of these). PA passes the links-only strip; the default
+  //     carries the disclaimer too.
+  attributionCompact = true,
+  mapAttribution = siteConfig.mapAttribution,
 }) {
   const containerRef = useRef(null);
 
@@ -98,9 +107,11 @@ export default function MapView({
       // Lock panning to the section's city extent (per-city CITY_BOUNDS via
       // MAP_VIEW.maxBounds) so the user can't pan off into empty basemap.
       maxBounds: view.maxBounds,
-      // compact "i" toggle; the basemap CARTO/OSM credit comes from the TileJSON
-      // automatically, customAttribution APPENDS our data credit (siteConfig §6).
-      attributionControl: { compact: true, customAttribution: siteConfig.mapAttribution },
+      // The basemap CARTO/OSM credit comes from the TileJSON automatically;
+      // customAttribution APPENDS our data credit (siteConfig §6). `compact` is
+      // per-section: PA runs an always-visible links strip (compact:false), BP/BC the
+      // compact "i" toggle (default true).
+      attributionControl: { compact: attributionCompact, customAttribution: mapAttribution },
       // Default (BP/BC): scrolling zooms only with ctrl/⌘ (or two fingers); a
       // plain wheel scrolls the PAGE, so an embedded map doesn't hijack scroll.
       // PA opts OUT (cooperativeGestures=false) for a free-roam, full-bleed map:

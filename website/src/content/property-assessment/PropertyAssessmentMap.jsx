@@ -44,6 +44,7 @@ import InfoRail from "./InfoRail.jsx";
 import DataTable from "./DataTable.jsx";
 import SearchPeek from "./SearchPeek.jsx";
 import MapTipsPopover from "./MapTipsPopover.jsx";
+import AttributionPanel from "./AttributionPanel.jsx";
 import { introCardDismissed, rememberIntroCardDismissed } from "./introCard.js";
 import {
   buildSnapshotCsv,
@@ -90,8 +91,9 @@ import {
   makeIconButtonControl,
   railGlyph,
 } from "./interactions.js";
-import { ICON_RECENTRE, ICON_INFO } from "./mapIcons.js";
+import { ICON_RECENTRE, ICON_INFO, ICON_DATABASE } from "./mapIcons.js";
 import { DUR_BASE, reduceMotion } from "../../components/motion.js";
+import { siteConfig } from "../../config/siteConfig.js";
 import { useSearchParams } from "react-router-dom";
 
 // Animate a number from 0 → target on mount (ease-out cubic). Signals the figure
@@ -398,6 +400,10 @@ export default function PropertyAssessmentMap() {
   // The floating "About & tips" popover (open/closed). Holds the box-select tip +
   // the provenance/naming note — rehomed here from the removed left panel. [D1]
   const [infoOpen, setInfoOpen] = useState(false);
+
+  // The bottom-right "Data & attribution" panel (open/closed) — opened by the
+  // database-glyph control; the §6 home for source + licence + disclaimer + basemap.
+  const [attribOpen, setAttribOpen] = useState(false);
 
   // ---- The introductory usage card (ratified 2026-07-15) ---------------------
   // The About & tips popover IS the introduction — there is no separate hint (two things
@@ -1099,6 +1105,12 @@ export default function PropertyAssessmentMap() {
   // eslint-disable-next-line react-hooks/refs
   infoToggleRef.current = () => setInfoOpen((o) => !o);
 
+  // The database-glyph control (bottom-right) toggles the attribution panel — same
+  // single-affordance model as the "i": click to open, click to close.
+  const attribToggleRef = useRef(null);
+  // eslint-disable-next-line react-hooks/refs
+  attribToggleRef.current = () => setAttribOpen((o) => !o);
+
   // OPTION C (ratified 2026-07-15): ONE stable glyph, a STATE-AWARE name. The control
   // does two things — fit to the selection, or return to the home view — and no single
   // conventional metaphor covers both. A glyph that SWAPS would be worse: people learn a
@@ -1119,6 +1131,12 @@ export default function PropertyAssessmentMap() {
     infoCtrlRef.current?.setActive(infoOpen);
   }, [infoOpen]);
 
+  // The database control glows while its panel is open — same load-bearing cue as the "i".
+  const attribCtrlRef = useRef(null);
+  useEffect(() => {
+    attribCtrlRef.current?.setActive(attribOpen);
+  }, [attribOpen]);
+
   useEffect(() => {
     if (!map) return undefined;
     const reset = makeIconButtonControl({
@@ -1132,15 +1150,27 @@ export default function PropertyAssessmentMap() {
       label: "About & tips",
       onClick: () => infoToggleRef.current?.(),
     });
+    // Attribution control — BOTTOM-right (its own affordance), NOT a top-right rail
+    // sibling; the CSS themes it as a quiet utility (see .pa-canvas .maplibregl-ctrl-
+    // bottom-right button), distinct from the rail's petrol+teal active scheme.
+    const attrib = makeIconButtonControl({
+      svg: railGlyph(ICON_DATABASE),
+      label: "Data & attribution",
+      onClick: () => attribToggleRef.current?.(),
+    });
     map.addControl(reset, "top-right");
     map.addControl(info, "top-right");
+    map.addControl(attrib, "bottom-right");
     resetCtrlRef.current = reset;
     infoCtrlRef.current = info;
+    attribCtrlRef.current = attrib;
     info.setActive(infoOpen);   // the card may already be open (first visit auto-opens it)
+    attrib.setActive(attribOpen);
     return () => {
       resetCtrlRef.current = null;
       infoCtrlRef.current = null;
-      for (const c of [reset, info]) { try { map.removeControl(c); } catch { /* map already gone */ } }
+      attribCtrlRef.current = null;
+      for (const c of [reset, info, attrib]) { try { map.removeControl(c); } catch { /* map already gone */ } }
     };
     // resetLabel is deliberately NOT a dep — the controls mount ONCE; relabelling rides
     // the effect above. Re-adding them on every selection change would rebuild the rail.
@@ -1401,6 +1431,11 @@ export default function PropertyAssessmentMap() {
                     boxSelect={boxSelect}
                     preserveDrawingBuffer
                     cooperativeGestures={false}
+                    // Always-visible LINKS-ONLY strip (§6). The disclaimer moves to the
+                    // attribution panel (the database control) — keeping the strip narrow
+                    // so it clears the tuning bay + Data Console handle.
+                    attributionCompact={false}
+                    mapAttribution={siteConfig.mapAttributionStrip}
                   />
                 </MapErrorBoundary>
               </>
@@ -1503,6 +1538,10 @@ export default function PropertyAssessmentMap() {
             onClose={() => setInfoOpen(false)}
             lastUpdated={manifest?.last_updated}
           />
+
+          {/* DATA & ATTRIBUTION — opened by the database control in the map's bottom-right.
+              The §6 home for the full record + disclaimer; distinct from the usage "i". */}
+          <AttributionPanel open={attribOpen} onClose={() => setAttribOpen(false)} />
 
           {/* ===== CONSOLE FOOT — the analysis dock only. The tuning rack moved
               into the instrument column (contract §3.2), so the console now rises

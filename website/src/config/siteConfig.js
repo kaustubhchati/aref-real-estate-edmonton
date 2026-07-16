@@ -15,12 +15,12 @@
 
 // ---- Source-data attribution + licence — ONE source of truth ------------
 // City of Edmonton Open Data Portal, under the Open Government Licence – City of
-// Edmonton (Terms of Use v2.1, Jan 2016). Consumed by every data export
-// (exportData.js) so the required notice travels with any distribution — see the
-// Terms' distribution clause: "If you distribute or provide access to the datasets …
-// you agree to include … this URL for … these Terms of Use." Attribution itself is
-// REQUESTED, not required, by these Terms; the URL-travels-with-distribution
-// obligation is the hard one, so it is centralised here.
+// Edmonton (Terms of Use v2.1, Jan 2016). Consumed BOTH by the map's attribution
+// control AND by every data export (exportData.js) so the required notice travels
+// with any distribution — see the Terms' distribution clause: "If you distribute or
+// provide access to the datasets … you agree to include … this URL for … these
+// Terms of Use." Attribution itself is REQUESTED, not required, by these Terms; the
+// URL-travels-with-distribution obligation is the hard one, so it is centralised here.
 //
 // NO City of Edmonton LOGO anywhere (deliberate): the Terms licence the DATASETS only
 // ("this licence does not give you a copyright or other proprietary interest") and
@@ -36,11 +36,25 @@ export const EDMONTON_OPEN_DATA = {
 };
 
 // Basemap credit — LEGALLY REQUIRED verbatim by CARTO's terms + OSM's ODbL. On the live
-// map it is supplied automatically by the CARTO Voyager TileJSON; this copy exists to burn
-// into the PNG export, whose canvas does not include the DOM attribution overlay (see
-// exportData.exportPng). Wording is fixed by the licences; never iconify or abbreviate —
-// the "©" and the word "contributors" are both required.
+// map it is supplied automatically by the CARTO Voyager TileJSON (do NOT repeat it in
+// the strip's customAttribution). This copy exists to burn into the PNG export (whose
+// canvas does not include the DOM attribution overlay — see exportData.exportPng) and to
+// render the CARTO/OSM lines in the attribution PANEL. Wording is fixed by the licences;
+// never iconify or abbreviate — the "©" and the word "contributors" are both required.
 export const BASEMAP_CREDIT = "© OpenStreetMap contributors, © CARTO";
+
+// The basemap sources as LINKED parts, for the attribution panel. `pre`/`post` carry the
+// licence-fixed wording OUTSIDE the link text (the "©" and " contributors"), so the visible
+// string reads verbatim "© CARTO" and "© OpenStreetMap contributors" while CARTO /
+// OpenStreetMap themselves are the links. URLs match the CARTO TileJSON's own attribution.
+export const BASEMAP_SOURCES = [
+  { pre: "© ", label: "CARTO",         url: "https://carto.com/about-carto/",      post: "" },
+  { pre: "© ", label: "OpenStreetMap", url: "http://www.openstreetmap.org/about/", post: " contributors" },
+];
+
+// The two City links, composed once (shared by the strip + the full record below).
+const CITY_LINK  = `<a href="${EDMONTON_OPEN_DATA.url}" target="_blank" rel="noopener noreferrer">City of Edmonton Open Data</a>`;
+const TERMS_LINK = `<a href="${EDMONTON_OPEN_DATA.termsUrl}" target="_blank" rel="noopener noreferrer">Open Government Licence (Terms of Use v2.1)</a>`;
 
 export const siteConfig = {
   // ---- Identity (placeholders — fill before public launch) ---------------
@@ -53,11 +67,20 @@ export const siteConfig = {
   dataSource: EDMONTON_OPEN_DATA,
 
   // ---- Map attribution ---------------------------------------------------
-  // Appended to the map's AttributionControl via customAttribution. The basemap
-  // credit "© CARTO, © OpenStreetMap contributors" is supplied AUTOMATICALLY by
-  // the CARTO Voyager TileJSON, so do NOT repeat it here — this is the DATA
-  // credit only.
-  mapAttribution: "Data: City of Edmonton Open Data",
+  // Two shapes (both APPENDED to MapLibre's AttributionControl via customAttribution;
+  // the "© CARTO, © OpenStreetMap contributors" basemap credit is added AUTOMATICALLY by
+  // the CARTO Voyager TileJSON, never repeated here). Links open in a new tab.
+  //
+  //  • mapAttribution      — the DEFAULT: source + licence links + the §6 disclaimer.
+  //                          Used by sections whose attribution is a single compact
+  //                          control (building-permits, business-census).
+  //  • mapAttributionStrip — LINKS ONLY (no disclaimer prose). Used by Property
+  //                          Assessment's always-visible bottom strip, where the prose
+  //                          both overflowed into the console AND is redundant — PA moves
+  //                          the disclaimer into its attribution PANEL (the database-glyph
+  //                          control), which is the §6 home for it. See DESIGN_SYSTEM §6.
+  mapAttribution:      [CITY_LINK, TERMS_LINK, EDMONTON_OPEN_DATA.disclaimer],
+  mapAttributionStrip: [CITY_LINK, TERMS_LINK],
 
   // ---- Footer copy (placeholders) ----------------------------------------
   // Each line corresponds to one block in the footer (Footer.jsx).
