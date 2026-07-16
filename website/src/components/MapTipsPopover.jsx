@@ -197,7 +197,7 @@ export default function MapTipsPopover({
           It reads at the primary tier (.pa-box-cite → --pa-ink), lifted out of the muted
           tier the aggregate-methodology block keeps (KC, 2026-07-16). */}
       <p className="pa-box-ref pa-box-cite">
-        Updated {lastUpdated ?? "n/a"}. Renamed neighbourhoods (e.g. Oliver →
+        {lastUpdated ? `Updated ${lastUpdated}. ` : ""}Renamed neighbourhoods (e.g. Oliver →
         Wîhkwêntôwin, 2025) show their full history under the current name.{" "}
         <a href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
            target="_blank" rel="noopener noreferrer">

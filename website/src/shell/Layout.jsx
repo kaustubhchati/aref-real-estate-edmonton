@@ -17,9 +17,12 @@ import EdgeReveal from "./EdgeReveal.jsx";
 import SectionErrorBoundary from "../components/SectionErrorBoundary.jsx";
 
 // Routes that run the immersive map chrome (Nav + Footer auto-hide so the map
-// fills the frame). One entry today; add a path here when another map opts in.
+// fills the frame). Property Assessment is the standard; Dwelling Units adopts it.
 // useLocation().pathname has the router basename stripped, so match the bare path.
-const IMMERSIVE_ROUTES = new Set(["/properties/property-assessment"]);
+const IMMERSIVE_ROUTES = new Set([
+  "/properties/property-assessment",
+  "/activity/dwelling-units",
+]);
 
 export default function Layout() {
   // Key the boundary by route so a section that errored recovers when the user
