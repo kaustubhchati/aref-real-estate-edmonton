@@ -106,10 +106,14 @@ sections:
     # Dependency order: 01 fetches today's snapshot + builds the point geojson +
     # coverage/category CSVs (using the COMMITTED job_category_grouping; 01 self-
     # guards category drift via its n_unmapped stop). 02 reads that fresh snapshot
-    # + boundary -> per-year aggregates + choropleth geojsons. 03 emits the manifest.
+    # + boundary -> per-year aggregates + choropleth geojsons. 02b reshapes those
+    # per-year geojsons into ONE combined all-years file (the Data Console's
+    # resident source — same additive reshape as PA's 07b, makes no data decisions).
+    # 03 emits the manifest.
     scripts:
       - scripts/production/01_build_permits.R
       - scripts/production/02_build_permit_aggregates.R
+      - scripts/production/02b_combine_geojson.R
       - scripts/production/03_emit_manifest.R
     # 01a_build_job_grouping.R is NOT in the routine chain — it is an out-of-band
     # re-curation tool, run only when 01's n_unmapped guard trips (the City adds a
@@ -126,8 +130,9 @@ sections:
       glob:
         # Directory remap: output/permit_geojson/ -> public's permit-neighbourhoods/
         # (filenames identical). The ???? matches the 4-digit YEAR ONLY, so the
-        # per-year files publish but a stray permit_neighbourhoods_all_years.geojson
-        # (an unproduced, unconsumed combined-file orphan) is never swept in.
+        # per-year files publish here; the combined permit_neighbourhoods_all_years
+        # .geojson (02b) is published by an explicit files: entry below instead, so
+        # the year-only glob deliberately does NOT sweep it (no double-copy).
         # NB: glob2rx escapes "[", so ???? — not [0-9]* — is the year-only match.
         - src_dir:  output/permit_geojson
           dest_dir: website/public/data/building-permits/permit-neighbourhoods
@@ -144,6 +149,10 @@ sections:
       # so they take no year/span suffix (a span would be a forbidden date literal
       # / break the frontend URL on rollover). manifest.json is not a CSV — kept as-is.
       files:
+        # The combined all-years GeoJSON (02b) — the Data Console's resident source.
+        # A fixed-file copy (NOT the year-only glob above), mirroring PA's combined
+        # handoff. Same dir as the per-year files on both sides.
+        - { from: output/permit_geojson/permit_neighbourhoods_all_years.geojson, to: website/public/data/building-permits/permit-neighbourhoods/permit_neighbourhoods_all_years.geojson }
         - { from: output/permits_coverage.csv,        to: website/public/data/building-permits/yeg_building-permits_coverage.csv }
         - { from: output/permits_category_counts.csv, to: website/public/data/building-permits/yeg_building-permits_category_counts.csv }
         - { from: output/manifest.json,               to: website/public/data/building-permits/manifest.json }
