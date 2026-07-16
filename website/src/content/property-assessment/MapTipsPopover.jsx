@@ -16,15 +16,13 @@
 // Keys are KEY-CAPS (⇧, T), not spelled out: the reader has to find a physical key,
 // and a picture of the key is a better instruction than its name.
 //
-// THE HONESTY BLOCK IS NOT A TIP. The selection-aggregate disclosure stays PROSE at
-// the foot, outside the index (§6 — honesty labels are never stripped, never
-// compressed into a glyph line). It says the Mean is exact and the Median/YoY are
-// approximations; that is a methodology statement a reader must be able to read as
-// sentences, so it is deliberately shaped differently from the tips above it.
+// THE HONESTY BLOCK IS NOT A TIP. The selection-aggregate disclosure sits at the foot,
+// outside the index (§6 — honesty labels are never stripped). It is BULLETED, not prose,
+// so the ASYMMETRY is the point: Mean is exact, Median/YoY are estimates. Muted tier.
 //
 // The two CLEARS get two entries, one line each. They are two separate undos and the
-// distinction is the useful part — crushing them onto one line is what made the old
-// single line unreadable.
+// distinction is the useful part. Each carries the shared eraser glyph in the GUTTER (so
+// the rows align with every tip above) and its real coral button INLINE in the sentence.
 //
 // THIS PANEL IS ALSO THE INTRODUCTORY USAGE CARD. On a first visit the parent opens it
 // automatically and it stays open through exploration, dismissing only on the reader's
@@ -40,8 +38,8 @@
 import { useEffect, useRef } from "react";
 import { useScrollFade } from "./useScrollFade.js";
 import {
-  ICON_CLICK, ICON_BOX_SELECT, ICON_SEARCH,
-  ICON_SLIDERS, ICON_TABLE, ICON_MOUSE_CLICK,
+  ICON_MOUSE, ICON_CLICK, ICON_BOX_SELECT, ICON_SEARCH,
+  ICON_SLIDERS, ICON_TABLE, ICON_MOUSE_CLICK, ICON_CLEAR_SELECTION,
 } from "./mapIcons.js";
 
 // One <svg> shell for the index glyphs — the same Lucide family + spec as the rail, one
@@ -72,31 +70,43 @@ function Key({ children }) {
 // A scaled replica of a REAL console button — not a generic glyph. The visual-index
 // principle taken literally: the tip shows the control you will go and look for, in the
 // state where it does something (coral = actionable; it sits grey and inert in the
-// console until then, so the coral version is the one worth teaching).
+// console until then, so the coral version is the one worth teaching). It rides INLINE
+// in the sentence as its SUBJECT (the eraser icon holds the gutter), sized to sit on the
+// text baseline without disturbing the row's line height.
 //
 // NOT aria-hidden, deliberately — a DEVIATION from the brief's a11y note, which assumed
 // these were icons. They are text pills, and they are the SUBJECT of their sentence: the
-// line reads "Resets the Search, District and Range Filters" with no subject unless the pill is
+// line reads "resets the Search, District and Range Filters" with no subject unless the pill is
 // announced. Hiding it would leave a screen reader asking "what does?".
 function BtnChip({ children }) {
   return <span className="pa-tip-btn">{children}</span>;
 }
 
-// THE INDEX — data-driven, rendered in a loop. Each row is {glyph, body}. Adding a tip
-// is adding a row; nothing else moves.
+// THE INDEX — data-driven, rendered in a loop on ONE two-column grid (icon gutter →
+// text at a shared left edge; Principle 0). Each row is {glyph, body}: the glyph ALWAYS
+// sits in the gutter as an icon; where a row also teaches a real console button, that
+// button rides INLINE in the sentence (see the clears), so it never becomes the aligning
+// element. Order is GESTURES first (scroll, click, shift-drag), then chrome (console,
+// search, sliders), then the two clears — the gentlest entry (scroll needs no teaching)
+// leads. Adding a tip is adding a row; nothing else moves.
 const TIPS = [
+  // Scroll leads: the most basic map gesture, no explanation needed.
+  { key: "scroll", glyph: <Glyph body={ICON_MOUSE} />,
+    body: <>Scroll to Zoom</> },
+
   { key: "click", glyph: <Glyph body={ICON_CLICK} />,
     body: <>Click to Select a Neighbourhood</> },
 
-  { key: "table", glyph: <Glyph body={ICON_TABLE} />,
-    body: <>Press <Key>T</Key> for Data Console</> },
-
   // "SELECT AN AREA" (ratified) — plain and spatially honest: the reader IS drawing an
   // area on the map. It avoids the jargon ("box-select", "marquee") and it cannot be
-  // confused with District or any data term. MATCHED PAIR with the "Deselects the Area"
-  // tip below — the two share one noun, and if the term ever changes BOTH change.
+  // confused with District or any data term. MATCHED PAIR with the "deselects the Area"
+  // tip below — the two share one noun, and if the term ever changes BOTH change. Grouped
+  // with the gestures (above the console), since it IS one.
   { key: "area", glyph: <Glyph body={ICON_BOX_SELECT} />,
     body: <><Key>⇧ shift</Key> + <Key><Glyph body={ICON_MOUSE_CLICK} inline /> click</Key> and drag to Select an Area</> },
+
+  { key: "table", glyph: <Glyph body={ICON_TABLE} />,
+    body: <>Press <Key>T</Key> for Data Console</> },
 
   // The search tip carries the SEARCH control's own glyph — that is the index working.
   { key: "search", glyph: <Glyph body={ICON_SEARCH} />,
@@ -105,14 +115,15 @@ const TIPS = [
   { key: "sliders", glyph: <Glyph body={ICON_SLIDERS} />,
     body: <>Drag Slider Knobs to Select Year and Metric Range</> },
 
-  // The two clears — one line each, each showing its REAL button. They are two separate
-  // undos; the pills make that concrete, because they are the very things on screen.
-  // Names the SEARCH (amended 2026-07-15): the button now clears it too, and a tip that
-  // under-describes the control is the drift §2 exists to end.
-  { key: "clearf", glyph: <BtnChip>Clear filters</BtnChip>,
-    body: <>Resets the Search, District and Range Filters</> },
-  { key: "clears", glyph: <BtnChip>Clear selection</BtnChip>,
-    body: <>Deselects the Area</> },
+  // The two clears — one line each. The GUTTER carries the shared eraser glyph (icons in
+  // the icon column, so these rows align with every row above); the REAL coral button
+  // rides inline as the sentence's subject, so the reader still recognizes the on-screen
+  // control without it becoming the aligning element. Names the SEARCH (amended
+  // 2026-07-15): the button now clears it too.
+  { key: "clearf", glyph: <Glyph body={ICON_CLEAR_SELECTION} />,
+    body: <><BtnChip>Clear filters</BtnChip> resets the Search, District and Range Filters</> },
+  { key: "clears", glyph: <Glyph body={ICON_CLEAR_SELECTION} />,
+    body: <><BtnChip>Clear selection</BtnChip> deselects the Area</> },
 ];
 
 export default function MapTipsPopover({ open, onClose, lastUpdated }) {
@@ -155,24 +166,25 @@ export default function MapTipsPopover({ open, onClose, lastUpdated }) {
         ))}
       </ul>
 
-      {/* §6 honesty label — PROSE, deliberately outside the index above. Never a glyph
-          line, never compressed, never stripped. */}
-      <p className="pa-box-ref">
-        Selection aggregates: <b>Mean</b> is parcel-weighted (exact);{" "}
-        <b>Median</b> (of neighbourhood medians) and <b>YoY</b> are
-        neighbourhood-weighted approximations (≈).
-      </p>
+      {/* §6 honesty label — bulleted so the ASYMMETRY is the point (one exact, two
+          estimates), not buried in prose. Muted tier, never stripped. */}
+      <div className="pa-tips-honesty">
+        <span className="pa-tips-honesty-h">Selection Aggregates</span>
+        <ul>
+          <li><b>Mean</b> is parcel-weighted (exact)</li>
+          <li><b>Median</b> and <b>YoY</b> are neighbourhood-weighted estimates (≈)</li>
+        </ul>
+      </div>
       {/* The CITATION/provenance line — a source citation, NOT the honesty hedge above.
           It reads at the primary tier (.pa-box-cite → --pa-ink), lifted out of the muted
           tier the aggregate-methodology block keeps (KC, 2026-07-16). */}
       <p className="pa-box-ref pa-box-cite">
-        <span>Updated {lastUpdated ?? "—"}.</span>{" "}
-        Some neighbourhoods were renamed (e.g. Oliver → Wîhkwêntôwin, 2025); a
-        neighbourhood&apos;s full history shows under its current name.{" "}
+        Updated {lastUpdated ?? "n/a"}. Renamed neighbourhoods (e.g. Oliver →
+        Wîhkwêntôwin, 2025) show their full history under the current name.{" "}
         <a href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
            target="_blank" rel="noopener noreferrer">
           Naming Committee
-        </a>.
+        </a>
       </p>
     </div>
   );

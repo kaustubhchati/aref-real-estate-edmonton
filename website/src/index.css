@@ -1762,13 +1762,18 @@ p  { margin: 0 0 0.75rem; }
 /* Tips read at the PRIMARY text tier (--pa-ink = --tx = #f5f6f7, the standard white),
    not the muted tier. They are instructions to follow, not labels to skim past. The
    honesty prose below stays muted on purpose — see .pa-box-ref. */
+/* ONE grid for EVERY row (Principle 0): a fixed icon gutter + text at a shared left edge.
+   All eight rows align — including the two clears, whose eraser icon holds the gutter while
+   their coral button rides inline. Multi-line tips wrap within the text column (to the
+   shared edge), never back under the gutter. */
 .pa-tips-list li {
-  display: flex; align-items: start; gap: 8px;
-  font-size: var(--t-xs); color: var(--pa-ink); line-height: 1.5; margin: 0 0 6px;
+  display: grid; grid-template-columns: 18px 1fr; column-gap: 9px; align-items: start;
+  font-size: var(--t-xs); color: var(--pa-ink); line-height: 1.5; margin: 0 0 7px;
 }
 /* No colour of its own — the glyph INHERITS its line, so a tip is one tier and there is
-   one colour decision per line rather than two that can drift apart. */
-.pa-tip-glyph { flex: 0 0 auto; margin-top: 2px; }
+   one colour decision per line rather than two that can drift apart. Centred in the fixed
+   gutter so every row's text starts at ONE shared left edge. */
+.pa-tip-glyph { justify-self: center; margin-top: 2px; }
 
 /* INPUT CHIP — a physical thing to press (a key, or a mouse click), drawn as one. Not
    teal: teal means "interactive on screen" (§1.3), and these are pictures of HARDWARE —
@@ -1789,14 +1794,25 @@ p  { margin: 0 0 0.75rem; }
    transparent body, coral text, coral rim (--pa-sel, §1.3's table/rail selection accent),
    --r-md family. Only the type + padding shrink — the identity must survive scaling, or
    the reader is being shown a different button than the one they'll hunt for.
-   Sits in the index column, so it takes that column's alignment. */
+   Rides INLINE in the sentence now (the gutter carries an icon), on the text baseline,
+   with a tight line-height so it never inflates the row. */
 .pa-tip-btn {
-  display: inline-flex; align-items: center; flex: 0 0 auto;
-  padding: 1px 6px; border-radius: var(--r-sm);
-  font-family: inherit; font-size: var(--t-2xs); font-weight: 500; line-height: 1.5;
+  display: inline-flex; align-items: center;
+  padding: 0 5px; border-radius: var(--r-sm);
+  font-family: inherit; font-size: var(--t-2xs); font-weight: 500; line-height: 1.4;
   color: var(--pa-sel); background: transparent; border: 1px solid var(--pa-sel);
-  white-space: nowrap;
+  white-space: nowrap; vertical-align: baseline;
 }
+
+/* §6 honesty label — bulleted "Selection Aggregates". Muted tier (§6); the label is bold,
+   the two bullets carry the exact/estimate ASYMMETRY that prose was burying. */
+.pa-tips-honesty {
+  margin: 11px 0 0; font-size: var(--t-2xs); color: var(--pa-mut); line-height: 1.5;
+}
+.pa-tips-honesty-h { display: block; font-weight: 600; margin-bottom: 2px; }
+.pa-tips-honesty ul { list-style: none; margin: 0; padding: 0; }
+.pa-tips-honesty li { position: relative; padding-left: 11px; }
+.pa-tips-honesty li::before { content: "\2022"; position: absolute; left: 1px; }
 
 /* The .pa-hint block that lived here is GONE (2026-07-15): the separate box-select hint
    is superseded — the About & tips card IS the introduction, and a hint teaching the same

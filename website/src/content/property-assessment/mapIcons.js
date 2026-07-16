@@ -134,6 +134,12 @@ export const ICON_CLEAR_SELECTION =
 export const ICON_MOUSE_CLICK =
   '<path d="M14 4.1 12 6"/> <path d="m5.1 8-2.9-.8"/> <path d="m6 12-1.9 2"/> <path d="M7.2 2.2 8 5.1"/> <path d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z"/>';
 
+// Tips index: scroll the mouse wheel to zoom — a mouse body with the wheel line. The
+// gentlest, most basic map gesture, so it leads the index.
+// lucide: mouse
+export const ICON_MOUSE =
+  '<rect x="5" y="2" width="14" height="20" rx="7"/> <path d="M12 6v4"/>';
+
 // The DATA-SOURCE / attribution glyph — a database cylinder. Marks the "where this data
 // came from" control (bottom-right), DELIBERATELY a different silhouette from the circled-i
 // usage control (ICON_INFO) in the top-right rail: two info controls must not share a
