@@ -4,20 +4,21 @@
 // Visual contract for the Dwelling Units choropleth (formerly "Permit
 // Neighbourhoods"). Mirrors property-assessment/choroplethStyle.js for all map
 // chrome (basemap, layers, states, outlines, hover). Dwelling-Units-specific:
-// the 3-metric + sub-switch system, colour ramps, popup rows.
+// the FLAT metric list (one field per button), colour ramp, popup rows.
 //
 // GeoJSON fields (from 03_build_permit_aggregates.R): display_name, district,
 // Neighbourhood ID, polygon_state, n_permits, total_construction_value,
-// median_construction_value, units_added_gross, units_demolished,
-// yoy_pct_permits.
+// median_construction_value, units_added_gross, units_demolished.
+// (yoy_pct_permits still ships in the data but is no longer surfaced — the % YoY
+// of permit counts was dropped as not logical, 2026-07-16.)
 //
-// Metric system: three top-level metrics, each with a 2-option sub-switch that
-// RESOLVES to one GeoJSON field key (see DWELLING_METRICS). Every metric value
-// is read generically via ["get", field], so adding/retargeting a sub-state is
-// a table edit here — the component never hard-codes a field key.
+// Metric system: FOUR flat metrics (METRICS), each resolving to ONE GeoJSON field,
+// read generically via ["get", field] — retargeting/adding a metric is a table edit
+// here; the component never hard-codes a field key. Every metric is sequential (the
+// diverging %YoY path was removed with the YoY metric).
 // =========================================================
 
-import { fmtCurrency, fmtPct } from "../../utils/format.js";
+import { fmtCurrency } from "../../utils/format.js";
 import { polyOutline, rampFloor, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
 import { CITY_BOUNDS } from "../../config/cityBounds.js";
 import { paintTransition, DUR_BASE } from "../../components/motion.js";
@@ -93,50 +94,30 @@ const fmtInt = (v) =>
   v == null || !Number.isFinite(+v) ? "—"
   : Math.round(+v).toLocaleString();
 
-// ---- The 3-metric + sub-switch system ---------------------------------
-// Each metric carries a 2-option sub-switch; each sub RESOLVES to one GeoJSON
-// field, plus its legend label, value formatter, and ramp type. The component
-// stores {metricKey, subKey} and calls resolveSub() to get the active field.
-export const DWELLING_METRICS = [
-  {
-    key: "permit_count", label: "Permit Count",
-    subs: [
-      { key: "total", label: "Total", field: "n_permits",
-        legendLabel: "Residential permits", fmt: fmtInt, ramp: "sequential" },
-      { key: "yoy", label: "% YoY", field: "yoy_pct_permits",
-        legendLabel: "Permit count, YoY % change", fmt: fmtPct, ramp: "diverging" },
-    ],
-  },
-  {
-    key: "construction_value", label: "Construction Value",
-    subs: [
-      { key: "total", label: "Total", field: "total_construction_value",
-        legendLabel: "Residential construction value", fmt: fmtCurrency, ramp: "sequential" },
-      { key: "median", label: "Median", field: "median_construction_value",
-        legendLabel: "Median residential construction value", fmt: fmtCurrency, ramp: "sequential" },
-    ],
-  },
-  {
-    key: "dwellings", label: "Dwellings",
-    subs: [
-      { key: "added", label: "Added", field: "units_added_gross",
-        legendLabel: "Dwelling units added", fmt: fmtInt, ramp: "sequential" },
-      { key: "demolished", label: "Demolished", field: "units_demolished",
-        legendLabel: "Dwelling units demolished", fmt: fmtInt, ramp: "sequential" },
-    ],
-  },
+// ---- Metrics — FLAT, one field per button (standardized to PA, 2026-07-16) ----
+// Each metric is one GeoJSON field + its label, legend label, value formatter, and
+// glyph (icon `d` path, for the PA SegmentedControl chip). Every value reads via
+// ["get", field], so retargeting a metric is a table edit here. Mirrors PA's METRICS
+// shape {key, field, label, fmt, icon} + the DU legend label. The % YoY of permit
+// counts was DROPPED (not logical) — with it went the only diverging ramp, so every
+// metric is now sequential.
+export const METRICS = [
+  { key: "permit_count", field: "n_permits", label: "Permit Count",
+    legendLabel: "Residential permits", fmt: fmtInt,
+    icon: "M14 3v4a1 1 0 0 0 1 1h4 M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z M9 13h6 M9 17h6" },
+  { key: "construction_value", field: "total_construction_value", label: "Construction Value",
+    legendLabel: "Residential construction value", fmt: fmtCurrency,
+    icon: "M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1z M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5 M4 15v-3a6 6 0 0 1 6-6 M14 6a6 6 0 0 1 6 6v3" },
+  { key: "units_added", field: "units_added_gross", label: "Dwellings Added",
+    legendLabel: "Dwelling units added", fmt: fmtInt,
+    icon: "M13 22H5a2 2 0 0 1-2-2v-9.5a2 2 0 0 1 .8-1.6l7-5.2a2 2 0 0 1 2.4 0l7 5.2a2 2 0 0 1 .8 1.6V11 M15 18h6 M18 15v6" },
+  { key: "units_demolished", field: "units_demolished", label: "Dwellings Demolished",
+    legendLabel: "Dwelling units demolished", fmt: fmtInt,
+    icon: "M13 22H5a2 2 0 0 1-2-2v-9.5a2 2 0 0 1 .8-1.6l7-5.2a2 2 0 0 1 2.4 0l7 5.2a2 2 0 0 1 .8 1.6V11 M15 18h6" },
 ];
 
-// Default open state: Dwellings / Added (the housing-growth headline).
-export const DEFAULT_METRIC = "dwellings";
-export const DEFAULT_SUB = "added";
-
-// Resolve {metricKey, subKey} -> the active sub (falls back to first sub/metric).
-export function resolveSub(metricKey, subKey) {
-  const m = DWELLING_METRICS.find((d) => d.key === metricKey) ?? DWELLING_METRICS[0];
-  const s = m.subs.find((x) => x.key === subKey) ?? m.subs[0];
-  return { ...s, metricKey: m.key, metricLabel: m.label };
-}
+// Default open metric: Dwellings Added (the housing-growth headline).
+export const DEFAULT_METRIC = "units_added";
 
 // ---- Colour ramps -----------------------------------------------------
 // Sequential: cream → Ferrari red (shared $-value family, matches assessment).
@@ -146,16 +127,6 @@ const RAMP_SEQ = [
   { key: "median", c: "#f07840", label: "median" },
   { key: "q75",    c: "#e03818", label: "Q75"    },
   { key: "max",    c: "#cc0000", label: "max"    },
-];
-
-// Diverging: RdBu, used only for %YoY. Red = decline (negative), white = 0
-// (neutral), blue = growth (positive). Centred at 0 so 0% reads neutral.
-const RAMP_DIVERGING = [
-  "#ca0020", // most negative (decline)
-  "#f4a582",
-  "#f7f7f7", // 0 — neutral
-  "#92c5de",
-  "#0571b0", // most positive (growth)
 ];
 
 // ---- Quantile helper (mirrors assessment) -----------------------------
@@ -195,43 +166,12 @@ function sequentialStops(gj, field) {
   return stops.length >= 2 ? stops : SEQ_FALLBACK;
 }
 
-// Diverging: symmetric domain [-M, 0, +M] centred at 0, so a 0% neighbourhood
-// reads neutral (white). M = 95th percentile of |value| over aggregated, finite
-// values (robust to the small-base extremes like a 1→80 jump). Labels use ascii
-// "-"/"+" so the Legend's value/label dedup matches.
-function divergingStops(gj, field) {
-  const vals = [];
-  for (const f of gj?.features ?? []) {
-    const p = f.properties;
-    if (p?.polygon_state !== "aggregated") continue;
-    const v = p[field];
-    if (typeof v === "number" && Number.isFinite(v)) vals.push(Math.abs(v));
-  }
-  let M = 50;
-  if (vals.length >= 2) { vals.sort((a, b) => a - b); M = quantile(vals, 0.95); }
-  if (!(M > 0)) M = 50;
-  M = Math.max(1, Math.round(M));
-  const h = Math.round(M / 2);
-  return [
-    { v: -M, c: RAMP_DIVERGING[0], label: `-${M}%` },
-    { v: -h, c: RAMP_DIVERGING[1], label: `-${h}%` },
-    { v: 0,  c: RAMP_DIVERGING[2], label: "0%" },
-    { v: h,  c: RAMP_DIVERGING[3], label: `+${h}%` },
-    { v: M,  c: RAMP_DIVERGING[4], label: `+${M}%` },
-  ];
-}
-
-export function metricStops(gj, sub) {
-  return sub.ramp === "diverging"
-    ? divergingStops(gj, sub.field)
-    : sequentialStops(gj, sub.field);
+// Every metric is sequential now (the diverging %YoY was dropped).
+export function metricStops(gj, metric) {
+  return sequentialStops(gj, metric.field);
 }
 
 // ---- Fill colour expression -------------------------------------------
-// Sentinel distinguishes a true NA (null / absent property) from a real value
-// in the diverging path. yoy is in [-100, ~+8000], so -1e9 can never collide.
-const NA_SENTINEL = -1e9;
-
 function sequentialFill(field, stops) {
   const value = ["number", ["get", field], 0];
   const interp = ["interpolate", ["linear"], value];
@@ -247,31 +187,8 @@ function sequentialFill(field, stops) {
   ];
 }
 
-// Diverging fill with explicit NA handling: an aggregated polygon whose value is
-// NA (null) renders as no-data grey — NOT as 0 and NOT as the bottom of the
-// scale — so an NA neighbourhood is visually distinct from a real -100.
-function divergingFill(field, stops) {
-  const v = ["coalesce", ["get", field], NA_SENTINEL];
-  const interp = ["interpolate", ["linear"], v];
-  for (const s of stops) interp.push(s.v, s.c);
-  return [
-    "case",
-    ["==", ["get", "polygon_state"], "aggregated"],
-      ["case",
-        ["==", v, NA_SENTINEL], STATE_STYLE.no_data.fillColor, // NA -> no-data grey
-        interp],
-    ["==", ["get", "polygon_state"], "suppressed_low_n"],
-      STATE_STYLE.suppressed_low_n.fillColor,
-    ["==", ["get", "polygon_state"], "no_data"],
-      STATE_STYLE.no_data.fillColor,
-    "#cccccc",
-  ];
-}
-
-export function choroplethFillColor(sub, stops) {
-  return sub.ramp === "diverging"
-    ? divergingFill(sub.field, stops)
-    : sequentialFill(sub.field, stops);
+export function choroplethFillColor(metric, stops) {
+  return sequentialFill(metric.field, stops);
 }
 
 // Per-feature fill opacity (aggregated bright, non-aggregated glass; hover/pin
@@ -301,8 +218,8 @@ export const FILL_LAYER_IDS = ["pnbhd-fill-a", "pnbhd-fill-b"];
 // switch the component paints the new colour onto the hidden layer and
 // crossfades opacity (see PermitChoroplethMap). 150ms transition = snappy hover;
 // the component bumps it to 500ms only for the duration of a switch.
-export function choroplethLayers(stops, sub) {
-  const fillColor = choroplethFillColor(sub, stops);
+export function choroplethLayers(stops, metric) {
+  const fillColor = choroplethFillColor(metric, stops);
   return [
     // 1a. Fill A — starts visible
     {
@@ -430,19 +347,18 @@ function escapeHtml(s) {
 // Every resolvable field, for the Tier-3 pinned popup. [field, label, fmt].
 export const POPUP_ROWS = [
   ["n_permits",                 "Residential permits",                  fmtInt],
-  ["yoy_pct_permits",           "Permit count, YoY % change",           fmtPct],
   ["units_added_gross",         "Dwelling units added",                 fmtInt],
   ["units_demolished",          "Dwelling units demolished",            fmtInt],
   ["total_construction_value",  "Residential construction value",       fmtCurrency],
   ["median_construction_value", "Median residential construction value",fmtCurrency],
 ];
 
-// `detail` selects the tier; `sub` is the active sub-state (resolved field).
+// `detail` selects the tier; `metric` is the active flat metric.
 //   detail=false → Tier 2 (slim hover): name + district + active-metric headline
 //                  + permit count.
 //   detail=true  → Tier 3 (pinned click): name + district + year + state badge
 //                  + every row + dismiss hint.
-export function buildPopupHtml(p, detail, year, sub) {
+export function buildPopupHtml(p, detail, year, metric) {
   const state = p.polygon_state;
   const name  = p.display_name ?? "—";
 
@@ -456,12 +372,12 @@ export function buildPopupHtml(p, detail, year, sub) {
     if (state === "aggregated") {
       parts.push(
         `<div class="pop-row headline">` +
-          `<span class="pop-k">${escapeHtml(sub.legendLabel)}</span>` +
-          `<span class="pop-v">${sub.fmt(p[sub.field])}</span>` +
+          `<span class="pop-k">${escapeHtml(metric.legendLabel)}</span>` +
+          `<span class="pop-v">${metric.fmt(p[metric.field])}</span>` +
         `</div>`
       );
       // Always show permit count, unless it is already the headline.
-      if (sub.field !== "n_permits") {
+      if (metric.field !== "n_permits") {
         parts.push(
           `<div class="pop-row">` +
             `<span class="pop-k">Residential permits</span>` +
@@ -485,7 +401,7 @@ export function buildPopupHtml(p, detail, year, sub) {
     );
     for (const [key, label, fmt] of POPUP_ROWS) {
       parts.push(
-        `<div class="pop-row${key === sub.field ? " headline" : ""}">` +
+        `<div class="pop-row${key === metric.field ? " headline" : ""}">` +
           `<span class="pop-k">${label}</span>` +
           `<span class="pop-v">${fmt(p[key])}</span>` +
         `</div>`

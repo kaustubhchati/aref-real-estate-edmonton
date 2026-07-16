@@ -7,8 +7,8 @@
 // ids), the polygon states, the 900ms hover popup, click-to-pin, cursor and
 // feature-state.
 //
-// Metric UI (part 1): three top-level metrics, each with a 2-option sub-switch
-// that resolves to one GeoJSON field (DWELLING_METRICS in the style file).
+// Metric UI: four FLAT metric buttons (METRICS in the style file), each one
+// GeoJSON field — Permit Count, Construction Value, Dwellings Added / Demolished.
 //
 // Part 2 polish:
 //  • The metric + sub controls use PA's city-switcher gel styling (.opt-toggle-gel).
@@ -37,10 +37,8 @@ import MapSkeleton from "../../components/MapSkeleton.jsx";
 import {
   BASEMAP_STYLE,
   MAP_VIEW,
-  DWELLING_METRICS,
+  METRICS,
   DEFAULT_METRIC,
-  DEFAULT_SUB,
-  resolveSub,
   metricStops,
   choroplethFillColor,
   choroplethLayers,
@@ -108,9 +106,8 @@ export default function PermitChoroplethMap() {
   const [years, setYears] = useState([]);
   const [year, setYear] = useState(null);
 
-  // Metric system: primary metric + its sub-state. Default = Dwellings / Added.
+  // One flat metric (4 buttons). Default = Dwellings Added.
   const [metricKey, setMetricKey] = useState(DEFAULT_METRIC);
-  const [subKey, setSubKey] = useState(DEFAULT_SUB);
 
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
@@ -127,21 +124,13 @@ export default function PermitChoroplethMap() {
   const fadeTimerRef = useRef(null);
   // Tracks the last-painted selection so the paint effect can tell a metric/sub
   // SWITCH (crossfade) from a stops-only refinement (gj settling — repaint live).
-  const prevSelRef = useRef(`${DEFAULT_METRIC}|${DEFAULT_SUB}`);
+  const prevSelRef = useRef(DEFAULT_METRIC);
 
-  const metricDef =
-    DWELLING_METRICS.find((m) => m.key === metricKey) ?? DWELLING_METRICS[0];
-  const activeSub = resolveSub(metricKey, subKey);
+  const metricDef = METRICS.find((m) => m.key === metricKey) ?? METRICS[0];
 
   function chooseMetric(label) {
-    const m = DWELLING_METRICS.find((d) => d.label === label);
-    if (!m) return;
-    setMetricKey(m.key);
-    setSubKey(m.subs[0].key);
-  }
-  function chooseSub(label) {
-    const s = metricDef.subs.find((x) => x.label === label);
-    if (s) setSubKey(s.key);
+    const m = METRICS.find((d) => d.label === label);
+    if (m) setMetricKey(m.key);
   }
 
   useEffect(() => {
@@ -159,11 +148,11 @@ export default function PermitChoroplethMap() {
 
   const url = year != null ? dataUrl(year) : null;
 
-  // Ramp stops for the active field (sequential or diverging per activeSub.ramp).
+  // Ramp stops for the active metric field (all metrics sequential).
   const stops = useMemo(
-    () => metricStops(gj, activeSub),
+    () => metricStops(gj, metricDef),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [gj, metricKey, subKey]
+    [gj, metricKey]
   );
 
   // Refs so the once-installed map handlers read the live selection.
@@ -171,8 +160,8 @@ export default function PermitChoroplethMap() {
   useEffect(() => { yearRef.current = year; }, [year]);
   const setHoveredFeatureRef = useRef(setHoveredFeature);
   useEffect(() => { setHoveredFeatureRef.current = setHoveredFeature; }, [setHoveredFeature]);
-  const subRef = useRef(activeSub);
-  useEffect(() => { subRef.current = activeSub; });
+  const metricRef = useRef(metricDef);
+  useEffect(() => { metricRef.current = metricDef; });
   const gjRef = useRef(gj);
   useEffect(() => { gjRef.current = gj; }, [gj]);
 
@@ -206,7 +195,7 @@ export default function PermitChoroplethMap() {
   function handleMapLoad(m) {
     activeFillRef.current = "a";
     setActiveFill("a");
-    prevSelRef.current = `${metricKey}|${subKey}`;
+    prevSelRef.current = metricKey;
     setMap(m);
   }
 
@@ -218,13 +207,13 @@ export default function PermitChoroplethMap() {
   //    layer in place (no fade).
   useEffect(() => {
     if (!map) return;
-    const sel = `${metricKey}|${subKey}`;
+    const sel = metricKey;
     const isSwitch = sel !== prevSelRef.current;
     prevSelRef.current = sel;
 
     const cur = activeFillRef.current;
     const activeId = `pnbhd-fill-${cur}`;
-    const newColor = choroplethFillColor(activeSub, stops);
+    const newColor = choroplethFillColor(metricDef, stops);
 
     if (!isSwitch) {
       try {
@@ -260,7 +249,7 @@ export default function PermitChoroplethMap() {
       }, FADE_MS + 20);
     } catch { /* map mid-teardown; next mount repaints via choroplethLayers */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, metricKey, subKey, stops]);
+  }, [map, metricKey, stops]);
 
   // Clear any pending fade-reset timer on unmount.
   useEffect(() => () => clearTimeout(fadeTimerRef.current), []);
@@ -335,7 +324,7 @@ export default function PermitChoroplethMap() {
             hoverPopup
               .setLngLat(e.lngLat)
               .setHTML(buildPopupHtml(
-                f.properties, false, yearRef.current, subRef.current))
+                f.properties, false, yearRef.current, metricRef.current))
               .addTo(map);
           }
         }, 900);
@@ -358,7 +347,7 @@ export default function PermitChoroplethMap() {
       pinnedPopup
         .setLngLat(e.lngLat)
         .setHTML(buildPopupHtml(
-          f.properties, true, yearRef.current, subRef.current))
+          f.properties, true, yearRef.current, metricRef.current))
         .addTo(map);
       pinnedPopup.once("close", () => {
         if (pinnedId !== null) { setPinned(pinnedId, false); pinnedId = null; }
@@ -451,22 +440,13 @@ export default function PermitChoroplethMap() {
             </select>
           </div>
 
-          {/* Primary metric (3) + the active metric's sub-switch (2), both in
-              PA's city-switcher gel style (.opt-toggle-gel). */}
+          {/* Metric selector (4 flat metrics) in PA's gel style (.opt-toggle-gel). */}
           <div className="opt-toggle-gel">
             <OptionToggle
               label="Metric"
-              options={DWELLING_METRICS.map((m) => m.label)}
+              options={METRICS.map((m) => m.label)}
               value={metricDef.label}
               onChange={chooseMetric}
-            />
-          </div>
-          <div className="opt-toggle-gel">
-            <OptionToggle
-              label={metricDef.label}
-              options={metricDef.subs.map((s) => s.label)}
-              value={activeSub.label}
-              onChange={chooseSub}
             />
           </div>
         </section>
@@ -475,11 +455,11 @@ export default function PermitChoroplethMap() {
             in step with the 500ms fill crossfade; sequential↔diverging swap
             dissolves rather than snaps. */}
         <section className="sb-section">
-          <div className="du-legend-fade" key={`${metricKey}-${subKey}`}>
+          <div className="du-legend-fade" key={metricKey}>
             <Legend
-              title={activeSub.legendLabel}
+              title={metricDef.legendLabel}
               stops={stops}
-              format={activeSub.fmt}
+              format={metricDef.fmt}
               greyTitle="Neighbourhood status"
               greyStates={LEGEND_STATES}
             />
@@ -496,8 +476,8 @@ export default function PermitChoroplethMap() {
             <p className="sb-hover-name">{hoveredFeature.display_name}</p>
             <div className="sb-hover-rows">
               <div className="sb-hover-row">
-                <span className="sb-hover-k">{activeSub.legendLabel}</span>
-                <span className="sb-hover-v">{activeSub.fmt(hoveredFeature[activeSub.field])}</span>
+                <span className="sb-hover-k">{metricDef.legendLabel}</span>
+                <span className="sb-hover-v">{metricDef.fmt(hoveredFeature[metricDef.field])}</span>
               </div>
               <div className="sb-hover-row">
                 <span className="sb-hover-k">Residential permits</span>
@@ -546,7 +526,7 @@ export default function PermitChoroplethMap() {
                 view={MAP_VIEW}
                 sourceId="pnbhd"
                 promoteId="Neighbourhood ID"
-                layers={choroplethLayers(stops, activeSub)}
+                layers={choroplethLayers(stops, metricDef)}
                 images={[]}
                 onLoad={handleMapLoad}
                 onLoading={setSwapLoading}
