@@ -30,46 +30,49 @@ P0 (load error) / P1 (loading) remain bare shells as-built. Brush and box-select
 
 ### 3.1 Display / View / b₂ (console down)
 ```
-┌──────────────────────────────────────────────────────────────┐
-│ ┌─COLUMN─┐                                    ┌nav┐          │
-│ │identity│                                    │ 🔍 │          │
-│ │────────│                                    │ + │          │
-│ │ METRIC │            MAP (sacred centre,     │ − │          │
-│ │────────│             zero chrome)           └───┘          │
-│ │ TUNING │                                   ┌DETAIL┐ (S-b   │
-│ │────────│                                   │float │  only) │
-│ │ LEGEND │                                   └──────┘        │
-│ │────────│                                                   │
-│ │ footer │                 [Data Console ▴]                  │
-│ └────────┘                          (handle)                 │
-└──────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│ ┌─COLUMN─┐                                     ┌──nav──┐       │
+│ │identity│                                     │ search│       │
+│ │────────│          MAP (sacred centre,        │ +   − │       │
+│ │ METRIC │           zero chrome)              │ full  │       │
+│ │────────│                                     │ fit   │       │
+│ │ LEGEND │                                     │ info i│       │
+│ │────────│                                     └───────┘       │
+│ │ footer │                                  ┌─DETAIL─┐ (S-b    │
+│ │·parcels│                                  │ float  │  only)  │
+│ └────────┘   ┌──── TUNING BAY ────┐         └────────┘         │
+│              │  Year · Metric rng │                  ┌ data ┐  │
+│              └────────────────────┘                  └──────┘  │
+│                  [ Data Console ▴ ]      © City · CARTO · OSM  │
+└────────────────────────────────────────────────────────────────┘
 ```
-- **Instrument column** (left, fixed width ~196px, top→bottom, full height minus margins): TWO stacked dark cards (P1) — an **Identity card** (title, city toggle) and, below it, an **Instrument chassis card** (Metric module → Tuning module → Legend module → footer [About & tips trigger + parcel count]). A gap separates the two cards; within the chassis, modules are hairline-separated. Module set identical in all data states. (The year readout was removed from Identity — the Tuning year slider owns the live year.)
+- **Instrument column** (left, fixed width ~196px, top→bottom, full height minus margins): TWO stacked dark cards (P1) — an **Identity card** (title, city toggle) and, below it, an **Instrument chassis card** (Metric module → Legend module → footer [parcel count]). Tuning and the About & tips trigger are no longer in the column (§5 / DESIGN_SYSTEM §6). A gap separates the two cards; within the chassis, modules are hairline-separated. Module set identical in all data states. (The year readout was removed from Identity — the Tuning year slider owns the live year.)
 - **Nav stack** (right-top): search peek + zoom +/− + fullscreen + recentre + info "i" (one Lucide family, DESIGN_SYSTEM §6). A **separate bottom-right stack** carries the scale bar + a "Data & attribution" database-glyph control (its panel = source + licence + disclaimer + CARTO/OSM; the always-visible links strip sits below).
 - **Detail instrument** (right, below nav): mounts in S-b only. Fixed frame position; interior = name, rank/parcels/reportable line, sparkline, value/city/delta triplet, hairline, condo block (Condo share / Mean excl. condo / Lot non-condo).
 - **Handle** (bottom, centred over the map area right of the column): the console's only down-state presence. Shows count; shows `N selected` (coral) in b₂.
-- **The old `.pa-topbar` is REMOVED** — the parcel count re-homes to the column footer. The old centred `.pa-rack` is REMOVED — tuning re-homes to the column (see §5).
+- **The old `.pa-topbar` is REMOVED** — the parcel count re-homes to the column footer. The old centred `.pa-rack` is REMOVED. Tuning then re-homed AGAIN (Fix 4) OUT of the column into the **Data Console spine** — a horizontal Year·range bay bottom-centre above the handle in View, relocating into the console header in Analysis (see §5).
 
 ### 3.2 Analysis (console up)
 ```
-┌──────────────────────────────────────────────────────────────┐
-│ ┌─COLUMN─┐  (map remains above console,        ┌nav┐         │
-│ │identity│   centre clear; column persists)    └───┘         │
-│ │ TUNING │                                                   │
-│ │ LEGEND │   ← metric module DORMANT (chips re-home below)   │
-│ └────────┘                                                   │
-│ ┌─CONSOLE (full-width shell, rises alone from bottom)──────┐ │
-│ │ HEADER: scope-title · metric chips │ District · Clear ·  │ │
-│ │                                    │ Export              │ │
-│ │ ┌RAIL 184┐ ┌TABLE ≤~640 dense┐ ┌TREND ~340┐ ┌margin────┐ │ │
-│ │ │KPI cards│ │uppercase heads  │ │line+city │ │(empty,   │ │ │
-│ │ │MEDIAN   │ │%CONDO col       │ │envelope  │ │honest    │ │ │
-│ │ │MEAN/YOY │ │TREND sparkcol   │ │yr cursor │ │gutter)   │ │ │
-│ │ │CONDO    │ │coral sel outline│ │YoY strip │ │          │ │ │
-│ │ │DISTRIB  │ │                 │ │          │ │          │ │ │
-│ │ └─────────┘ └─────────────────┘ └──────────┘ └──────────┘ │ │
-│ └───────────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│ ┌COLUMN┐  (map above console, centre clear)         ┌nav┐      │
+│ │identity                                           └───┘      │
+│ │LEGEND│   ← METRIC dormant: chips re-home to console header   │
+│ │footer│      TUNING (Year·range) re-homes to header too       │
+│ └──────┘                                                       │
+│ ┌CONSOLE (full-width shell, rises alone from the bottom)────┐  │
+│ │ HEADER: scope-title · metric chips │ Year·range │ District │ │
+│ │                                    │  (tuning)  │ Clear ·  │ │
+│ │                                    │            │ Export   │ │
+│ │ ┌RAIL 184┐ ┌TABLE ≤~640─┐ ┌TREND~340┐ ┌margin──┐          │  │
+│ │ │KPI cards│ │dense table │ │line+city│ │(empty, │          │ │
+│ │ │MEDIAN   │ │%CONDO col  │ │envelope │ │honest  │          │ │
+│ │ │MEAN/YOY │ │TREND spark │ │yr cursor│ │gutter) │          │ │
+│ │ │CONDO    │ │coral sel   │ │YoY strip│ │        │          │ │
+│ │ │DISTRIB  │ │            │ │         │ │        │          │ │
+│ │ └─────────┘ └────────────┘ └─────────┘ └────────┘          │ │
+│ └──────────────────────────────────────────────────────────┘   │
+└────────────────────────────────────────────────────────────────┘
 ```
 Console interior = **four fixed frames**: `rail (≈184–200px) | table (content-capped ≈600–680px, never stretched) | trend instrument (width-bound ≈300–360px) | margin (residual, deliberately empty)`. Content packs LEFT; full-width shell ≠ full-width content.
 
@@ -77,7 +80,7 @@ Console interior = **four fixed frames**: `rail (≈184–200px) | table (conten
 
 **Identity card:** its own dark surface (P1), always: title, city toggle. No year readout (removed in P1 — it duplicated the Tuning year slider's live readout).
 **Metric module:** S-a/b/b₂: vertical chip list, active chip green-bordered; each left-rail chip carries a leading metric glyph (inline stroke SVG, `currentColor` → greens with the active chip; NO per-metric colour — the green border stays the sole selected signal) (P5). S-c/d/e: DORMANT (empties; chips render in console header — the ONLY re-homing element, mechanics as-built: two conditional SegmentedControl homes, not a portal; the re-homed console-header chips stay text-only, icons suppressed there). S-E: hidden.
-**Tuning module:** each control is a fixed **two-row form** (P2) — a name header row, then a slider row `[min · fixed track · max]`; the slider TRACK is a fixed width at a fixed x on every control and every state (Principle 0 — the track never resizes with its value), only the handle + the flanking numbers move. Year = green readout at the right, min cell reserved empty; range = white bold min/max flanking the track. `⚙ Tuning` banner. Range dims (`is-off`) in selection mode (N≥2) exactly as-built. Present in ALL data states including Analysis (stays left; never floats over map).
+**Tuning module:** each control is a fixed **two-row form** (P2) — a name header row, then a slider row `[min · fixed track · max]`; the slider TRACK is a fixed width at a fixed x on every control and every state (Principle 0 — the track never resizes with its value), only the handle + the flanking numbers move. Year = green readout at the right, min cell reserved empty; range = white bold min/max flanking the track. `⚙ Tuning` banner. Range dims (`is-off`) in selection mode (N≥2) exactly as-built. Docked in the **Data Console spine** (Fix 4): a horizontal Year·range bay above the pull-up handle in View, relocating into the console header in Analysis — no longer in the left column.
 **Legend module:** horizontal ramp bar + min/max labels (D6 as committed: sequential = index-spaced simple gradient; YoY = value-spaced diverging with ±1 plateau tag). Frame fixed; ramp swaps with active metric. Relocated from `.pa-legend` bottom-right into the column — a real relocation, conscious.
 **Detail instrument (S-b):** anatomy above; suppressed/non-reportable single-select shows its state label and honest em-dashes.
 **Console header:** left = scope title (`All 407 Neighbourhoods` / `<Name> · rank · parcels · state` / `N neighbourhoods selected`) + metric chips; right = a FIXED-SLOT strip (Principle 0 — every element permanently present, enabled/disabled in place, never added/removed): District ▾ (filter; inert while a selection is active), `Clear filters` (empties the range/District filter), `Clear selection` (empties the selection), Export (as-built menu, portal to body preserved). State toggles each slot's enabled state; nothing reflows.
@@ -89,8 +92,8 @@ Console interior = **four fixed frames**: `rail (≈184–200px) | table (conten
 
 ## 5. Controls, channels, interlinking (preserve as-built wiring — R4/R8 anchors)
 
-- **Year:** slider → `slideYear` (leading+trailing throttle @ DUR_BASE, reduced-motion 0) → `sliderYear`/`year`. Unchanged; only the DOM home moves into the column.
-- **Range:** RangeFacet stays **owned by DataTable, portaled** — the portal TARGET moves from `.pa-rack-range-slot` to the column's tuning slot. Filter application immediate; brush report throttled 100ms + signature guard. All unchanged.
+- **Year:** slider → `slideYear` (leading+trailing throttle @ DUR_BASE, reduced-motion 0) → `sliderYear`/`year`. Unchanged; only the DOM home moves into the console tuning bay (Fix 4).
+- **Range:** RangeFacet stays **owned by DataTable, portaled** — the portal TARGET moves from `.pa-rack-range-slot` to the console tuning bay's slot. Filter application immediate; brush report throttled 100ms + signature guard. All unchanged.
 - **Metric-range / District = a FILTER (updated 2026-07-13, ratified KC):** the metric-range slider + District are `columnFilters` — narrowing them filters the **table view AND the neighbourhood count** (`scopeTitle` = viewRows/total), and (via `brushActive = !selectionMode && columnFilters.length>0` → `brushedIds`) **dims the map** to the in-range set. This is a FILTER ("which neighbourhoods are in scope"), DISTINCT from a *selection* (a chosen neighbourhood, `--sel`/`--pa-selection-outline` = "this one"). Each has its OWN clear in the console strip: **`Clear filters`** (empties `columnFilters` — range + District) vs **`Clear selection`** (empties `selectedIds`). The filter STILL does NOT touch the selection, the KPI **aggregate**, or **Export** — those read the selection/city channel (`selectionAggregate`/`cityBaseline`; `handleExport` scopes to the selection or ALL 407, never the brushed set), so a filtered view never silently narrows an aggregate or export. (Stale wording corrected: the old note said "map dim ONLY," but `columnFilters` also drive the table + count — the dim is one of three filter effects, not the only one.)
 - **Search:** D5 unified control unchanged (peek → `flyAndPinByName` + `globalFilter`).
 - **Selection:** click ≤1 / box-select ≥2 (auto-opens console, `reserveConsole:true` fit) — unchanged. **Clear** button = new writer that empties `selectedIds` (and thus collapses per existing auto-collapse rule only if that rule fires; console stays up on manual clear — clearing scope ≠ closing console; S-e→S-c in place).
