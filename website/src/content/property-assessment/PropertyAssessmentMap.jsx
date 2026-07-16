@@ -38,12 +38,12 @@ import Legend from "../../components/Legend.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
-import IdentityCard from "./IdentityCard.jsx";
+import IdentityCard from "../../components/IdentityCard.jsx";
 import SegmentedControl from "../../components/SegmentedControl.jsx";
 import InfoRail from "./InfoRail.jsx";
 import DataTable from "./DataTable.jsx";
 import SearchPeek from "../../components/SearchPeek.jsx";
-import MapTipsPopover from "./MapTipsPopover.jsx";
+import MapTipsPopover from "../../components/MapTipsPopover.jsx";
 import AttributionPanel from "../../components/AttributionPanel.jsx";
 import { introCardDismissed, rememberIntroCardDismissed } from "./introCard.js";
 import {
@@ -1454,7 +1454,7 @@ export default function PropertyAssessmentMap() {
               no-data state; the instrument chassis is gated on url. ===== */}
           <div className="pa-float pa-column">
             <section className="pa-card pa-card-identity">
-              <IdentityCard cities={CITIES} city={city} onCityChange={changeCity} />
+              <IdentityCard title="Property Assessment" cities={CITIES} city={city} onCityChange={changeCity} />
             </section>
 
             {url && (

@@ -36,11 +36,11 @@
 // =============================================================================
 
 import { useEffect, useRef } from "react";
-import { useScrollFade } from "../../components/useScrollFade.js";
+import { useScrollFade } from "./useScrollFade.js";
 import {
   ICON_MOUSE, ICON_CLICK, ICON_BOX_SELECT, ICON_SEARCH,
   ICON_SLIDERS, ICON_TABLE, ICON_MOUSE_CLICK, ICON_CLEAR_SELECTION,
-} from "../../components/mapIcons.js";
+} from "./mapIcons.js";
 
 // One <svg> shell for the index glyphs — the same Lucide family + spec as the rail, one
 // step down in size (§1.5a: 16px index glyph vs the rail's 18px). The body is injected
@@ -49,7 +49,7 @@ import {
 // of the control, so announcing it would just repeat the line.
 // `inline` = the glyph sits INSIDE a sentence/chip rather than in the index column, so it
 // takes the smaller optical size and rides the text baseline.
-function Glyph({ body, inline = false }) {
+export function Glyph({ body, inline = false }) {
   const px = inline ? 12 : 16;
   return (
     <svg className={inline ? "pa-tip-glyph pa-tip-glyph--inline" : "pa-tip-glyph"}
@@ -63,7 +63,7 @@ function Glyph({ body, inline = false }) {
 // key rather than showing a bare arrow (an unlabelled ⇧ teaches nothing to someone who
 // doesn't already know it), and the click chip carries the pointer glyph beside the word.
 // <kbd> is the right element for both: the spec's "user input", not keyboards only.
-function Key({ children }) {
+export function Key({ children }) {
   return <kbd className="pa-key">{children}</kbd>;
 }
 
@@ -78,7 +78,7 @@ function Key({ children }) {
 // these were icons. They are text pills, and they are the SUBJECT of their sentence: the
 // line reads "resets the Search, District and Range Filters" with no subject unless the pill is
 // announced. Hiding it would leave a screen reader asking "what does?".
-function BtnChip({ children }) {
+export function BtnChip({ children }) {
   return <span className="pa-tip-btn">{children}</span>;
 }
 
@@ -89,7 +89,7 @@ function BtnChip({ children }) {
 // element. Order is GESTURES first (scroll, click, shift-drag), then chrome (console,
 // search, sliders), then the two clears — the gentlest entry (scroll needs no teaching)
 // leads. Adding a tip is adding a row; nothing else moves.
-const TIPS = [
+const DEFAULT_TIPS = [
   // Scroll leads: the most basic map gesture, no explanation needed.
   { key: "scroll", glyph: <Glyph body={ICON_MOUSE} />,
     body: <>Scroll to Zoom</> },
@@ -126,7 +126,31 @@ const TIPS = [
     body: <><BtnChip>Clear selection</BtnChip> deselects the Area</> },
 ];
 
-export default function MapTipsPopover({ open, onClose, lastUpdated }) {
+// PA's default §6 honesty block — the Selection Aggregates disclosure. Sections without a
+// selection-aggregate concept (Dwelling Units, Business Counts view-only) pass honesty={null}.
+function SelectionAggregatesHonesty() {
+  return (
+    <div className="pa-tips-honesty">
+      <span className="pa-tips-honesty-h">Selection Aggregates</span>
+      <ul>
+        <li><b>Mean</b> is parcel-weighted (exact)</li>
+        <li><b>Median</b> and <b>YoY</b> are neighbourhood-weighted estimates (≈)</li>
+      </ul>
+    </div>
+  );
+}
+
+// Shared across every aggregate-map section. Props:
+//   tips     — array of {key, glyph, body}; defaults to PA's set. Build yours with the
+//              exported Glyph / Key / BtnChip helpers.
+//   honesty  — optional §6 block rendered below the tips (default = PA's Selection
+//              Aggregates; pass null to omit).
+//   lastUpdated — manifest last-updated (drives the citation line; no literals).
+export default function MapTipsPopover({
+  open, onClose, lastUpdated,
+  tips = DEFAULT_TIPS,
+  honesty = <SelectionAggregatesHonesty />,
+}) {
   const panelRef = useRef(null);
 
   // The content can outrun the panel on a short viewport; fade the bottom edge while
@@ -161,20 +185,14 @@ export default function MapTipsPopover({ open, onClose, lastUpdated }) {
       </div>
 
       <ul className="pa-tips-list">
-        {TIPS.map((t) => (
+        {tips.map((t) => (
           <li key={t.key}>{t.glyph}<span>{t.body}</span></li>
         ))}
       </ul>
 
-      {/* §6 honesty label — bulleted so the ASYMMETRY is the point (one exact, two
-          estimates), not buried in prose. Muted tier, never stripped. */}
-      <div className="pa-tips-honesty">
-        <span className="pa-tips-honesty-h">Selection Aggregates</span>
-        <ul>
-          <li><b>Mean</b> is parcel-weighted (exact)</li>
-          <li><b>Median</b> and <b>YoY</b> are neighbourhood-weighted estimates (≈)</li>
-        </ul>
-      </div>
+      {/* §6 honesty block — PA's Selection Aggregates by default; a section can pass its
+          own or null (see the honesty prop). Bulleted so the asymmetry is the point. */}
+      {honesty}
       {/* The CITATION/provenance line — a source citation, NOT the honesty hedge above.
           It reads at the primary tier (.pa-box-cite → --pa-ink), lifted out of the muted
           tier the aggregate-methodology block keeps (KC, 2026-07-16). */}
