@@ -1,30 +1,25 @@
 // =============================================================================
 // PermitChoroplethMap.jsx
 //
-// The Dwelling Units choropleth route ("/activity/dwelling-units"). STANDARDIZED to
-// the Property Assessment instrument (PropertyAssessmentMap.jsx is the website
-// standard for every neighbourhood-aggregate map): the same immersive full-bleed
-// canvas, the transparent .pa-float instrument column (identity → metric → year →
-// legend → count), the shared right rail (recentre / info / database), the unified
-// SearchPeek, the About & tips popover, the data-&-attribution panel, and a single-
-// select DetailPanel float — all the shared chrome, one visual system.
+// The Dwelling Units choropleth route ("/activity/dwelling-units"), STANDARDIZED to
+// the Property Assessment instrument (the website standard for neighbourhood
+// aggregates): the immersive full-bleed canvas, the .pa-float instrument column
+// (identity → metric → year → legend → count), the shared right rail, SearchPeek,
+// the About & tips popover, the Data & attribution panel, and the single-select
+// DetailPanel.
 //
-// Where it DIVERGES from PA — and why (data shortage, not choice):
-//   • VIEW-ONLY. No analyst Data Console / box-select / KPI rail (Tier B, deferred).
-//     Dwelling Units ships one aggregate per neighbourhood-year, no parcel rows to
-//     roll up, so there is no selection-aggregate concept (tips honesty={null}).
-//   • FLAT metrics. Four metric buttons (METRICS in the style file), each ONE GeoJSON
-//     field — Permit Count, Construction Value, Dwellings Added / Demolished. The
-//     %-YoY-of-permit-counts metric was dropped as not logical (2026-07-16).
-//   • Year lives in the COLUMN (a select), not a console slider — there is no console.
-//     And a year change is a real per-year FILE swap (the data is per-year files), so
-//     the map dips-and-swaps the source in place; the two-layer opacity crossfade is
-//     only for the metric switch (all four fields already live on every feature).
+// COMBINED-FILE MODEL (mirrors PA — the foundation for the Analysis Data Console):
+//   • Loads ONE combined all-years GeoJSON (02b) — geometry once, every year's values
+//     as flat <field>_<year> props. A YEAR change is a PAINT SWAP (applyPermitYearMetric
+//     on <field>_<year>), not a file reload; a METRIC change is the same paint swap.
+//     (Retired: the per-year file fetch + the two-layer a/b opacity crossfade.)
+//   • `gjView = projectYearCollection(gj, year)` is the bare-named view for the active
+//     year that the JS-side consumers read (stops, search, detail, popups).
 //
-// Data: /data/building-permits/permit-neighbourhoods/permit_neighbourhoods_<year>.geojson
-//   fields: display_name, district, Neighbourhood ID, polygon_state, is_annexation_area,
-//   n_permits, total_construction_value, median_construction_value, units_added_gross,
-//   units_demolished
+// Metric UI: four FLAT metric buttons (Permit Count, Construction Value, Dwellings
+// Added / Demolished — the %-YoY-of-permit-counts metric was dropped, not logical).
+//
+// Data: /data/building-permits/permit-neighbourhoods/permit_neighbourhoods_all_years.geojson
 // =============================================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -47,48 +42,36 @@ import {
   METRICS,
   DEFAULT_METRIC,
   metricStops,
-  choroplethFillColor,
   choroplethLayers,
+  applyPermitYearMetric,
   buildPopupHtml,
-  FILL_OPACITY_EXPR,
-  FILL_LAYER_IDS,
+  FILL_LAYER_ID,
   LEGEND_STATES,
 } from "./permitChoroplethStyle.js";
+import {
+  loadPermitManifest,
+  permitYears,
+  permitDefaultYear,
+  resolveCombinedPermitUrl,
+  projectYearCollection,
+  projectYearProps,
+} from "./dataSources.js";
 import { fmtNumber } from "../../utils/format.js";
-import { DUR_SLOW, DUR_FAST, reduceMotion } from "../../components/motion.js";
+import { reduceMotion } from "../../components/motion.js";
 import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
 import { ICON_RECENTRE, ICON_INFO, ICON_DATABASE, ICON_MOUSE, ICON_CLICK, ICON_SEARCH } from "../../components/mapIcons.js";
 import { siteConfig } from "../../config/siteConfig.js";
-import { assetUrl } from "../../utils/assetUrl.js";
-
-// Crossfade timing. 500ms ease-out for the metric dissolve (MapLibre's built-in
-// transition easing); hover stays snappy at 150ms outside a switch.
-const FADE_MS = DUR_SLOW;
-const HOVER_MS = DUR_FAST;
 
 const SOURCE_ID = "pnbhd";
+// The combined all-years file is a stable URL — the year is a paint swap, not a path.
+const COMBINED_URL = resolveCombinedPermitUrl();
 
-// This map's "How to Use" index (MapTipsPopover). A LEAN subset of PA's — no console /
-// box-select / sliders / clears, because View-only Dwelling Units has none of them.
-// Same glyph family as the rail (the index doubles as a tip→control map).
+// This map's "How to Use" index — the lean View subset (no console/sliders yet).
 const DU_TIPS = [
   { key: "scroll", glyph: <Glyph body={ICON_MOUSE} />, body: <>Scroll to Zoom</> },
   { key: "click",  glyph: <Glyph body={ICON_CLICK} />, body: <>Click to Select a Neighbourhood</> },
   { key: "search", glyph: <Glyph body={ICON_SEARCH} />, body: <>Search to Find a Neighbourhood and Fly to It</> },
 ];
-
-async function loadPermitManifest() {
-  const res = await fetch(assetUrl("/data/building-permits/manifest.json"));
-  if (!res.ok) {
-    throw new Error(`Could not load the year catalogue (HTTP ${res.status})`);
-  }
-  return res.json();
-}
-
-// One file per year at a stable path; year is the only thing that varies.
-function dataUrl(year) {
-  return assetUrl(`/data/building-permits/permit-neighbourhoods/permit_neighbourhoods_${year}.geojson`);
-}
 
 // ---- Fly-to helpers (double-click, search, recentre). promoteId = "Neighbourhood ID". ----
 function findFeatureById(gj, id) {
@@ -111,8 +94,7 @@ function bboxOfGeom(geom) {
   return [[minX, minY], [maxX, maxY]];
 }
 // Left padding = the instrument column's live width so a flown-to polygon clears the
-// .pa-float overlay (mirrors PA's chromePadding; only pads while it's an absolute overlay,
-// i.e. desktop — on a stacked mobile layout the column is in flow and this returns 0).
+// .pa-float overlay (only pads while it's an absolute overlay — desktop).
 function floatLeftPad(map) {
   const el = map.getContainer().closest(".content-map")?.querySelector(".pa-float");
   if (!el || getComputedStyle(el).position !== "absolute") return 0;
@@ -135,28 +117,15 @@ export default function PermitChoroplethMap() {
   const [metricKey, setMetricKey] = useState(DEFAULT_METRIC);
 
   const [map, setMap] = useState(null);
-  const [gj, setGj] = useState(null);
+  const [gj, setGj] = useState(null);          // the combined all-years file (loaded once)
   const [fetchError, setFetchError] = useState(null);
-  // True while an in-place year swap's new data is genuinely slow (MapView reports it
-  // via onLoading) — drives the skeleton-threshold fallback.
-  const [swapLoading, setSwapLoading] = useState(false);
 
-  // Shared-chrome state (mirrors PA): the About & tips popover, the attribution panel,
-  // the unified search text, and the single SELECTED neighbourhood (its id — the detail
-  // float + pinned highlight derive from it).
+  // Shared-chrome state (mirrors PA): tips popover, attribution panel, unified search
+  // text, and the single SELECTED neighbourhood (its id — detail float + pin derive).
   const [infoOpen, setInfoOpen] = useState(false);
   const [attribOpen, setAttribOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
-
-  // Which fill layer is currently visible ("a" or "b") — carried in a REF, not state:
-  // the crossfade is driven imperatively (MapLibre paint props), so nothing renders off
-  // it. Reset to "a" on every map (re)mount, since choroplethLayers builds "a" visible.
-  const activeFillRef = useRef("a");
-  const fadeTimerRef = useRef(null);
-  // Tracks the last-painted metric so the paint effect can tell a metric SWITCH
-  // (crossfade) from a stops-only refinement (gj settling — repaint live).
-  const prevSelRef = useRef(DEFAULT_METRIC);
 
   const metricDef = METRICS.find((m) => m.key === metricKey) ?? METRICS[0];
 
@@ -166,32 +135,33 @@ export default function PermitChoroplethMap() {
       .then((m) => {
         if (cancelled) return;
         setManifest(m);
-        setYears([...m.years].sort((a, b) => b - a));
-        setYear(m.defaultYear);
+        setYears(permitYears(m));
+        setYear(permitDefaultYear(m));
       })
       .catch((err) => { if (!cancelled) setManifestError(err.message); });
     return () => { cancelled = true; };
   }, []);
 
-  const url = year != null ? dataUrl(year) : null;
+  // The active-year bare-named projection of the combined file — the JS-side view every
+  // consumer reads (stops, search, detail). Geometry shared by reference (cheap per year).
+  const gjView = useMemo(() => projectYearCollection(gj, year), [gj, year]);
 
-  // Ramp stops for the active metric field (all metrics sequential).
+  // Ramp stops for the active metric, from the active year's projected view.
   const stops = useMemo(
-    () => metricStops(gj, metricDef),
+    () => metricStops(gjView, metricDef),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [gj, metricKey]
+    [gjView, metricKey]
   );
 
-  // The selected neighbourhood's LIVE properties — derived from selectedId + the current
-  // year's gj (NOT a click-time snapshot), so a year swap refreshes the detail float with
-  // the new year's data (and shows the no-data/suppressed note if it lost coverage).
+  // The selected neighbourhood's LIVE (active-year) props — from gjView, so a year swap
+  // refreshes the detail float with the new year's data.
   const selectedFeature = useMemo(() => {
-    if (selectedId == null || !gj) return null;
-    const f = findFeatureById(gj, selectedId);
+    if (selectedId == null || !gjView) return null;
+    const f = findFeatureById(gjView, selectedId);
     return f ? f.properties : null;
-  }, [selectedId, gj]);
+  }, [selectedId, gjView]);
 
-  // Search datalist names — every neighbourhood in the loaded year, de-duped + sorted.
+  // Search datalist names — every neighbourhood (display_name is year-invariant).
   const names = useMemo(() => {
     if (!gj) return [];
     const s = new Set();
@@ -204,7 +174,7 @@ export default function PermitChoroplethMap() {
   useEffect(() => { yearRef.current = year; }, [year]);
   const metricRef = useRef(metricDef);
   useEffect(() => { metricRef.current = metricDef; });
-  const gjRef = useRef(gj);
+  const gjRef = useRef(gj);   // the raw combined file (dblclick fly-to lookup)
   useEffect(() => { gjRef.current = gj; }, [gj]);
 
   useEffect(() => {
@@ -213,15 +183,12 @@ export default function PermitChoroplethMap() {
     return () => { document.title = "Open Data Centre"; };
   }, [year]);
 
-  // Fetch the year's GeoJSON. A year swap keeps map + the old gj so MapView dips-and-swaps
-  // the source in place (one WebGL context); gj updates when the new file resolves.
+  // Fetch the combined file ONCE (a year change is a paint swap, not a fetch).
   useEffect(() => {
-    if (!url) return undefined;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setFetchError(null);
-
     let cancelled = false;
-    fetch(url)
+    fetch(COMBINED_URL)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
         return r.json();
@@ -229,73 +196,19 @@ export default function PermitChoroplethMap() {
       .then((data) => { if (!cancelled) setGj(data); })
       .catch((err) => { if (!cancelled) setFetchError(err.message); });
     return () => { cancelled = true; };
-  }, [url]);
+  }, []);
 
-  // Reset which fill layer is active whenever a fresh map mounts: choroplethLayers always
-  // builds "a" visible / "b" hidden.
-  function handleMapLoad(m) {
-    activeFillRef.current = "a";
-    prevSelRef.current = metricKey;
-    setMap(m);
-  }
+  function handleMapLoad(m) { setMap(m); }
 
-  // Single paint effect. Two cases, told apart by whether the metric changed:
-  //  • SWITCH (metric changed): paint the new colour on the HIDDEN layer, then crossfade
-  //    opacity over 500ms (hidden→visible, active→0), swap active. Pure paint — never
-  //    setData/re-fetch (all four fields already on every feature).
-  //  • REFINE (same metric, stops settled after gj load): repaint the active layer in
-  //    place (no fade).
+  // Paint swap — year OR metric OR stops change repaints the ONE fill layer + re-filters
+  // the state outlines for the new year, in place (no data reload). Mirrors PA.
   useEffect(() => {
     if (!map) return;
-    const sel = metricKey;
-    const isSwitch = sel !== prevSelRef.current;
-    prevSelRef.current = sel;
-
-    const cur = activeFillRef.current;
-    const activeId = `pnbhd-fill-${cur}`;
-    const newColor = choroplethFillColor(metricDef, stops);
-
-    if (!isSwitch) {
-      try {
-        if (map.getLayer(activeId)) {
-          map.setPaintProperty(activeId, "fill-color", newColor);
-        }
-      } catch { /* map mid-teardown */ }
-      return;
-    }
-
-    const hidden = cur === "a" ? "b" : "a";
-    const hiddenId = `pnbhd-fill-${hidden}`;
-    try {
-      if (!map.getLayer(hiddenId) || !map.getLayer(activeId)) return;
-      // 1. New colour on the hidden layer (still at opacity 0).
-      map.setPaintProperty(hiddenId, "fill-color", newColor);
-      // 2. Crossfade both layers over 500ms (GPU transition; no JS animation).
-      map.setPaintProperty(hiddenId, "fill-opacity-transition", { duration: FADE_MS, delay: 0 });
-      map.setPaintProperty(activeId, "fill-opacity-transition", { duration: FADE_MS, delay: 0 });
-      map.setPaintProperty(hiddenId, "fill-opacity", FILL_OPACITY_EXPR); // 0 → visible
-      map.setPaintProperty(activeId, "fill-opacity", 0);                 // visible → 0
-      // 3. Swap which layer is active.
-      activeFillRef.current = hidden;
-      // 4. After the fade, restore snappy hover transition on the now-active layer.
-      clearTimeout(fadeTimerRef.current);
-      fadeTimerRef.current = setTimeout(() => {
-        try {
-          if (map.getLayer(hiddenId)) {
-            map.setPaintProperty(hiddenId, "fill-opacity-transition", { duration: HOVER_MS, delay: 0 });
-          }
-        } catch { /* map gone */ }
-      }, FADE_MS + 20);
-    } catch { /* map mid-teardown; next mount repaints via choroplethLayers */ }
+    applyPermitYearMetric(map, metricDef, year, stops);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, metricKey, stops]);
+  }, [map, metricKey, year, stops]);
 
-  // Clear any pending fade-reset timer on unmount.
-  useEffect(() => () => clearTimeout(fadeTimerRef.current), []);
-
-  // Sync the PINNED feature-state to the React selection (selectedId). Re-runs on a year
-  // swap (gj dep) because setData clears feature-state — re-applies the pin to the reloaded
-  // feature. No MapLibre pinned popup any more: the DetailPanel float is the selection UI.
+  // Sync the PINNED feature-state to the React selection (selectedId).
   const prevPinnedRef = useRef(null);
   useEffect(() => {
     if (!map) return;
@@ -310,9 +223,9 @@ export default function PermitChoroplethMap() {
     prevPinnedRef.current = selectedId ?? null;
   }, [map, selectedId, gj]);
 
-  // Hover (900ms popup) + click-to-SELECT, installed once per map. Bound to BOTH fill
-  // layers so events fire whichever is on top mid-crossfade; the popup reads metricRef
-  // (the ACTIVE metric) so its content is never the fading-out layer's metric.
+  // Hover (900ms popup) + click-to-SELECT, installed once per map. The popup reads the
+  // PROJECTED (bare-name) props for the active year — the raw source props are
+  // year-suffixed, so we project the hovered feature before building the popup.
   useEffect(() => {
     if (!map) return undefined;
 
@@ -357,16 +270,15 @@ export default function PermitChoroplethMap() {
             hoverPopup
               .setLngLat(e.lngLat)
               .setHTML(buildPopupHtml(
-                f.properties, false, yearRef.current, metricRef.current))
+                projectYearProps(f.properties, yearRef.current), false,
+                yearRef.current, metricRef.current))
               .addTo(map);
           }
         }, 900);
       }
     }
 
-    function onLeave() {
-      clearHover();
-    }
+    function onLeave() { clearHover(); }
 
     function onFillClick(e) {
       if (!e.features?.length) return;
@@ -383,26 +295,21 @@ export default function PermitChoroplethMap() {
     }
 
     function onMapClick(e) {
-      const hits = map.queryRenderedFeatures(e.point, { layers: FILL_LAYER_IDS });
+      const hits = map.queryRenderedFeatures(e.point, { layers: [FILL_LAYER_ID] });
       if (!hits.length) setSelectedId(null);   // click empty → clear selection
     }
 
-    // Bind the per-layer handlers to BOTH fill layers (a + b).
-    for (const id of FILL_LAYER_IDS) {
-      map.on("mousemove", id, onMove);
-      map.on("mouseleave", id, onLeave);
-      map.on("click", id, onFillClick);
-      map.on("dblclick", id, onDblClick);
-    }
+    map.on("mousemove", FILL_LAYER_ID, onMove);
+    map.on("mouseleave", FILL_LAYER_ID, onLeave);
+    map.on("click", FILL_LAYER_ID, onFillClick);
+    map.on("dblclick", FILL_LAYER_ID, onDblClick);
     map.on("click", onMapClick);
 
     return () => {
-      for (const id of FILL_LAYER_IDS) {
-        map.off("mousemove", id, onMove);
-        map.off("mouseleave", id, onLeave);
-        map.off("click", id, onFillClick);
-        map.off("dblclick", id, onDblClick);
-      }
+      map.off("mousemove", FILL_LAYER_ID, onMove);
+      map.off("mouseleave", FILL_LAYER_ID, onLeave);
+      map.off("click", FILL_LAYER_ID, onFillClick);
+      map.off("dblclick", FILL_LAYER_ID, onDblClick);
       map.off("click", onMapClick);
       clearTimeout(hoverTimer);
       hoverPopup.remove();
@@ -410,9 +317,6 @@ export default function PermitChoroplethMap() {
   }, [map]);
 
   // ---- Right rail (shared chrome): recentre / info / database ----------------
-  // The recentre control fits to the selection if one exists, else eases home. State-aware
-  // NAME, one stable glyph (Option C, PA) — the shape never lies, the label carries the
-  // precision. Info toggles the tips popover; database toggles the attribution panel.
   const resetRef = useRef(null);
   // eslint-disable-next-line react-hooks/refs
   resetRef.current = () => {
@@ -430,13 +334,10 @@ export default function PermitChoroplethMap() {
   // eslint-disable-next-line react-hooks/refs
   attribToggleRef.current = () => setAttribOpen((o) => !o);
 
-  // Relabel the recentre control in place as the selection comes and goes (mount once).
   const resetLabel = selectedId != null ? "Fit to selection" : "Return to home view";
   const resetCtrlRef = useRef(null);
   useEffect(() => { resetCtrlRef.current?.setLabel(resetLabel); }, [resetLabel]);
 
-  // The info / database controls GLOW while their panel is open — load-bearing (with no ×
-  // on the popovers, the glow is the only cue for where the close action lives).
   const infoCtrlRef = useRef(null);
   useEffect(() => { infoCtrlRef.current?.setActive(infoOpen); }, [infoOpen]);
   const attribCtrlRef = useRef(null);
@@ -446,7 +347,7 @@ export default function PermitChoroplethMap() {
     if (!map) return undefined;
     const reset = makeIconButtonControl({
       svg: railGlyph(ICON_RECENTRE),
-      label: () => resetLabel,   // read at mount so the first label matches the load state
+      label: () => resetLabel,
       onClick: () => resetRef.current?.(),
     });
     const info = makeIconButtonControl({
@@ -473,13 +374,10 @@ export default function PermitChoroplethMap() {
       attribCtrlRef.current = null;
       for (const c of [reset, info, attrib]) { try { map.removeControl(c); } catch { /* map already gone */ } }
     };
-    // Controls mount ONCE; relabel/glow ride the effects above. resetLabel/*Open are read
-    // at mount then updated in place — re-adding on every change would rebuild the rail.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map]);
 
-  // Search → fly + select (mirrors PA's flyAndPinByName). Finds the feature by name in the
-  // loaded year, frames it, and sets it as the selection (detail float + pin).
+  // Search → fly + select (mirrors PA's flyAndPinByName).
   function flyAndPinByName(name) {
     const gjNow = gjRef.current;
     if (!map || !gjNow) return;
@@ -510,32 +408,27 @@ export default function PermitChoroplethMap() {
 
   return (
     <article className="content-map pa-map">
-      {/* ===== FULL-BLEED MAP CANVAS (PA standard). The instrument column floats on the
-           left, the detail float on the right; the map centre stays chrome-free. ===== */}
       <div className="pa-canvas">
         <div className="canvas-wrap">
           {fetchError ? (
             <EmptyState
               title="Could not load data"
-              body={`The ${year} dwelling-unit aggregates failed to load. Try refreshing or selecting a different year.`}
+              body="The dwelling-unit aggregates failed to load. Try refreshing the page."
             />
           ) : (
             <>
-              {(!gj || swapLoading) && <MapSkeleton />}
-              {/* resetKey (not key) so a YEAR swap clears a caught error WITHOUT
-                  remounting MapView — the map persists and dips-and-swaps in place. */}
-              <MapErrorBoundary resetKey={url}>
+              {(!gj || !map) && <MapSkeleton />}
+              <MapErrorBoundary resetKey={COMBINED_URL}>
                 <MapView
                   className="canvas"
                   basemapStyle={BASEMAP_STYLE}
-                  geojsonUrl={url}
+                  geojsonUrl={COMBINED_URL}
                   view={MAP_VIEW}
                   sourceId="pnbhd"
                   promoteId="Neighbourhood ID"
-                  layers={choroplethLayers(stops, metricDef)}
+                  layers={choroplethLayers(stops, metricDef, year)}
                   images={[]}
                   onLoad={handleMapLoad}
-                  onLoading={setSwapLoading}
                   cooperativeGestures={false}
                   attributionCompact={false}
                   mapAttribution={siteConfig.mapAttributionStrip}
@@ -545,17 +438,14 @@ export default function PermitChoroplethMap() {
           )}
         </div>
 
-        {/* ===== INSTRUMENT COLUMN (PA standard) — identity card + instrument chassis
-            (metric → year → legend → count). Identity always renders; the chassis waits
-            for the year's data. ===== */}
+        {/* ===== INSTRUMENT COLUMN (PA standard) ===== */}
         <div className="pa-float pa-column">
           <section className="pa-card pa-card-identity">
             <IdentityCard title="Dwelling Units" />
           </section>
 
-          {gj && (
+          {gjView && (
             <section className="pa-card pa-card-instrument">
-              {/* METRIC — the four flat metrics as the shared SegmentedControl (icon chips). */}
               <div className="pa-col-mod pa-col-metric">
                 <SegmentedControl
                   label="Metric"
@@ -565,8 +455,8 @@ export default function PermitChoroplethMap() {
                 />
               </div>
 
-              {/* YEAR — a select, not a console slider: Dwelling Units has no console, and a
-                  year change is a real per-year FILE swap. */}
+              {/* YEAR — a select (a paint swap now, not a file swap). The Data Console
+                  (Phase 3) re-homes this to a slider; kept as a select while View-only. */}
               <div className="pa-col-mod pa-col-year">
                 <span className="pa-col-lab">Year</span>
                 <select
@@ -581,8 +471,6 @@ export default function PermitChoroplethMap() {
                 </select>
               </div>
 
-              {/* LEGEND — fades on each metric switch (keyed remount), in step with the
-                  500ms fill crossfade. Sequential ramp + the categorical status block. */}
               <div className="pa-col-mod pa-col-legend">
                 <span className="pa-col-lab">Legend</span>
                 <div className="du-legend-fade" key={metricKey}>
@@ -597,19 +485,16 @@ export default function PermitChoroplethMap() {
                 </div>
               </div>
 
-              {/* FOOTER — the neighbourhood count (the universe for this year). */}
               <div className="pa-col-mod pa-col-foot">
                 <div className="pa-foot-line">
-                  <span className="pa-col-count">{gj.features.length.toLocaleString()} neighbourhoods</span>
+                  <span className="pa-col-count">{gjView.features.length.toLocaleString()} neighbourhoods</span>
                 </div>
               </div>
             </section>
           )}
         </div>
 
-        {/* ===== SINGLE-SELECT DETAIL (PA standard) — the right-side float, shown when
-            exactly one neighbourhood is selected. Lean vs PA's InfoRail (no sparkline /
-            triplet / condo — Dwelling Units has no timeseries or parcel aggregate). ===== */}
+        {/* ===== SINGLE-SELECT DETAIL (PA standard) ===== */}
         {selectedFeature && (() => {
           const p = selectedFeature;
           const agg = p.polygon_state === "aggregated";
@@ -641,8 +526,7 @@ export default function PermitChoroplethMap() {
           );
         })()}
 
-        {/* UNIFIED SEARCH (PA standard) — the magnifier peek by the map's zoom stack.
-            Selecting flies + pins; the text is kept in state (single source of truth). */}
+        {/* UNIFIED SEARCH (PA standard) */}
         {gj && (
           <SearchPeek
             names={names}
@@ -652,8 +536,7 @@ export default function PermitChoroplethMap() {
           />
         )}
 
-        {/* ABOUT & TIPS — opened by the "i" in the rail. Lean DU index; no §6 honesty
-            block (view-only, no selection aggregates). */}
+        {/* ABOUT & TIPS */}
         <MapTipsPopover
           open={infoOpen}
           onClose={() => setInfoOpen(false)}
@@ -662,7 +545,7 @@ export default function PermitChoroplethMap() {
           lastUpdated={manifest?.last_updated}
         />
 
-        {/* DATA & ATTRIBUTION — opened by the database control (bottom-right). */}
+        {/* DATA & ATTRIBUTION */}
         <AttributionPanel open={attribOpen} onClose={() => setAttribOpen(false)} />
       </div>
     </article>

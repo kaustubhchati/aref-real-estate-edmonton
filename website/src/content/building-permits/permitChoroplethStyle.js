@@ -171,78 +171,85 @@ export function metricStops(gj, metric) {
   return sequentialStops(gj, metric.field);
 }
 
+// ---- Year-keyed field access (combined-file model) --------------------
+// The choropleth loads ONE combined all-years file (02b) whose per-year values are
+// flat <field>_<year> props; a YEAR change is a paint swap (applyPermitYearMetric),
+// not a data reload. yget centralises the suffixing so the expressions read like the
+// old bare-name ones. Identity fields (display_name, is_annexation_area) are NOT
+// year-keyed. Mirrors PA's choroplethStyle.js.
+const yget = (field, year) => ["get", `${field}_${year}`];
+
 // ---- Fill colour expression -------------------------------------------
-function sequentialFill(field, stops) {
-  const value = ["number", ["get", field], 0];
+function sequentialFill(field, stops, year) {
+  // A null / -999 sentinel value → no_data colour, caught BEFORE the ramp: an
+  // aggregated polygon with no value for THIS metric is no_data, not the ramp min
+  // (the bug PA's YOY-10 fixed — a null coerced to 0 painted as "the smallest").
+  const MISSING = -999;
+  const value = ["number", yget(field, year), MISSING];
   const interp = ["interpolate", ["linear"], value];
   for (const s of stops) interp.push(s.v, s.c);
+  const aggregatedFill = ["case", ["==", value, MISSING], STATE_STYLE.no_data.fillColor, interp];
+
+  const state = yget("polygon_state", year);
   return [
     "case",
-    ["==", ["get", "polygon_state"], "aggregated"], interp,
-    ["==", ["get", "polygon_state"], "suppressed_low_n"],
-      STATE_STYLE.suppressed_low_n.fillColor,
-    ["==", ["get", "polygon_state"], "no_data"],
-      STATE_STYLE.no_data.fillColor,
+    ["==", state, "aggregated"],       aggregatedFill,
+    ["==", state, "suppressed_low_n"], STATE_STYLE.suppressed_low_n.fillColor,
+    ["==", state, "no_data"],          STATE_STYLE.no_data.fillColor,
     "#cccccc",
   ];
 }
 
-export function choroplethFillColor(metric, stops) {
-  return sequentialFill(metric.field, stops);
+export function choroplethFillColor(metric, stops, year) {
+  return sequentialFill(metric.field, stops, year);
 }
 
-// Per-feature fill opacity (aggregated bright, non-aggregated glass; hover/pin
-// bump). Exported because the two-layer crossfade (PermitChoroplethMap) toggles
-// a fill layer between this expression (visible) and 0 (hidden).
-export const FILL_OPACITY_EXPR = [
-  "case",
-  ["==", ["get", "polygon_state"], "aggregated"],
-    [
-      "case",
-      ["boolean", ["feature-state", "hover"],   false], 0.88,
-      ["boolean", ["feature-state", "pinned"],  false], 0.88,
-      0.74,
-    ],
-  ["boolean", ["feature-state", "hover"],  false], 0.15,
-  ["boolean", ["feature-state", "pinned"], false], 0.15,
-  0.04,
-];
-
-// Two stacked fill layers (a/b) for the dissolve. The IDs the component drives.
-export const FILL_LAYER_IDS = ["pnbhd-fill-a", "pnbhd-fill-b"];
-
-// ---- Layer stack — pnbhd-* ids (unchanged source; a/b fills added) -----
-// Source-agnostic (source filled in by MapView via `source` prop). The two fill
-// layers are identical except their fill-color expression and starting opacity:
-// "a" starts visible (FILL_OPACITY_EXPR), "b" starts hidden (0). On a metric
-// switch the component paints the new colour onto the hidden layer and
-// crossfades opacity (see PermitChoroplethMap). 150ms transition = snappy hover;
-// the component bumps it to 500ms only for the duration of a switch.
-export function choroplethLayers(stops, metric) {
-  const fillColor = choroplethFillColor(metric, stops);
+// Per-feature fill opacity (aggregated bright, non-aggregated glass; hover/pin bump;
+// box-select dim). year-keyed (reads polygon_state_<year>) — applyPermitYearMetric
+// rebuilds it on a year change. The `dimmed` feature-state channel fades an aggregated
+// polygon NOT in the current selection/facet set (box-select), mirroring PA's DIM.
+const DIM_OPACITY = 0.12;
+export function fillOpacityExpr(year) {
+  const state = yget("polygon_state", year);
   return [
-    // 1a. Fill A — starts visible
+    "case",
+    ["==", state, "aggregated"],
+      [
+        "case",
+        // hover + pinned (selection) stay DOMINANT over the dim — checked first.
+        ["boolean", ["feature-state", "hover"],  false], 0.88,
+        ["boolean", ["feature-state", "pinned"], false], 0.88,
+        ["boolean", ["feature-state", "dimmed"], false], DIM_OPACITY,
+        0.74,
+      ],
+    ["boolean", ["feature-state", "hover"],  false], 0.15,
+    ["boolean", ["feature-state", "pinned"], false], 0.15,
+    0.04,
+  ];
+}
+
+// The single fill layer id the component drives. Was a two-layer a/b opacity
+// crossfade for metric switches — retired for the combined-file model, where year
+// AND metric are both paint swaps on one layer (applyPermitYearMetric), matching PA.
+export const FILL_LAYER_ID = "pnbhd-fill";
+
+// ---- Layer stack — pnbhd-* ids (combined-file model) ------------------
+// Source-agnostic (source filled in by MapView). ONE fill layer (was a two-layer
+// a/b opacity crossfade); year + metric are both paint swaps via applyPermitYearMetric.
+// The state outlines filter on polygon_state_<year>; the annexation outline + labels
+// are year-invariant. Mirrors PA's choroplethLayers.
+export function choroplethLayers(stops, metric, year) {
+  return [
+    // 1. Fill — the ramp for aggregated, glass for the other states. year-keyed.
     {
-      id: "pnbhd-fill-a",
+      id: "pnbhd-fill",
       type: "fill",
       paint: {
-        "fill-color": fillColor,
-        // Colour FLOWS old→new on a year swap (setData via the shared MapView seam)
-        // and on a stops refine — the SAME reduced-motion-aware tween PA's nbhd-fill
-        // uses (was relying on MapLibre's non-reduced-motion-aware 300ms default).
+        "fill-color": choroplethFillColor(metric, stops, year),
+        // Colour FLOWS old→new on a year/metric/stops change — the reduced-motion-
+        // aware tween PA's nbhd-fill uses.
         "fill-color-transition": paintTransition(DUR_BASE),
-        "fill-opacity": FILL_OPACITY_EXPR,
-        "fill-opacity-transition": { duration: 150, delay: 0 },
-      },
-    },
-    // 1b. Fill B — starts hidden (same colour; recoloured on first switch)
-    {
-      id: "pnbhd-fill-b",
-      type: "fill",
-      paint: {
-        "fill-color": fillColor,
-        "fill-color-transition": paintTransition(DUR_BASE), // same shared tween as fill-a
-        "fill-opacity": 0,
+        "fill-opacity": fillOpacityExpr(year),
         "fill-opacity-transition": { duration: 150, delay: 0 },
       },
     },
@@ -250,7 +257,7 @@ export function choroplethLayers(stops, metric) {
     {
       id: "pnbhd-outline-solid",
       type: "line",
-      filter: ["==", ["get", "polygon_state"], "aggregated"],
+      filter: ["==", yget("polygon_state", year), "aggregated"],
       paint: {
         "line-color": STATE_STYLE.aggregated.outlineColor,
         "line-width": POLY_OUTLINE_WIDTH,
@@ -260,7 +267,7 @@ export function choroplethLayers(stops, metric) {
     {
       id: "pnbhd-outline-suppressed",
       type: "line",
-      filter: ["==", ["get", "polygon_state"], "suppressed_low_n"],
+      filter: ["==", yget("polygon_state", year), "suppressed_low_n"],
       paint: {
         "line-color": STATE_STYLE.suppressed_low_n.outlineColor,
         "line-width": STATE_STYLE.suppressed_low_n.outlineWidth,
@@ -271,7 +278,7 @@ export function choroplethLayers(stops, metric) {
     {
       id: "pnbhd-outline-nodata",
       type: "line",
-      filter: ["==", ["get", "polygon_state"], "no_data"],
+      filter: ["==", yget("polygon_state", year), "no_data"],
       paint: {
         "line-color": STATE_STYLE.no_data.outlineColor,
         "line-width": STATE_STYLE.no_data.outlineWidth,
@@ -333,6 +340,20 @@ export function choroplethLayers(stops, metric) {
       },
     },
   ];
+}
+
+// ---- Year/metric paint swap (combined-file model) ---------------------
+// A year OR metric change with the combined file resident: repaint the ONE fill layer
+// + re-filter the state outlines for the new year, in place (no data reload). Mirrors
+// PA's applyYearMetric. Guards getLayer so a call mid-teardown is a no-op.
+export function applyPermitYearMetric(map, metric, year, stops) {
+  if (!map || !map.getLayer(FILL_LAYER_ID)) return;
+  map.setPaintProperty(FILL_LAYER_ID, "fill-color", choroplethFillColor(metric, stops, year));
+  map.setPaintProperty(FILL_LAYER_ID, "fill-opacity", fillOpacityExpr(year));
+  map.setFilter("pnbhd-outline-solid",      ["==", yget("polygon_state", year), "aggregated"]);
+  map.setFilter("pnbhd-outline-suppressed", ["==", yget("polygon_state", year), "suppressed_low_n"]);
+  map.setFilter("pnbhd-outline-nodata",     ["==", yget("polygon_state", year), "no_data"]);
+  // annexation outline + labels are year-invariant — untouched.
 }
 
 // ---- Popup HTML -------------------------------------------------------

@@ -33,6 +33,132 @@ export const permitDefaultYear = (m) => m?.defaultYear ?? null;
 export const resolvePermitPointsUrl = (year) =>
   assetUrl(`/data/building-permits/permit-points/permit_points_${year}.geojson`);
 
+// === Choropleth combined-file model (the Data Console's resident source) =======
+//
+// The Dwelling Units CHOROPLETH (PermitChoroplethMap + its Analysis console) loads
+// ONE combined all-years GeoJSON (02b) — geometry once, every year's values as flat
+// <field>_<year> props — so a year change is a paint swap, not a file reload, and a
+// per-neighbourhood trend is readable client-side. This mirrors PA's dataSources.js
+// (projectYearCollection + resolveCombinedUrl), kept DU-local rather than shared:
+// a self-contained section file of trivial code beats a clever cross-section factory
+// (§6). NB: the POINT map above stays on its per-year files — different product.
+
+// The combined all-years choropleth file (02b's output; runner-published).
+export const resolveCombinedPermitUrl = () =>
+  assetUrl(`/data/building-permits/permit-neighbourhoods/permit_neighbourhoods_all_years.geojson`);
+
+// The value fields the combined file carries per year as <field>_<year>. The four
+// identity fields (Neighbourhood ID, display_name, district, is_annexation_area) are
+// year-invariant and NOT suffixed. Mirrors 02b's VALUE_COLS — the backend/frontend
+// contract for which columns are year-keyed.
+export const PER_YEAR_FIELDS = [
+  "polygon_state",
+  "n_permits",
+  "total_construction_value",
+  "median_construction_value",
+  "units_added_gross",
+  "units_demolished",
+  "yoy_pct_permits",
+];
+
+// Project a combined feature's props to the BARE-named shape the rest of the section
+// expects, for one year: <field>_<year> -> <field>. Identity fields pass through. The
+// seam that lets metricStops, the popup, search and the detail read bare names while
+// the source is the combined all-years file.
+export function projectYearProps(props, year) {
+  const out = { ...props };
+  for (const f of PER_YEAR_FIELDS) out[f] = props[`${f}_${year}`];
+  return out;
+}
+
+// Project a whole combined FeatureCollection to one year's bare-named view. Geometry
+// is shared by reference (only properties are reshaped), so this is cheap to recompute
+// on every year change. Returns null on null.
+export function projectYearCollection(gj, year) {
+  if (!gj) return null;
+  return {
+    ...gj,
+    features: gj.features.map((ft) => ({
+      ...ft,
+      properties: projectYearProps(ft.properties, year),
+    })),
+  };
+}
+
+// === Selection / area aggregate (the KPI rail's math) ==========================
+//
+// Roll a set of combined features up to one area total, for `year` (+ `prevYear`
+// for the exact area-YoY). Reads the RAW <field>_<year> props directly (not the
+// projected view) so both years are reachable in one pass.
+//
+// The DU analogue of PA's aggregateFeatures — but SUM-based, because DU carries no
+// parcel-count weight and its measures are counts/$ totals, not parcel-weighted
+// means. Exact-vs-estimate contract (mirrors PA's honesty split):
+//   • Sums (permits, construction value, units added/demolished) + area-YoY are
+//     EXACT. They cover the DATA-BEARING set — aggregated AND suppressed_low_n — a
+//     sum is exact regardless of sample size, so suppressing it would only undercount
+//     (suppression protects a sparse neighbourhood's per-permit VALUES on the map, not
+//     the existence of its permits). no_data is excluded from every measure.
+//   • medianOfMedianCV is an ESTIMATE (median of per-neighbourhood medians) and is
+//     taken over AGGREGATED ONLY — a median of <10 permits is exactly the small-sample
+//     noise suppressed_low_n marks, the DU analogue of PA excluding suppressed from its
+//     mean/median. It carries the "≈ of medians" §6 tag wherever it shows.
+const num = (v) => {
+  const n = Number(v);
+  return v == null || !Number.isFinite(n) || n === -999 ? null : n;
+};
+const medianOf = (arr) => {
+  if (!arr.length) return null;
+  const s = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+};
+
+export function aggregatePermitFeatures(features, year, prevYear) {
+  let nReportable = 0, nSuppressed = 0, nExcluded = 0;
+  let sumPermits = 0, sumConstructionValue = 0, sumUnitsAdded = 0, sumUnitsDemolished = 0;
+  let sumPermitsPrev = 0;
+  const medians = [];
+
+  for (const f of features) {
+    const p = f.properties;
+    const state = p[`polygon_state_${year}`];
+
+    if (state === "aggregated") nReportable++;
+    else if (state === "suppressed_low_n") nSuppressed++;
+    else { nExcluded++; continue; }   // no_data / unknown — out of every measure
+
+    // Sums over the data-bearing set (aggregated + suppressed): exact, sample-size-
+    // independent. null / -999 sentinel skipped.
+    const np = num(p[`n_permits_${year}`]);                  if (np != null) sumPermits += np;
+    const cv = num(p[`total_construction_value_${year}`]);   if (cv != null) sumConstructionValue += cv;
+    const ua = num(p[`units_added_gross_${year}`]);          if (ua != null) sumUnitsAdded += ua;
+    const ud = num(p[`units_demolished_${year}`]);           if (ud != null) sumUnitsDemolished += ud;
+    if (prevYear != null) {
+      const npp = num(p[`n_permits_${prevYear}`]);           if (npp != null) sumPermitsPrev += npp;
+    }
+
+    // Median-of-medians: AGGREGATED only (exclude small-sample suppressed medians).
+    if (state === "aggregated") {
+      const mcv = num(p[`median_construction_value_${year}`]);
+      if (mcv != null) medians.push(mcv);
+    }
+  }
+
+  return {
+    nReportable, nSuppressed, nExcluded,
+    sumPermits, sumConstructionValue, sumUnitsAdded, sumUnitsDemolished,
+    netUnits: sumUnitsAdded - sumUnitsDemolished,
+    medianOfMedianCV: medianOf(medians),
+    // Exact area-YoY of permit COUNT: Σthis / Σprev − 1 (over the same data-bearing
+    // set). null when there is no prior year in range or the prior sum is 0.
+    areaYoYPermits:
+      prevYear != null && sumPermitsPrev > 0
+        ? (sumPermits - sumPermitsPrev) / sumPermitsPrev
+        : null,
+  };
+}
+
 // Permit type toggle — filters on job_group field in tile.
 export const ALL_GROUPS    = "All";
 export const JOB_GROUPS    = ["All", "Residential", "Commercial"];
