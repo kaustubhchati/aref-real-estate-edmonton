@@ -13,7 +13,7 @@
 // domain is kept only as the fallback when a year has no usable scale.
 // =============================================================================
 
-import { fmtCurrency, fmtNumber, fmtPct, fmtLogPts, fmtYear, fmtArea } from "../../utils/format.js";
+import { fmtCurrency, fmtPct, fmtLogPts, fmtArea } from "../../utils/format.js";
 import { polyOutline, rampFloor, RAMP_FLOOR, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
 import { paintTransition, DUR_BASE } from "../../components/motion.js";
 import { CITY_BOUNDS } from "../../config/cityBounds.js";
@@ -432,29 +432,12 @@ export const LEGEND_STATES = [
 ];
 
 // ---- Popup rows ------------------------------------------------------------
-// One row per aggregate column shown for an `aggregated` polygon. The first
-// entry is the headline (border-emphasised) and matches the choropleth
-// variable. Suppressed_low_n polygons show only n_properties + a "suppressed"
-// note; the other three states show only their label badge.
-//
-// Tuple format: [propertyKey, displayLabel, formatter, isHeadline]
-export const POPUP_ROWS = [
-  ["median_assessvalue",           "Median assessed",          fmtCurrency, true ],
-  ["n_properties",                 "N properties",             fmtNumber,   false],
-  ["avall_public",                 "Mean assessed (all)",      fmtCurrency, false],
-  ["sd_assessedvalue",             "SD assessed",              fmtCurrency, false],
-  ["median_yearbuilt",             "Median year built",        fmtYear,     false],
-  ["pct_with_unit",                "% with unit (condo)",      fmtPct,      false],
-  ["avg_assessvalue_without_unit", "Mean assessed (non-unit)", fmtCurrency, false],
-  ["avg_lotsize",                  "Mean lot size",            fmtArea,     false],
-];
-
-// NOTE: the per-feature DETAIL view (name, year, state badge, the POPUP_ROWS
-// table, suppression / no-data notes) used to be hand-built HTML here
-// (buildPopupHtml + escapeHtml) for a MapLibre popup. It now renders as React in
-// the right info rail — see InfoRail.jsx, which consumes POPUP_ROWS + STATE_STYLE
-// above (and owns the per-state note copy). POPUP_ROWS / STATE_STYLE stay here as
-// the section's visual contract; the HTML builders were removed with the popup.
+// NOTE: the per-feature DETAIL view (name, year, state badge, aggregate rows,
+// suppression / no-data notes) used to be hand-built HTML here (buildPopupHtml +
+// escapeHtml) for a MapLibre popup. It now renders as React in the right info rail
+// — see InfoRail.jsx, which consumes STATE_STYLE above (and owns the per-state note
+// copy plus its own aggregate-row set). The HTML builders were removed with the
+// popup; the old POPUP_ROWS table went with the InfoRail move (2026-07-16 cleanup).
 
 // ---- Pattern image factories ----------------------------------------------
 // Both return ImageData (broad browser support, Safari included) so
@@ -535,13 +518,6 @@ function buildFillColourExpression(metricKey, year, stops) {
     ["==", state, "no_data"],                     STATE_STYLE.no_data.fillColor,
     "#cccccc",
   ];
-}
-
-// Public fill-colour expression for the chosen metric + year + stops. The page
-// uses this (via applyYearMetric) with map.setPaintProperty to repaint on a
-// metric/year/scale change without remounting the map.
-export function choroplethFillColor(metricKey = "median_assessvalue", year, stops = STOPS) {
-  return buildFillColourExpression(metricKey, year, stops);
 }
 
 // ---- The other year-keyed expressions ---------------------------------------

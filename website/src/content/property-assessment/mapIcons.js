@@ -118,12 +118,8 @@ export const ICON_SLIDERS =
 export const ICON_TABLE =
   '<path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/>';
 
-// Tips index: clear FILTERS (a funnel struck out).
-// lucide: filter-x
-export const ICON_CLEAR_FILTERS =
-  '<path d="M12.531 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14v6a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341l.427-.473"/> <path d="m16.5 3.5 5 5"/> <path d="m21.5 3.5-5 5"/>';
-
-// Tips index: clear SELECTION — a DIFFERENT glyph from filter-x, because they are two different undos.
+// Tips index: the CLEAR glyph — one eraser, shared by BOTH clear tips (filters +
+// selection); the tip's inline coral pill says which clear it is.
 // lucide: eraser
 export const ICON_CLEAR_SELECTION =
   '<path d="M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21"/> <path d="m5.082 11.09 8.828 8.828"/>';

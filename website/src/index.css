@@ -1113,15 +1113,6 @@ p  { margin: 0 0 0.75rem; }
 }
 .dt-facet-opt:hover { background: var(--shell); }
 .dt-facet-opt input { accent-color: var(--sel); }
-/* Polygon-state multi-select — toggle chips (one per state); pressed = included. */
-.dt-facet-toggles { display: flex; flex-wrap: wrap; gap: 5px; }
-.dt-facet-chip {
-  font-family: inherit; font-size: 0.72rem; font-weight: 500; cursor: pointer;
-  padding: 3px 8px; border-radius: 999px; white-space: nowrap;
-  background: var(--bg-soft); border: 1px solid var(--border); color: var(--text-muted);
-}
-.dt-facet-chip:hover { background: var(--bg); }
-.dt-facet-chip.is-on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); }
 /* The metric-range facet now renders as a one-line dual-handle in the tuning rack
    (RangeFacet → .pa-range-slot / .pa-dual, styled near the rack CSS below). */
 /* "Clear filters" (distinct from "Clear selection") — now a console pill sharing the
@@ -1275,11 +1266,6 @@ p  { margin: 0 0 0.75rem; }
 /* Facets — dark. (A1: the District dropdown trigger + portaled menu now carry their own
    dark styling above; the summary/list/opt overrides here are retired — the menu is on
    <body>, no longer a .dt-panel descendant.) */
-.dt-panel .dt-facet-chip { background: var(--pa-card); border-color: var(--pa-hair); color: var(--tx-key); }
-.dt-panel .dt-facet-chip.is-on {
-  background: var(--accent-int-fill); border-color: var(--accent-int-border); color: var(--accent-int-text);
-  box-shadow: var(--accent-int-specular), var(--accent-int-glow); text-shadow: var(--accent-int-text-glow); font-weight: 600;
-}
 /* (Clear-filters color/hover now live in the §6 identical-clears rule.) */
 
 /* Table — basic dark skin (C7 re-cuts columns + adds the TREND sparkcol). */
@@ -2143,8 +2129,7 @@ p  { margin: 0 0 0.75rem; }
      border + weight so active still reads (the barrier carries §4 contrast). */
   .pa-col-metric .seg-btn.active,
   .pa-column .opt-toggle-btn.active,
-  .dt-panel .dt-metric .seg-btn.active,
-  .dt-panel .dt-facet-chip.is-on {
+  .dt-panel .dt-metric .seg-btn.active {
     background: var(--pa-card); box-shadow: none;
   }
 }
@@ -2154,7 +2139,6 @@ p  { margin: 0 0 0.75rem; }
   .pa-col-metric .seg-btn.active,
   .pa-column .opt-toggle-btn.active,
   .dt-panel .dt-metric .seg-btn.active,
-  .dt-panel .dt-facet-chip.is-on,
   .dt-panel .dt-sort.active {
     border-color: Highlight; color: Highlight;
   }

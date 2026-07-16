@@ -70,16 +70,6 @@ export function cityHasAnyData(manifestData, city) {
 
 // === Resolving a data file ====================================================
 
-// Map a (city, year) to its committed per-year GeoJSON path. Gating lives
-// upstream: callers only resolve a year that getYearsForCity returned, so a
-// city/year without data never reaches here. The filename is currently
-// year-keyed only (Edmonton history); revisit the path shape when Calgary's
-// files land. RETAINED for the per-year fallback path — the live map now loads
-// the combined all-years file (resolveCombinedUrl) and paint-swaps the year.
-export function resolveDataUrl(city, year) {
-  return assetUrl(`/data/property-assessment/neighbourhoods_${year}_recovered.geojson`);
-}
-
 // The ONE combined all-years GeoJSON for a city: geometry serialized once, every
 // year's values carried as flat <field>_<year> properties (built by 07b). The
 // map loads this once and a year change is a paint swap, not a data reload — no

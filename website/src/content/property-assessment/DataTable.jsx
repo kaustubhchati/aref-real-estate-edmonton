@@ -80,7 +80,6 @@ import { useScrollFade } from "./useScrollFade.js";
 import {
   fmtArea,
   fmtCurrencyShort,
-  fmtLogPts,
   fmtLogPtsBare,
   fmtNumber,
   fmtPct,
@@ -185,7 +184,7 @@ const METRIC_KEYS = new Set(Object.keys(COLS_BY_KEY));
 // and the shared brush is unaffected (District + the metric-range still populate
 // columnFilters → the map dim AND the console's scope, per §122 as amended).
 const FACETS = [
-  { id: "district", label: "District", control: "dropdown", labelOf: (v) => v },
+  { id: "district", label: "District", labelOf: (v) => v },
 ];
 
 // LOAD-BEARING, NOT STYLISTIC — do NOT inline this back into a `[]` literal.
@@ -921,9 +920,8 @@ export default function DataTable({
                       onToggle: (v) => toggleFacet(f.id, v),
                       disabled: selectionMode,
                     };
-                    return f.control === "dropdown"
-                      ? <FacetDropdown key={f.id} {...shared} />
-                      : <FacetToggles key={f.id} {...shared} />;
+                    // Only the district dropdown facet exists (D4 removed the chip facet).
+                    return <FacetDropdown key={f.id} {...shared} />;
                   })}
                 </div>
                 {/* The export scope cue mirrors handleExport: the selection, else the
@@ -1370,27 +1368,6 @@ function FacetDropdown({ label, options, selected, labelOf, onToggle, disabled =
 // A multi-select facet rendered as toggle CHIPS (one per option) — for a small,
 // stable option set (the polygon states). aria-pressed reflects each chip's on/off;
 // clicking toggles it in the column filter. Default (nothing pressed) = all shown.
-function FacetToggles({ label, options, selected, labelOf, onToggle }) {
-  return (
-    <div className="dt-facet-toggles" role="group" aria-label={`Filter by ${label.toLowerCase()}`}>
-      {options.map((v) => {
-        const on = selected.includes(v);
-        return (
-          <button
-            key={v}
-            type="button"
-            className={`dt-facet-chip${on ? " is-on" : ""}`}
-            aria-pressed={on}
-            onClick={() => onToggle(v)}
-          >
-            {labelOf(v)}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 // =============================================================================
 // The Tuning instrument (Fix 4) — horizontal Year (single) + Metric range (dual),
 // docked in the Data Console spine (strip above the handle in View; console header in
