@@ -76,7 +76,7 @@ import SegmentedControl from "../../components/SegmentedControl.jsx";
 import Sparkline from "../../components/Sparkline.jsx";
 import { DUR_BASE, reduceMotion } from "../../components/motion.js";
 import { METRICS, COLOUR_LEVEL_DELTAS, YOY_CORE, YOY_OVERFLOW_SHARE } from "./choroplethStyle.js";
-import { useScrollFade } from "./useScrollFade.js";
+import { useScrollFade } from "../../components/useScrollFade.js";
 import {
   fmtArea,
   fmtCurrencyShort,

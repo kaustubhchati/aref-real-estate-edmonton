@@ -17,7 +17,7 @@
 // =============================================================================
 
 import { useEffect, useRef, useState } from "react";
-import SearchInput from "../../components/SearchInput.jsx";
+import SearchInput from "./SearchInput.jsx";
 import { ICON_SEARCH } from "./mapIcons.js";
 
 export default function SearchPeek({ names, onSelect, onValueChange, value }) {

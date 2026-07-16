@@ -237,73 +237,10 @@ export function applyCameraPreset(map, preset, { ease = true } = {}) {
   }
 }
 
-// ---- Rail controls --------------------------------------------------------
-// ONE chassis for every PA-added button in the map's right rail. MapLibre owns the
-// zoom + fullscreen buttons and styles them via .maplibregl-ctrl-group in index.css;
-// by emitting the SAME wrapper + button markup, our controls inherit that chassis
-// wholesale — size, glass body, hairline, and the full state set (rest / hover /
-// pressed / selected / disabled / focus-visible / reduced-motion). That inheritance is
-// the point: a hand-rolled button here would drift from the rail the moment either
-// side is touched, which is exactly how .pa-search-peek-btn ended up duplicating the
-// rail's styling by hand.
-//
-// Kept here (not MapView) so MapView stays section-agnostic — PA adds these to its own
-// map and supplies handlers that read fresh state.
-//
-// `svg` is the glyph markup (see mapIcons.js — the family lives there, not inline).
-// `label` becomes BOTH the tooltip and the accessible name: these are icon-only
-// buttons, so without it a screen reader announces nothing. The 18px glyph sits in a
-// 30px slot, so the touch/click target is larger than the mark it carries.
-export function makeIconButtonControl({ svg, label, onClick }) {
-  return {
-    onAdd() {
-      const wrap = document.createElement("div");
-      wrap.className = "maplibregl-ctrl maplibregl-ctrl-group";
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.innerHTML = svg;
-      btn.addEventListener("click", onClick);
-      this._btn = btn;
-      this._wrap = wrap;
-      // `label` may be a FUNCTION for a control whose action depends on state (see
-      // setLabel + the recentre control). Resolve it once here for the initial mount.
-      this.setLabel(typeof label === "function" ? label() : label);
-      wrap.appendChild(btn);
-      return wrap;
-    },
-    // Retitle in place. The SHAPE never changes — only the name for what it will do.
-    setLabel(text) {
-      if (!this._btn) return;
-      this._btn.title = text;
-      this._btn.setAttribute("aria-label", text);
-    },
-    // Mark the control ON/engaged. `.is-on` carries the rail's active material (petrol
-    // body + pearl rim + teal glow, §6) — the same scheme MapLibre's own
-    // .maplibregl-ctrl-shrink gets when fullscreen engages, so every toggle on the rail
-    // reads identically. aria-pressed makes the state real for a screen reader, not just
-    // visible: with no × on the popover, this button IS the close affordance.
-    setActive(on) {
-      if (!this._btn) return;
-      this._btn.classList.toggle("is-on", !!on);
-      this._btn.setAttribute("aria-pressed", on ? "true" : "false");
-    },
-    onRemove() {
-      this._btn?.removeEventListener("click", onClick);
-      this._wrap?.remove();
-    },
-  };
-}
-
-// Wrap a glyph BODY from mapIcons.js in the family's <svg> shell. One place decides the
-// rendered size + stroke spec for every JS-drawn rail glyph, so the family spec is
-// stated once rather than re-typed per control.
-export function railGlyph(body) {
-  return (
-    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
-    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ' +
-    'style="display:block;margin:auto">' + body + "</svg>"
-  );
-}
+// ---- Rail controls: MOVED to components/mapControls.js -------------------
+// makeIconButtonControl + railGlyph are now shared across all map sections
+// (Property Assessment is the standard; Dwelling Units + Business Counts adopt
+// the same rail). Imported from ../../components/mapControls.js where used.
 
 // ---- Helpers --------------------------------------------------------------
 

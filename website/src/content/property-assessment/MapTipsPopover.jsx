@@ -36,11 +36,11 @@
 // =============================================================================
 
 import { useEffect, useRef } from "react";
-import { useScrollFade } from "./useScrollFade.js";
+import { useScrollFade } from "../../components/useScrollFade.js";
 import {
   ICON_MOUSE, ICON_CLICK, ICON_BOX_SELECT, ICON_SEARCH,
   ICON_SLIDERS, ICON_TABLE, ICON_MOUSE_CLICK, ICON_CLEAR_SELECTION,
-} from "./mapIcons.js";
+} from "../../components/mapIcons.js";
 
 // One <svg> shell for the index glyphs — the same Lucide family + spec as the rail, one
 // step down in size (§1.5a: 16px index glyph vs the rail's 18px). The body is injected

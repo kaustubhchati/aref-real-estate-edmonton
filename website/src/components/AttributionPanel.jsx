@@ -26,7 +26,7 @@
 
 import { useEffect, useRef } from "react";
 import { useScrollFade } from "./useScrollFade.js";
-import { siteConfig, BASEMAP_SOURCES } from "../../config/siteConfig.js";
+import { siteConfig, BASEMAP_SOURCES } from "../config/siteConfig.js";
 
 export default function AttributionPanel({ open, onClose }) {
   const panelRef = useRef(null);

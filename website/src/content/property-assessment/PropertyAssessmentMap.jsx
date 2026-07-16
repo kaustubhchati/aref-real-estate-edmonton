@@ -42,9 +42,9 @@ import IdentityCard from "./IdentityCard.jsx";
 import SegmentedControl from "../../components/SegmentedControl.jsx";
 import InfoRail from "./InfoRail.jsx";
 import DataTable from "./DataTable.jsx";
-import SearchPeek from "./SearchPeek.jsx";
+import SearchPeek from "../../components/SearchPeek.jsx";
 import MapTipsPopover from "./MapTipsPopover.jsx";
-import AttributionPanel from "./AttributionPanel.jsx";
+import AttributionPanel from "../../components/AttributionPanel.jsx";
 import { introCardDismissed, rememberIntroCardDismissed } from "./introCard.js";
 import {
   buildSnapshotCsv,
@@ -88,10 +88,9 @@ import {
   indexNamesForSearch,
   fitToFeatures,
   applyCameraPreset,
-  makeIconButtonControl,
-  railGlyph,
 } from "./interactions.js";
-import { ICON_RECENTRE, ICON_INFO, ICON_DATABASE } from "./mapIcons.js";
+import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
+import { ICON_RECENTRE, ICON_INFO, ICON_DATABASE } from "../../components/mapIcons.js";
 import { DUR_BASE, reduceMotion } from "../../components/motion.js";
 import { siteConfig } from "../../config/siteConfig.js";
 import { useSearchParams } from "react-router-dom";

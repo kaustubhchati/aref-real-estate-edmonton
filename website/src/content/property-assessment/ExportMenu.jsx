@@ -26,7 +26,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useScrollFade } from "./useScrollFade.js";
+import { useScrollFade } from "../../components/useScrollFade.js";
 import { portalTarget } from "./portalTarget.js";
 
 const ICON_EXPORT = "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3";
