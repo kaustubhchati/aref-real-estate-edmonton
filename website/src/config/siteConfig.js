@@ -13,12 +13,44 @@
 // Placeholders use {Curly Names} so they're obviously not real copy yet.
 // =============================================================================
 
+// ---- Source-data attribution + licence — ONE source of truth ------------
+// City of Edmonton Open Data Portal, under the Open Government Licence – City of
+// Edmonton (Terms of Use v2.1, Jan 2016). Consumed by every data export
+// (exportData.js) so the required notice travels with any distribution — see the
+// Terms' distribution clause: "If you distribute or provide access to the datasets …
+// you agree to include … this URL for … these Terms of Use." Attribution itself is
+// REQUESTED, not required, by these Terms; the URL-travels-with-distribution
+// obligation is the hard one, so it is centralised here.
+//
+// NO City of Edmonton LOGO anywhere (deliberate): the Terms licence the DATASETS only
+// ("this licence does not give you a copyright or other proprietary interest") and
+// grant no right to the City's marks; importing the mark would also imply the
+// endorsement the disclaimer exists to disclaim. Text citation + Terms URL is the
+// compliant, more rigorous form.
+export const EDMONTON_OPEN_DATA = {
+  name:       "City of Edmonton Open Data",
+  url:        "https://data.edmonton.ca",
+  licence:    "Open Government Licence – City of Edmonton (Terms of Use v2.1)",
+  termsUrl:   "https://data.edmonton.ca/stories/s/City-of-Edmonton-Open-Data-Terms-of-Use/msh8-if28/",
+  disclaimer: "These datasets do not represent an official statement of City policy, practice, services, or procedure.",
+};
+
+// Basemap credit — LEGALLY REQUIRED verbatim by CARTO's terms + OSM's ODbL. On the live
+// map it is supplied automatically by the CARTO Voyager TileJSON; this copy exists to burn
+// into the PNG export, whose canvas does not include the DOM attribution overlay (see
+// exportData.exportPng). Wording is fixed by the licences; never iconify or abbreviate —
+// the "©" and the word "contributors" are both required.
+export const BASEMAP_CREDIT = "© OpenStreetMap contributors, © CARTO";
+
 export const siteConfig = {
   // ---- Identity (placeholders — fill before public launch) ---------------
   org:    "University of Alberta",
   centre: "Open Data Centre",
   dept:   "Department of Economics",
   funder: "{Funder}",
+
+  // ---- Data source + licence (see EDMONTON_OPEN_DATA above) ---------------
+  dataSource: EDMONTON_OPEN_DATA,
 
   // ---- Map attribution ---------------------------------------------------
   // Appended to the map's AttributionControl via customAttribution. The basemap

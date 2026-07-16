@@ -18,7 +18,7 @@
 // =============================================================================
 
 import { PER_YEAR_FIELDS } from "./dataSources.js";
-import { siteConfig } from "../../config/siteConfig.js";
+import { siteConfig, BASEMAP_CREDIT } from "../../config/siteConfig.js";
 
 // Year-invariant identity columns carried once (mirrors 07b's IDENTITY_COLS).
 const IDENTITY = ["Neighbourhood ID", "display_name", "district"];
@@ -64,6 +64,7 @@ function cellFor(field, raw) {
 // self-explanatory if it ever gets separated from its CSV.
 export function buildProvenanceText({ file, shape, city, metric, scope, coverage }) {
   const date = new Date().toISOString().slice(0, 10);
+  const ds = siteConfig.dataSource;
   return [
     `${siteConfig.org} — ${siteConfig.centre}`,
     `dataset: Property Assessment`,
@@ -74,6 +75,16 @@ export function buildProvenanceText({ file, shape, city, metric, scope, coverage
     `scope: ${scope}`,
     `map view metric: ${metric}`,
     `exported: ${date}`,
+    ``,
+    // Source + licence — TRAVELS with the distribution (Open Data Terms' distribution
+    // clause: include this URL for the Terms). Attribution to the City is requested (not
+    // required) by the Terms; the Terms URL is the hard obligation. This notice PASSES the
+    // City's Terms through — it adds no further restriction of any kind (the Terms forbid it).
+    `source: ${ds.name}`,
+    `source url: ${ds.url}`,
+    `licence: ${ds.licence}`,
+    `terms of use: ${ds.termsUrl}`,
+    ds.disclaimer,
   ].join("\n") + "\n";
 }
 
@@ -159,9 +170,27 @@ export function buildAggregateCsv(aggregate, cityBaseline) {
   return rows.map((row) => row.map(csvCell).join(",")).join("\n");
 }
 
-// A GeoJSON FeatureCollection of exactly the chosen features (full properties).
+// A GeoJSON FeatureCollection of exactly the chosen features (full properties). Carries
+// the source + Terms URL as top-level foreign members (RFC 7946 §6.1 permits them) so the
+// licence travels with this distributed data file — `attribution` (the one-line credit many
+// GIS tools surface) plus a structured `metadata` block. The features themselves are passed
+// through UNTOUCHED (data content frozen; this only ADDS a notice). No further restriction
+// is introduced — the notice passes the City's Terms through.
 export function buildGeoJson(features) {
-  return JSON.stringify({ type: "FeatureCollection", features });
+  const ds = siteConfig.dataSource;
+  return JSON.stringify({
+    type: "FeatureCollection",
+    attribution: `${ds.name} — ${ds.licence}. ${ds.termsUrl}`,
+    metadata: {
+      source: ds.name,
+      source_url: ds.url,
+      licence: ds.licence,
+      terms_of_use: ds.termsUrl,
+      disclaimer: ds.disclaimer,
+      produced_by: `${siteConfig.org} — ${siteConfig.centre}`,
+    },
+    features,
+  });
 }
 
 // Download a text blob under `filename`.
@@ -185,13 +214,48 @@ export function downloadCsvWithSidecar(csvName, csvText, provText) {
   setTimeout(() => downloadText(provName, provText, "text/plain;charset=utf-8"), 150);
 }
 
-// Export the current map view as a PNG. Requires the map to have been created
-// with preserveDrawingBuffer:true (PA passes it) — otherwise the canvas is blank.
-// Throws (SecurityError) only if a basemap tile tainted the canvas; MapLibre sets
-// CORS on tiles, so the CARTO basemap is safe.
+// Export the current map view as a PNG — with the attribution BURNED IN. Requires the map
+// to have been created with preserveDrawingBuffer:true (PA passes it) — otherwise the
+// canvas is blank. Throws (SecurityError) only if a basemap tile tainted the canvas;
+// MapLibre sets CORS on tiles, so the CARTO basemap is safe (drawing it onto a 2D canvas
+// preserves that non-taint).
+//
+// WHY WE COMPOSITE: map.getCanvas() is the WebGL drawing buffer ONLY. MapLibre's
+// attribution is a separate DOM overlay, NOT part of that canvas, so a raw toDataURL()
+// ships an image with ZERO credit. That is a compliance gap for CARTO/OSM (whose licences
+// REQUIRE the credit on the displayed map) and for the City source. We draw the map, then
+// a legible attribution strip carrying the CARTO/OSM credit + the City source + the Terms
+// URL, and export the composite.
 export function exportPng(map, filename) {
-  const url = map.getCanvas().toDataURL("image/png");
-  triggerDownload(url, filename);
+  const src = map.getCanvas();
+  const w = src.width, h = src.height;
+  const out = document.createElement("canvas");
+  out.width = w; out.height = h;
+  const ctx = out.getContext("2d");
+  ctx.drawImage(src, 0, 0);
+
+  const ds = siteConfig.dataSource;
+  const lines = [
+    BASEMAP_CREDIT,                                  // legally required, verbatim
+    `Data: ${ds.name} — ${ds.licence}`,
+    ds.termsUrl,                                     // the Terms URL travels with the image
+  ];
+  // Scale the text to the export's device-pixel size (getCanvas() is at DPR) so it reads
+  // the same on HiDPI as on standard displays.
+  const scale = w / (map.getContainer().clientWidth || w) || 1;
+  const fs = Math.round(11 * scale);
+  const pad = Math.round(6 * scale);
+  const lh = Math.round(fs * 1.4);
+  ctx.font = `${fs}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "left";
+  const barH = lines.length * lh + pad;
+  ctx.fillStyle = "rgba(13,14,16,0.66)";            // --shell @ 66% — legible over any basemap
+  ctx.fillRect(0, h - barH, w, barH);
+  ctx.fillStyle = "rgba(245,246,247,0.96)";         // --tx
+  lines.forEach((ln, i) => ctx.fillText(ln, pad, h - barH + pad / 2 + lh * (i + 0.5)));
+
+  triggerDownload(out.toDataURL("image/png"), filename);
 }
 
 function triggerDownload(url, filename) {
