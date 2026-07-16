@@ -122,8 +122,18 @@ sections, agent pipeline, and infrastructure.
       the PA manifest (refresh-by-design). (Was "parked" — superseded.)
 
 ### Frontend — polish deferred from Phase 1
-- [ ] Neighbourhood search — custom combobox replacing
-      native `<datalist>` (inconsistent cross-browser).
+- [x] **Neighbourhood search — custom combobox: RESOLVED (was already done).**
+      `SearchInput.jsx` already renders a custom `<ul role="listbox">`, NOT a
+      native `<datalist>` (its header comment says so), so the cross-browser
+      `<datalist>` concern this item names was retired before the item was
+      written. Dark-themed 2026-07-16 (`d6e8ad5`): the input + its results
+      dropdown had fallen through to SearchInput's LIGHT base styles (built for
+      the Report Card page) and rendered browser-white on the dark map — both
+      re-skinned to the dark-glass system, the highlighted result now takes the
+      standardized petrol+teal active material, and the standalone search
+      button's hover no longer washes to a white pill (it layers the lift over
+      the dark fill, which the rail buttons get from their group backing).
+      Scoped to `.pa-search-peek` so the Report Card's light search is untouched.
 - [ ] Map fly-to easing — ease-out quad vs default linear.
 - [ ] Map scrollytelling / guided tour (centrepiece per
       UIUX doc, medium effort).
