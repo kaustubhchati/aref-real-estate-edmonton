@@ -611,7 +611,8 @@ p  { margin: 0 0 0.75rem; }
 }
 .pa-search-peek-btn:hover { background: var(--btn-body-hover); color: var(--pa-ink); transform: translateY(-0.5px); }   /* HOVER — invite lift (uniform with the map controls) */
 .pa-search-peek-btn:active { transform: translateY(0.5px); background: var(--pa-card); }   /* PRESSED */
-.pa-search-peek.is-open .pa-search-peek-btn { color: var(--accent-teal); border-color: var(--accent-teal); }   /* teal open-state (was green --accent — a chrome-green violation) */
+/* Search OPEN takes the rail-wide active material above (was teal text + rim only) — a
+   toggle that is engaged now reads the same as fullscreen engaged and the "i" open. */
 .pa-search-peek-btn:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }
 /* Panel: kept mounted (value + coordinated filter persist), hidden when collapsed. */
 .pa-search-peek:not(.is-open) .pa-search-peek-panel { display: none; }
@@ -751,13 +752,15 @@ p  { margin: 0 0 0.75rem; }
    state · sparkline · value/city/delta triplet · condo block. (The legacy .rail-*
    rules below are no longer emitted by InfoRail.jsx.) */
 .pa-detail {
-  /* D-F4 — sit BELOW the top-right MapLibre nav stack so the zoom / fullscreen / reset
-     controls stay visible and clickable (CONTRACT §3.1 "detail instrument — below nav").
-     Derived offset (the stack is fixed — 3 control groups, no dynamic add/remove): nav
+  /* D-F4 — sit BELOW the top-right MapLibre nav stack so the zoom / fullscreen / reset /
+     info controls stay visible and clickable (CONTRACT §3.1 "detail instrument — below nav").
+     Derived offset (the stack is fixed — 4 control groups, no dynamic add/remove): nav
      container top 40px (.pa-canvas .maplibregl-ctrl-top-right margin-top) + zoom (10+60+2)
-     + fullscreen (10+30+2) + reset (10+30+2) ≈ 196px bottom, + ~12px gap = 208px. If a
-     control is ever added/removed here, re-derive this top. */
-  position: absolute; right: 12px; top: 208px; z-index: 14;
+     + fullscreen (10+30+2) + reset (10+30+2) + info (10+30+2) ≈ 238px bottom, + ~12px gap
+     = 250px. RE-DERIVED 2026-07-15 when the "i" joined the rail (was 208px for 3 groups) —
+     the old comment's warning was the whole reason this was caught. If a control is ever
+     added/removed here, re-derive this top again. */
+  position: absolute; right: 12px; top: 250px; z-index: 14;
   width: 224px; max-width: calc(100vw - 24px);
   padding: 11px 13px;
   background: var(--pa-shell);                        /* opaque barrier = the fallback (glass in @supports) */
@@ -1642,50 +1645,101 @@ p  { margin: 0 0 0.75rem; }
    column is now fit-content, so there's no void between the legend and the footer. */
 .pa-col-foot { display: flex; flex-direction: column; gap: var(--s2); }   /* foot gap to §1.6 scale (was ad-hoc 6px) */
 .pa-foot-line { display: flex; align-items: baseline; gap: 8px; }
-.pa-column .pa-info-btn {
-  background: transparent; border: 0; box-shadow: none; border-radius: 0;
-  color: var(--pa-mut); font-size: 10px; padding: 0; white-space: nowrap;
-}
-.pa-column .pa-info-btn:hover { color: var(--pa-ink); }
-.pa-column .pa-info-pop {
-  position: static; width: 100%; max-width: 100%; padding: 9px 10px;
-  background: var(--pa-card);                          /* opaque barrier = the fallback */
-  border: 1px solid var(--glass-overlay-rim);          /* higher-tier rim (glass in @supports) */
-  border-radius: 6px;
-  box-shadow: none; color: var(--pa-mut);
-}
-.pa-column .pa-hint { color: var(--pa-mut); }
+/* The .pa-column .pa-info-btn / .pa-info-pop rules that lived here are GONE (2026-07-15):
+   the About & tips trigger moved to the "i" in the map's right rail and the popover with
+   it, so every one of them was orphaned. The parcel count below stays — KC's ruling. */
 .pa-column .pa-box-ref { color: var(--pa-mut); }
 .pa-column .pa-box-ref a { color: var(--accent-int-text); text-decoration: underline; }  /* console link → accent ink + standing underline (the underline, not colour, is the affordance; ice near-white needs it) */
 .pa-col-count { font-size: 11px; color: var(--pa-mut); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-/* About&tips popover — the box-select tip + provenance/naming note, rehomed off the
-   dead panel. A small trigger + an in-flow expansion (so the float's scroll contains
-   it — no clipped absolute popover). */
-/* align-self:flex-start so the .pa-info box HUGS the button/popover — the empty
-   area beside the collapsed button stays click-through to the map. */
-.pa-info { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; align-self: flex-start; }
-.pa-info-btn {
-  font-family: inherit; font-size: 10.5px; color: var(--text-muted);
-  background: var(--bg-raised); border: 1px solid var(--sidebar-edge);
-  border-radius: 999px; padding: 3px 10px; cursor: pointer;
-  box-shadow: var(--gel-bevel), var(--gel-lift);
-}
-.pa-info-btn::before { content: "ⓘ "; }
-.pa-info-btn:hover { color: var(--text); }
-.pa-info-pop {
-  background: var(--bg-raised); border: 1px solid var(--sidebar-edge);
-  border-radius: var(--radius-md); box-shadow: var(--gel-bevel), var(--gel-lift);
-  padding: 10px 12px; max-width: 288px;
-}
-.pa-hint { font-size: 10.5px; color: var(--text-muted); font-style: italic; margin: 0; }
 .pa-box-ref { font-size: var(--t-2xs); color: var(--text-muted); line-height: 1.45; margin: 8px 0 0; }   /* Fix 4 — to the --t-2xs floor (was sub-spec 10px) */
 .pa-box-ref a { color: var(--accent); }
-/* Fix 4 — the canonical interaction reference (governed type) */
-.pa-info-pop-h { margin: 0 0 6px; font-size: var(--t-xs); font-weight: 600; color: var(--pa-ink); }
-.pa-info-list { margin: 0 0 8px; padding-left: 16px; font-size: var(--t-xs); color: var(--pa-mut); line-height: 1.5; }
-.pa-info-list li { margin: 3px 0; }
-.pa-info-list b { color: var(--pa-ink); font-weight: 600; }
+
+/* ---- About & tips popover (2026-07-15) — opens from the "i" in the right rail ------
+   Replaces the old .pa-info-* family (a gel pill + an in-flow expansion in the left
+   column's footer). Those rules are deleted, not left behind: the trigger moved to the
+   map, so every one of them was dead. Anchored under the rail — right-aligned, starting
+   at the same top as .pa-detail (whose offset is derived from the same control stack),
+   and ABOVE it (z 22 > 14): a user-invoked help panel may cover the detail instrument
+   while it is open, and it closes on Escape / outside-click / its own ×. */
+.pa-tips-pop {
+  position: absolute; right: 12px; top: 250px; z-index: 22;
+  width: 296px; max-width: calc(100vw - 24px);
+  max-height: calc(100% - 262px); overflow-y: auto;
+  padding: 11px 13px;
+  background: var(--pa-shell);                        /* opaque barrier = the fallback */
+  border: 1px solid var(--glass-overlay-rim);         /* brighter rim — higher elevation tier */
+  border-radius: 10px; color: var(--pa-ink);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.42);
+}
+.pa-tips-hd { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.pa-tips-h { font-size: var(--t-xs); font-weight: 600; color: var(--pa-ink); }
+.pa-tips-x {
+  flex: 0 0 auto; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; border-radius: var(--r-sm);
+  color: var(--pa-mut); cursor: pointer;
+}
+.pa-tips-x:hover { color: var(--pa-ink); background: var(--btn-body-hover); }
+.pa-tips-x:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: -2px; }
+
+/* THE INDEX — glyph + line. `align-items:start` keeps the glyph on the FIRST line of a
+   wrapping tip (centring it would float mid-paragraph and stop pointing at anything). */
+/* The honesty prose + its link. SCOPED HERE ON PURPOSE: the base `.pa-box-ref a` is
+   var(--accent) = GREEN, and §1.3 reserves green for DATA — no chrome may use it. The old
+   footer popover escaped that only because `.pa-column .pa-box-ref a` overrode it to the
+   interactive accent; moving the panel out of the column dropped the override and the
+   link came back green. Teal + a standing underline, matching what the column had: the
+   underline (not the colour) is the affordance. */
+/* The honesty blocks STAY muted (--pa-mut). §6 fixes honesty labels at the muted tier,
+   and the tier is doing work here: it is what separates a methodology disclosure from
+   an instruction. Whitening these would erase the tips/honesty distinction the popover
+   is built around — the labels are never stripped, and never promoted either. */
+.pa-tips-pop .pa-box-ref { color: var(--pa-mut); }
+.pa-tips-pop .pa-box-ref a { color: var(--accent-int-text); text-decoration: underline; }
+
+.pa-tips-list { list-style: none; margin: 0; padding: 0; }
+/* Tips read at the PRIMARY text tier (--pa-ink = --tx = #f5f6f7, the standard white),
+   not the muted tier. They are instructions to follow, not labels to skim past. The
+   honesty prose below stays muted on purpose — see .pa-box-ref. */
+.pa-tips-list li {
+  display: flex; align-items: start; gap: 8px;
+  font-size: var(--t-xs); color: var(--pa-ink); line-height: 1.5; margin: 0 0 6px;
+}
+/* No colour of its own — the glyph INHERITS its line, so a tip is one tier and there is
+   one colour decision per line rather than two that can drift apart. */
+.pa-tip-glyph { flex: 0 0 auto; margin-top: 2px; }
+
+/* INPUT CHIP — a physical thing to press (a key, or a mouse click), drawn as one. Not
+   teal: teal means "interactive on screen" (§1.3), and these are pictures of HARDWARE —
+   nothing here is clickable. inline-flex so the click chip's glyph centres with its word. */
+.pa-key {
+  display: inline-flex; align-items: center; gap: 3px;
+  min-width: 16px; padding: 0 4px;
+  font-family: inherit; font-size: 10px; line-height: 15px; text-align: center;
+  color: var(--pa-ink); background: var(--btn-body-grad);
+  border: 1px solid var(--pa-hair); border-radius: 4px;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.4);
+  vertical-align: baseline;
+}
+.pa-tip-glyph--inline { flex: 0 0 auto; margin-top: 0; }
+
+/* BUTTON CHIP — a scaled replica of the REAL console button (.dt-facets-clear /
+   .dt-clear), shown in its ENABLED state. Mirrors that button's actual treatment:
+   transparent body, coral text, coral rim (--pa-sel, §1.3's table/rail selection accent),
+   --r-md family. Only the type + padding shrink — the identity must survive scaling, or
+   the reader is being shown a different button than the one they'll hunt for.
+   Sits in the index column, so it takes that column's alignment. */
+.pa-tip-btn {
+  display: inline-flex; align-items: center; flex: 0 0 auto;
+  padding: 1px 6px; border-radius: var(--r-sm);
+  font-family: inherit; font-size: var(--t-2xs); font-weight: 500; line-height: 1.5;
+  color: var(--pa-sel); background: transparent; border: 1px solid var(--pa-sel);
+  white-space: nowrap;
+}
+
+/* The .pa-hint block that lived here is GONE (2026-07-15): the separate box-select hint
+   is superseded — the About & tips card IS the introduction, and a hint teaching the same
+   gesture alongside it would be two things at once. See introCard.js. */
 
 /* ----- Identity card (top of the floating .pa-float cluster) ----- */
 /* Floating card holding the section title + city switcher + green year readout +
@@ -1986,7 +2040,7 @@ p  { margin: 0 0 0.75rem; }
     backdrop-filter: blur(var(--glass-panel-blur));
   }
   .pa-detail,
-  .pa-column .pa-info-pop {
+  .pa-tips-pop {
     background: var(--glass-overlay-fill);
     -webkit-backdrop-filter: blur(var(--glass-overlay-blur));
     backdrop-filter: blur(var(--glass-overlay-blur));
@@ -2006,7 +2060,7 @@ p  { margin: 0 0 0.75rem; }
   .pa-tune-dock-strip .pa-tune-instrument { background: var(--pa-shell);
     -webkit-backdrop-filter: none; backdrop-filter: none; }
   .pa-detail,
-  .pa-column .pa-info-pop { background: var(--pa-card);
+  .pa-tips-pop { background: var(--pa-card);
     -webkit-backdrop-filter: none; backdrop-filter: none; }
   /* Active controls: drop the translucent lighten + glow; keep a solid readable
      border + weight so active still reads (the barrier carries §4 contrast). */
@@ -2727,33 +2781,78 @@ p  { margin: 0 0 0.75rem; }
   transition: background 120ms ease, transform 80ms ease;
 }
 .maplibregl-ctrl-group button + button { border-top: 1px solid var(--pa-hair) !important; }   /* uniform hairline between stacked slots */
-/* ICON FAMILY (Fix 2) — replace MapLibre's default zoom/fullscreen glyphs with custom Feather-style
-   icons (stroke 2, round, light #c9ccd0) matching the reset (fit-frame) + search (magnifier) so the
-   whole set is ONE family at ONE size (18px). No default MapLibre icons left; no invert filter. */
+/* ICON FAMILY — Lucide 1.24.0 (ISC), vendored. REPLACED 2026-07-15 (KC's ratified
+   set-replacement): the previous glyphs were hand-drawn "Feather-style" approximations;
+   the whole rail now takes ONE real open-licensed family. These four buttons are
+   MapLibre-OWNED (it builds their DOM and toggles .maplibregl-ctrl-shrink), so their
+   glyphs must be CSS background-images — CSS cannot read the JS constants. They are
+   GENERATED FROM the same constants in mapIcons.js (which carries the ISC notice + the
+   per-glyph source names), so the two mechanisms cannot drift apart in meaning: change a
+   glyph THERE, regenerate HERE. Stroke is baked (#c9ccd0) because a data-URI cannot
+   inherit currentColor; hover brightens it via a filter below. No MapLibre defaults, no
+   mixed sources. -------------------------------------------------------------------- */
 .maplibregl-ctrl-group .maplibregl-ctrl-icon {
   background-size: 18px 18px !important; background-position: center !important; background-repeat: no-repeat !important;
   filter: none;
 }
 .maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23c9ccd0' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='12' y1='5' x2='12' y2='19'/%3E%3Cline x1='5' y1='12' x2='19' y2='12'/%3E%3C/svg%3E") !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23c9ccd0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E %3Cpath d='M12 5v14'/%3E%3C/svg%3E") !important;
 }
 .maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23c9ccd0' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='5' y1='12' x2='19' y2='12'/%3E%3C/svg%3E") !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23c9ccd0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3C/svg%3E") !important;
 }
 .maplibregl-ctrl-fullscreen .maplibregl-ctrl-icon {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23c9ccd0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cpolyline points='9 21 3 21 3 15'/%3E%3Cline x1='21' y1='3' x2='14' y2='10'/%3E%3Cline x1='3' y1='21' x2='10' y2='14'/%3E%3C/svg%3E") !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23c9ccd0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 15 6 6'/%3E %3Cpath d='m15 9 6-6'/%3E %3Cpath d='M21 16v5h-5'/%3E %3Cpath d='M21 8V3h-5'/%3E %3Cpath d='M3 16v5h5'/%3E %3Cpath d='m3 21 6-6'/%3E %3Cpath d='M3 8V3h5'/%3E %3Cpath d='M9 9 3 3'/%3E%3C/svg%3E") !important;
 }
 .maplibregl-ctrl-shrink .maplibregl-ctrl-icon {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23c9ccd0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 14 10 14 10 20'/%3E%3Cpolyline points='20 10 14 10 14 4'/%3E%3Cline x1='14' y1='10' x2='21' y2='3'/%3E%3Cline x1='3' y1='21' x2='10' y2='14'/%3E%3C/svg%3E") !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23c9ccd0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 15 6 6m-6-6v4.8m0-4.8h4.8'/%3E %3Cpath d='M9 19.8V15m0 0H4.2M9 15l-6 6'/%3E %3Cpath d='M15 4.2V9m0 0h4.8M15 9l6-6'/%3E %3Cpath d='M9 4.2V9m0 0H4.2M9 9 3 3'/%3E%3C/svg%3E") !important;
 }
 .maplibregl-ctrl-group button:hover { background: var(--btn-body-hover) !important; transform: translateY(-0.5px); color: var(--pa-ink); }   /* HOVER — invite lift */
 .maplibregl-ctrl-group button:hover .maplibregl-ctrl-icon { filter: brightness(1.3); }
 .maplibregl-ctrl-group button:active { transform: translateY(0.5px); background: var(--pa-card) !important; }   /* PRESSED — depress */
-/* SELECTED/on — fullscreen active (MapLibre swaps the button to .maplibregl-ctrl-shrink): the
-   active material — dark petrol body + a teal inset ring — matching the sidebar active buttons. */
-.maplibregl-ctrl-group button.maplibregl-ctrl-shrink {
-  background: var(--accent-petrol-base) !important;
-  box-shadow: inset 0 0 0 1px var(--accent-teal);
+/* ACTIVE / ON — ONE scheme for the WHOLE rail (ratified 2026-07-15), and it is the SAME
+   recipe the sidebar/console active buttons use (--accent-int-*): petrol body + teal rim +
+   specular + glow, with the pearl rim as Layer 2 below. Not a rail-specific look — the rail
+   is part of the same button system.
+
+   The controls differ in KIND, so the same material lands two ways:
+     TOGGLES  — glow PERSISTS while engaged: fullscreen (MapLibre swaps in its own
+                .maplibregl-ctrl-shrink class), the "i" (.is-on, set by setActive), and the
+                search peek (.is-open).
+     MOMENTARY — zoom ± and recentre have no "on" state to hold, so they take the same
+                material as a PRESS flash (:active, below) and fall back to rest.
+
+   For the "i" this is load-bearing: the popover has no ×, so the glow is the only signal
+   telling the reader where the close action lives. */
+.maplibregl-ctrl-group button.maplibregl-ctrl-shrink,
+.maplibregl-ctrl-group button.is-on,
+.pa-search-peek.is-open .pa-search-peek-btn {
+  background: var(--accent-int-fill) !important;
+  border-color: var(--accent-int-border) !important;
+  color: var(--accent-int-text) !important;
+  box-shadow: var(--accent-int-specular), var(--accent-int-glow) !important;
+}
+/* MOMENTARY press-flash — zoom ± / recentre / the "i" on the way down. Same material,
+   held only for the press. Overridden by the rest state as soon as the pointer lifts. */
+.maplibregl-ctrl-group button:active:not(:disabled) {
+  background: var(--accent-int-fill) !important;
+  box-shadow: var(--accent-int-specular), var(--accent-int-glow) !important;
+  color: var(--accent-int-text);
+}
+/* LAYER 2 (pearl) — the same masked rounded-ring ::after the console's active chips use.
+   Default OFF (--accent-rim-image: none) → invisible pseudo → the solid teal Layer-1 rim
+   shows through unchanged. Only ever 1–2 elements, so it stays GPU-cheap. */
+.maplibregl-ctrl-group button.maplibregl-ctrl-shrink,
+.maplibregl-ctrl-group button.is-on,
+.pa-search-peek.is-open .pa-search-peek-btn { position: relative; }
+.maplibregl-ctrl-group button.maplibregl-ctrl-shrink::after,
+.maplibregl-ctrl-group button.is-on::after,
+.pa-search-peek.is-open .pa-search-peek-btn::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+  background: var(--accent-rim-image); pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
 }
 .maplibregl-ctrl-group button:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: -2px; }   /* teal focus (interactive accent) */
 .maplibregl-ctrl-group button:disabled .maplibregl-ctrl-icon { opacity: 0.5; }   /* DISABLED — zoom-limit reached → muted in place (Principle 0); icon already light */

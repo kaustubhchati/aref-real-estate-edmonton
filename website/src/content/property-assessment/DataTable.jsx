@@ -58,6 +58,7 @@
 
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { portalTarget } from "./portalTarget.js";
 import {
   flexRender,
   getCoreRowModel,
@@ -643,7 +644,6 @@ export default function DataTable({
   // column's [lo, hi] filter (undefined = full range = no filter). A range that
   // spans the full bounds clears the filter so it doesn't count as active.
   const activeCol = COLS_BY_KEY[metric];   // resolves any active metric (incl. %Condo / YoY)
-  const rangeBounds = table.getColumn(metric)?.getFacetedMinMaxValues();
   const rangeValue = table.getColumn(metric)?.getFilterValue();
 
   // YoY's overflow ceiling — the largest YoY in the WHOLE panel, not this year's. Every
@@ -655,11 +655,48 @@ export default function DataTable({
     return m;
   }, [rows]);
 
+  // The range TRACK: its MAX spans the WHOLE PANEL, its MIN is THIS YEAR's. Asymmetric on
+  // purpose — the two bounds behave completely differently in this data.
+  //
+  // MAX = panel-wide, because that is the bound that overflowed. Across 2012-2026 the
+  // per-year max climbs 802k → 1.23M — a 34.5% swing across the track. The FILTER VALUE is
+  // in data units and rightly survives a year change ($810k is $810k in 2012), so when the
+  // domain moved under it the thumbs mapped outside 0-100%: set $810k-$1.23M on 2026, drag
+  // to 2012, and the fill left the track entirely — 160px past its own right edge, still
+  // reading "$810k – $1.23M". A panel-wide max kills that by construction (Principle 0: a
+  // track is a FRAME, and a frame does not resize when the data inside it changes).
+  // `yoyCeiling` above already does exactly this for YoY ("year-invariant by construction"),
+  // which is why YoY was the one slider that never showed the bug.
+  //
+  // MIN = this year's (KC, 2026-07-16), because a panel-wide min bought stability the data
+  // didn't need and cost real resolution: the per-year mins sit in a narrow 71k-127k band
+  // EXCEPT 2025's lone $9,500, and that single outlier dragged every other year's track ~8%
+  // left of its own data — a dead zone no year could reach.
+  //
+  // ...but it never rises ABOVE an active filter's lo. Set a lo on a low-min year (2025's
+  // 9,500), carry it to a high-min year (2018's 127,000), and a strict year-min would push
+  // the thumb off the LEFT end — the exact mirror of the bug this block exists to kill. The
+  // track extends only as far as the user's own filter demands, so at rest it is precisely
+  // this year's min.
+  const panelMax = useMemo(() => {
+    let hi = -Infinity;
+    for (const r of rows) for (const v of r.series ?? []) if (v != null && v > hi) hi = v;
+    return Number.isFinite(hi) ? hi : null;
+    // `series` carries the ACTIVE metric across every year, and num() upstream already
+    // turned the -999 no-prior-year sentinel + non-finites into null — so this is
+    // data-derived, with no literal to go stale on refresh.
+  }, [rows]);
+
+  const yearBounds = table.getColumn(metric)?.getFacetedMinMaxValues();
+  const activeLo = Array.isArray(rangeValue) ? rangeValue[0] : null;
+
   const rangeScale = useMemo(() => {
     if (metric === "yoy_log_points") return yoyScale(yoyCeiling);
-    return rangeBounds ? linearScale(rangeBounds[0], rangeBounds[1]) : null;
-    // rangeBounds is a fresh array each render; key off its CONTENTS, not its identity.
-  }, [metric, yoyCeiling, rangeBounds?.[0], rangeBounds?.[1]]);
+    if (yearBounds?.[0] == null || panelMax == null) return null;
+    const min = activeLo != null && activeLo < yearBounds[0] ? activeLo : yearBounds[0];
+    return linearScale(min, panelMax);
+    // yearBounds is a fresh array each render; key off its CONTENTS, not its identity.
+  }, [metric, yoyCeiling, yearBounds?.[0], panelMax, activeLo]);
 
   const setRange = ([lo, hi]) => {
     if (!rangeScale) return;
@@ -692,7 +729,21 @@ export default function DataTable({
   // "Clear selection" (which empties the selected set). The two never co-exist
   // (facets show in normal mode; Clear-selection in the AggregateHeader), so the
   // labels keep them unambiguous.
-  const clearFacets = () => setColumnFilters([]);
+  // The SEARCH narrows the table too — through TanStack's `globalFilter`, a channel apart
+  // from `columnFilters`. That split is what trapped users: a search held the table at one
+  // row while this button, counting only columnFilters, sat dead — and the peek closes on
+  // select, so the input that set it was off-screen. "Clear filters" means every narrowing,
+  // so it counts and clears both (ratified 2026-07-15).
+  //
+  // Deliberately NOT folded into `anyFacet`: that one still means "a facet is engaged" and
+  // drives the map dim + the KPI/trend scope. Whether a SEARCH should scope those the way a
+  // District does is a separate question, unasked and unanswered here.
+  const searchActive = !!globalFilter;
+  const anyNarrowing = anyFacet || searchActive;
+  const clearFacets = () => {
+    setColumnFilters([]);
+    onGlobalFilterChange?.("");
+  };
 
   // --- Brush (D7) -------------------------------------------------------------
   // The IDs of the rows currently shown WHEN a facet is active — the map dims
@@ -784,7 +835,7 @@ export default function DataTable({
   );
 
   return (
-    <section className="dt" aria-label="Neighbourhood data table">
+    <section className="dt" aria-label="Neighbourhood data console">
       {/* VIEW dock (Fix 4) — the Tuning instrument rides as a strip ABOVE the pull-up
           handle when the console is DOWN. In Analysis it relocates into the console
           header (below), so it renders here only while collapsed. */}
@@ -795,8 +846,8 @@ export default function DataTable({
         onClick={onToggle}
         aria-expanded={open}
       >
-        <span className="dt-handle-title">Data Table</span>
-        {/* Fix A2 — "Data Table" + its pull-up affordance only. The universe count (·407)
+        <span className="dt-handle-title">Data Console</span>
+        {/* Fix A2 — "Data Console" + its pull-up affordance only. The universe count (·407)
             and the "Analyst View" chip are removed (dropping the count also retires the
             stale-403/407 maintenance — no literal to keep in sync). The SELECTION count
             stays (live state feedback, contract §3.1); a light "Press T" discoverability
@@ -852,7 +903,7 @@ export default function DataTable({
                     vs SELECTION — disambiguated labels, identical pill treatment, each
                     disabled in place when its target is empty. `Clear filters` also clears
                     the metric-range narrowing (both are columnFilters). */}
-                <button type="button" className="dt-facets-clear" onClick={clearFacets} disabled={!anyFacet}>
+                <button type="button" className="dt-facets-clear" onClick={clearFacets} disabled={!anyNarrowing}>
                   Clear filters
                 </button>
                 <button type="button" className="dt-clear" onClick={onClearSelection} disabled={!(selectionMode || singleRow)}>
@@ -1309,7 +1360,8 @@ function FacetDropdown({ label, options, selected, labelOf, onToggle, disabled =
             </label>
           ))}
         </div>,
-        document.body,
+        // NOT document.body — that is unpainted while the map is fullscreen.
+        portalTarget(),
       )}
     </div>
   );
@@ -1341,7 +1393,7 @@ function FacetToggles({ label, options, selected, labelOf, onToggle }) {
 
 // =============================================================================
 // The Tuning instrument (Fix 4) — horizontal Year (single) + Metric range (dual),
-// docked in the Data Table spine (strip above the handle in View; console header in
+// docked in the Data Console spine (strip above the handle in View; console header in
 // Analysis). Unmistakably-operable controls: end-labelled data bounds, calibration
 // ticks below the track, an accent active-readout in a fixed slot. Honest affordance:
 // Year snaps to discrete year ticks; the continuous metric glides over a ruler.

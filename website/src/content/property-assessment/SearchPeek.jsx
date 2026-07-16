@@ -18,6 +18,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import SearchInput from "../../components/SearchInput.jsx";
+import { ICON_SEARCH } from "./mapIcons.js";
 
 export default function SearchPeek({ names, onSelect, onValueChange, value }) {
   const [open, setOpen] = useState(false);
@@ -61,11 +62,13 @@ export default function SearchPeek({ names, onSelect, onValueChange, value }) {
         title="Search neighbourhoods"
         onClick={() => setOpen((o) => !o)}
       >
+        {/* Lucide `map-pin-search` — a pin WITH a lens, because this control finds a
+            PLACE and a bare lens is the universal "find text on this page". The body is
+            injected because the glyph mixes <path> and <circle>; it is static in-repo
+            text from mapIcons.js, never user input. */}
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-             strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" />
-          <line x1="21" y1="21" x2="16.5" y2="16.5" />
-        </svg>
+             strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+             dangerouslySetInnerHTML={{ __html: ICON_SEARCH }} />
       </button>
     </div>
   );

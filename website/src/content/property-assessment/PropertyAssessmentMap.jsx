@@ -43,6 +43,8 @@ import SegmentedControl from "../../components/SegmentedControl.jsx";
 import InfoRail from "./InfoRail.jsx";
 import DataTable from "./DataTable.jsx";
 import SearchPeek from "./SearchPeek.jsx";
+import MapTipsPopover from "./MapTipsPopover.jsx";
+import { introCardDismissed, rememberIntroCardDismissed } from "./introCard.js";
 import {
   buildSnapshotCsv,
   buildTimeseriesCsv,
@@ -85,8 +87,10 @@ import {
   indexNamesForSearch,
   fitToFeatures,
   applyCameraPreset,
-  makeResetControl,
+  makeIconButtonControl,
+  railGlyph,
 } from "./interactions.js";
+import { ICON_RECENTRE, ICON_INFO } from "./mapIcons.js";
 import { DUR_BASE, reduceMotion } from "../../components/motion.js";
 import { useSearchParams } from "react-router-dom";
 
@@ -394,6 +398,35 @@ export default function PropertyAssessmentMap() {
   // The floating "About & tips" popover (open/closed). Holds the box-select tip +
   // the provenance/naming note — rehomed here from the removed left panel. [D1]
   const [infoOpen, setInfoOpen] = useState(false);
+
+  // ---- The introductory usage card (ratified 2026-07-15) ---------------------
+  // The About & tips popover IS the introduction — there is no separate hint (two things
+  // teaching the same gesture is the bombarding the research warns against). It opens
+  // ITSELF on a first visit, stays open while the reader explores, and steps aside on
+  // their first successful selection.
+  //
+  // `introLive` = the card is in that first-visit life. It is state, not a storage read
+  // per render, and it gates the auto-dismiss so a later "i" recall is NOT closed by
+  // selecting — after the one-way dismissal, the card is a manual reference and only "i"
+  // or Esc closes it.
+  const [introLive, setIntroLive] = useState(false);
+  useEffect(() => {
+    if (introCardDismissed()) return;      // already introduced, on some earlier visit
+    setIntroLive(true);
+    setInfoOpen(true);
+  }, []);
+
+  // The ONLY auto-dismissal: the first successful selection. A click that hits nothing, a
+  // pan, a zoom, a slider drag and an empty box-drag all leave selectedIds empty and are
+  // deliberately NOT dismissals — they are the exploration the card exists to accompany.
+  // A neighbourhood click and a completed area-select both land here, which is why this
+  // watches the selection rather than either gesture.
+  useEffect(() => {
+    if (!introLive || selectedIds.length === 0) return;
+    rememberIntroCardDismissed();   // permanent + one-way; clearing the selection can't undo it
+    setIntroLive(false);
+    setInfoOpen(false);             // → the InfoRail takes the stage; the "i" is where the card went
+  }, [introLive, selectedIds]);
 
   // Auto-collapse the dock when the selection empties — the ONE intentional
   // behaviour change in the layout re-architecture (previously the dock latched
@@ -753,15 +786,28 @@ export default function PropertyAssessmentMap() {
   // SOURCE is year-invariant, so the per-year reportable set is applied as a layer FILTER here
   // (recomputed on year change from gjView's polygon_state). The FOCUS layer stays unfiltered —
   // hover/selected still names any neighbourhood (the always-label exception).
+  // getLayer is INSIDE the try — it is not a safe test, it is a call that THROWS on a
+  // removed map (`map.style` is gone, so `style.getLayer` blows up). It used to sit in the
+  // guard on the line below, outside the try, and that one line took the whole section
+  // down: select YoY, drag to the earliest year, and `noPriorYear` unmounts MapView —
+  // WITHOUT changing `url`, so the only setMap(null) never fires and this effect re-runs
+  // (gjView changed with the year) holding a dead map. The SectionErrorBoundary swallowed
+  // it into "Try again", taking the year slider, the metric buttons, the instrument column
+  // and the rail with it — a dead end two clicks from the default view, with no control
+  // left to escape by. Every sibling effect here already does it this way; this one was the
+  // odd one out. Clearing `map` on unmount would NOT have saved it: React runs this effect
+  // in the same pass as the teardown, so the guard must survive a dead map, not assume one
+  // can't reach it.
   useEffect(() => {
-    if (!map || !gjView || !map.getLayer("nbhd-labels")) return;
-    const reportable = gjView.features
-      .filter((f) => f.properties.polygon_state === "aggregated")
-      .map((f) => String(f.properties["Neighbourhood ID"]));
+    if (!map || !gjView) return;
     try {
+      if (!map.getLayer("nbhd-labels")) return;
+      const reportable = gjView.features
+        .filter((f) => f.properties.polygon_state === "aggregated")
+        .map((f) => String(f.properties["Neighbourhood ID"]));
       map.setFilter("nbhd-labels", ["in", ["get", "Neighbourhood ID"], ["literal", reportable]]);
     } catch {
-      /* map mid-teardown */
+      /* map mid-teardown — the next mounted map re-applies via this effect */
     }
   }, [map, gjView]);
 
@@ -1039,11 +1085,66 @@ export default function PropertyAssessmentMap() {
       applyCameraPreset(map, HOME_VIEW[city], { ease: true });
     }
   };
+  // The two PA-added rail controls, mounted ONCE and sharing the rail chassis with
+  // MapLibre's own zoom/fullscreen buttons (see makeIconButtonControl).
+  //   Reset  — fit to selection, else the HOME preset. Fit-frame glyph, NOT a GPS
+  //            crosshair: this recentres, it does not geolocate (there is no
+  //            geolocation anywhere in this app).
+  //   Info   — opens the About & tips popover. It lives HERE, in the rail, because it
+  //            is a map-level utility; it used to be a text link in the left column's
+  //            footer, which is not where anyone looks for help about the map.
+  // Both go through refs so the controls mount once while their handlers read fresh
+  // state. Order matters: add-order is stack-order, so info lands at the bottom.
+  const infoToggleRef = useRef(null);
+  // eslint-disable-next-line react-hooks/refs
+  infoToggleRef.current = () => setInfoOpen((o) => !o);
+
+  // OPTION C (ratified 2026-07-15): ONE stable glyph, a STATE-AWARE name. The control
+  // does two things — fit to the selection, or return to the home view — and no single
+  // conventional metaphor covers both. A glyph that SWAPS would be worse: people learn a
+  // button by its shape, and a shape that changes is harder to learn. So the fit-frame
+  // silhouette holds ("frame the relevant thing" is true in both cases) and the accessible
+  // name carries the precision. The name is required for an icon-only button anyway, so
+  // this costs nothing and lies about nothing.
+  const resetLabel = selectedIds.length >= 1 ? "Fit to selection" : "Return to home view";
+  const resetCtrlRef = useRef(null);
+  useEffect(() => {
+    resetCtrlRef.current?.setLabel(resetLabel);
+  }, [resetLabel]);
+
+  // The "i" GLOWS while the card is open. Load-bearing, not decoration: with the × gone,
+  // this glow is the only thing telling the reader where the close action lives.
+  const infoCtrlRef = useRef(null);
+  useEffect(() => {
+    infoCtrlRef.current?.setActive(infoOpen);
+  }, [infoOpen]);
+
   useEffect(() => {
     if (!map) return undefined;
-    const ctrl = makeResetControl(() => resetRef.current?.());
-    map.addControl(ctrl, "top-right");
-    return () => { try { map.removeControl(ctrl); } catch { /* map already gone */ } };
+    const reset = makeIconButtonControl({
+      svg: railGlyph(ICON_RECENTRE),
+      // A function: read at mount so the first label matches the state the map loads in.
+      label: () => resetLabel,
+      onClick: () => resetRef.current?.(),
+    });
+    const info = makeIconButtonControl({
+      svg: railGlyph(ICON_INFO),
+      label: "About & tips",
+      onClick: () => infoToggleRef.current?.(),
+    });
+    map.addControl(reset, "top-right");
+    map.addControl(info, "top-right");
+    resetCtrlRef.current = reset;
+    infoCtrlRef.current = info;
+    info.setActive(infoOpen);   // the card may already be open (first visit auto-opens it)
+    return () => {
+      resetCtrlRef.current = null;
+      infoCtrlRef.current = null;
+      for (const c of [reset, info]) { try { map.removeControl(c); } catch { /* map already gone */ } }
+    };
+    // resetLabel is deliberately NOT a dep — the controls mount ONCE; relabelling rides
+    // the effect above. Re-adding them on every selection change would rebuild the rail.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map]);
 
   // Dev-only: expose the live map for console debugging (and headless camera
@@ -1340,7 +1441,7 @@ export default function PropertyAssessmentMap() {
                 )}
 
                 {/* TUNING module removed from the column (Fix 4). The Year + metric-range
-                    sliders re-home into the Data Table spine as ONE horizontal instrument:
+                    sliders re-home into the Data Console spine as ONE horizontal instrument:
                     a strip above the pull-up handle in View, the console header in Analysis.
                     Year state (sliderYear/slideYear) is passed to <DataTable> below; the
                     range keeps its TanStack wiring + the VIEW-only brush there. */}
@@ -1361,55 +1462,16 @@ export default function PropertyAssessmentMap() {
                   />
                 </div>
 
-                {/* FOOTER module — About & tips trigger + parcel count (re-homed
-                    here from the removed .pa-topbar). The popover opens upward. */}
+                {/* FOOTER module — the parcel count. The "About & tips" trigger that used
+                    to share this line MOVED to the "i" in the map's right rail (2026-07-15):
+                    help about the map belongs on the map, not as a 10px text link in a
+                    column footer. KC's ruling: the count STAYS here — it is a property of
+                    this instrument column (it re-derives per year off the loaded GeoJSON),
+                    not a map utility, so it does not follow the popover out. */}
                 <div className="pa-col-mod pa-col-foot">
                   <div className="pa-foot-line">
-                    <button
-                      type="button"
-                      className="pa-info-btn"
-                      aria-expanded={infoOpen}
-                      onClick={() => setInfoOpen((o) => !o)}
-                    >
-                      About &amp; tips
-                    </button>
                     <span className="pa-col-count">{propCount.toLocaleString()} parcels</span>
                   </div>
-                  {infoOpen && (
-                    <div className="pa-info-pop" role="group" aria-label="About and tips">
-                      {/* Fix 4 — the canonical interaction reference: ALL interactions documented
-                          once, plain English, Title Case (§2). The inline "Press T" handle hint
-                          stays as the discoverable; this is the reference. */}
-                      <p className="pa-info-pop-h">How to Use This Map</p>
-                      <ul className="pa-info-list">
-                        <li><b>Click</b> a Neighbourhood to Select It.</li>
-                        <li><b>Shift + Drag</b> Across the Map to Box-Select Several at Once.</li>
-                        <li>Use the <b>Search</b> (Top Right) to Find and Fly to a Neighbourhood.</li>
-                        <li>Drag the <b>Year</b> Slider to Change the Year; Drag the <b>Median</b> Range to Narrow the Set to a Value Range.</li>
-                        <li>Press <b>T</b> (or the <b>Data Table</b> Handle) to Open the Analyst Table.</li>
-                        <li><b>Clear Filters</b> Resets the Range Filter; <b>Clear Selection</b> Deselects — Two Separate Undos.</li>
-                      </ul>
-                      {/* D-F3 — the honest-aggregate disclosure, re-homed here from the per-KPI
-                          methodology chips (surfaced ONCE, unobtrusively; §4/§9 never stripped). */}
-                      <p className="pa-box-ref">
-                        Selection aggregates: <b>Mean</b> is parcel-weighted (exact);{" "}
-                        <b>Median</b> (of neighbourhood medians) and <b>YoY</b> are
-                        neighbourhood-weighted approximations (≈).
-                      </p>
-                      <p className="pa-box-ref">
-                        <span>Updated {manifest?.last_updated ?? "—"}.</span>{" "}
-                        Some neighbourhoods were renamed (e.g. Oliver → Wîhkwêntôwin, 2025); a
-                        neighbourhood's full history shows under its current name.{" "}
-                        <a
-                          href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Naming Committee
-                        </a>.
-                      </p>
-                    </div>
-                  )}
                 </div>
               </section>
             )}
@@ -1433,6 +1495,14 @@ export default function PropertyAssessmentMap() {
               onSelect={(name) => { flyAndPinByName(name); setSearchQuery(name); }}
             />
           )}
+
+          {/* ABOUT & TIPS — opened by the "i" in the rail above. Anchored under the
+              rail so the panel and its trigger read as one thing. */}
+          <MapTipsPopover
+            open={infoOpen}
+            onClose={() => setInfoOpen(false)}
+            lastUpdated={manifest?.last_updated}
+          />
 
           {/* ===== CONSOLE FOOT — the analysis dock only. The tuning rack moved
               into the instrument column (contract §3.2), so the console now rises
@@ -1461,7 +1531,19 @@ export default function PropertyAssessmentMap() {
                 aggregate={selectionAggregate}
                 facetAggregate={facetAggregate}
                 cityBaseline={cityBaseline}
-                onClearSelection={() => { keepDockOnClearRef.current = true; setSelectedIds([]); }}
+                /* Clearing the selection MUST clear the search too. The search is a live
+                   filter on the table (TanStack globalFilter), and the peek CLOSES on
+                   select — so a bare setSelectedIds([]) left the table pinned to one row
+                   by an input the user could no longer see, with neither clear able to
+                   release it: the table looked frozen. `selectNeighbourhood` already
+                   clears the query for exactly this reason ("a persisted name filter never
+                   hides a subsequently-selected neighbourhood", D5); this path bypassed it
+                   by calling the setter directly. Same rule, now on every path out. */
+                onClearSelection={() => {
+                  keepDockOnClearRef.current = true;
+                  setSelectedIds([]);
+                  setSearchQuery("");
+                }}
                 onExport={handleExport}
                 onBrush={setBrushedIds}
                 open={dockOpen}
