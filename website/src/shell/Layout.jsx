@@ -22,6 +22,7 @@ import SectionErrorBoundary from "../components/SectionErrorBoundary.jsx";
 const IMMERSIVE_ROUTES = new Set([
   "/properties/property-assessment",
   "/activity/dwelling-units",
+  "/economy/business-counts",
 ]);
 
 export default function Layout() {

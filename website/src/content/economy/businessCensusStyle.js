@@ -88,9 +88,15 @@ const fmtInt = (v) =>
   v == null || !Number.isFinite(+v) ? "—"
   : Math.round(+v).toLocaleString();
 
+// Each metric = one GeoJSON field + label + value formatter + glyph (icon `d` path for
+// the PA SegmentedControl chip, mirroring PA/DU's METRICS shape {key,label,fmt,icon}).
+// The "(2025)" stays in the label — it is the survey year and BC has no year axis to
+// carry it (single-survey-year product; the year is a parked literal, bc-parity-parked).
 export const METRICS = [
-  { key: "n_businesses_2025", label: "Businesses (2025)", fmt: fmtInt },
-  { key: "n_employees_2025",  label: "Employees (2025)",  fmt: fmtInt },
+  { key: "n_businesses_2025", label: "Businesses (2025)", fmt: fmtInt,
+    icon: "M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z M6 12H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2 M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2 M10 6h4 M10 10h4 M10 14h4 M10 18h4" },
+  { key: "n_employees_2025",  label: "Employees (2025)",  fmt: fmtInt,
+    icon: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 0 0 0-8 4 4 0 0 0 0 8Z M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75" },
 ];
 
 // ---- Colour ramp — cream → Ferrari red (shared $-value family) --------
@@ -307,7 +313,8 @@ function escapeHtml(s) {
 
 // Signed percent for the YoY row: "+50%" green, "−12.4%" red.
 // Returns null when the value is missing so the row is dropped entirely.
-function fmtSignedPct(v) {
+// Exported so the DetailPanel (single-select float) can reuse it for its YoY row.
+export function fmtSignedPct(v) {
   if (v == null || !Number.isFinite(+v)) return null;
   const n = +v;
   const sign = n > 0 ? "+" : n < 0 ? "−" : "";       // U+2212 minus
