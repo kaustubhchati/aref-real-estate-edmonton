@@ -6,7 +6,7 @@ pages, fed by an R data pipeline. Phase 1 delivers Edmonton property-assessment 
 (Layer 1a row rules) and per-neighbourhood aggregation with spatial join (Layer 2); further
 cities and data domains queue behind it.
 
-Built on free, open tooling — **React + Vite + PMTiles + MapLibre** for the site, **R** for the
+Built on free, open tooling — **React + Vite + MapLibre** for the site, **R** for the
 pipeline — and served as static files: no licensed software, no live server, no runtime database.
 (A larger agent-driven data platform is a separate, parked future direction — not this build.)
 
@@ -36,7 +36,7 @@ The bar is "researchers and the public can rely on it," not five-nines uptime.
 ## Run the current choropleth (demo)
 
 `pipeline/yeg/property-assessment/scripts/production/09_build_choropleth.html` — interactive MapLibre choropleth
-of 2026 median residential assessment, 402 Edmonton neighbourhoods. Serve from the repo root:
+of 2026 median residential assessment, 407 Edmonton neighbourhoods. Serve from the repo root:
 
 ```sh
 python3 -m http.server 8000

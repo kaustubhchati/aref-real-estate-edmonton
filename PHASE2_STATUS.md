@@ -222,7 +222,8 @@ run records) shipped (`e67a658`).
 - Property Assessment choropleth — production, live,
   per-metric palettes, gradient legend, full popup.
 - Building Permits point map — production, live,
-  PMTiles on R2, interactive legend, standard popup.
+  per-year GeoJSON (PMTiles/R2 tiler retired, §12 v1.10),
+  interactive legend, standard popup.
 - Permit Neighbourhoods choropleth — built (full assessment
   parity), deployed to demo; awaiting Olivia QA sign-off.
 - Download page — `/download` serves 3 cleaned CSVs (PA neighbourhood

@@ -127,7 +127,7 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
 │   │   ├─ property-assessment/  #     BUILT — Layer 1a + 2, historical backfill, manifest
 │   │   │   ├─ scripts/          #       01_load … 09_build
 │   │   │   ├─ data/             #       raw/  processed/  validation/  reference/
-│   │   │   └─ output/           #       this section's products: GeoJSON / PMTiles / CSVs
+│   │   │   └─ output/           #       this section's products: GeoJSON / CSVs
 │   │   ├─ building-permits/     #     BUILT — point GeoJSON (per-year) + neighbourhood aggregates
 │   │   ├─ economy/              #     ECONOMY section — neighbourhood-level economic data
 │   │   │   └─ business-census/  #       BUILT — Business Census choropleth; scripts/ data/ output/
@@ -307,13 +307,13 @@ target is now config (§2) and a new data year needs no frontend edit:
 **Data flow.**
 ```
 Edmonton Open Data → (quarterly, on laptop) pipeline/yeg/<section>/ fetch→clean→aggregate
-  → pipeline/yeg/<section>/output/ (GeoJSON / PMTiles / CSVs)
+  → pipeline/yeg/<section>/output/ (GeoJSON / CSVs)
   → copied to website/public/data/<section>/ → Vite build → website/dist/ → git push → host
 ```
 The Edmonton portal is touched **only at refresh time** on the laptop, never on a visit.
 **Fit note:** the neighbourhood choropleth is 407 polygons (City of Edmonton Neighbourhoods CSV
-65fr-66s6, adopted as the boundary source — §10) — load it as plain GeoJSON. Reserve PMTiles for
-high-volume layers (parcel-level properties, permit points) where it earns its keep.
+65fr-66s6, adopted as the boundary source — §10) — load it as plain GeoJSON. (PMTiles is retired,
+§12 v1.10; every layer, including the permit points, now ships as per-year GeoJSON.)
 
 **Published-output CSV naming standard — LOCKED (the contract all sections conform to).**
 Web-served CSVs (the copies under `website/public/`) are named:
