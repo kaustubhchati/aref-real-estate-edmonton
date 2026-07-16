@@ -162,7 +162,10 @@ export default function MapTipsPopover({ open, onClose, lastUpdated }) {
         <b>Median</b> (of neighbourhood medians) and <b>YoY</b> are
         neighbourhood-weighted approximations (≈).
       </p>
-      <p className="pa-box-ref">
+      {/* The CITATION/provenance line — a source citation, NOT the honesty hedge above.
+          It reads at the primary tier (.pa-box-cite → --pa-ink), lifted out of the muted
+          tier the aggregate-methodology block keeps (KC, 2026-07-16). */}
+      <p className="pa-box-ref pa-box-cite">
         <span>Updated {lastUpdated ?? "—"}.</span>{" "}
         Some neighbourhoods were renamed (e.g. Oliver → Wîhkwêntôwin, 2025); a
         neighbourhood&apos;s full history shows under its current name.{" "}

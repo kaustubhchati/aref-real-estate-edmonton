@@ -1690,12 +1690,18 @@ p  { margin: 0 0 0.75rem; }
    interactive accent; moving the panel out of the column dropped the override and the
    link came back green. Teal + a standing underline, matching what the column had: the
    underline (not the colour) is the affordance. */
-/* The honesty blocks STAY muted (--pa-mut). §6 fixes honesty labels at the muted tier,
-   and the tier is doing work here: it is what separates a methodology disclosure from
-   an instruction. Whitening these would erase the tips/honesty distinction the popover
-   is built around — the labels are never stripped, and never promoted either. */
+/* The AGGREGATE-METHODOLOGY honesty block STAYS muted (--pa-mut). §6 fixes honesty labels
+   at the muted tier, and the tier is doing work here: it separates a methodology disclosure
+   (the ≈/exact hedge) from an instruction. Whitening it would erase the tips/honesty
+   distinction the popover is built around — never stripped, never promoted.
+   The CITATION/provenance line (source + currency + naming change) is a DIFFERENT §6
+   sub-block: a source citation, not a methodology hedge, and it read too dim to use —
+   lifted to the primary tier (--pa-ink) via .pa-box-cite below (KC, 2026-07-16). */
 .pa-tips-pop .pa-box-ref { color: var(--pa-mut); }
 .pa-tips-pop .pa-box-ref a { color: var(--accent-int-text); text-decoration: underline; }
+/* Citation/provenance lifted OUT of the muted tier — see the note above. It keeps the
+   .pa-box-ref link + margin/size rules (both classes present); this only overrides colour. */
+.pa-tips-pop .pa-box-cite { color: var(--pa-ink); }
 
 .pa-tips-list { list-style: none; margin: 0; padding: 0; }
 /* Tips read at the PRIMARY text tier (--pa-ink = --tx = #f5f6f7, the standard white),
