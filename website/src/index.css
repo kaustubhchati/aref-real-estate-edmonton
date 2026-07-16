@@ -609,7 +609,12 @@ p  { margin: 0 0 0.75rem; }
   color: var(--tx-key); cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.34);
   transition: background 120ms ease, transform 80ms ease;
 }
-.pa-search-peek-btn:hover { background: var(--btn-body-hover); color: var(--pa-ink); transform: translateY(-0.5px); }   /* HOVER — invite lift (uniform with the map controls) */
+/* HOVER — invite lift, uniform with the map controls. The lift gradient is LAYERED OVER the
+   dark glass fill (not replacing it): the rail buttons are transparent over a dark GROUP, so
+   their --btn-body-hover sits on dark; this standalone button has no group behind it, so a
+   bare --btn-body-hover (translucent white) went white over the light map and washed the
+   glyph out. Layering keeps it dark, so the glyph reads like every other control on hover. */
+.pa-search-peek-btn:hover { background: var(--btn-body-hover), var(--glass-panel-fill); color: var(--pa-ink); transform: translateY(-0.5px); }
 .pa-search-peek-btn:active { transform: translateY(0.5px); background: var(--pa-card); }   /* PRESSED */
 /* Search OPEN takes the rail-wide active material above (was teal text + rim only) — a
    toggle that is engaged now reads the same as fullscreen engaged and the "i" open. */
@@ -617,8 +622,35 @@ p  { margin: 0 0 0.75rem; }
 /* Panel: kept mounted (value + coordinated filter persist), hidden when collapsed. */
 .pa-search-peek:not(.is-open) .pa-search-peek-panel { display: none; }
 .pa-search-peek-panel { flex: 0 0 auto; width: min(240px, 60vw); }
+/* PA search sits on the DARK map, but SearchInput's base styles (.search-input /
+   .search-results / .search-result, ~§2560) are LIGHT-themed — they were built for the
+   Report Card's light PAGE (--bg / --gel-fill / --text / green ring), so here the input
+   and its results dropdown fell through to browser-white. Re-skin them to the dark-glass
+   system, SCOPED to the peek so the Report Card's light search is untouched. The results
+   list is already a custom <ul> (not a native <datalist>), so it themes fully. */
 .pa-search-peek-panel .search-input {
-  border-radius: 6px; box-shadow: 0 4px 14px rgba(74,60,33,0.18);
+  background: var(--glass-panel-fill);
+  -webkit-backdrop-filter: blur(var(--glass-panel-blur)); backdrop-filter: blur(var(--glass-panel-blur));
+  color: var(--tx);
+  border: 1px solid var(--glass-panel-rim); border-radius: var(--r-md);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.34);
+}
+.pa-search-peek-panel .search-input::placeholder { color: var(--tx-mut); }
+.pa-search-peek-panel .search-input:focus {
+  outline: 2px solid var(--accent-teal); outline-offset: 1px;   /* the standardized teal focus ring (was the base green) */
+  border-color: var(--glass-panel-rim); box-shadow: 0 4px 16px rgba(0,0,0,0.34);
+}
+/* Results dropdown — a SOLID dark panel (readable over any basemap), themed scrollbar. */
+.pa-search-peek-panel .search-results {
+  background: var(--panel); border: 1px solid var(--pa-hair);
+  border-radius: var(--r-md); box-shadow: 0 8px 28px rgba(0,0,0,0.42);
+  scrollbar-width: thin; scrollbar-color: var(--pa-hair) transparent;
+}
+.pa-search-peek-panel .search-result { color: var(--tx); }
+/* Highlighted option = the ONE standardized active material (petrol body + teal-white
+   text), so the selected result reads as one system with the metric chips + rail. */
+.pa-search-peek-panel .search-result.active {
+  background: var(--accent-int-fill); color: var(--accent-int-text);
 }
 
 /* The map canvas is now the SOLE body child (D1 removed the in-flow .pa-panel), so
