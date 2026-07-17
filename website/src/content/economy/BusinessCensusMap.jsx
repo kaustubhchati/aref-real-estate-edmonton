@@ -40,7 +40,7 @@ import {
   BASEMAP_STYLE,
   MAP_VIEW,
   METRICS,
-  bcensusMetricStops,
+  bcensusQuantileColorStops,
   bcensusFillColor,
   bcensusLayers,
   buildBusinessCensusPopupHtml,
@@ -145,9 +145,10 @@ export default function BusinessCensusMap() {
     firstHomeRef.current = false;
   }
 
-  // Ramp stops from the loaded polygons' quantiles for the chosen metric (fallback until
-  // gj resolves). Memoised so the Legend and repaint effect share a stable identity.
-  const stops = useMemo(() => bcensusMetricStops(gj, metric), [gj, metric]);
+  // Ramp stops from the loaded polygons — colour ∝ PERCENTILE (fine quantile), so the heavy
+  // right-skew of both metrics doesn't crush the bulk into one colour (fallback until gj
+  // resolves). Memoised so the Legend and repaint effect share a stable identity.
+  const stops = useMemo(() => bcensusQuantileColorStops(gj, metric), [gj, metric]);
 
   // The selected neighbourhood's LIVE properties — derived from selectedId + gj (not a
   // click-time snapshot), so the detail float always reflects the loaded data.

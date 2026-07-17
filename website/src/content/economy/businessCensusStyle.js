@@ -176,6 +176,64 @@ export function bcensusMetricStops(gj, metricKey) {
   return stops.length >= 2 ? stops : BCENSUS_STOPS;
 }
 
+// ---- Colour interpolation along the ramp (for the quantile fill) -------
+// The 5 RAMP_ORRD colours are anchors at even ramp fractions (0, ¼, ½, ¾, 1). rampColorAt
+// returns the ramp colour at ANY fraction t∈[0,1] — it lerps the two bracketing anchors in
+// sRGB — so the quantile fill below can place a colour at every percentile, not only the 5
+// anchors. (Mirrors the permit map; a shared home for these helpers is a deferred de-dup.)
+function hexToRgb(h) {
+  const s = h.replace("#", "");
+  const n = parseInt(s.length === 3 ? s.split("").map((c) => c + c).join("") : s, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+const toHex = (x) => Math.round(Math.min(255, Math.max(0, x))).toString(16).padStart(2, "0");
+function lerpHex(a, b, t) {
+  const A = hexToRgb(a), B = hexToRgb(b);
+  return "#" + toHex(A[0] + (B[0] - A[0]) * t) + toHex(A[1] + (B[1] - A[1]) * t) + toHex(A[2] + (B[2] - A[2]) * t);
+}
+function rampColorAt(ramp, t) {
+  const cols = ramp.map((r) => r.c);                      // 5 anchors, evenly spaced along the ramp
+  const x = Math.min(1, Math.max(0, t)) * (cols.length - 1);
+  const i = Math.floor(x);
+  return i >= cols.length - 1 ? cols[cols.length - 1] : lerpHex(cols[i], cols[i + 1], x - i);
+}
+
+// ---- Quantile colour stops (colour ∝ percentile) ----------------------
+// The live map's ramp — the same treatment as the permit map's construction value, and it
+// SUPERSEDES bcensusMetricStops (the 5-anchor version above, kept for reference). Both BC
+// metrics are heavily right-skewed (businesses median 28 / max ~1,900; employees median 421 /
+// max ~89,000 — the median sits at ~1% of a linear [min,max] track), so the 5-anchor ramp,
+// which interpolates LINEARLY IN VALUE between anchors, paints the whole top quartile as
+// nearly one colour. This lays colour out by PERCENTILE instead — sampling the ramp at
+// BC_STOP_N even percentiles between p2 and p98 — so equal colour steps hold equal shares of
+// neighbourhoods (a downtown at p99 looks distinctly darker than a p80). Single survey year,
+// so there is no panel/year axis: the quantile is over the one year's "data" polygons. Ends
+// clamp to p2/p98 (robust); values outside clamp to the end colours.
+const BC_STOP_N = 24;                                     // ramp samples between p2 and p98
+export function bcensusQuantileColorStops(gj, metricKey) {
+  const ramp = METRIC_RAMP[metricKey] ?? RAMP_DEFAULT;
+  const vals = [];
+  for (const f of gj?.features ?? []) {
+    const p = f.properties;
+    if (p?.census_state !== "data") continue;
+    const v = Number(p[metricKey]);
+    if (Number.isFinite(v) && v > 0) vals.push(v);
+  }
+  if (vals.length < 2) return BCENSUS_STOPS;
+  vals.sort((a, b) => a - b);
+  const raw = [];
+  for (let k = 0; k <= BC_STOP_N; k++) {
+    const t = k / BC_STOP_N;                              // 0..1 = position along the ramp
+    const pct = 0.02 + t * 0.96;                          // the percentile (p2 … p98)
+    raw.push({ v: quantile(vals, pct), c: rampColorAt(ramp, t), label: "" });
+  }
+  // interpolate needs STRICTLY ascending inputs — collapse tied quantiles (integer counts tie
+  // more than $-values do; keeping the lower-percentile colour at a tie is harmless).
+  const stops = [];
+  for (const s of raw) if (!stops.length || s.v > stops[stops.length - 1].v) stops.push(s);
+  return stops.length >= 2 ? stops : BCENSUS_STOPS;
+}
+
 // ---- Fill colour expression (mirrors permit/assessment) ---------------
 function buildFillColourExpression(metricKey, stops) {
   const value = ["number", ["get", metricKey], 0];
