@@ -211,20 +211,32 @@ export function choroplethFillColor(metric, stops, year) {
 const DIM_OPACITY = 0.12;
 export function fillOpacityExpr(year) {
   const state = yget("polygon_state", year);
-  return [
+  // Per-state opacity at an aggregated-fade factor k. Only the AGGREGATED branch scales by
+  // k; the glass / suppressed states (0.04–0.15) are already faint and NEVER fade — fading
+  // them would erase their honesty encoding. hover/pinned/dimmed stay proportional.
+  const stateCase = (k) => [
     "case",
     ["==", state, "aggregated"],
       [
         "case",
         // hover + pinned (selection) stay DOMINANT over the dim — checked first.
-        ["boolean", ["feature-state", "hover"],  false], 0.88,
-        ["boolean", ["feature-state", "pinned"], false], 0.88,
-        ["boolean", ["feature-state", "dimmed"], false], DIM_OPACITY,
-        0.74,
+        ["boolean", ["feature-state", "hover"],  false], 0.88 * k,
+        ["boolean", ["feature-state", "pinned"], false], 0.88 * k,
+        ["boolean", ["feature-state", "dimmed"], false], DIM_OPACITY * k,
+        0.74 * k,
       ],
     ["boolean", ["feature-state", "hover"],  false], 0.15,
     ["boolean", ["feature-state", "pinned"], false], 0.15,
     0.04,
+  ];
+  // High-zoom fade (PA F4): ZOOM must be the OUTERMOST expression (MapLibre forbids a nested
+  // zoom), so interpolate between two pre-scaled state-cases — hold as-built to z14, ease the
+  // aggregated fills to k=0.68 by z16.5 (0.74 → ≈0.50) so streets, buildings and the labels
+  // read through at neighbourhood zoom.
+  return [
+    "interpolate", ["linear"], ["zoom"],
+    14, stateCase(1),
+    16.5, stateCase(0.68),
   ];
 }
 
@@ -253,7 +265,8 @@ export function choroplethLayers(stops, metric, year) {
         "fill-opacity-transition": { duration: 150, delay: 0 },
       },
     },
-    // 2. Solid outline — aggregated (white)
+    // 2. Solid outline — aggregated (white). POLY_OUTLINE_WIDTH is ALREADY a zoom ramp
+    //    (choroplethTheme) — used directly, NOT re-wrapped (a nested zoom is invalid).
     {
       id: "pnbhd-outline-solid",
       type: "line",
@@ -270,7 +283,7 @@ export function choroplethLayers(stops, metric, year) {
       filter: ["==", yget("polygon_state", year), "suppressed_low_n"],
       paint: {
         "line-color": STATE_STYLE.suppressed_low_n.outlineColor,
-        "line-width": STATE_STYLE.suppressed_low_n.outlineWidth,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.2, 13, STATE_STYLE.suppressed_low_n.outlineWidth],
         "line-dasharray": STATE_STYLE.suppressed_low_n.outlineDash,
       },
     },
@@ -281,64 +294,57 @@ export function choroplethLayers(stops, metric, year) {
       filter: ["==", yget("polygon_state", year), "no_data"],
       paint: {
         "line-color": STATE_STYLE.no_data.outlineColor,
-        "line-width": STATE_STYLE.no_data.outlineWidth,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.2, 13, STATE_STYLE.no_data.outlineWidth],
         "line-dasharray": STATE_STYLE.no_data.outlineDash,
       },
     },
-    // 4b. Annexation-area outline (Tier 2 · sub-concern E) — ORTHOGONAL to
-    //     polygon_state. Above the state outlines so the teal border wins where a
-    //     polygon is both annexation-area AND aggregates permits. Flag-driven.
+    // 4b. Annexation-area outline (Tier 2 · sub-concern E) — ORTHOGONAL to polygon_state;
+    //     flag-driven. Above the state outlines; width zoom-ramped like the siblings.
     {
       id: "pnbhd-outline-annexation",
       type: "line",
       filter: ["==", ["get", "is_annexation_area"], true],
       paint: {
         "line-color":     ANNEXATION_STYLE.outlineColor,
-        "line-width":     ANNEXATION_STYLE.outlineWidth,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.5, 13, ANNEXATION_STYLE.outlineWidth],
         "line-dasharray": ANNEXATION_STYLE.outlineDash,
       },
     },
-    // 5. Hover / pinned highlight outline
+    // 5. Selection CASING — a cream under-stroke BENEATH the violet highlight so a selected
+    //    boundary stays legible over deep-red fills. Pinned only. This pair (casing +
+    //    highlight) is lifted to the TOP of the stack by the component (moveLayer) — PA P4.
+    {
+      id: "pnbhd-highlight-casing",
+      type: "line",
+      paint: {
+        "line-color": ["case", ["boolean", ["feature-state", "pinned"], false], "#f7f1df", "rgba(0,0,0,0)"],
+        "line-width": ["case", ["boolean", ["feature-state", "pinned"], false], 4.4, 0],
+      },
+    },
+    // 6. Highlight outline — hover darkens; selection turns VIOLET + thicker (mirrors PA's
+    //    --pa-selection-outline). Violet is distinct from the ramp reds/oranges.
     {
       id: "pnbhd-highlight",
       type: "line",
       paint: {
         "line-color": [
           "case",
-          ["boolean", ["feature-state", "pinned"], false], "#0f0f12",
+          ["boolean", ["feature-state", "pinned"], false], "#8b5cf6",
           ["boolean", ["feature-state", "hover"],  false], "#2a2a30",
           "rgba(0,0,0,0)",
         ],
         "line-width": [
           "case",
-          ["boolean", ["feature-state", "pinned"], false], 2.4,
+          ["boolean", ["feature-state", "pinned"], false], 2.8,
           ["boolean", ["feature-state", "hover"],  false], 1.6,
           0,
         ],
       },
     },
-    // 6. Neighbourhood name labels (zoom ≥ 11)
-    {
-      id: "pnbhd-labels",
-      type: "symbol",
-      minzoom: 11,
-      layout: {
-        "text-field": ["get", "display_name"],
-        "text-size": 11,
-        "text-font": ["Noto Sans Regular"],
-        "text-max-width": 8,
-        // Collision avoidance: centred first (keeps the current look), then nudge
-        // to an offset anchor instead of dropping the label when crowded.
-        "text-variable-anchor": ["center", "top", "bottom", "left", "right"],
-        "text-radial-offset": 0.6,
-        "text-justify": "auto",
-      },
-      paint: {
-        "text-color": "#3c3728",
-        "text-halo-color": "#ffffff",
-        "text-halo-width": 1.5,
-      },
-    },
+    // (Neighbourhood NAME labels moved OUT of this array — they now render from a
+    //  CLIENT-DERIVED centroid source, added ABOVE everything by the component:
+    //  centroidNameLayer / centroidFocusLayer from components/nameLabels.js. This is
+    //  why the label mount + reportable filter live in PermitChoroplethMap, not here.)
   ];
 }
 

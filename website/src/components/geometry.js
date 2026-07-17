@@ -60,8 +60,9 @@ function meanOfVertices(geom) {
   return n ? [sx / n, sy / n] : null;
 }
 
-// |signed area| of a ring — to pick a MultiPolygon's LARGEST part for polylabel.
-function ringArea(ring) {
+// |signed area| of a ring — to pick a MultiPolygon's LARGEST part for polylabel, and
+// (exported) the area a name-label layer's symbol-sort-key ranks neighbourhoods by.
+export function ringArea(ring) {
   let A = 0;
   for (let i = 0, n = ring.length; i < n; i++) {
     const [x0, y0] = ring[i];

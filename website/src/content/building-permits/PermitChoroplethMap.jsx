@@ -14,7 +14,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 
-import MapView from "../../components/MapView.jsx";
+import MapView, { findFirstSymbolLayerId } from "../../components/MapView.jsx";
 import Legend from "../../components/Legend.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
@@ -27,6 +27,9 @@ import AttributionPanel from "../../components/AttributionPanel.jsx";
 import DetailPanel from "../../components/DetailPanel.jsx";
 import PermitDataConsole from "./PermitDataConsole.jsx";
 import { geometryCentroid } from "../../components/geometry.js";
+import { HOME_VIEW, applyCameraPreset } from "../../components/mapCamera.js";
+import { CENTROID_SOURCE, buildCentroidPoints, centroidNameLayer, centroidFocusLayer } from "../../components/nameLabels.js";
+import { applyChoroplethBasemapHarmony } from "../../components/choroplethBasemap.js";
 import {
   BASEMAP_STYLE, MAP_VIEW, METRICS, DEFAULT_METRIC,
   metricStops, choroplethLayers, applyPermitYearMetric, buildPopupHtml,
@@ -77,10 +80,12 @@ function floatLeftPad(map) {
   if (!el || getComputedStyle(el).position !== "absolute") return 0;
   return Math.round(el.getBoundingClientRect().width);
 }
-function flyToFeature(map, feat) {
+function flyToFeature(map, feat, { reserveConsole = false } = {}) {
   map.fitBounds(bboxOfGeom(feat.geometry), {
-    padding: { top: 80, bottom: 80, left: floatLeftPad(map) + 60, right: 60 },
+    // reserveConsole reserves the raised dock's height so a flown-to neighbourhood clears it.
+    padding: { top: 80, bottom: reserveConsole ? 320 : 80, left: floatLeftPad(map) + 60, right: 60 },
     duration: reduceMotion() ? 0 : 900, maxZoom: 14,
+    pitch: 0, bearing: 0, // a focus is a data-derived FLAT fit — HOME is the only pitched view
   });
 }
 // Fit the camera to a SET of features. reserveConsole reserves the raised dock's height
@@ -96,6 +101,7 @@ function fitToFeatures(map, features, { reserveConsole = false } = {}) {
   map.fitBounds([[minX, minY], [maxX, maxY]], {
     padding: { top: 80, bottom: reserveConsole ? 320 : 80, left: floatLeftPad(map) + 60, right: 60 },
     duration: reduceMotion() ? 0 : 700, maxZoom: 14,
+    pitch: 0, bearing: 0, // flat data-derived fit — HOME is the only pitched view
   });
 }
 
@@ -222,6 +228,8 @@ export default function PermitChoroplethMap() {
   const metricRef = useRef(metricDef); useEffect(() => { metricRef.current = metricDef; });
   const gjRef = useRef(gj);           useEffect(() => { gjRef.current = gj; }, [gj]);
   const gjViewRef = useRef(gjView);   useEffect(() => { gjViewRef.current = gjView; }, [gjView]);
+  const dockOpenRef = useRef(dockOpen); useEffect(() => { dockOpenRef.current = dockOpen; }, [dockOpen]);
+  const firstHomeRef = useRef(true);   // first HOME landing = jumpTo (under skeleton), then ease
 
   useEffect(() => {
     if (year == null) return undefined;
@@ -251,7 +259,12 @@ export default function PermitChoroplethMap() {
     return () => { cancelled = true; };
   }, []);
 
-  function handleMapLoad(m) { setMap(m); }
+  function handleMapLoad(m) {
+    setMap(m);
+    // Land on the pitched HOME view (jumpTo under the skeleton on first load; ease after).
+    applyCameraPreset(m, HOME_VIEW[CITY], { ease: !firstHomeRef.current });
+    firstHomeRef.current = false;
+  }
 
   // Paint swap on year/metric/stops change.
   useEffect(() => {
@@ -363,7 +376,7 @@ export default function PermitChoroplethMap() {
       e.preventDefault();
       if (!e.features?.length) return;
       const full = findFeatureById(gjRef.current, e.features[0].id);
-      if (full) flyToFeature(map, full);
+      if (full) flyToFeature(map, full, { reserveConsole: dockOpenRef.current });
     }
     function onMapClick(e) {
       const hits = map.queryRenderedFeatures(e.point, { layers: [FILL_LAYER_ID] });
@@ -384,6 +397,74 @@ export default function PermitChoroplethMap() {
     };
   }, [map]);
 
+  // Basemap harmony (buildings → neutral grey so the ramp reads through; hide the basemap's
+  // OWN neighbourhood labels) + lift the selection highlight pair to the TOP so a pin is never
+  // occluded (PA P4). Declared BEFORE the label mount so the centroid labels still land on top.
+  useEffect(() => {
+    if (!map) return;
+    applyChoroplethBasemapHarmony(map);
+    try {
+      for (const id of ["pnbhd-highlight-casing", "pnbhd-highlight"]) {
+        if (map.getLayer(id)) map.moveLayer(id);
+      }
+    } catch { /* map mid-teardown */ }
+  }, [map]);
+
+  // Name labels — a CLIENT-DERIVED centroid source + the base/focus layers (shared, mirrors
+  // PA). Base adjacent to the basemap symbols (one collision index); focus ABOVE everything
+  // (the hover/select always-names guarantee). Year-invariant; re-derived only if gj changes.
+  useEffect(() => {
+    if (!map || !gj) return;
+    const points = buildCentroidPoints(gj, "Neighbourhood ID");
+    try {
+      const src = map.getSource(CENTROID_SOURCE);
+      if (src) { src.setData(points); return; }
+      map.addSource(CENTROID_SOURCE, { type: "geojson", data: points, promoteId: "Neighbourhood ID" });
+      map.addLayer({ ...centroidNameLayer(), source: CENTROID_SOURCE }, findFirstSymbolLayerId(map));
+      map.addLayer({ ...centroidFocusLayer(), source: CENTROID_SOURCE });
+    } catch { /* map mid-teardown — re-adds on next mount */ }
+  }, [map, gj]);
+
+  // Filter the BASE name layer to REPORTABLE (aggregated) neighbourhoods for the active year,
+  // so suppressed/no-data names never clutter. The FOCUS layer stays unfiltered.
+  useEffect(() => {
+    if (!map || !gjView) return;
+    try {
+      if (!map.getLayer("nbhd-labels")) return;
+      const reportable = gjView.features
+        .filter((f) => f.properties.polygon_state === "aggregated")
+        .map((f) => String(f.properties["Neighbourhood ID"]));
+      map.setFilter("nbhd-labels", ["in", ["get", "Neighbourhood ID"], ["literal", reportable]]);
+    } catch { /* map mid-teardown */ }
+  }, [map, gjView]);
+
+  // Mirror the selection (pinned) onto the centroid source so a selected neighbourhood keeps
+  // its name via the focus layer even where the base label was collision-culled.
+  const prevCentroidPinRef = useRef(new Set());
+  useEffect(() => {
+    if (!map) return;
+    const next = new Set(selectedIds.map(String));
+    const prev = prevCentroidPinRef.current;
+    try {
+      for (const id of prev) if (!next.has(id)) map.setFeatureState({ source: CENTROID_SOURCE, id }, { pinned: false });
+      for (const id of next) map.setFeatureState({ source: CENTROID_SOURCE, id }, { pinned: true });
+      prevCentroidPinRef.current = next;
+    } catch { /* centroid source not added yet */ }
+  }, [map, selectedIds]);
+
+  // Mirror the MAP hover onto the centroid source (its focus label shows on hover). Read-only;
+  // the polygon hover channel is owned by the interactions effect above.
+  useEffect(() => {
+    if (!map) return undefined;
+    let curId = null;
+    const set = (id, on) => { try { map.setFeatureState({ source: CENTROID_SOURCE, id }, { hover: on }); } catch { /* not ready */ } };
+    const onMove = (e) => { const id = e.features?.[0]?.id; if (id === curId) return; if (curId != null) set(curId, false); curId = id ?? null; if (curId != null) set(curId, true); };
+    const onLeave = () => { if (curId != null) { set(curId, false); curId = null; } };
+    map.on("mousemove", FILL_LAYER_ID, onMove);
+    map.on("mouseleave", FILL_LAYER_ID, onLeave);
+    return () => { map.off("mousemove", FILL_LAYER_ID, onMove); map.off("mouseleave", FILL_LAYER_ID, onLeave); };
+  }, [map]);
+
   // ---- Right rail (recentre / info / database) ----
   const resetRef = useRef(null);
   // eslint-disable-next-line react-hooks/refs
@@ -393,7 +474,7 @@ export default function PermitChoroplethMap() {
       const feats = featuresByIds(selectedIds);
       if (feats.length) { fitToFeatures(map, feats, { reserveConsole: dockOpen }); return; }
     }
-    map.easeTo({ center: MAP_VIEW.center, zoom: MAP_VIEW.zoom, duration: reduceMotion() ? 0 : 600 });
+    applyCameraPreset(map, HOME_VIEW[CITY], { ease: true });   // no selection → the pitched HOME
   };
   const infoToggleRef = useRef(null);
   // eslint-disable-next-line react-hooks/refs
@@ -432,7 +513,7 @@ export default function PermitChoroplethMap() {
     if (!map || !gjNow) return;
     const feat = gjNow.features.find((f) => f.properties?.display_name === name);
     if (!feat) return;
-    flyToFeature(map, feat);
+    flyToFeature(map, feat, { reserveConsole: dockOpenRef.current });
     setSelectedIds([feat.properties["Neighbourhood ID"]]);
   }
 
