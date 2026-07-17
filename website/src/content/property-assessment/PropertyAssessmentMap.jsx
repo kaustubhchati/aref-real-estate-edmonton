@@ -45,7 +45,6 @@ import DataTable from "./DataTable.jsx";
 import SearchPeek from "../../components/SearchPeek.jsx";
 import MapTipsPopover from "../../components/MapTipsPopover.jsx";
 import AttributionPanel from "../../components/AttributionPanel.jsx";
-import { introCardDismissed, rememberIntroCardDismissed } from "./introCard.js";
 import {
   buildSnapshotCsv,
   buildTimeseriesCsv,
@@ -398,28 +397,24 @@ export default function PropertyAssessmentMap() {
   // The tuning rack's range slot — its DOM node, captured by a ref-callback so
   // The floating "About & tips" popover (open/closed). Holds the box-select tip +
   // the provenance/naming note — rehomed here from the removed left panel. [D1]
-  const [infoOpen, setInfoOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(true);    // intro/info card opens on EVERY load (see the intro block)
 
   // The bottom-right "Data & attribution" panel (open/closed) — opened by the
   // database-glyph control; the §6 home for source + licence + disclaimer + basemap.
   const [attribOpen, setAttribOpen] = useState(false);
 
-  // ---- The introductory usage card (ratified 2026-07-15) ---------------------
+  // ---- The introductory usage card — auto-opens on EVERY load/reload (KC 2026-07-17) ------
   // The About & tips popover IS the introduction — there is no separate hint (two things
-  // teaching the same gesture is the bombarding the research warns against). It opens
-  // ITSELF on a first visit, stays open while the reader explores, and steps aside on
-  // their first successful selection.
+  // teaching the same gesture is the bombarding the research warns against). `infoOpen` starts
+  // true so it opens ITSELF on every load/reload, stays open while the reader explores, and
+  // steps aside on their first successful selection so attention moves to the data. There is
+  // NO permanent dismissal — a reload brings it back. (This SUPERSEDES the 2026-07-15 one-way
+  // permanent-dismissal model; KC's call, to match Dwelling Units / Business Counts.)
   //
-  // `introLive` = the card is in that first-visit life. It is state, not a storage read
-  // per render, and it gates the auto-dismiss so a later "i" recall is NOT closed by
-  // selecting — after the one-way dismissal, the card is a manual reference and only "i"
-  // or Esc closes it.
-  const [introLive, setIntroLive] = useState(false);
-  useEffect(() => {
-    if (introCardDismissed()) return;      // already introduced, on some earlier visit
-    setIntroLive(true);
-    setInfoOpen(true);
-  }, []);
+  // `introLive` gates the auto-dismiss so a later "i" recall is NOT re-closed by selecting
+  // again — after the first-selection step-aside, the card is a manual reference (only "i" or
+  // Esc). It re-arms on the next load.
+  const [introLive, setIntroLive] = useState(true);
 
   // The ONLY auto-dismissal: the first successful selection. A click that hits nothing, a
   // pan, a zoom, a slider drag and an empty box-drag all leave selectedIds empty and are
@@ -428,9 +423,8 @@ export default function PropertyAssessmentMap() {
   // watches the selection rather than either gesture.
   useEffect(() => {
     if (!introLive || selectedIds.length === 0) return;
-    rememberIntroCardDismissed();   // permanent + one-way; clearing the selection can't undo it
-    setIntroLive(false);
-    setInfoOpen(false);             // → the InfoRail takes the stage; the "i" is where the card went
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- step aside on the first selection (this view only)
+    setIntroLive(false); setInfoOpen(false);   // → the InfoRail takes the stage; the "i" is where the card went
   }, [introLive, selectedIds]);
 
   // Auto-collapse the dock when the selection empties — the ONE intentional
