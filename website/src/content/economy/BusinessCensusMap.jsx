@@ -37,6 +37,7 @@ import IdentityCard from "../../components/IdentityCard.jsx";
 import SegmentedControl from "../../components/SegmentedControl.jsx";
 import SearchPeek from "../../components/SearchPeek.jsx";
 import MapTipsPopover, { Glyph } from "../../components/MapTipsPopover.jsx";
+import { introCardDismissed, rememberIntroCardDismissed } from "../../components/introCard.js";
 import AttributionPanel from "../../components/AttributionPanel.jsx";
 import DetailPanel from "../../components/DetailPanel.jsx";
 import {
@@ -118,6 +119,9 @@ function flyToFeature(map, feat) {
   });
 }
 
+// Storage key for BC's introductory usage card — module-scope so it is not an effect dep.
+const INTRO_KEY = "bc.introCard.dismissed";
+
 export default function BusinessCensusMap() {
   const [metric, setMetric] = useState(METRICS[0].key);
   const [map, setMap] = useState(null);
@@ -131,6 +135,25 @@ export default function BusinessCensusMap() {
   const [attribOpen, setAttribOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
+
+  // ---- Introductory usage card (the PA-established behaviour, propagated here) ----------
+  // The About & tips popover IS the introduction: it opens ITSELF on a first visit (and on any
+  // reload until then), stays open through exploration, and steps aside ONE-WAY on the first
+  // successful selection — after that only the "i" reopens it. `introLive` gates the auto-
+  // dismiss so a later "i" recall is not closed by selecting. BC's own storage key so it
+  // introduces itself once, independent of PA/DU. Mirrors PropertyAssessmentMap.
+  const [introLive, setIntroLive] = useState(false);
+  useEffect(() => {
+    if (introCardDismissed(INTRO_KEY)) return;   // already introduced on an earlier visit
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional one-time first-visit auto-open
+    setIntroLive(true); setInfoOpen(true);
+  }, []);
+  useEffect(() => {
+    if (!introLive || selectedId == null) return;   // exploration keeps the card; a SELECTION dismisses it
+    rememberIntroCardDismissed(INTRO_KEY);   // permanent + one-way
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-way dismissal on the first selection
+    setIntroLive(false); setInfoOpen(false);
+  }, [introLive, selectedId]);
 
   const selectedMetric = METRICS.find((m) => m.key === metric) ?? METRICS[0];
 
