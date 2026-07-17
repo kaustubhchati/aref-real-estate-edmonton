@@ -45,6 +45,7 @@ import DataTable from "./DataTable.jsx";
 import SearchPeek from "../../components/SearchPeek.jsx";
 import MapTipsPopover from "../../components/MapTipsPopover.jsx";
 import AttributionPanel from "../../components/AttributionPanel.jsx";
+import { introCardDismissed, rememberIntroCardDismissed } from "../../components/introCard.js";
 import {
   buildSnapshotCsv,
   buildTimeseriesCsv,
@@ -318,6 +319,9 @@ function aggregateFeatures(features) {
   };
 }
 
+// Storage key for PA's introductory usage card — module-scope so it is not an effect dep.
+const INTRO_KEY = "pa.introCard.dismissed";
+
 export default function PropertyAssessmentMap() {
   // The manifest is the source of truth for which years exist. Until it loads,
   // we show a loading state; if it fails, an error state. year is null until
@@ -397,24 +401,29 @@ export default function PropertyAssessmentMap() {
   // The tuning rack's range slot — its DOM node, captured by a ref-callback so
   // The floating "About & tips" popover (open/closed). Holds the box-select tip +
   // the provenance/naming note — rehomed here from the removed left panel. [D1]
-  const [infoOpen, setInfoOpen] = useState(true);    // intro/info card opens on EVERY load (see the intro block)
+  const [infoOpen, setInfoOpen] = useState(false);   // intro/info card opens on the FIRST visit only (see the intro block)
 
   // The bottom-right "Data & attribution" panel (open/closed) — opened by the
   // database-glyph control; the §6 home for source + licence + disclaimer + basemap.
   const [attribOpen, setAttribOpen] = useState(false);
 
-  // ---- The introductory usage card — auto-opens on EVERY load/reload (KC 2026-07-17) ------
+  // ---- The introductory usage card — FIRST VISIT ONLY (KC 2026-07-17) ---------------------
   // The About & tips popover IS the introduction — there is no separate hint (two things
-  // teaching the same gesture is the bombarding the research warns against). `infoOpen` starts
-  // true so it opens ITSELF on every load/reload, stays open while the reader explores, and
-  // steps aside on their first successful selection so attention moves to the data. There is
-  // NO permanent dismissal — a reload brings it back. (This SUPERSEDES the 2026-07-15 one-way
-  // permanent-dismissal model; KC's call, to match Dwelling Units / Business Counts.)
+  // teaching the same gesture is the bombarding the research warns against). It opens ITSELF on
+  // the FIRST-EVER visit and marks itself seen on that first load, so a RELOAD does NOT re-show
+  // it (shown once, no reload persistence). It stays open while the reader explores and steps
+  // aside on their first successful selection; after that only the "i" reopens it.
   //
   // `introLive` gates the auto-dismiss so a later "i" recall is NOT re-closed by selecting
   // again — after the first-selection step-aside, the card is a manual reference (only "i" or
-  // Esc). It re-arms on the next load.
-  const [introLive, setIntroLive] = useState(true);
+  // Esc).
+  const [introLive, setIntroLive] = useState(false);
+  useEffect(() => {
+    if (introCardDismissed(INTRO_KEY)) return;   // seen on an earlier visit → stay closed
+    rememberIntroCardDismissed(INTRO_KEY);        // mark seen NOW (first load) → reloads never re-show
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time first-visit auto-open
+    setIntroLive(true); setInfoOpen(true);
+  }, []);
 
   // The ONLY auto-dismissal: the first successful selection. A click that hits nothing, a
   // pan, a zoom, a slider drag and an empty box-drag all leave selectedIds empty and are
@@ -423,7 +432,7 @@ export default function PropertyAssessmentMap() {
   // watches the selection rather than either gesture.
   useEffect(() => {
     if (!introLive || selectedIds.length === 0) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- step aside on the first selection (this view only)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- step aside on the first selection
     setIntroLive(false); setInfoOpen(false);   // → the InfoRail takes the stage; the "i" is where the card went
   }, [introLive, selectedIds]);
 

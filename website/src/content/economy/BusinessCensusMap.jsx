@@ -37,6 +37,7 @@ import IdentityCard from "../../components/IdentityCard.jsx";
 import SegmentedControl from "../../components/SegmentedControl.jsx";
 import SearchPeek from "../../components/SearchPeek.jsx";
 import MapTipsPopover, { Glyph } from "../../components/MapTipsPopover.jsx";
+import { introCardDismissed, rememberIntroCardDismissed } from "../../components/introCard.js";
 import AttributionPanel from "../../components/AttributionPanel.jsx";
 import DetailPanel from "../../components/DetailPanel.jsx";
 import {
@@ -118,6 +119,9 @@ function flyToFeature(map, feat) {
   });
 }
 
+// Storage key for BC's introductory usage card — module-scope so it is not an effect dep.
+const INTRO_KEY = "bc.introCard.dismissed";
+
 export default function BusinessCensusMap() {
   const [metric, setMetric] = useState(METRICS[0].key);
   const [map, setMap] = useState(null);
@@ -127,22 +131,27 @@ export default function BusinessCensusMap() {
   // Shared-chrome state (mirrors PA): tips popover, attribution panel, unified search
   // text, and the single SELECTED neighbourhood (its id — the detail float + pin derive
   // from it).
-  const [infoOpen, setInfoOpen] = useState(true);    // intro/info card opens on EVERY load (see the intro block)
+  const [infoOpen, setInfoOpen] = useState(false);   // intro/info card opens on the FIRST visit only (see the intro block)
   const [attribOpen, setAttribOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
 
-  // ---- Introductory usage card — auto-opens on EVERY load/reload (KC 2026-07-17) ----------
-  // The About & tips popover IS the introduction: `infoOpen` starts true so it opens itself on
-  // every load/reload, it stays open through exploration (pan / zoom / clicks that hit
-  // nothing), and it steps aside on the first successful selection so attention moves to the
-  // data. There is NO permanent dismissal — a reload brings it back. `introLive` gates the
-  // auto-dismiss so a later "i" recall is not re-closed by selecting again (this session only;
-  // it re-arms on the next load).
-  const [introLive, setIntroLive] = useState(true);
+  // ---- Introductory usage card — FIRST VISIT ONLY (KC 2026-07-17) --------------------------
+  // The About & tips popover IS the introduction: it opens itself on the FIRST-EVER visit and
+  // marks itself seen on that first load, so a RELOAD does NOT re-show it (shown once, no reload
+  // persistence). It stays open through exploration (pan / zoom / clicks that hit nothing) and
+  // steps aside on the first selection; after that only the "i" reopens it. `introLive` gates
+  // the auto-dismiss so a later "i" recall is not re-closed by selecting. BC's own storage key.
+  const [introLive, setIntroLive] = useState(false);
+  useEffect(() => {
+    if (introCardDismissed(INTRO_KEY)) return;   // seen on an earlier visit → stay closed
+    rememberIntroCardDismissed(INTRO_KEY);        // mark seen NOW (first load) → reloads never re-show
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time first-visit auto-open
+    setIntroLive(true); setInfoOpen(true);
+  }, []);
   useEffect(() => {
     if (!introLive || selectedId == null) return;   // exploration keeps the card; a SELECTION steps it aside
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- dismiss on the first selection (this view only)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- step aside on the first selection
     setIntroLive(false); setInfoOpen(false);
   }, [introLive, selectedId]);
 
