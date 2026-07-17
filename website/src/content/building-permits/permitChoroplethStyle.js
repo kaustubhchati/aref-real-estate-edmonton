@@ -18,7 +18,7 @@
 // diverging %YoY path was removed with the YoY metric).
 // =========================================================
 
-import { fmtCurrency } from "../../utils/format.js";
+import { fmtCurrencyShort } from "../../utils/format.js";
 import { polyOutline, rampFloor, POLY_OUTLINE_WIDTH } from "../../components/choroplethTheme.js";
 import { CITY_BOUNDS } from "../../config/cityBounds.js";
 import { paintTransition, DUR_BASE } from "../../components/motion.js";
@@ -106,7 +106,7 @@ export const METRICS = [
     legendLabel: "Residential Permits", fmt: fmtInt,
     icon: "M14 3v4a1 1 0 0 0 1 1h4 M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z M9 13h6 M9 17h6" },
   { key: "construction_value", field: "total_construction_value", label: "Construction Value",
-    legendLabel: "Residential Construction Value", fmt: fmtCurrency,
+    legendLabel: "Residential Construction Value", fmt: fmtCurrencyShort,
     icon: "M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1z M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5 M4 15v-3a6 6 0 0 1 6-6 M14 6a6 6 0 0 1 6 6v3" },
   { key: "units_added", field: "units_added_gross", label: "Dwellings Added",
     legendLabel: "Dwelling Units Added", fmt: fmtInt,
@@ -376,8 +376,8 @@ export const POPUP_ROWS = [
   ["n_permits",                 "Residential Permits",                  fmtInt],
   ["units_added_gross",         "Dwelling Units Added",                 fmtInt],
   ["units_demolished",          "Dwelling Units Demolished",            fmtInt],
-  ["total_construction_value",  "Residential Construction Value",       fmtCurrency],
-  ["median_construction_value", "Median Residential Construction Value",fmtCurrency],
+  ["total_construction_value",  "Residential Construction Value",       fmtCurrencyShort],
+  ["median_construction_value", "Median Residential Construction Value",fmtCurrencyShort],
 ];
 
 // `detail` selects the tier; `metric` is the active flat metric.

@@ -28,7 +28,7 @@ import ExportMenu from "../../components/ExportMenu.jsx";
 import {
   rangeFilter, multiSelectFilter, EMPTY_COLUMN_FILTERS, useRenderStormGuard, linearScale,
 } from "../../components/consoleTable.js";
-import { fmtNumber, fmtCurrency, fmtCurrencyShort } from "../../utils/format.js";
+import { fmtNumber, fmtCurrencyShort } from "../../utils/format.js";
 import { reduceMotion, DUR_BASE } from "../../components/motion.js";
 
 // ── DU column presentation. The 4 MAP metrics are keyed by metric key (so the active-
@@ -38,7 +38,7 @@ const COL_WIDTH = { name: "24%", metric: "13%", trend: "11%" };
 // Per-metric presentation: table header (compact, carries the unit) + full/cell formatter.
 const DU_COLS = {
   permit_count:       { key: "permit_count",       label: "Permit Count",         header: "Permits",   fmt: fmtNumber,        cellFmt: fmtNumber },
-  construction_value: { key: "construction_value", label: "Construction Value",   header: "Constr.",   fmt: fmtCurrency,      cellFmt: fmtCurrencyShort },
+  construction_value: { key: "construction_value", label: "Construction Value",   header: "Constr.",   fmt: fmtCurrencyShort, cellFmt: fmtCurrencyShort },
   units_added:        { key: "units_added",        label: "Dwellings Added",      header: "Added",     fmt: fmtNumber,        cellFmt: fmtNumber },
   units_demolished:   { key: "units_demolished",   label: "Dwellings Demolished", header: "Demol.",    fmt: fmtNumber,        cellFmt: fmtNumber },
 };
