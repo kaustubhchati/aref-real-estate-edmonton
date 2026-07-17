@@ -39,6 +39,49 @@ export const linearScale = (min, max) => {
   };
 };
 
+// Range SCALE — QUANTILE. For a metric whose values span orders of magnitude — Dwelling
+// Units' construction value runs $0–$395M with a median of only $2.28M — a LINEAR track
+// jams the whole bulk into its left edge (median at ~2% of the track), so the slider can't
+// separate neighbourhoods. This lays the track out by PERCENTILE of the panel-wide
+// distribution instead: track position IS the value's rank, so equal track travel filters
+// an equal SHARE of neighbourhood-years. The dense small-permit cluster and the sparse
+// $10M+ cluster each get room proportional to how many neighbourhoods they hold, and a lone
+// outlier sits one thumb-width past its neighbour instead of stretching the axis. The ends
+// clamp to p2/p98 (robust — a lone $0 or the single $395M never defines an end label), and
+// the median sits at the detent (mid-track: half the neighbourhoods below, half above).
+// `sorted` is the panel-wide value array across ALL years, already ascending — so the frame
+// is year-invariant (DESIGN_SYSTEM Principle 0), same as linearScale's panel-wide bounds.
+// Returns the same {min,max,toPct,toVal,detentPct,detentVal} shape; detentPct is set, so
+// RangeFacet renders it piecewise (detent line + snap), exactly like PA's yoyScale.
+const Q_LO = 0.02, Q_HI = 0.98;              // the track's ends, as fractional ranks (p2 … p98)
+export const quantileScale = (sorted) => {
+  const n = sorted.length;
+  // The value at a fractional rank f∈[0,1] — linear interpolation between the two neighbours.
+  const valueAt = (f) => {
+    const x = Math.min(n - 1, Math.max(0, f * (n - 1)));
+    const i = Math.floor(x);
+    return i + 1 < n ? sorted[i] + (x - i) * (sorted[i + 1] - sorted[i]) : sorted[i];
+  };
+  // The fractional rank of a value v∈[0,1] — the inverse of valueAt (binary search, then
+  // interpolate the rank between the bracketing samples, so toPct∘toVal round-trips).
+  const rankOf = (v) => {
+    if (v <= sorted[0]) return 0;
+    if (v >= sorted[n - 1]) return 1;
+    let lo = 0, hi = n - 1;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (sorted[m] < v) lo = m + 1; else hi = m; }
+    const a = sorted[lo - 1], b = sorted[lo];        // a < v ≤ b  (lo = first index with sorted[lo] ≥ v)
+    return (lo - 1 + (b > a ? (v - a) / (b - a) : 0)) / (n - 1);
+  };
+  const usable = Q_HI - Q_LO;                        // the rank window [p2, p98] the track spans
+  return {
+    min: valueAt(Q_LO), max: valueAt(Q_HI),
+    detentPct: ((0.5 - Q_LO) / usable) * 100,        // the median → mid-track (50%)
+    detentVal: valueAt(0.5),
+    toPct: (v) => Math.min(100, Math.max(0, ((rankOf(v) - Q_LO) / usable) * 100)),
+    toVal: (p) => valueAt(Q_LO + (p / 100) * usable),
+  };
+};
+
 // Numeric RANGE filter (the metric-range facet) — a row passes when its value is in
 // [lo, hi]. Set on the metric columns; the slider targets the ACTIVE metric's column.
 // A null value (non-reportable polygon) has no value to be in range, so it drops out

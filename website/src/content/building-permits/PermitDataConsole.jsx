@@ -26,7 +26,7 @@ import DistributionStrip from "../../components/DistributionStrip.jsx";
 import TrendInstrument from "../../components/TrendInstrument.jsx";
 import ExportMenu from "../../components/ExportMenu.jsx";
 import {
-  rangeFilter, multiSelectFilter, EMPTY_COLUMN_FILTERS, useRenderStormGuard, linearScale,
+  rangeFilter, multiSelectFilter, EMPTY_COLUMN_FILTERS, useRenderStormGuard, linearScale, quantileScale,
 } from "../../components/consoleTable.js";
 import { fmtNumber, fmtCurrencyShort } from "../../utils/format.js";
 import { reduceMotion, DUR_BASE } from "../../components/motion.js";
@@ -315,28 +315,33 @@ export default function PermitDataConsole({
     table.getColumn(id)?.setFilterValue(cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]);
   }
 
-  // ── Metric-range facet (targets the active metric's column). All linear (no YoY piecewise).
+  // ── Metric-range facet (targets the active metric's column).
   const activeCol = DU_COLS[metric];
   const rangeValue = table.getColumn(metric)?.getFilterValue();
-  // Panel-wide (YEAR-INVARIANT) bounds for the range track — a FIXED frame (Principle 0: the
-  // track never resizes with the year, so a filter set in one year means the same thing in
-  // every year; both the MIN and the MAX are fixed). Both bounds are DISTRIBUTION PERCENTILES,
-  // NOT the absolute extremes — a symmetric outlier trim so neither a lone $0-construction edge
-  // case (bottom) nor a lone ~$395M outlier (top) dominates the track: MIN = the p2, MAX = the
-  // p98 of the panel-wide distribution. Values outside [p2, p98] clamp to the ends and still
-  // SHOW when the range is at full (the full-range = no-filter rule includes them). Read from
-  // `series` (the active metric across ALL years), so it is year-invariant by construction.
+  // Panel-wide (YEAR-INVARIANT) range track — a FIXED frame (Principle 0: the track never
+  // resizes with the year, so a filter set in one year means the same thing in every year).
+  // The SHAPE of the track is metric-dependent:
+  //   • construction value — QUANTILE. Its values span ~4 orders of magnitude ($0–$395M,
+  //     median only $2.28M), so a linear track jams the bulk into the left edge and can't
+  //     separate neighbourhoods. quantileScale lays it out by PERCENTILE (equal drag = an
+  //     equal SHARE of neighbourhoods), ends at p2/p98, median at the detent.
+  //   • every other metric (permit count, dwellings added/demolished) — modest range, so a
+  //     LINEAR track between the p2/p98 ends is honest and evenly spaced (outlier-trimmed so
+  //     neither a lone $0 nor a lone outlier dominates).
+  // Both read from `series` (the active metric across ALL years), so the frame is
+  // year-invariant by construction; values outside [p2, p98] clamp to the ends and still
+  // SHOW when the range is at full (the full-range = no-filter rule includes them).
   const rangeScale = useMemo(() => {
     const vals = [];
     for (const r of rows) for (const v of r.series ?? []) if (v != null && Number.isFinite(v)) vals.push(v);
     if (vals.length < 2) return null;
     vals.sort((a, b) => a - b);
+    if (metric === "construction_value") return quantileScale(vals);
     const q = (pp) => vals[Math.min(vals.length - 1, Math.max(0, Math.round((vals.length - 1) * pp)))];
     const min = q(0.02);   // p2 — the distribution's low bound (excludes $0-value edge cases)
     const max = q(0.98);   // p98 — outlier-robust high bound
     return min >= max ? null : linearScale(min, max);
     // rows recomputes per year but `series` is year-invariant, so the bounds are STABLE.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metric, rows]);
   const setRange = ([lo, hi]) => {
     if (!rangeScale) return;
