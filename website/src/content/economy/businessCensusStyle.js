@@ -13,6 +13,8 @@
 //   census_state, n_businesses_2025, n_employees_2025,
 //   n_businesses_2024, n_employees_2024, yoy_businesses_change,
 //   yoy_employees_change, yoy_businesses_pct, yoy_employees_pct
+//   (the *_2024 + yoy_* fields are still emitted but NO LONGER SURFACED — a backend-derived
+//    YoY, not a source figure; removed from the UI 2026-07. Single survey year is shown.)
 //
 // NOTE: the state field is `census_state` (values "data" / "no_data"),
 // NOT `polygon_state` — the expressions below read `census_state`.
@@ -374,22 +376,6 @@ function escapeHtml(s) {
   ));
 }
 
-// Signed percent for the YoY row: "+50%" green, "−12.4%" red.
-// Returns null when the value is missing so the row is dropped entirely.
-// Exported so the DetailPanel (single-select float) can reuse it for its YoY row.
-export function fmtSignedPct(v) {
-  if (v == null || !Number.isFinite(+v)) return null;
-  const n = +v;
-  const sign = n > 0 ? "+" : n < 0 ? "−" : "";       // U+2212 minus
-  const a = Math.abs(n);
-  const num = a % 1 === 0 ? String(a) : a.toFixed(1);
-  return `${sign}${num}%`;
-}
-function pctColor(v) {
-  const n = +v;
-  return n > 0 ? "#1a7a3a" : n < 0 ? "#c0392b" : "var(--text)";
-}
-
 const fmtIntPopup = (v) =>
   v == null || !Number.isFinite(+v) ? "—"
   : Math.round(+v).toLocaleString();
@@ -401,7 +387,7 @@ const PROVENANCE =
 // `detail` selects the tier:
 //   detail=false → Tier 2 (slim hover): name + district + businesses + employees.
 //   detail=true  → Tier 3 (pinned click): name + district + state badge +
-//                  businesses + employees + 2024 + YoY + provenance.
+//                  businesses + employees + provenance.
 export function buildBusinessCensusPopupHtml(p, detail) {
   const name     = p.display_name ?? "—";
   // planning_district is the primary geography label; fall back to civic_ward.
@@ -458,24 +444,6 @@ export function buildBusinessCensusPopupHtml(p, detail) {
         `<span class="pop-v">${fmtIntPopup(p.n_employees_2025)}</span>` +
       `</div>`
     );
-    if (p.n_businesses_2024 != null) {
-      parts.push(
-        `<div class="pop-row">` +
-          `<span class="pop-k">Businesses 2024</span>` +
-          `<span class="pop-v">${fmtIntPopup(p.n_businesses_2024)}</span>` +
-        `</div>`
-      );
-    }
-    const yoy = fmtSignedPct(p.yoy_businesses_pct);
-    if (yoy != null) {
-      parts.push(
-        `<div class="pop-row">` +
-          `<span class="pop-k">Year-over-year</span>` +
-          `<span class="pop-v" style="color:${pctColor(p.yoy_businesses_pct)}">` +
-            `${yoy}</span>` +
-        `</div>`
-      );
-    }
   } else {
     parts.push(
       `<div class="pop-reason">No business census data recorded for ` +

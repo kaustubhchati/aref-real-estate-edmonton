@@ -20,6 +20,9 @@
 //   census_state, is_annexation_area, n_businesses_2025, n_employees_2025,
 //   n_businesses_2024, n_employees_2024, yoy_businesses_change, yoy_employees_change,
 //   yoy_businesses_pct, yoy_employees_pct
+//   NOTE: the *_2024 and yoy_* fields are a backend-computed cross-year comparison; they
+//   are NO LONGER SURFACED (removed 2026-07 — a YoY we derived, not a source figure). The
+//   backend still emits them; the map/detail/popup show 2025 counts only.
 // =============================================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -44,7 +47,6 @@ import {
   bcensusFillColor,
   bcensusLayers,
   buildBusinessCensusPopupHtml,
-  fmtSignedPct,
   LEGEND_STATES,
 } from "./businessCensusStyle.js";
 import { fmtNumber } from "../../utils/format.js";
@@ -521,7 +523,7 @@ export default function BusinessCensusMap() {
         </div>
 
         {/* ===== SINGLE-SELECT DETAIL (PA standard) — the right-side float. Lean vs PA's
-            InfoRail; carries the pinned-tier figures (2025 counts, 2024, YoY). ===== */}
+            InfoRail; carries the 2025 counts (single survey year — no cross-year YoY). ===== */}
         {selectedFeature && (() => {
           const p = selectedFeature;
           const hasData = p.census_state === "data";
@@ -530,13 +532,10 @@ export default function BusinessCensusMap() {
             notes.push("Annexation area — annexed, not yet subdivided into neighbourhoods; shown with its own outline. Any business counts it carries are real and included.");
           }
           if (!hasData) notes.push("No business census data recorded for this neighbourhood.");
-          const yoy = hasData ? fmtSignedPct(p.yoy_businesses_pct) : null;
           const rows = hasData
             ? [
                 { k: "Businesses (2025)", v: fmtNumber(p.n_businesses_2025) },
                 { k: "Employees (2025)", v: fmtNumber(p.n_employees_2025) },
-                ...(p.n_businesses_2024 != null ? [{ k: "Businesses (2024)", v: fmtNumber(p.n_businesses_2024) }] : []),
-                ...(yoy != null ? [{ k: "Businesses YoY", v: yoy }] : []),
               ]
             : [];
           return (
