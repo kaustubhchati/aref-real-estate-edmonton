@@ -1,14 +1,15 @@
 # CLAUDE.md
 
-> **Version: v1.11 — authoritative. Supersedes all prior versions (v0.1–v1.10).**
+> **Version: v1.12 — authoritative. Supersedes all prior versions (v0.1–v1.11).**
 > This is the single source of project context for every Claude Code session — read it first.
 > If any other note, comment, or older doc frames *the website* as an "agent-driven platform,"
 > that framing is **retired** — see §1.
 > Owner / **builder**: KC (Research Assistant, UAlberta) — direct-push authority to `main` (§7).
 > Verifier: Olivia (post-hoc review, §7). Supervisor: Prof. Haifang Huang.
-> Last updated: 2026-07-13. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
+> Last updated: 2026-07-16. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
 > current open work tracked in **PHASE2_STATUS.md**. Tier 2 (container-universe reconciliation)
-> is **CLOSED** end-to-end (§12 v1.11).
+> is **CLOSED** end-to-end (§12 v1.11). Dwelling Units now carries the full analyst Data Console
+> (§12 v1.12); the DU backend was unfrozen to emit its combined all-years file.
 
 ---
 
@@ -411,7 +412,9 @@ Result: the **live clone** — shell + one real map — the proof the frame work
 - Hardcode org / university / professor / author names — `siteConfig` only. (§6.)
 - Add a runtime database, server, or API. (§1.)
 - Introduce stacks beyond React + Vite + MapLibre (+ Recharts for charts; + `@tanstack/react-table`,
-  headless, scoped to the PA analyst data table + box-select aggregation — KC's closing decision 2026-06-27).
+  headless — the analyst Data Console. Originally scoped to PA (KC's closing decision 2026-06-27);
+  **scope widened to PA + Dwelling Units** when DU adopted the console (§12 v1.12, KC 2026-07-16).
+  A third section reusing the shared console leaves is in-scope; a NEW stack is not.)
   Everything else stays hand-rolled. (§2.)
 - Duplicate cross-section base geometry (boundary, road/vegetation layers) into sections — it lives in `pipeline/yeg/shared/`. (§3.)
 - Over-engineer, or merge code Olivia can't read. (§6.)
@@ -460,6 +463,25 @@ When in doubt, load §2 (locked architecture) and §9 (negative rules) — the l
 Revise when: a locked decision changes (§2), a new section is wired (§3), a new rule is validated
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
+- **v1.12 (2026-07-16)** — **Dwelling Units gains the full analyst Data Console — and the DU
+  backend was UNFROZEN to feed it.** The aggregate-map standardization (v-note memory
+  `agg-map-standardization`) is complete: after DU + Business Counts were re-skinned onto the PA
+  immersive instrument (Tier A), **DU received PA's full Analysis-mode console (Tier B)** — the
+  `@tanstack` table (5 columns + trend sparkline), the KPI rail (Permits · Construction Value w/
+  median ≈ · Net Units · YoY · Distribution histogram), the Year + metric-range sliders, the trend
+  instrument, District facet → map dim, box-select, and scoped CSV/GeoJSON/PNG export.
+  **Backend (unfrozen for DU):** `pipeline/yeg/building-permits/scripts/production/02b_combine_geojson.R`
+  (mirrors PA's 07b) reshapes the 18 per-year files into ONE combined all-years file
+  (`permit_neighbourhoods_all_years.geojson`, 407×130 props) — a pure reshape (verified 0
+  mismatches), wired into `_whirl.yaml` (`01→02→02b→03`) + the handoff. **Frontend strategy (c) —
+  extract-by-copy:** the domain-agnostic console leaves were lifted to `components/`
+  (`consoleControls.jsx`, `consoleTable.js`, `geometry.js`, + relocated `DistributionStrip`/
+  `TrendInstrument`/`ExportMenu`/`portalTarget`); PA's `DataTable.jsx` is **byte-identical**
+  (verified: zero `content/property-assessment/` diff across the console commits), the PA de-dup
+  deferred to a separate concern. DU is now on PA's combined-file model (year = paint swap). §9:
+  the `@tanstack` scope widened PA → **PA + DU**. Aggregate scope = REPORTABLE-only (the KPI
+  matches the map + table + distribution; city 2026 = 6,258 permits). Business Counts stays
+  view-only (single survey year — no console). Shipped `4819f55`→`af9ab1d`.
 - **v1.11 (2026-07-13)** — **Tier 2 (container-universe reconciliation) COMPLETE end-to-end —
   the three-encoding / three-universe finding is closed in the data AND on the maps.** The four
   annexation-area polygons (8885–8888) are **kept and labelled**, not dropped: geometry-confirmed

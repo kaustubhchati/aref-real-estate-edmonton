@@ -143,6 +143,25 @@ sections, agent pipeline, and infrastructure.
 
 ## 2. New Phase 2 workstreams
 
+### Aggregate-map standardization (PA is the website standard)
+- [x] **Tier A — DONE.** Dwelling Units + Business Counts re-skinned onto the PA
+      immersive instrument (identity column, metric SegmentedControl, right rail,
+      SearchPeek, tips/attribution, single-select DetailPanel). Shared chrome lives
+      in `website/src/components/`.
+- [x] **Tier B — DU analyst Data Console DONE (2026-07-16, `4819f55`→`af9ab1d`;
+      CLAUDE §12 v1.12).** DU backend UNFROZEN: `02b_combine_geojson.R` emits the
+      combined all-years file (mirrors PA 07b; wired into `_whirl.yaml`). Frontend on
+      PA's combined-file model + the full console (@tanstack table, KPI rail,
+      distribution, Year + metric-range sliders, trend, District facet → dim,
+      box-select, CSV/GeoJSON/PNG export). Reuse = **extract-by-copy** — console leaves
+      lifted to `components/`, **PA `DataTable.jsx` byte-identical**; the PA de-dup is a
+      DEFERRED follow-up. `@tanstack` scope widened PA→PA+DU (§9). Aggregate =
+      reportable-only.
+- [ ] **PA console de-dup (deferred).** Rewire PA's `DataTable.jsx`/
+      `PropertyAssessmentMap.jsx` to import the shared `components/` leaves and delete
+      the inline defs; gate on a PA behavior-identity check. Off the DU critical path.
+- Business Counts stays **view-only** (single survey year — no console).
+
 ### Agent pipeline
 - [ ] **Sanity Agent** — N≥100 gate, YoY ±10% jump
       detection, spatial neighbour check. Olivia owns
