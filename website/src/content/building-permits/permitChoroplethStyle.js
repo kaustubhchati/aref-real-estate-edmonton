@@ -120,13 +120,17 @@ export const METRICS = [
 export const DEFAULT_METRIC = "units_added";
 
 // ---- Colour ramps -----------------------------------------------------
-// Sequential: cream → Ferrari red (shared $-value family, matches assessment).
+// Sequential: soft-yellow floor → Ferrari red — the SAME anchors as Property Assessment's
+// RAMP_ASSESSED ($-value ramp). The low band is AMBER (#f5a02e), not a pale peach: a pale low
+// band merged into the cream floor at lower values once the quantile ramp spread the bulk
+// across the low percentiles. Keep these in sync with PA's RAMP_ASSESSED (a shared home is a
+// deferred de-dup).
 const RAMP_SEQ = [
-  { key: "min",    c: rampFloor("#f5f0e8"), label: "min"    },
-  { key: "q25",    c: "#f5c4a0", label: "Q25"    },
-  { key: "median", c: "#f07840", label: "median" },
-  { key: "q75",    c: "#e03818", label: "Q75"    },
-  { key: "max",    c: "#cc0000", label: "max"    },
+  { key: "min",    c: rampFloor("#f5f0e8"), label: "min"    }, // shared floor #fbe3a0
+  { key: "q25",    c: "#f5a02e", label: "Q25"    }, // amber
+  { key: "median", c: "#ec6f2e", label: "median" }, // orange-red
+  { key: "q75",    c: "#e0381c", label: "Q75"    }, // scarlet
+  { key: "max",    c: "#cc0000", label: "max"    }, // Ferrari
 ];
 
 // ---- Quantile helper (mirrors assessment) -----------------------------

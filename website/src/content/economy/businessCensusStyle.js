@@ -99,12 +99,13 @@ export const METRICS = [
     icon: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 0 0 0-8 4 4 0 0 0 0 8Z M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75" },
 ];
 
-// ---- Colour ramp — cream → Ferrari red (shared $-value family) --------
-// Matches property-assessment's RAMP_VALUE so $-and-count choropleths read
-// the same across the site: warm cream → peach → orange → red-orange →
-// Ferrari red. Both metrics use this same ramp; values are heavily
-// right-skewed (businesses max ~1950, employees max ~89016) so the stop
-// VALUES come from quantiles, not the colours.
+// ---- Colour ramp — soft-yellow floor → Ferrari red (shared $-value family) --------
+// The SAME anchors as property-assessment's RAMP_ASSESSED so $-and-count choropleths read the
+// same across the site: warm cream → AMBER → orange-red → scarlet → Ferrari red. The low band
+// is amber (#f5a02e), NOT a pale peach — a pale low band merged into the cream floor at lower
+// values once the quantile ramp spread the bulk across the low percentiles. Keep in sync with
+// PA's RAMP_ASSESSED. Both metrics use this same ramp; values are heavily right-skewed
+// (businesses max ~1950, employees max ~89016) so the stop VALUES come from quantiles.
 //
 // label is "" on every stop on purpose: these are quantile descriptors
 // (min/Q25/…), not meaningful category names, and the shared Legend would
@@ -112,11 +113,11 @@ export const METRICS = [
 // numeric stop value. Empty label → Legend renders only the formatted
 // number. `key` still drives the buildStops scale lookup.
 const RAMP_ORRD = [
-  { key: "min",    c: rampFloor("#f5f0e8"), label: "" },
-  { key: "q25",    c: "#f5c4a0", label: "" },
-  { key: "median", c: "#f07840", label: "" },
-  { key: "q75",    c: "#e03818", label: "" },
-  { key: "max",    c: "#cc0000", label: "" },
+  { key: "min",    c: rampFloor("#f5f0e8"), label: "" }, // shared floor #fbe3a0
+  { key: "q25",    c: "#f5a02e", label: "" }, // amber
+  { key: "median", c: "#ec6f2e", label: "" }, // orange-red
+  { key: "q75",    c: "#e0381c", label: "" }, // scarlet
+  { key: "max",    c: "#cc0000", label: "" }, // Ferrari
 ];
 
 const METRIC_RAMP = {
