@@ -171,6 +171,67 @@ export function metricStops(gj, metric) {
   return sequentialStops(gj, metric.field);
 }
 
+// ---- Colour interpolation along the ramp (for the quantile fill) -------
+// The 5 RAMP_SEQ colours are anchors at even ramp fractions (0, ¼, ½, ¾, 1). rampColorAt(t)
+// returns the ramp colour at ANY fraction t∈[0,1] — it lerps the two bracketing anchors in
+// sRGB — so the quantile fill below can place a colour at every percentile, not only the 5
+// anchors. (The 5-anchor legend gradient is unaffected: it samples the same ramp.)
+function hexToRgb(h) {
+  const s = h.replace("#", "");
+  const n = parseInt(s.length === 3 ? s.split("").map((c) => c + c).join("") : s, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+const toHex = (x) => Math.round(Math.min(255, Math.max(0, x))).toString(16).padStart(2, "0");
+function lerpHex(a, b, t) {
+  const A = hexToRgb(a), B = hexToRgb(b);
+  return "#" + toHex(A[0] + (B[0] - A[0]) * t) + toHex(A[1] + (B[1] - A[1]) * t) + toHex(A[2] + (B[2] - A[2]) * t);
+}
+function rampColorAt(t) {
+  const cols = RAMP_SEQ.map((r) => r.c);                 // 5 anchors, evenly spaced along the ramp
+  const x = Math.min(1, Math.max(0, t)) * (cols.length - 1);
+  const i = Math.floor(x);
+  return i >= cols.length - 1 ? cols[cols.length - 1] : lerpHex(cols[i], cols[i + 1], x - i);
+}
+
+// ---- Quantile colour stops (construction value) -----------------------
+// The map TWIN of the console's quantile slider. Construction value spans ~4 orders of
+// magnitude ($0–$395M, median only $2.28M): the 5-anchor ramp interpolates LINEARLY IN VALUE
+// between anchors, so the whole top quartile ($10M–$395M) reads as nearly one colour and a
+// p90 neighbourhood is indistinguishable from a p76 one. This lays colour out by PERCENTILE
+// instead — colour ∝ the value's rank in the PANEL-WIDE distribution — so equal colour steps
+// hold equal shares of neighbourhoods (the choropleth analogue of the slider's "equal drag =
+// equal share"). It samples the ramp at CV_STOP_N even percentiles between p2 and p98 (the
+// SAME clamp as the slider: min $59k = cream, max $94.77M = red; values outside clamp to the
+// end colours), so MapLibre's linear-in-value interpolation between adjacent (close) quantile
+// values closely follows colour∝percentile. PANEL-WIDE (all years) ⇒ year-invariant
+// (Principle 0): a colour means the same percentile every year and the map agrees with the
+// slider. `years` selects the per-year <field>_<year> props from the combined file.
+const CV_STOP_N = 24;                                     // ramp samples between p2 and p98
+export function quantileColorStops(gj, field, years) {
+  const vals = [];
+  for (const f of gj?.features ?? []) {
+    const p = f.properties;
+    for (const y of years) {
+      if (p[`polygon_state_${y}`] !== "aggregated") continue;
+      const v = Number(p[`${field}_${y}`]);
+      if (Number.isFinite(v) && v > 0) vals.push(v);
+    }
+  }
+  if (vals.length < 2) return SEQ_FALLBACK;
+  vals.sort((a, b) => a - b);
+  const raw = [];
+  for (let k = 0; k <= CV_STOP_N; k++) {
+    const t = k / CV_STOP_N;                              // 0..1 = position along the ramp
+    const pct = 0.02 + t * 0.96;                          // the panel-wide percentile (p2 … p98)
+    raw.push({ v: quantile(vals, pct), c: rampColorAt(t), label: `p${Math.round(pct * 100)}` });
+  }
+  // interpolate needs STRICTLY ascending inputs — collapse any tied quantiles (keeps the
+  // lower-percentile colour at the tie; harmless for a continuous $-distribution).
+  const stops = [];
+  for (const s of raw) if (!stops.length || s.v > stops[stops.length - 1].v) stops.push(s);
+  return stops.length >= 2 ? stops : SEQ_FALLBACK;
+}
+
 // ---- Year-keyed field access (combined-file model) --------------------
 // The choropleth loads ONE combined all-years file (02b) whose per-year values are
 // flat <field>_<year> props; a YEAR change is a paint swap (applyPermitYearMetric),

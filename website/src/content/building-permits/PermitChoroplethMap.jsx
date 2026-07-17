@@ -32,7 +32,7 @@ import { CENTROID_SOURCE, buildCentroidPoints, centroidNameLayer, centroidFocusL
 import { applyChoroplethBasemapHarmony } from "../../components/choroplethBasemap.js";
 import {
   BASEMAP_STYLE, MAP_VIEW, METRICS, DEFAULT_METRIC,
-  metricStops, choroplethLayers, applyPermitYearMetric, buildPopupHtml,
+  metricStops, quantileColorStops, choroplethLayers, applyPermitYearMetric, buildPopupHtml,
   FILL_LAYER_ID, LEGEND_STATES,
 } from "./permitChoroplethStyle.js";
 import {
@@ -160,10 +160,20 @@ export default function PermitChoroplethMap() {
   }, []);
 
   const gjView = useMemo(() => projectYearCollection(gj, year), [gj, year]);
+  // Construction value gets a PANEL-WIDE quantile colour ramp (colour ∝ percentile) — the map
+  // twin of the console's quantile slider, year-invariant (Principle 0), computed once from the
+  // all-years file. Every other metric keeps its per-year 5-anchor quantile ramp (modest range,
+  // per-year contrast — the current behaviour). Split memos so the panel-wide sort runs on data
+  // load, not on every year change.
+  const cvColorStops = useMemo(() => {
+    const cv = METRICS.find((m) => m.key === "construction_value");
+    return cv ? quantileColorStops(gj, cv.field, yearsAsc) : null;
+  }, [gj, yearsAsc]);
   const stops = useMemo(
-    () => metricStops(gjView, metricDef),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [gjView, metricKey]
+    () => (metricKey === "construction_value" && cvColorStops
+      ? cvColorStops
+      : metricStops(gjView, metricDef)),
+    [metricKey, cvColorStops, gjView, metricDef]
   );
 
   const selectedFeature = useMemo(() => {
