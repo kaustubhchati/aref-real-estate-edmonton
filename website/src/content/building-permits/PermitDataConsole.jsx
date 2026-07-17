@@ -320,19 +320,20 @@ export default function PermitDataConsole({
   const rangeValue = table.getColumn(metric)?.getFilterValue();
   // Panel-wide (YEAR-INVARIANT) bounds for the range track — a FIXED frame (Principle 0: the
   // track never resizes with the year, so a filter set in one year means the same thing in
-  // every year; both the MIN and the MAX are fixed). MIN = the panel-wide min; MAX = the p98
-  // of the panel-wide distribution, NOT the absolute max — a single outlier (one ~$395M
-  // construction value) otherwise pushes the max so high the useful range collapses into the
-  // bottom sliver of the track. Values above p98 clamp to the top and still SHOW when the
-  // range is at full (the full-range = no-filter rule includes them). Read from `series` (the
-  // active metric across ALL years), so it is year-invariant by construction.
+  // every year; both the MIN and the MAX are fixed). Both bounds are DISTRIBUTION PERCENTILES,
+  // NOT the absolute extremes — a symmetric outlier trim so neither a lone $0-construction edge
+  // case (bottom) nor a lone ~$395M outlier (top) dominates the track: MIN = the p2, MAX = the
+  // p98 of the panel-wide distribution. Values outside [p2, p98] clamp to the ends and still
+  // SHOW when the range is at full (the full-range = no-filter rule includes them). Read from
+  // `series` (the active metric across ALL years), so it is year-invariant by construction.
   const rangeScale = useMemo(() => {
     const vals = [];
     for (const r of rows) for (const v of r.series ?? []) if (v != null && Number.isFinite(v)) vals.push(v);
     if (vals.length < 2) return null;
     vals.sort((a, b) => a - b);
-    const min = vals[0];
-    const max = vals[Math.min(vals.length - 1, Math.round((vals.length - 1) * 0.98))]; // p98 (outlier-robust)
+    const q = (pp) => vals[Math.min(vals.length - 1, Math.max(0, Math.round((vals.length - 1) * pp)))];
+    const min = q(0.02);   // p2 — the distribution's low bound (excludes $0-value edge cases)
+    const max = q(0.98);   // p98 — outlier-robust high bound
     return min >= max ? null : linearScale(min, max);
     // rows recomputes per year but `series` is year-invariant, so the bounds are STABLE.
     // eslint-disable-next-line react-hooks/exhaustive-deps
