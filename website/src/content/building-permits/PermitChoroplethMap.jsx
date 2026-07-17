@@ -37,6 +37,10 @@ import {
   resolveCombinedPermitUrl, projectYearCollection, projectYearProps,
   aggregatePermitFeatures,
 } from "./dataSources.js";
+import {
+  buildSnapshotCsv, buildTimeseriesCsv, buildAggregateCsv, buildGeoJson,
+  buildProvenanceText, downloadCsvWithSidecar, downloadText, exportPng,
+} from "./exportPermitData.js";
 import { fmtNumber } from "../../utils/format.js";
 import { reduceMotion } from "../../components/motion.js";
 import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
@@ -93,19 +97,6 @@ function fitToFeatures(map, features, { reserveConsole = false } = {}) {
     padding: { top: 80, bottom: reserveConsole ? 320 : 80, left: floatLeftPad(map) + 60, right: 60 },
     duration: reduceMotion() ? 0 : 700, maxZoom: 14,
   });
-}
-
-// Minimal client-side CSV download (the scoped current-year snapshot). The full export
-// module (timeseries / aggregate / provenance sidecar / PNG) lands in a follow-up.
-function downloadCsv(name, text) {
-  const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(a.href);
 }
 
 export default function PermitChoroplethMap() {
@@ -454,17 +445,40 @@ export default function PermitChoroplethMap() {
   };
   const clearSelection = () => setSelectedIds([]);
 
-  // Scoped current-year CSV (selection → facet → all). Full module (timeseries / aggregate
-  // / provenance / PNG) is a follow-up; the button ships a working snapshot now.
-  function handleExport() {
-    if (!gjView) return;
+  // Scoped export (selection → district facet → all city). CSV bodies + a provenance
+  // sidecar, GeoJSON, or a PNG of the map — all client-side, mirroring PA's handleExport.
+  function handleExport(format) {
+    if (!gj) return;
     const ids = selectedIds.length ? selectedIds : (brushedIds?.length ? brushedIds : null);
     const set = ids ? new Set(ids.map(String)) : null;
-    const rows = tableRows.filter((r) => !set || set.has(String(r.id)));
-    const header = ["Neighbourhood ID", "name", "district", "permits", "construction_value", "units_added", "units_demolished", "median_construction_value"];
-    const body = rows.map((r) => [r.id, `"${r.name}"`, `"${r.district ?? ""}"`, r.permit_count ?? "", r.construction_value ?? "", r.units_added ?? "", r.units_demolished ?? "", r.median_cv ?? ""].join(","));
-    const scope = selectedIds.length ? `${rows.length}-selected` : brushedIds?.length ? `${rows.length}-filtered` : "all";
-    downloadCsv(`dwelling-units_${CITY}_${scope}_${year}.csv`, [header.join(","), ...body].join("\n"));
+    const scoped = set
+      ? gj.features.filter((f) => set.has(String(f.properties["Neighbourhood ID"])))
+      : gj.features;
+    const scopeKind = selectedIds.length ? "selected" : brushedIds?.length ? "filtered" : null;
+    const base = `dwelling-units_${CITY}_${scopeKind ? `${scoped.length}-${scopeKind}` : "all"}`;
+    const span = `${yearsAsc[0]}-${yearsAsc[yearsAsc.length - 1]}`;
+    const meta = {
+      city: CITY,
+      metric: metricDef.label,
+      scope: scopeKind ? `${scoped.length} ${scopeKind === "selected" ? "selected" : "filtered (table view)"} neighbourhoods` : "all neighbourhoods",
+    };
+    if (format === "csv-current") {
+      const name = `${base}_${year}.csv`;
+      downloadCsvWithSidecar(name, buildSnapshotCsv(scoped, year),
+        buildProvenanceText({ ...meta, file: name, shape: "snapshot — one row per neighbourhood", coverage: String(year) }));
+    } else if (format === "csv-timeseries") {
+      const name = `${base}_${span}.csv`;
+      downloadCsvWithSidecar(name, buildTimeseriesCsv(scoped, yearsAsc),
+        buildProvenanceText({ ...meta, file: name, shape: "timeseries panel — one row per neighbourhood × year", coverage: span }));
+    } else if (format === "csv-aggregate") {
+      const name = `${base}_summary_${year}.csv`;
+      downloadCsvWithSidecar(name, buildAggregateCsv(selectionAggregate, cityBaseline),
+        buildProvenanceText({ ...meta, file: name, shape: "aggregate — one row per measure", coverage: String(year) }));
+    } else if (format === "geojson") {
+      downloadText(`${base}.geojson`, buildGeoJson(scoped), "application/geo+json");
+    } else if (format === "png") {
+      if (map) exportPng(map, `${base}_${year}.png`);
+    }
   }
 
   if (manifestError) {
