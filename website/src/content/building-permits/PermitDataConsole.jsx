@@ -318,20 +318,25 @@ export default function PermitDataConsole({
   // ── Metric-range facet (targets the active metric's column). All linear (no YoY piecewise).
   const activeCol = DU_COLS[metric];
   const rangeValue = table.getColumn(metric)?.getFilterValue();
-  // Panel-wide max (every year) so the track is a fixed FRAME (doesn't resize year to year).
-  const panelMax = useMemo(() => {
-    let hi = -Infinity;
-    for (const r of rows) for (const v of r.series ?? []) if (v != null && v > hi) hi = v;
-    return Number.isFinite(hi) ? hi : null;
-  }, [rows]);
-  const yearBounds = table.getColumn(metric)?.getFacetedMinMaxValues();
-  const activeLo = Array.isArray(rangeValue) ? rangeValue[0] : null;
+  // Panel-wide (YEAR-INVARIANT) bounds for the range track — a FIXED frame (Principle 0: the
+  // track never resizes with the year, so a filter set in one year means the same thing in
+  // every year; both the MIN and the MAX are fixed). MIN = the panel-wide min; MAX = the p98
+  // of the panel-wide distribution, NOT the absolute max — a single outlier (one ~$395M
+  // construction value) otherwise pushes the max so high the useful range collapses into the
+  // bottom sliver of the track. Values above p98 clamp to the top and still SHOW when the
+  // range is at full (the full-range = no-filter rule includes them). Read from `series` (the
+  // active metric across ALL years), so it is year-invariant by construction.
   const rangeScale = useMemo(() => {
-    if (yearBounds?.[0] == null || panelMax == null) return null;
-    const min = activeLo != null && activeLo < yearBounds[0] ? activeLo : yearBounds[0];
-    return linearScale(min, panelMax);
+    const vals = [];
+    for (const r of rows) for (const v of r.series ?? []) if (v != null && Number.isFinite(v)) vals.push(v);
+    if (vals.length < 2) return null;
+    vals.sort((a, b) => a - b);
+    const min = vals[0];
+    const max = vals[Math.min(vals.length - 1, Math.round((vals.length - 1) * 0.98))]; // p98 (outlier-robust)
+    return min >= max ? null : linearScale(min, max);
+    // rows recomputes per year but `series` is year-invariant, so the bounds are STABLE.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [metric, yearBounds?.[0], panelMax, activeLo]);
+  }, [metric, rows]);
   const setRange = ([lo, hi]) => {
     if (!rangeScale) return;
     const full = lo <= rangeScale.min && hi >= rangeScale.max;
