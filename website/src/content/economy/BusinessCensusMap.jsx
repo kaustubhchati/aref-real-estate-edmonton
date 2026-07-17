@@ -47,7 +47,6 @@ import {
   bcensusFillColor,
   bcensusLayers,
   buildBusinessCensusPopupHtml,
-  LEGEND_STATES,
 } from "./businessCensusStyle.js";
 import { fmtNumber } from "../../utils/format.js";
 import { reduceMotion } from "../../components/motion.js";
@@ -479,7 +478,7 @@ export default function BusinessCensusMap() {
 
         {/* ===== INSTRUMENT COLUMN (PA standard) — identity + metric → legend → count.
             No year module: Business Counts is a single survey year (2025). ===== */}
-        <div className="pa-float pa-column">
+        <div className="pa-float pa-column pa-column-lean">
           <section className="pa-card pa-card-identity">
             <IdentityCard title="Business Counts" />
           </section>
@@ -496,8 +495,8 @@ export default function BusinessCensusMap() {
                 />
               </div>
 
-              {/* LEGEND — ramp + the "Neighbourhood status" categorical block
-                  (no-data + annexation). */}
+              {/* LEGEND — the value ramp only (the neighbourhood-status categorical block was
+                  removed; non-data states are still explained on click, in the popup/detail). */}
               <div className="pa-col-mod pa-col-legend">
                 <span className="pa-col-lab">Legend</span>
                 <div className="du-legend-fade" key={metric}>
@@ -506,8 +505,6 @@ export default function BusinessCensusMap() {
                     stops={stops}
                     format={selectedMetric.fmt}
                     horizontal
-                    greyTitle="Neighbourhood status"
-                    greyStates={LEGEND_STATES}
                   />
                 </div>
               </div>

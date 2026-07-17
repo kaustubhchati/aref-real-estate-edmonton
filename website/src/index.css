@@ -1644,6 +1644,11 @@ p  { margin: 0 0 0.75rem; }
    Works in both modes: View (after the metric panel) and console (after identity, where
    the metric is dormant — a modest gap, no huge gutter). */
 .pa-card-instrument .pa-col-legend { margin-top: var(--s6); }
+/* DU + BC (.pa-column-lean) — their metric group is short and the neighbourhood-status legend
+   block was removed, so the --s6 gutter above the ramp read as dead space. Tighten it to the
+   --s2 step the other section gaps (metric/foot) use, so the ramp sits directly under the
+   metrics. Scoped: PA (no .pa-column-lean) keeps its --s6. */
+.pa-column-lean .pa-card-instrument .pa-col-legend { margin-top: var(--s2); }
 /* color: the horizontal ramp's min/max bound labels use `color: inherit` (Legend.jsx);
    without this they inherited a light-theme near-black (#1a1f2e) and vanished on the
    dark/glass panel. Set the governed muted tier so the bounds clear §4 on the panel

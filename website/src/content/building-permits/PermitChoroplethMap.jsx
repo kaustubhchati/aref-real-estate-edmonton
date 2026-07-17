@@ -33,7 +33,7 @@ import { applyChoroplethBasemapHarmony } from "../../components/choroplethBasema
 import {
   BASEMAP_STYLE, MAP_VIEW, METRICS, DEFAULT_METRIC,
   metricStops, quantileColorStops, choroplethLayers, applyPermitYearMetric, buildPopupHtml,
-  FILL_LAYER_ID, LEGEND_STATES,
+  FILL_LAYER_ID,
 } from "./permitChoroplethStyle.js";
 import {
   loadPermitManifest, permitYears, permitDefaultYear,
@@ -651,7 +651,7 @@ export default function PermitChoroplethMap() {
         {/* INSTRUMENT COLUMN — metric DORMANT (re-homes to the console header) when the
             console is up; legend + count stay. No year select — the Year slider lives in
             the console tuning bay (strip above the handle when down). */}
-        <div className="pa-float pa-column">
+        <div className="pa-float pa-column pa-column-lean">
           <section className="pa-card pa-card-identity">
             <IdentityCard title="Dwelling Units" />
           </section>
@@ -665,8 +665,7 @@ export default function PermitChoroplethMap() {
               <div className="pa-col-mod pa-col-legend">
                 <span className="pa-col-lab">Legend</span>
                 <div className="du-legend-fade" key={metricKey}>
-                  <Legend title={metricDef.label} stops={stops} format={metricDef.fmt} horizontal
-                          greyTitle="Neighbourhood status" greyStates={LEGEND_STATES} />
+                  <Legend title={metricDef.label} stops={stops} format={metricDef.fmt} horizontal />
                 </div>
               </div>
               <div className="pa-col-mod pa-col-foot">
