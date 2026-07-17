@@ -30,16 +30,20 @@ export function fmtCurrency(v) {
   return "$" + Math.round(+v).toLocaleString();
 }
 
-// Abbreviated currency for the analyst table, where six numeric columns must fit
-// a bounded module: $1.41M / $353k / $920. Full precision still lives in
-// fmtCurrency (the rail + aggregate cards, where there's room).
+// Abbreviated currency for the analyst table + KPI cards, where numeric columns must
+// fit a bounded module: $1.13B / $1.41M / $353k / $920. Full precision still lives in
+// fmtCurrency (Export's job). The BILLIONS tier is load-bearing for Dwelling Units —
+// its Σ construction value reaches ~$1.1B, which without a B tier read "$1134.59M" (a
+// value that overflows its own compact form — DESIGN_SYSTEM §2.104). PA never reaches
+// $1B (its values are per-property), so the B branch is inert there.
 export function fmtCurrencyShort(v) {
   if (v == null || isNaN(+v)) return DASH;
   const n = Math.round(+v);
   if (Math.abs(n) < 1e4) return "$" + n.toLocaleString();           // $9,500
-  // Round to thousands first, THEN promote to M — so a value that rounds up to
-  // 1000k (e.g. $999,800) reads "$1.00M", never "$1000k".
+  // Round to thousands first, THEN promote — so a value that rounds up to a boundary
+  // (e.g. $999,800 → 1000k) reads "$1.00M", never "$1000k" (same for k→M→B).
   const k = Math.round(n / 1e3);
+  if (Math.abs(k) >= 1e6)  return "$" + (k / 1e6).toFixed(2) + "B"; // $1.13B
   if (Math.abs(k) >= 1000) return "$" + (k / 1e3).toFixed(2) + "M"; // $1.41M
   return "$" + k + "k";                                             // $353k
 }

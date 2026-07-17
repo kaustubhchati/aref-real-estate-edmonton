@@ -38,13 +38,13 @@ const COL_WIDTH = { name: "24%", metric: "13%", trend: "11%" };
 // Per-metric presentation: table header (compact, carries the unit) + full/cell formatter.
 const DU_COLS = {
   permit_count:       { key: "permit_count",       label: "Permit Count",         header: "Permits",   fmt: fmtNumber,        cellFmt: fmtNumber },
-  construction_value: { key: "construction_value", label: "Construction Value",   header: "Constr. $", fmt: fmtCurrency,      cellFmt: fmtCurrencyShort },
+  construction_value: { key: "construction_value", label: "Construction Value",   header: "Constr.",   fmt: fmtCurrency,      cellFmt: fmtCurrencyShort },
   units_added:        { key: "units_added",        label: "Dwellings Added",      header: "Added",     fmt: fmtNumber,        cellFmt: fmtNumber },
   units_demolished:   { key: "units_demolished",   label: "Dwellings Demolished", header: "Demol.",    fmt: fmtNumber,        cellFmt: fmtNumber },
 };
 // The 5 table columns in order (the 4 metrics + the table-only median).
 const TABLE_METRIC_COLS = ["permit_count", "construction_value", "units_added", "units_demolished"];
-const MEDIAN_COL = { key: "median_cv", header: "Median $", cellFmt: fmtCurrencyShort };
+const MEDIAN_COL = { key: "median_cv", header: "Median", cellFmt: fmtCurrencyShort };
 
 // Categorical facet — District (data-driven from the rows). A SCOPE (drives the map dim
 // + the KPI/trend/export), matching PA §122.
@@ -62,12 +62,22 @@ const PermitTrendCell = memo(function PermitTrendCell({ series }) {
   return <Sparkline values={nums} stroke={stroke} width={44} height={12} activeIndex={-1} ariaLabel="Trend" />;
 });
 
-// A signed percent for the YoY card + its delta: "+12.4%", coloured up/down. null → null.
+// A signed percent for the YoY card VALUE: "+12.4%", coloured up/down. null → null.
+// (DU's permit-count YoY is a true Σthis/Σprev−1 rate, so the value IS a percent — unlike
+// PA's log-points.)
 function signedPct(v, digits = 1) {
   if (v == null || !Number.isFinite(+v)) return null;
   const n = +v * 100;
   const sign = n > 0 ? "+" : n < 0 ? "−" : "";
   return `${sign}${Math.abs(n).toFixed(digits)}%`;
+}
+// A signed percentage-POINT delta: "+1.7pp" — NO % (a pp is the gap between two percentages,
+// so it never carries a percent sign; §2.104. The former "+1.7% pp" double-unit was a defect).
+function signedPp(v, digits = 1) {
+  if (v == null || !Number.isFinite(+v)) return null;
+  const n = +v * 100;
+  const sign = n > 0 ? "+" : n < 0 ? "−" : "";
+  return `${sign}${Math.abs(n).toFixed(digits)}pp`;
 }
 const signClass = (v) => (v > 0 ? "dt-up" : v < 0 ? "dt-dn" : "");
 
@@ -83,7 +93,7 @@ function PermitKpiRail({ scope, cityBaseline, cityScope, cityName, dist }) {
     : { txt: `${((v / base) * 100).toFixed(1)}% of city`, cls: "" };
   const yoyDeltaPp =
     cityScope || scope.areaYoYPermits == null || cityBaseline?.areaYoYPermits == null ? null
-    : { txt: `${signedPct(scope.areaYoYPermits - cityBaseline.areaYoYPermits, 1)} pp`,
+    : { txt: signedPp(scope.areaYoYPermits - cityBaseline.areaYoYPermits, 1),
         cls: signClass(scope.areaYoYPermits - cityBaseline.areaYoYPermits) };
 
   const cityTxt = (v, fmt) => (cityScope || v == null ? null : `${cityName ?? "city"} ${fmt(v)}`);
@@ -106,10 +116,10 @@ function PermitKpiRail({ scope, cityBaseline, cityScope, cityName, dist }) {
       <KpiCard
         label="Net Units" cityScope={cityScope} cityName={cityName}
         value={fmtNumber(scope.netUnits)}
-        foot={`Added ${fmtNumber(scope.sumUnitsAdded)} · Demol ${fmtNumber(scope.sumUnitsDemolished)}`}
+        foot={`Added ${fmtNumber(scope.sumUnitsAdded)} · Demol. ${fmtNumber(scope.sumUnitsDemolished)}`}
       />
       <KpiCard
-        label="YoY · Permits" cityScope={cityScope} cityName={cityName}
+        label="YoY (Permits)" cityScope={cityScope} cityName={cityName}
         value={signedPct(scope.areaYoYPermits) ?? "—"}
         valueCls={scope.areaYoYPermits != null ? signClass(scope.areaYoYPermits) : ""}
         city={cityScope || cityBaseline?.areaYoYPermits == null ? null : `${cityName ?? "city"} ${signedPct(cityBaseline.areaYoYPermits)}`}

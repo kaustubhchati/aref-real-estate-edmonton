@@ -55,6 +55,19 @@ const CITY = "Edmonton";
 const COMBINED_URL = resolveCombinedPermitUrl();
 const num = (v) => (v == null || !Number.isFinite(+v) || +v === -999 ? null : +v);
 
+// §6 honesty block for the tips popover — DU's selection-aggregate disclosure. DU is NO LONGER
+// view-only (it has the Data Console), so the exact-vs-≈ asymmetry MUST show (§6.133/§6.143):
+// the sums are exact; the median-of-medians is an estimate. Muted tier, bulleted.
+const DU_HONESTY = (
+  <div className="pa-tips-honesty">
+    <span className="pa-tips-honesty-h">Selection Aggregates</span>
+    <ul>
+      <li><b>Permits</b>, <b>Construction Value</b> and <b>Units</b> are exact sums</li>
+      <li><b>Median</b> is a median of neighbourhood medians (≈)</li>
+    </ul>
+  </div>
+);
+
 // ---- Fly-to / fit helpers. promoteId = "Neighbourhood ID". --------------------
 function findFeatureById(gj, id) {
   for (const f of gj?.features ?? []) {
@@ -589,9 +602,9 @@ export default function PermitChoroplethMap() {
     if (!agg) notes.push(p.polygon_state === "suppressed_low_n" ? "Fewer than 10 permits — aggregate values suppressed." : "No permit data for this neighbourhood.");
     const rows = agg ? [
       { k: metricDef.legendLabel, v: metricDef.fmt(p[metricDef.field]) },
-      ...(metricDef.field !== "n_permits" ? [{ k: "Residential permits", v: fmtNumber(p.n_permits) }] : []),
+      ...(metricDef.field !== "n_permits" ? [{ k: "Residential Permits", v: fmtNumber(p.n_permits) }] : []),
     ] : [];
-    return <DetailPanel name={p.display_name} sub={p.district ? `${p.district} district` : null} notes={notes} rows={rows} onClear={clearSelection} />;
+    return <DetailPanel name={p.display_name} sub={p.district ? `${p.district} District` : null} notes={notes} rows={rows} onClear={clearSelection} />;
   })() : null;
 
   return (
@@ -642,7 +655,7 @@ export default function PermitChoroplethMap() {
               <div className="pa-col-mod pa-col-legend">
                 <span className="pa-col-lab">Legend</span>
                 <div className="du-legend-fade" key={metricKey}>
-                  <Legend title={metricDef.legendLabel} stops={stops} format={metricDef.fmt} horizontal
+                  <Legend title={metricDef.label} stops={stops} format={metricDef.fmt} horizontal
                           greyTitle="Neighbourhood status" greyStates={LEGEND_STATES} />
                 </div>
               </div>
@@ -665,8 +678,8 @@ export default function PermitChoroplethMap() {
         )}
 
         {/* ABOUT & TIPS — the full tip set now that DU has the console (box-select, sliders,
-            Press T, clears). honesty={null}: the median-of-medians ≈ tag rides the KPI card. */}
-        <MapTipsPopover open={infoOpen} onClose={() => setInfoOpen(false)} honesty={null} lastUpdated={manifest?.last_updated} />
+            Press T, clears) + the §6 aggregate-honesty block (sums exact, median ≈). */}
+        <MapTipsPopover open={infoOpen} onClose={() => setInfoOpen(false)} honesty={DU_HONESTY} lastUpdated={manifest?.last_updated} />
 
         {/* DATA & ATTRIBUTION */}
         <AttributionPanel open={attribOpen} onClose={() => setAttribOpen(false)} />

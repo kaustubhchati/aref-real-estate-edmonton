@@ -103,16 +103,16 @@ const fmtInt = (v) =>
 // metric is now sequential.
 export const METRICS = [
   { key: "permit_count", field: "n_permits", label: "Permit Count",
-    legendLabel: "Residential permits", fmt: fmtInt,
+    legendLabel: "Residential Permits", fmt: fmtInt,
     icon: "M14 3v4a1 1 0 0 0 1 1h4 M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z M9 13h6 M9 17h6" },
   { key: "construction_value", field: "total_construction_value", label: "Construction Value",
-    legendLabel: "Residential construction value", fmt: fmtCurrency,
+    legendLabel: "Residential Construction Value", fmt: fmtCurrency,
     icon: "M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1z M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5 M4 15v-3a6 6 0 0 1 6-6 M14 6a6 6 0 0 1 6 6v3" },
   { key: "units_added", field: "units_added_gross", label: "Dwellings Added",
-    legendLabel: "Dwelling units added", fmt: fmtInt,
+    legendLabel: "Dwelling Units Added", fmt: fmtInt,
     icon: "M13 22H5a2 2 0 0 1-2-2v-9.5a2 2 0 0 1 .8-1.6l7-5.2a2 2 0 0 1 2.4 0l7 5.2a2 2 0 0 1 .8 1.6V11 M15 18h6 M18 15v6" },
   { key: "units_demolished", field: "units_demolished", label: "Dwellings Demolished",
-    legendLabel: "Dwelling units demolished", fmt: fmtInt,
+    legendLabel: "Dwelling Units Demolished", fmt: fmtInt,
     icon: "M13 22H5a2 2 0 0 1-2-2v-9.5a2 2 0 0 1 .8-1.6l7-5.2a2 2 0 0 1 2.4 0l7 5.2a2 2 0 0 1 .8 1.6V11 M15 18h6" },
 ];
 
@@ -373,11 +373,11 @@ function escapeHtml(s) {
 
 // Every resolvable field, for the Tier-3 pinned popup. [field, label, fmt].
 export const POPUP_ROWS = [
-  ["n_permits",                 "Residential permits",                  fmtInt],
-  ["units_added_gross",         "Dwelling units added",                 fmtInt],
-  ["units_demolished",          "Dwelling units demolished",            fmtInt],
-  ["total_construction_value",  "Residential construction value",       fmtCurrency],
-  ["median_construction_value", "Median residential construction value",fmtCurrency],
+  ["n_permits",                 "Residential Permits",                  fmtInt],
+  ["units_added_gross",         "Dwelling Units Added",                 fmtInt],
+  ["units_demolished",          "Dwelling Units Demolished",            fmtInt],
+  ["total_construction_value",  "Residential Construction Value",       fmtCurrency],
+  ["median_construction_value", "Median Residential Construction Value",fmtCurrency],
 ];
 
 // `detail` selects the tier; `metric` is the active flat metric.
@@ -391,7 +391,7 @@ export function buildPopupHtml(p, detail, year, metric) {
 
   const parts = [`<div class="pop-name">${escapeHtml(name)}</div>`];
   if (p.district) {
-    parts.push(`<div class="pop-district">${escapeHtml(p.district)} district</div>`);
+    parts.push(`<div class="pop-district">${escapeHtml(p.district)} District</div>`);
   }
 
   // ---- Tier 2 — slim hover preview ----
@@ -407,7 +407,7 @@ export function buildPopupHtml(p, detail, year, metric) {
       if (metric.field !== "n_permits") {
         parts.push(
           `<div class="pop-row">` +
-            `<span class="pop-k">Residential permits</span>` +
+            `<span class="pop-k">Residential Permits</span>` +
             `<span class="pop-v">${fmtInt(p.n_permits)}</span>` +
           `</div>`
         );
@@ -439,7 +439,7 @@ export function buildPopupHtml(p, detail, year, metric) {
       `<div class="pop-state suppressed_low_n">` +
         `${escapeHtml(STATE_STYLE.suppressed_low_n.label)}</div>`,
       `<div class="pop-row">` +
-        `<span class="pop-k">Residential permits</span>` +
+        `<span class="pop-k">Residential Permits</span>` +
         `<span class="pop-v">${fmtInt(p.n_permits)}</span>` +
       `</div>`,
       `<div class="pop-reason">Fewer than 10 permits — ` +
