@@ -48,9 +48,11 @@ export default function MapView({
   cooperativeGestures = true,
   className = "",
   // Attribution shape (§6). Defaults reproduce the compact "i" every section had.
-  //   • attributionCompact — false = an always-visible inline strip (no toggle). PA
-  //     uses this for its bottom-edge links strip; the fuller record lives in PA's own
-  //     attribution panel. BP/BC keep the compact toggle (true).
+  //   • attributionCompact — false = an always-visible inline strip (no toggle). PA, DU
+  //     and BC ALL pass false now (the standardization gave DU/BC PA's links strip + the
+  //     attribution panel); the `true` default is only the built-in fallback for a caller
+  //     that passes nothing (e.g. the permit POINT map). The fuller record lives in the
+  //     database-control attribution panel.
   //   • mapAttribution — the customAttribution entries (CARTO/OSM come from the TileJSON
   //     automatically, on top of these). PA passes the links-only strip; the default
   //     carries the disclaimer too.
@@ -108,13 +110,13 @@ export default function MapView({
       // MAP_VIEW.maxBounds) so the user can't pan off into empty basemap.
       maxBounds: view.maxBounds,
       // The basemap CARTO/OSM credit comes from the TileJSON automatically;
-      // customAttribution APPENDS our data credit (siteConfig §6). `compact` is
-      // per-section: PA runs an always-visible links strip (compact:false), BP/BC the
-      // compact "i" toggle (default true).
+      // customAttribution APPENDS our data credit (siteConfig §6). PA, DU and BC all run
+      // the always-visible links strip (compact:false); the compact "i" toggle (default
+      // true) is only the fallback for a caller that passes nothing (the permit point map).
       attributionControl: { compact: attributionCompact, customAttribution: mapAttribution },
-      // Default (BP/BC): scrolling zooms only with ctrl/⌘ (or two fingers); a
-      // plain wheel scrolls the PAGE, so an embedded map doesn't hijack scroll.
-      // PA opts OUT (cooperativeGestures=false) for a free-roam, full-bleed map:
+      // Default: scrolling zooms only with ctrl/⌘ (or two fingers); a plain wheel scrolls
+      // the PAGE, so an embedded map doesn't hijack scroll. PA/DU/BC all opt OUT
+      // (cooperativeGestures=false) for a free-roam, full-bleed map:
       // wheel/two-finger zooms directly, no modifier. PA-scoped via the prop.
       cooperativeGestures,
       // PA opts in (preserveDrawingBuffer) so the WebGL canvas can be exported to
