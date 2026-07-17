@@ -338,7 +338,9 @@ export default function BusinessCensusMap() {
       const withData = gj.features
         .filter((f) => f.properties.census_state === "data")
         .map((f) => String(f.properties.neighbourhood_id));
-      map.setFilter("nbhd-labels", ["in", ["get", "neighbourhood_id"], ["literal", withData]]);
+      // to-string COERCES the property so the match is type-agnostic (a bare ["get"] on a
+      // numeric id vs a string-id array culls every base label — the "labels gone" bug).
+      map.setFilter("nbhd-labels", ["in", ["to-string", ["get", "neighbourhood_id"]], ["literal", withData]]);
     } catch { /* map mid-teardown */ }
   }, [map, gj]);
 

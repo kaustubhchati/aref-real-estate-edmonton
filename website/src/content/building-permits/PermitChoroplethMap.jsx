@@ -264,6 +264,7 @@ export default function PermitChoroplethMap() {
     // Land on the pitched HOME view (jumpTo under the skeleton on first load; ease after).
     applyCameraPreset(m, HOME_VIEW[CITY], { ease: !firstHomeRef.current });
     firstHomeRef.current = false;
+    if (import.meta.env.DEV) window.__duMap = m;   // dev-only console handle (mirrors PA's __paMap)
   }
 
   // Paint swap on year/metric/stops change.
@@ -434,7 +435,10 @@ export default function PermitChoroplethMap() {
       const reportable = gjView.features
         .filter((f) => f.properties.polygon_state === "aggregated")
         .map((f) => String(f.properties["Neighbourhood ID"]));
-      map.setFilter("nbhd-labels", ["in", ["get", "Neighbourhood ID"], ["literal", reportable]]);
+      // to-string COERCES the property to a string — DU's "Neighbourhood ID" is a NUMBER
+      // (PA's is a string), so a bare ["get"] would compare number-vs-string-array and cull
+      // EVERY base label (the "labels gone" bug). to-string makes the match type-agnostic.
+      map.setFilter("nbhd-labels", ["in", ["to-string", ["get", "Neighbourhood ID"]], ["literal", reportable]]);
     } catch { /* map mid-teardown */ }
   }, [map, gjView]);
 
