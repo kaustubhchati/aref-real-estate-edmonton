@@ -195,6 +195,23 @@ export function bcensusFillColor(metricKey, stops) {
   return buildFillColourExpression(metricKey, stops);
 }
 
+// Per-state fill opacity at an aggregated-fade factor k. Only the `data` branch scales by k;
+// the glass no_data states (0.04–0.15) never fade — that faintness is their honesty encoding.
+// Two pre-scaled copies drive the high-zoom fade in the fill layer below.
+const dataFillOpacity = (k) => [
+  "case",
+  ["==", ["get", "census_state"], "data"],
+    [
+      "case",
+      ["boolean", ["feature-state", "hover"],  false], 0.88 * k,
+      ["boolean", ["feature-state", "pinned"], false], 0.88 * k,
+      0.74 * k,
+    ],
+  ["boolean", ["feature-state", "hover"],  false], 0.15,
+  ["boolean", ["feature-state", "pinned"], false], 0.15,
+  0.04,
+];
+
 // ---- Layer stack — bcensus-* ids (no collision with nbhd-* / pnbhd-*) -
 // Source-agnostic (source filled in by MapView via `source` prop).
 export function bcensusLayers(stops, metricKey = "n_businesses_2025") {
@@ -207,18 +224,12 @@ export function bcensusLayers(stops, metricKey = "n_businesses_2025") {
         "fill-color": buildFillColourExpression(metricKey, stops),
         // Tween the colour on a metric change instead of snapping.
         "fill-color-transition": paintTransition(DUR_BASE),
+        // High-zoom fade (PA F4): data fills ease 0.74→~0.50 between z14 and z16.5 so
+        // streets/buildings/labels read through at neighbourhood zoom.
         "fill-opacity": [
-          "case",
-          ["==", ["get", "census_state"], "data"],
-            [
-              "case",
-              ["boolean", ["feature-state", "hover"],   false], 0.88,
-              ["boolean", ["feature-state", "pinned"],  false], 0.88,
-              0.74,
-            ],
-          ["boolean", ["feature-state", "hover"],  false], 0.15,
-          ["boolean", ["feature-state", "pinned"], false], 0.15,
-          0.04,
+          "interpolate", ["linear"], ["zoom"],
+          14, dataFillOpacity(1),
+          16.5, dataFillOpacity(0.68),
         ],
         "fill-opacity-transition": { duration: 150, delay: 0 },
       },
@@ -240,7 +251,7 @@ export function bcensusLayers(stops, metricKey = "n_businesses_2025") {
       filter: ["==", ["get", "census_state"], "no_data"],
       paint: {
         "line-color": STATE_STYLE.no_data.outlineColor,
-        "line-width": STATE_STYLE.no_data.outlineWidth,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.2, 13, STATE_STYLE.no_data.outlineWidth],
         "line-dasharray": STATE_STYLE.no_data.outlineDash,
       },
     },
@@ -254,51 +265,44 @@ export function bcensusLayers(stops, metricKey = "n_businesses_2025") {
       filter: ["==", ["get", "is_annexation_area"], true],
       paint: {
         "line-color":     ANNEXATION_STYLE.outlineColor,
-        "line-width":     ANNEXATION_STYLE.outlineWidth,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.5, 13, ANNEXATION_STYLE.outlineWidth],
         "line-dasharray": ANNEXATION_STYLE.outlineDash,
       },
     },
-    // 4. Hover / pinned highlight outline
+    // 4. Selection CASING — a cream under-stroke beneath the violet highlight so a selected
+    //    boundary stays legible over the ramp (PA P4). Pinned only. Lifted to the top with
+    //    the highlight by the component (moveLayer).
+    {
+      id: "bcensus-highlight-casing",
+      type: "line",
+      paint: {
+        "line-color": ["case", ["boolean", ["feature-state", "pinned"], false], "#f7f1df", "rgba(0,0,0,0)"],
+        "line-width": ["case", ["boolean", ["feature-state", "pinned"], false], 4.4, 0],
+      },
+    },
+    // 5. Highlight outline — hover darkens; selection turns VIOLET + thicker (mirrors PA's
+    //    --pa-selection-outline).
     {
       id: "bcensus-highlight",
       type: "line",
       paint: {
         "line-color": [
           "case",
-          ["boolean", ["feature-state", "pinned"], false], "#0f0f12",
+          ["boolean", ["feature-state", "pinned"], false], "#8b5cf6",
           ["boolean", ["feature-state", "hover"],  false], "#2a2a30",
           "rgba(0,0,0,0)",
         ],
         "line-width": [
           "case",
-          ["boolean", ["feature-state", "pinned"], false], 2.4,
+          ["boolean", ["feature-state", "pinned"], false], 2.8,
           ["boolean", ["feature-state", "hover"],  false], 1.6,
           0,
         ],
       },
     },
-    // 5. Neighbourhood name labels (zoom ≥ 11)
-    {
-      id: "bcensus-label",
-      type: "symbol",
-      minzoom: 11,
-      layout: {
-        "text-field": ["get", "display_name"],
-        "text-size": 11,
-        "text-font": ["Noto Sans Regular"],
-        "text-max-width": 8,
-        // Collision avoidance: centred first (keeps the current look), then nudge
-        // to an offset anchor instead of dropping the label when crowded.
-        "text-variable-anchor": ["center", "top", "bottom", "left", "right"],
-        "text-radial-offset": 0.6,
-        "text-justify": "auto",
-      },
-      paint: {
-        "text-color": "#3c3728",
-        "text-halo-color": "#ffffff",
-        "text-halo-width": 1.5,
-      },
-    },
+    // (Neighbourhood NAME labels moved OUT — now the CLIENT-DERIVED centroid system, added
+    //  ABOVE everything by the component: centroidNameLayer / centroidFocusLayer from
+    //  components/nameLabels.js. The mount + data filter live in BusinessCensusMap.)
   ];
 }
 

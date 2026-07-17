@@ -25,7 +25,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 
-import MapView from "../../components/MapView.jsx";
+import MapView, { findFirstSymbolLayerId } from "../../components/MapView.jsx";
 import Legend from "../../components/Legend.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
@@ -53,6 +53,9 @@ import { makeIconButtonControl, railGlyph } from "../../components/mapControls.j
 import { ICON_RECENTRE, ICON_INFO, ICON_DATABASE, ICON_MOUSE, ICON_CLICK, ICON_SEARCH } from "../../components/mapIcons.js";
 import { siteConfig } from "../../config/siteConfig.js";
 import { assetUrl } from "../../utils/assetUrl.js";
+import { HOME_VIEW, applyCameraPreset } from "../../components/mapCamera.js";
+import { CENTROID_SOURCE, buildCentroidPoints, centroidNameLayer, centroidFocusLayer } from "../../components/nameLabels.js";
+import { applyChoroplethBasemapHarmony } from "../../components/choroplethBasemap.js";
 
 // Single committed GeoJSON — survey year 2025, no year axis.
 const DATA_URL = assetUrl("/data/economy/business_census_2025.geojson");
@@ -110,6 +113,7 @@ function flyToFeature(map, feat) {
   map.fitBounds(bboxOfGeom(feat.geometry), {
     padding: { top: 80, bottom: 80, left: floatLeftPad(map) + 60, right: 60 },
     duration: reduceMotion() ? 0 : 900, maxZoom: 14,
+    pitch: 0, bearing: 0, // a focus is a data-derived FLAT fit — HOME is the only pitched view
   });
 }
 
@@ -132,6 +136,14 @@ export default function BusinessCensusMap() {
   // gj read via ref so the once-installed dblclick / reset / search handlers see the data.
   const gjRef = useRef(gj);
   useEffect(() => { gjRef.current = gj; }, [gj]);
+  const firstHomeRef = useRef(true);   // first HOME landing = jumpTo (under skeleton), then ease
+
+  // Land on the pitched HOME view (jumpTo under the skeleton on first load; ease after).
+  function handleMapLoad(m) {
+    setMap(m);
+    applyCameraPreset(m, HOME_VIEW.Edmonton, { ease: !firstHomeRef.current });
+    firstHomeRef.current = false;
+  }
 
   // Ramp stops from the loaded polygons' quantiles for the chosen metric (fallback until
   // gj resolves). Memoised so the Legend and repaint effect share a stable identity.
@@ -290,6 +302,71 @@ export default function BusinessCensusMap() {
     };
   }, [map]);
 
+  // Basemap harmony (buildings → neutral grey so the ramp reads through; hide the basemap's
+  // OWN neighbourhood labels) + lift the selection highlight pair to the TOP so a pin is never
+  // occluded (PA P4). Declared BEFORE the label mount so the centroid labels still land on top.
+  useEffect(() => {
+    if (!map) return;
+    applyChoroplethBasemapHarmony(map);
+    try {
+      for (const id of ["bcensus-highlight-casing", "bcensus-highlight"]) {
+        if (map.getLayer(id)) map.moveLayer(id);
+      }
+    } catch { /* map mid-teardown */ }
+  }, [map]);
+
+  // Name labels — a CLIENT-DERIVED centroid source + the base/focus layers (shared, mirrors
+  // PA). Base adjacent to the basemap symbols (one collision index); focus ABOVE everything.
+  useEffect(() => {
+    if (!map || !gj) return;
+    const points = buildCentroidPoints(gj, "neighbourhood_id");
+    try {
+      const src = map.getSource(CENTROID_SOURCE);
+      if (src) { src.setData(points); return; }
+      map.addSource(CENTROID_SOURCE, { type: "geojson", data: points, promoteId: "neighbourhood_id" });
+      map.addLayer({ ...centroidNameLayer(), source: CENTROID_SOURCE }, findFirstSymbolLayerId(map));
+      map.addLayer({ ...centroidFocusLayer(), source: CENTROID_SOURCE });
+    } catch { /* map mid-teardown — re-adds on next mount */ }
+  }, [map, gj]);
+
+  // Filter the BASE name layer to the DATA neighbourhoods (BC's reportable state) so no-data
+  // names never clutter. The FOCUS layer stays unfiltered (hover/select names any).
+  useEffect(() => {
+    if (!map || !gj) return;
+    try {
+      if (!map.getLayer("nbhd-labels")) return;
+      const withData = gj.features
+        .filter((f) => f.properties.census_state === "data")
+        .map((f) => String(f.properties.neighbourhood_id));
+      map.setFilter("nbhd-labels", ["in", ["get", "neighbourhood_id"], ["literal", withData]]);
+    } catch { /* map mid-teardown */ }
+  }, [map, gj]);
+
+  // Mirror the selection (pinned) onto the centroid source so a selected neighbourhood keeps
+  // its name via the focus layer even where the base label was collision-culled.
+  const prevCentroidPinRef = useRef(null);
+  useEffect(() => {
+    if (!map) return;
+    const prev = prevCentroidPinRef.current;
+    try {
+      if (prev != null && String(prev) !== String(selectedId)) map.setFeatureState({ source: CENTROID_SOURCE, id: prev }, { pinned: false });
+      if (selectedId != null) map.setFeatureState({ source: CENTROID_SOURCE, id: selectedId }, { pinned: true });
+      prevCentroidPinRef.current = selectedId ?? null;
+    } catch { /* centroid source not added yet */ }
+  }, [map, selectedId]);
+
+  // Mirror the MAP hover onto the centroid source (its focus label shows on hover).
+  useEffect(() => {
+    if (!map) return undefined;
+    let curId = null;
+    const set = (id, on) => { try { map.setFeatureState({ source: CENTROID_SOURCE, id }, { hover: on }); } catch { /* not ready */ } };
+    const onMove = (e) => { const id = e.features?.[0]?.id; if (id === curId) return; if (curId != null) set(curId, false); curId = id ?? null; if (curId != null) set(curId, true); };
+    const onLeave = () => { if (curId != null) { set(curId, false); curId = null; } };
+    map.on("mousemove", FILL_LAYER_ID, onMove);
+    map.on("mouseleave", FILL_LAYER_ID, onLeave);
+    return () => { map.off("mousemove", FILL_LAYER_ID, onMove); map.off("mouseleave", FILL_LAYER_ID, onLeave); };
+  }, [map]);
+
   // ---- Right rail (shared chrome): recentre / info / database ----------------
   const resetRef = useRef(null);
   // eslint-disable-next-line react-hooks/refs
@@ -299,7 +376,7 @@ export default function BusinessCensusMap() {
       const feat = findFeatureById(gjRef.current, selectedId);
       if (feat) { flyToFeature(map, feat); return; }
     }
-    map.easeTo({ center: MAP_VIEW.center, zoom: MAP_VIEW.zoom, duration: reduceMotion() ? 0 : 600 });
+    applyCameraPreset(map, HOME_VIEW.Edmonton, { ease: true });   // no selection → the pitched HOME
   };
   const infoToggleRef = useRef(null);
   // eslint-disable-next-line react-hooks/refs
@@ -385,7 +462,7 @@ export default function BusinessCensusMap() {
                   promoteId="neighbourhood_id"
                   layers={bcensusLayers(stops, metric)}
                   images={[]}
-                  onLoad={setMap}
+                  onLoad={handleMapLoad}
                   cooperativeGestures={false}
                   attributionCompact={false}
                   mapAttribution={siteConfig.mapAttributionStrip}
