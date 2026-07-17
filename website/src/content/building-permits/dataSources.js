@@ -92,17 +92,16 @@ export function projectYearCollection(gj, year) {
 // projected view) so both years are reachable in one pass.
 //
 // The DU analogue of PA's aggregateFeatures — but SUM-based, because DU carries no
-// parcel-count weight and its measures are counts/$ totals, not parcel-weighted
-// means. Exact-vs-estimate contract (mirrors PA's honesty split):
-//   • Sums (permits, construction value, units added/demolished) + area-YoY are
-//     EXACT. They cover the DATA-BEARING set — aggregated AND suppressed_low_n — a
-//     sum is exact regardless of sample size, so suppressing it would only undercount
-//     (suppression protects a sparse neighbourhood's per-permit VALUES on the map, not
-//     the existence of its permits). no_data is excluded from every measure.
-//   • medianOfMedianCV is an ESTIMATE (median of per-neighbourhood medians) and is
-//     taken over AGGREGATED ONLY — a median of <10 permits is exactly the small-sample
-//     noise suppressed_low_n marks, the DU analogue of PA excluding suppressed from its
-//     mean/median. It carries the "≈ of medians" §6 tag wherever it shows.
+// parcel-count weight and its measures are counts/$ totals, not parcel-weighted means.
+// Scope = REPORTABLE (aggregated) only, so the KPI cards describe the SAME set the map
+// colours + the table lists + the distribution bins (internal consistency), and it
+// matches PA's aggregated-only value aggregates. suppressed_low_n (the established
+// "values suppressed for N<10" state) + no_data are COUNTED (nSuppressed / nExcluded)
+// but never summed — pooling their values would contradict the suppression the whole
+// UI already shows. Exact-vs-estimate contract (mirrors PA's honesty split):
+//   • Sums (permits, construction value, units added/demolished) + area-YoY are EXACT.
+//   • medianOfMedianCV is an ESTIMATE (median of per-neighbourhood medians) — it carries
+//     the "≈ of medians" §6 tag wherever it shows.
 const num = (v) => {
   const n = Number(v);
   return v == null || !Number.isFinite(n) || n === -999 ? null : n;
@@ -124,12 +123,14 @@ export function aggregatePermitFeatures(features, year, prevYear) {
     const p = f.properties;
     const state = p[`polygon_state_${year}`];
 
-    if (state === "aggregated") nReportable++;
-    else if (state === "suppressed_low_n") nSuppressed++;
-    else { nExcluded++; continue; }   // no_data / unknown — out of every measure
+    // Reportable (aggregated) only. suppressed_low_n keeps the established "values
+    // suppressed for N<10" semantics — counted, never summed; no_data is out entirely.
+    if (state === "suppressed_low_n") { nSuppressed++; continue; }
+    if (state !== "aggregated") { nExcluded++; continue; }   // no_data / unknown
+    nReportable++;
 
-    // Sums over the data-bearing set (aggregated + suppressed): exact, sample-size-
-    // independent. null / -999 sentinel skipped.
+    // Sums over the reportable set. null / -999 sentinel skipped. A sum is EXACT; the one
+    // estimate is medianOfMedianCV (a median of per-neighbourhood medians).
     const np = num(p[`n_permits_${year}`]);                  if (np != null) sumPermits += np;
     const cv = num(p[`total_construction_value_${year}`]);   if (cv != null) sumConstructionValue += cv;
     const ua = num(p[`units_added_gross_${year}`]);          if (ua != null) sumUnitsAdded += ua;
@@ -137,12 +138,7 @@ export function aggregatePermitFeatures(features, year, prevYear) {
     if (prevYear != null) {
       const npp = num(p[`n_permits_${prevYear}`]);           if (npp != null) sumPermitsPrev += npp;
     }
-
-    // Median-of-medians: AGGREGATED only (exclude small-sample suppressed medians).
-    if (state === "aggregated") {
-      const mcv = num(p[`median_construction_value_${year}`]);
-      if (mcv != null) medians.push(mcv);
-    }
+    const mcv = num(p[`median_construction_value_${year}`]); if (mcv != null) medians.push(mcv);
   }
 
   return {
