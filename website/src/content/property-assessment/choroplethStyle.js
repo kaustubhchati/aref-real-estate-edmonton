@@ -45,22 +45,11 @@ export const MAP_VIEW = {
   maxBounds: CITY_BOUNDS.Edmonton,
 };
 
-// HOME_VIEW — the landing camera per city: a CAPTURED preset (center/zoom/pitch/bearing applied
-// as-is via applyCameraPreset — NOT a fit). KC hand-found this framing on the live map: the
-// centre + pitch came from the recipe (pan the city under the tuning bay, keep the tuned tilt),
-// and the ZOOM was dialled in visually against KC's own screen — nudged to 10.3 ("a bit more
-// zoom") so the built-up city fills the frame with Downtown centred and Chappelle just above the
-// tuning bay. Applied on load, city-switch, and the reset button with no selection — all via the
-// ONE applyCameraPreset call, so "home" and "recentre with nothing selected" never drift. NOT
-// refresh-by-design: a literal camera won't auto-adjust if the data extent changes (a future
-// far-south annexation, a Chappelle boundary redraw) — re-dial it to re-capture (the accepted
-// tradeoff: a hand-ratified camera over a computed fit that overshot twice). NB the zoom is tuned
-// to KC's ~900px-tall window (Chappelle sits ~8px above the bay there); a much shorter window
-// would tuck Chappelle behind the bay. bearing 0 = north-up; the tilt is pitch only. Per-city —
-// Calgary captures its own.
-export const HOME_VIEW = {
-  Edmonton: { center: [-113.4927, 53.4862], zoom: 10.3, pitch: 18, bearing: 0 },
-};
+// HOME_VIEW — re-exported from the shared camera module (components/mapCamera.js), the SINGLE
+// source of truth. PA, Dwelling Units, Business Counts, and the Building Permits point map all
+// land on this ONE captured camera, so they can never drift. The details (KC's recipe + the
+// z10.3 hand-ratification, the ~900px-window tuning) live in mapCamera.js.
+export { HOME_VIEW } from "../../components/mapCamera.js";
 
 // Basemap style is shared + base-resolved; re-exported so consumers here are unchanged.
 export { BASEMAP_STYLE } from "../../components/basemapStyle.js";

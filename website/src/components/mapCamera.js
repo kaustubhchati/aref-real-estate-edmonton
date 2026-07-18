@@ -1,23 +1,25 @@
 // =============================================================================
-// mapCamera.js  (shared — the tuned landing camera + camera-preset helper)
+// mapCamera.js  (shared — THE tuned landing camera + camera-preset helper; single source)
 //
-// The pitched HOME view + the apply helper, shared by every neighbourhood-aggregate map
-// (Property Assessment is the standard; Dwelling Units + Business Counts adopt it) so all
-// three land + recentre on the SAME cinematic camera. Extracted from PA's choroplethStyle
-// (HOME_VIEW) + interactions.js (applyCameraPreset). PA still uses its own copies (byte-
-// identical); the de-dup is a deferred follow-up.
+// The pitched HOME view + the apply helper, shared by EVERY map that lands on the cinematic
+// camera: Property Assessment (the standard — it re-exports HOME_VIEW from here), Dwelling
+// Units, Business Counts, AND the Building Permits point map. All four land on the SAME camera
+// from this ONE definition, so they can never drift.
 //
-// HOME is a TUNED pitched preset, NOT a data-derived fit — applied on load, on the reset
-// button (when no selection is active), and never touched by the year slider. The flat
-// data-derived fit (fitToFeatures / flyToFeature, pitch:0) handles SELECTION + focus
-// framing — the two distinct camera concepts. Per-city by design (Calgary gets its own
-// when it ships); Edmonton values captured from the design reference.
+// The Edmonton camera is KC's HAND-RATIFIED capture (not a data-derived fit): centre + pitch
+// from the recipe (pan the city under the tuning bay, keep the tilt), zoom dialled visually to
+// 10.3 against KC's ~900px window ("a bit more zoom") so the built-up city fills the frame with
+// Downtown centred and Chappelle just above the tuning bay. Applied on load + on the reset
+// button (no selection); never touched by the year slider. The flat data-derived fit
+// (fitToFeatures / flyToFeature, pitch:0) handles SELECTION + focus framing — the two distinct
+// camera concepts. NOT refresh-by-design (a literal camera won't track data-extent changes —
+// re-dial to re-capture). Per-city by design (Calgary gets its own when it ships).
 // =============================================================================
 
 import { reduceMotion, DUR_SLOW } from "./motion.js";
 
 export const HOME_VIEW = {
-  Edmonton: { center: [-113.485, 53.515], zoom: 10.5, pitch: 18, bearing: 0 },
+  Edmonton: { center: [-113.4927, 53.4862], zoom: 10.3, pitch: 18, bearing: 0 },
 };
 
 // Apply a tuned camera PRESET (center/zoom/pitch/bearing). easeTo for a gentle landing;

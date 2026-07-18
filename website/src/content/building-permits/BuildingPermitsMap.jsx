@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import MapView from "../../components/MapView.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
 import { wirePermitPopup } from "./permitInteractions.js";
+import { HOME_VIEW, applyCameraPreset } from "../../components/mapCamera.js";
 import {
   LAYER_ID,
   SOURCE_ID,
@@ -665,6 +666,10 @@ export default function BuildingPermitsMap() {
               // popups/hover/fly-to, and disabling dbl-click-zoom (dbl-click = fly-to).
               wirePermitPopup(m, setClickedFeature);
               m.doubleClickZoom.disable();
+              // Land on the SAME pitched HOME camera as PA / DU / BC (the shared mapCamera
+              // preset) — a jump under the skeleton, matching their first-load. The Year slider
+              // swaps the source, never the camera, so this fires once.
+              applyCameraPreset(m, HOME_VIEW.Edmonton, { ease: false });
               setMap(m);
             }}
           />
