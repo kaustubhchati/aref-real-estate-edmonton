@@ -134,6 +134,14 @@ sections, agent pipeline, and infrastructure.
       button's hover no longer washes to a white pill (it layers the lift over
       the dark fill, which the rail buttons get from their group backing).
       Scoped to `.pa-search-peek` so the Report Card's light search is untouched.
+- [x] **Building Permits POINT map — value-honesty + motion polish (2026-07-17, `bf2f6ec`;
+      CLAUDE §12 v1.14/v1.15).** No-value permits (~36–39%, JSON null) EXCLUDED — not laundered
+      into `<$10k` — via an unconditional `["!=",get,null]` filter clause; the coverage note is one
+      combined filter-aware statement (shown + no-coord + no-value). The year swap RECREATES the
+      source (kills high-zoom tile-edge clipping — `setData` corrupts tiles at zoom, `removeSource`
+      +`addSource` re-tiles) wrapped in a genuine ramp-preserving CROSS-FADE
+      (`components/crossFadeSource.js`, rAF, ghost overlap); the year slider is debounced (loads
+      once at rest). Not done (separate rulings): heatmap→circles, radius taper, halo standardization.
 - [ ] Map fly-to easing — ease-out quad vs default linear.
 - [ ] Map scrollytelling / guided tour (centrepiece per
       UIUX doc, medium effort).
@@ -161,6 +169,13 @@ sections, agent pipeline, and infrastructure.
       `PropertyAssessmentMap.jsx` to import the shared `components/` leaves and delete
       the inline defs; gate on a PA behavior-identity check. Off the DU critical path.
 - Business Counts stays **view-only** (single survey year — no console).
+- [x] **Home camera unified (2026-07-17, `1bd8451`; CLAUDE §12 v1.15).** PA/DU/BC + the BP POINT
+      map all land on ONE hand-ratified CAPTURED camera — `components/mapCamera.js` is the single
+      source (PA re-exports `HOME_VIEW` from it; BP's point map, previously a flat `MAP_VIEW`, now
+      applies it on load). PA's earlier padded `fitToHome` fit overshot ("city floating in
+      emptiness") and was replaced by the captured camera (`fitToHome`/`developedSouthLat`
+      removed). Change it once, all four follow. NOT refresh-by-design (a literal camera, re-dialled
+      by hand). BP has no camera reset yet (its "reset" is the value-tier filter).
 
 ### Agent pipeline
 - [ ] **Sanity Agent** — N≥100 gate, YoY ±10% jump
@@ -239,10 +254,14 @@ run records) shipped (`e67a658`).
 - 407-polygon boundary (65fr-66s6) as source of truth.
   ID-based join is the locked join strategy.
 - Property Assessment choropleth — production, live,
-  per-metric palettes, gradient legend, full popup.
+  per-metric palettes, gradient legend, full popup;
+  hand-ratified CAPTURED home camera (§12 v1.15, shared via `mapCamera.js`).
 - Building Permits point map — production, live,
   per-year GeoJSON (PMTiles/R2 tiler retired, §12 v1.10),
-  interactive legend, standard popup.
+  interactive legend, standard popup; value-honesty (no-value permits
+  excluded), source-recreate year swap (no high-zoom clipping) + a
+  ramp-preserving cross-fade, debounced slider, shared pitched home
+  camera (§12 v1.14/v1.15).
 - Permit Neighbourhoods choropleth — built (full assessment
   parity), deployed to demo; awaiting Olivia QA sign-off.
 - Download page — `/download` serves 3 cleaned CSVs (PA neighbourhood

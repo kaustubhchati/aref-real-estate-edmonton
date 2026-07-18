@@ -1,5 +1,5 @@
 # Open Data Centre for Alberta Urban Real Estate (Dev Build)
-# MAPS LIVE: Property Assessment · Building Permits · Permit Neighbourhoods. Download page live.
+**Live (Edmonton):** Property Assessment · Dwelling Units · Building Permits · Business Counts · Neighbourhood Report Card · Download — see **[Now Live](#now-live)** for links.
 A **free-tier, static replication** of the public real-estate data website at
 `realestatedata.srv.ualberta.ca` — the Tableau Public dashboards rebuilt as our own maps and
 pages, fed by an R data pipeline. Phase 1 delivers Edmonton property-assessment cleaning
@@ -16,6 +16,21 @@ The bar is "researchers and the public can rely on it," not five-nines uptime.
 
 > The deployed site's displayed identity (university, centre, funder names) is placeholdered in
 > `website/src/config/siteConfig.js` until finalised — see CLAUDE.md §6.
+
+## Now Live
+
+Deployed on Cloudflare Pages — **[aref-real-estate-edmonton.pages.dev](https://aref-real-estate-edmonton.pages.dev/)** (Edmonton). Six sections shipped:
+
+| Section | Type | Link |
+| --- | --- | --- |
+| **Property Assessment** | 5-metric choropleth map | [aref-real-estate-edmonton.pages.dev/properties/property-assessment](https://aref-real-estate-edmonton.pages.dev/properties/property-assessment) |
+| **Dwelling Units** (permit neighbourhoods) | choropleth + analyst Data Console | [aref-real-estate-edmonton.pages.dev/activity/dwelling-units](https://aref-real-estate-edmonton.pages.dev/activity/dwelling-units) |
+| **Construction & Improvement** (Building Permits) | per-year point map | [aref-real-estate-edmonton.pages.dev/activity/construction-improvement](https://aref-real-estate-edmonton.pages.dev/activity/construction-improvement) |
+| **Business Counts** | choropleth map | [aref-real-estate-edmonton.pages.dev/economy/business-counts](https://aref-real-estate-edmonton.pages.dev/economy/business-counts) |
+| **Neighbourhood Report Card** | sortable / searchable table | [aref-real-estate-edmonton.pages.dev/report-card](https://aref-real-estate-edmonton.pages.dev/report-card) |
+| **Download** | 3 cleaned CSVs | [aref-real-estate-edmonton.pages.dev/download](https://aref-real-estate-edmonton.pages.dev/download) |
+
+The three aggregate maps + the Building Permits point map all land on one shared, hand-ratified home camera (Property Assessment is the standard — CLAUDE.md §12 v1.15). Everything else in the nav is a placeholder pending data.
 
 ## Context
 
