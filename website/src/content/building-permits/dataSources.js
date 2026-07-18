@@ -5,7 +5,7 @@
 // The year list + default come from the published BP manifest (the same file
 // the choropleth reads), so a refresh that adds a year flows through with no
 // edit here. Each year is its OWN per-year GeoJSON (permit-points/), so the Year
-// slider swaps the file (MapView setData); Permit type / Month / value tier are
+// slider swaps the file (MapView recreates the source); Permit type / Month / value tier are
 // client-side MapLibre filters on the loaded year (see BuildingPermitsMap).
 // =============================================================================
 
@@ -28,7 +28,7 @@ export const permitDefaultYear = (m) => m?.defaultYear ?? null;
 
 // The per-year point GeoJSON for one year (published by the runner from 01's 4b2
 // emit). The slider passes the result as MapView's geojsonUrl, so a year change
-// is a setData swap. No year literal — the year comes from the manifest/slider;
+// recreates the source. No year literal — the year comes from the manifest/slider;
 // the filename derives from it, mirroring the choropleth's permit_neighbourhoods.
 export const resolvePermitPointsUrl = (year) =>
   assetUrl(`/data/building-permits/permit-points/permit_points_${year}.geojson`);
@@ -178,14 +178,17 @@ export const MONTHS = [
 ];
 export const DEFAULT_MONTH = 0;
 
-// Construction value buckets — interactive legend filter.
-// id must be stable (used as React key + Set member).
+// Construction value buckets — interactive legend filter (id + label + [min,max) bounds).
+// id must be stable (used as React key + Set member). (Removed a dead `radius` field here — it
+// was never read; the legend cards size from PermitLegend.TIER_RADII and the map dots from the
+// radius expression's tier multipliers. Those two remain separate by purpose — legend px vs map
+// zoom×tier ratios — a unify-or-leave call flagged as a follow-up, out of this honesty fix.)
 export const VALUE_BUCKETS = [
-  { id:"micro",  label:"< $10k",       min:0,         max:10_000,    radius:4  },
-  { id:"small",  label:"$10k–$100k",   min:10_000,    max:100_000,   radius:7  },
-  { id:"medium", label:"$100k–$500k",  min:100_000,   max:500_000,   radius:10 },
-  { id:"large",  label:"$500k–$2M",    min:500_000,   max:2_000_000, radius:14 },
-  { id:"major",  label:"> $2M",        min:2_000_000, max:Infinity,  radius:19 },
+  { id:"micro",  label:"< $10k",       min:0,         max:10_000    },
+  { id:"small",  label:"$10k–$100k",   min:10_000,    max:100_000   },
+  { id:"medium", label:"$100k–$500k",  min:100_000,   max:500_000   },
+  { id:"large",  label:"$500k–$2M",    min:500_000,   max:2_000_000 },
+  { id:"major",  label:"> $2M",        min:2_000_000, max:Infinity  },
 ];
 export const ALL_BUCKET_IDS = VALUE_BUCKETS.map((b) => b.id);
 // All buckets active on load — map shows everything by default.

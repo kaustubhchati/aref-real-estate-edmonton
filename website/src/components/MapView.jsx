@@ -30,6 +30,7 @@ import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { applyAppleClassic } from "./basemapTheme.js";
+import { crossFadeSource, abortCrossFade } from "./crossFadeSource.js";
 import { siteConfig } from "../config/siteConfig.js";
 
 export default function MapView({
@@ -95,6 +96,9 @@ export default function MapView({
   // swap effect can update data without re-creating the map (one WebGL context).
   const mapRef = useRef(null);
   const loadedUrlRef = useRef(null);
+  // Interrupt/lifecycle state for the year-swap cross-fade, owned here and passed
+  // to crossFadeSource so a fast re-swap (or unmount) tears the fade down cleanly.
+  const crossFadeRef = useRef({ token: 0, listeners: [], ghostLayers: [], ghostSrc: null, timer: null, raf: null });
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -192,7 +196,13 @@ export default function MapView({
       loadedUrlRef.current = geojsonUrl;
     });
 
-    return () => { mapRef.current = null; map.remove(); };
+    return () => {
+      // Stop any in-flight cross-fade (timers, listeners, ghost) BEFORE destroying the
+      // map, so nothing fires against a removed map.
+      abortCrossFade(map, crossFadeRef, layers);
+      mapRef.current = null;
+      map.remove();
+    };
     // We intentionally do NOT re-run this effect when props change —
     // the section is rebuilt by routing, not by prop tweaks. If a future
     // page needs live updates (e.g. toggling a filter), expose that via
@@ -200,39 +210,40 @@ export default function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // In-place YEAR/SOURCE swap on a PERSISTENT map (no remount, ONE WebGL context).
-  // The assessed ramp is now `interpolate` (a CONTINUOUS colour space), so on a year
-  // change we just swap the source data here + the per-year stops (the latter via
-  // the page's setPaintProperty repaint effect) and let nbhd-fill's
-  // fill-color-transition TWEEN the colour old→new. No opacity blank-then-fill —
-  // that was a workaround for the old `step` colours, which couldn't tween. Reduced-
-  // motion: paintTransition already yields a 0-duration fill-color-transition, so the
-  // colour snaps. The create effect handles the FIRST load, so this runs only on
-  // later swaps.
+  // In-place SOURCE swap on a PERSISTENT map (no remount, ONE WebGL context). The
+  // create effect handles the FIRST load; this runs only on a LATER geojsonUrl change.
+  // Today the one section that changes its geojsonUrl is the Building Permits POINT map
+  // (the Year slider swaps to that year's per-year file). The choropleths (PA, DU, BC)
+  // keep a CONSTANT url and change year by PAINT (setPaintProperty over a combined
+  // all-years file), so they never enter this effect at all.
   //
-  // TWEEN EXPERIMENT: whether setData actually tweens a DATA-driven fill-color is the
-  // load-bearing question — this path is deliberately UNCOVERED (no opacity fade) so
-  // a dev eyeball of one year swap answers it: colours FLOW (tween) or SNAP. If they
-  // snap, restore the sequenced opacity dissolve (git history).
+  // The swap is delegated to crossFadeSource (components/crossFadeSource.js), which:
+  //   • RECREATES the source (removeSource + addSource), NEVER setData — setData on a
+  //     live GeoJSON source corrupts its tiles at high zoom (the BP points clipping);
+  //     recreating forces a clean re-tile. This is the load-bearing fix and it stays.
+  //   • CROSS-FADES year→year: a throwaway ghost source holds the OLD year and fades out
+  //     while the recreated canonical (NEW year) fades in — they OVERLAP, so the map is
+  //     never empty of points mid-swap. Ramp-preserving (it scales the layer's opacity
+  //     EXPRESSION, never flattens it) and reduced-motion-aware (duration 0 → straight
+  //     recreate, no ghost).
+  //   • Re-adds the layers at their anchor carrying their LIVE filter (getStyle), so the
+  //     section's setFilter + popup/hover wiring (bound to the fixed LAYER id) survive.
+  // Interrupt state lives in crossFadeRef; the create effect aborts it before map.remove().
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.getSource(sourceId)) return undefined;
     if (geojsonUrl === loadedUrlRef.current) return undefined;
+    const oldUrl = loadedUrlRef.current;
     loadedUrlRef.current = geojsonUrl;
 
-    // ---- The data-swap SEAM: the ONLY backend-aware step --------------------
-    // Mode A (today, per-year GeoJSON files): replace the source data with the new
-    // year's URL. Mode B (future, ONE combined multi-year source): drop setData and
-    //   map.setFilter(dataLayerId, ["==", ["get", "year"], year])
-    // instead — the source would also be created from the combined file (the
-    // addSource line in the create effect above). The A→B switch is THIS function
-    // (+ that one addSource line); the persistent-map lifecycle, the colour tween,
-    // the layers, feature-state, and the controls do NOT change.
-    function applyYearData() {
-      map.getSource(sourceId).setData(geojsonUrl); // mode A
-    }
-
-    applyYearData();
+    crossFadeSource(map, {
+      sourceId,
+      oldUrl,
+      newUrl: geojsonUrl,
+      promoteId,
+      baseLayers: layers,
+      stateRef: crossFadeRef,
+    }).catch((err) => console.warn("[MapView] crossFadeSource", err));
     return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geojsonUrl, sourceId]);

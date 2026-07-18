@@ -33,9 +33,9 @@ export const COLOUR_LEVEL_DELTAS = true;
 
 export const MAP_VIEW = {
   // center/zoom are only the CONSTRUCTION FALLBACK (the map must build with some
-  // view before HOME_VIEW is applied). The real HOME view is the tuned pitched
-  // HOME_VIEW preset below — applied on load + city switch; the data-derived
-  // fitToFeatures handles only SELECTION framing (see HOME_VIEW + METHODOLOGY D6).
+  // view before HOME is applied). The real HOME view is now the captured HOME_VIEW
+  // preset (applyCameraPreset) — applied on load + city switch; the flat data-derived
+  // fit (fitToFeatures) handles SELECTION framing.
   center: [-113.4956, 53.5356],   // Edmonton area-weighted centroid (pre-data placeholder)
   zoom: 10.2,
   minZoom: 7,
@@ -45,17 +45,21 @@ export const MAP_VIEW = {
   maxBounds: CITY_BOUNDS.Edmonton,
 };
 
-// HOME_VIEW — the cinematic landing camera per city: a TUNED pitched preset, NOT a
-// data-derived fit. Applied on load, on city-switch, and by the reset button when no
-// selection is active (easeTo; reduced-motion / first-load → jumpTo). The flat
-// data-derived fit (fitToFeatures) is kept for SELECTION framing + reset-with-a-
-// selection — two distinct camera concepts. The Edmonton values were captured by
-// framing the live map to the design reference (Home-View Pitch angle) and reading
-// back getCenter/getZoom/getPitch/getBearing (bearing 0 = north-up; the tilt is
-// pitch only). Per-city by design — Calgary needs its own preset when it arrives.
-// This is the ONE deliberate departure from data-derived framing (see METHODOLOGY).
+// HOME_VIEW — the landing camera per city: a CAPTURED preset (center/zoom/pitch/bearing applied
+// as-is via applyCameraPreset — NOT a fit). KC hand-found this framing on the live map: the
+// centre + pitch came from the recipe (pan the city under the tuning bay, keep the tuned tilt),
+// and the ZOOM was dialled in visually against KC's own screen — nudged to 10.3 ("a bit more
+// zoom") so the built-up city fills the frame with Downtown centred and Chappelle just above the
+// tuning bay. Applied on load, city-switch, and the reset button with no selection — all via the
+// ONE applyCameraPreset call, so "home" and "recentre with nothing selected" never drift. NOT
+// refresh-by-design: a literal camera won't auto-adjust if the data extent changes (a future
+// far-south annexation, a Chappelle boundary redraw) — re-dial it to re-capture (the accepted
+// tradeoff: a hand-ratified camera over a computed fit that overshot twice). NB the zoom is tuned
+// to KC's ~900px-tall window (Chappelle sits ~8px above the bay there); a much shorter window
+// would tuck Chappelle behind the bay. bearing 0 = north-up; the tilt is pitch only. Per-city —
+// Calgary captures its own.
 export const HOME_VIEW = {
-  Edmonton: { center: [-113.485, 53.515], zoom: 10.5, pitch: 18, bearing: 0 },
+  Edmonton: { center: [-113.4927, 53.4862], zoom: 10.3, pitch: 18, bearing: 0 },
 };
 
 // Basemap style is shared + base-resolved; re-exported so consumers here are unchanged.
@@ -768,8 +772,12 @@ export const CENTROID_SOURCE = "nbhd-centroids";
 export function centroidNameLayer() {
   return {
     id: "nbhd-labels",
+    // The HOME overview is now a padded fit to the full city extent, which lands at ~z8.9–9.4
+    // (viewport-dependent) — lower than the old hand-picked z10.5. minzoom 8.5 (was 9) so the
+    // tier-1 district landmarks show at the home view on SHORT viewports too, not only tall
+    // ones. The tier text-size STEP (z11 / z12.5) is unchanged — this only lowers the floor.
     type: "symbol",
-    minzoom: 9,
+    minzoom: 8.5,
     layout: {
       "text-field": ["get", "display_name"],
       // Priority: bigger neighbourhoods win placement. symbol-sort-key gives LOWER keys

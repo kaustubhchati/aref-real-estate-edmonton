@@ -230,17 +230,35 @@ function buildCentroidPoints(gj) {
     const g = f.geometry;
     const polys = g.type === "MultiPolygon" ? g.coordinates : [g.coordinates];
     const area = polys.reduce((max, poly) => Math.max(max, ringArea(poly[0])), 0);
-    pts.push({ c, area, id: f.properties["Neighbourhood ID"], name: f.properties.display_name });
+    pts.push({
+      c, area, id: f.properties["Neighbourhood ID"],
+      name: f.properties.display_name, district: f.properties.district,
+    });
   }
-  // D-P2 F2 F3 D-P3 B3 — assign a zoom-density TIER by area rank so the overview breathes:
-  // the largest neighbourhoods (tier 1) label from the wide view, mid ones (tier 2) appear
-  // ~z12.5, the rest (tier 3) only at neighbourhood zoom ~z14. The label layer's text-size
-  // step reads this tier; the table always holds the exhaustive list.
-  const byArea = [...pts].sort((a, b) => b.area - a.area);
-  const n = byArea.length;
-  const t1 = Math.round(n * 0.08);  // top ~8% = major
-  const t2 = Math.round(n * 0.33);  // next ~25% = mid
-  byArea.forEach((p, i) => { p.tier = i < t1 ? 1 : i < t2 ? 2 : 3; });
+  // Zoom-density TIER — balanced BY DISTRICT (replaces the global area rank, which flooded the
+  // overview with the largest polygons — the big southern neighbourhoods — and left the north
+  // and centre blank). Within each district we rank by AREA (largest = the recognisable
+  // landmark; area is year/metric-invariant, so the set is stable and matches the label layer's
+  // area-priority collision sort), then give each district a per-district QUOTA per tier so the
+  // low-zoom labels spread evenly ACROSS the city. The quotas scale with the layer's text-size
+  // zoom step (unchanged): tier 1 (low, ~z11) = the district's top LOW_Q — a FEW per district
+  // (≈1–3); tier 2 (mid, ~z12.5) = its top MID_Q cumulative — MORE per district; tier 3 (~z14+)
+  // = all the rest (collision packs them; the table stays exhaustive). Quotas are a share of the
+  // district's size, floored at 1 (every district names ≥1 landmark from the overview) and
+  // capped so a big district can't re-flood the low tier.
+  const lowQuota = (size) => Math.min(3, Math.max(1, Math.round(size * 0.08)));
+  const midQuota = (size) => Math.min(9, Math.max(3, Math.round(size * 0.30)));
+  const byDistrict = new Map();
+  for (const p of pts) {
+    const d = p.district ?? "(none)";
+    if (!byDistrict.has(d)) byDistrict.set(d, []);
+    byDistrict.get(d).push(p);
+  }
+  for (const group of byDistrict.values()) {
+    group.sort((a, b) => b.area - a.area);   // largest first WITHIN the district
+    const lo = lowQuota(group.length), mid = midQuota(group.length);
+    group.forEach((p, i) => { p.tier = i < lo ? 1 : i < mid ? 2 : 3; });
+  }
   return {
     type: "FeatureCollection",
     features: pts.map((p) => ({
@@ -1022,11 +1040,12 @@ export default function PropertyAssessmentMap() {
     }
   }
 
-  // --- Camera: pitched HOME preset + reset (note 15 + amendment) -------------
-  // HOME is a TUNED per-city pitched preset (HOME_VIEW), NOT a data-derived fit —
-  // applied on load + city switch. The flat data-derived fit (fitToFeatures) is
-  // KEPT for selection framing. No control interaction moves the camera: this fires
-  // only on a genuine CITY change (a year/metric paint-swap leaves gj+city alone).
+  // --- Camera: captured HOME preset + reset (note 15 + amendment) -------------
+  // HOME is the captured HOME_VIEW preset (applyCameraPreset) — KC's hand-ratified recipe
+  // framing (center/zoom/pitch/bearing), applied on load + city switch. The flat data-derived
+  // fit (fitToFeatures, pitch 0) is KEPT for selection framing (it shares chromePadding, so a
+  // selection fit clears the sidebar / tuning bay / rail). No control interaction moves the
+  // camera: this fires only on a genuine CITY change (a year/metric paint-swap leaves gj+city alone).
 
   // Save the live camera so a MapView REMOUNT can restore it. The no-prior-year YoY
   // excursion (earliest year + YoY) swaps MapView↔EmptyState, remounting the map and
@@ -1062,6 +1081,10 @@ export default function PropertyAssessmentMap() {
     if (homedCityRef.current !== city) {
       homedCityRef.current = city;
       lastMapRef.current = map;
+      // HOME = the captured HOME_VIEW preset (KC's hand-ratified recipe framing) applied as-is
+      // via applyCameraPreset — center/zoom/pitch/bearing, no fit. gj isn't used for the camera
+      // now, but the [map,gj,city] deps + gj guard stay: home once the data's ready (map mounted)
+      // and re-home on a city switch, never on a year paint-swap.
       applyCameraPreset(map, HOME_VIEW[city], { ease: !firstHomeRef.current });
       firstHomeRef.current = false;
     } else if (lastMapRef.current !== map) {
@@ -1089,7 +1112,10 @@ export default function PropertyAssessmentMap() {
     if (selectedIds.length >= 1 && gjView) {
       const set = new Set(selectedIds.map(String));
       fitToFeatures(map, gjView.features.filter((f) => set.has(String(f.properties["Neighbourhood ID"]))));
-    } else {
+    } else if (gjView) {
+      // No selection → the HOME view. The SAME captured camera as the load/city-switch home
+      // (applyCameraPreset, HOME_VIEW[city]) — "home" and "recentre with nothing selected" are
+      // ONE camera and must not drift.
       applyCameraPreset(map, HOME_VIEW[city], { ease: true });
     }
   };

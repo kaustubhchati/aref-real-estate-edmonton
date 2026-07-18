@@ -10,7 +10,8 @@
 // (CLAUDE.md §6: data-driven tables, one source of truth).
 //
 //   • job_group         — "residential" | "commercial" → colour (orange / blue)
-//   • construction_value — raw $CAD (NULL → 0)          → radius tier
+//   • construction_value — raw $CAD; NO value (null) → EXCLUDED (never rendered), a real 0 kept
+//                          → radius tier
 // =============================================================================
 
 import { fmtCurrency } from "../../utils/format.js";
@@ -78,7 +79,12 @@ function buildColourExpression() {
 //     top-level step/interpolate" (zoom interp isn't outermost).
 // This form computes the identical base×tier value but is valid.
 function buildRadiusExpression() {
-  const v = ["number", ["get", "construction_value"], 0];
+  // NO 0 fallback (was ["number", …, 0]). A rendered dot ALWAYS has a value — the layer's base
+  // filter + buildPermitFilter both exclude no-value permits — so ["number", …] resolves to the
+  // real value and never evaluates on an absent one. Coalescing null→0 was the defect: it
+  // laundered ~40% unknown-value permits into the <$10k tier (size IS value; a valueless dot
+  // cannot carry it). A genuine 0 is not null, so it survives the filter and still reads as micro.
+  const v = ["number", ["get", "construction_value"]];
   // Data-driven tier multiplier (1.0 = micro floor). Thresholds match the
   // VALUE_BUCKETS boundaries. NOT zoom-based, so it nests freely.
   const tier = [
@@ -111,6 +117,14 @@ export function permitCircleLayer() {
     id: LAYER_ID,
     type: "circle",
     minzoom: 9,
+    // Base exclusion: no-value permits NEVER render. Present in the layer spec (not only in
+    // buildPermitFilter's setFilter) so the exclusion holds from mount — before the React filter
+    // effect runs — which keeps the no-fallback radius above from ever seeing an absent value.
+    // "No value" is JSON null in the file; ["get","construction_value"] returns null for it, so
+    // ["!=", get, null] drops exactly those and KEEPS a legitimate 0 (verified on the live map:
+    // it excludes 38/366 nulls at a dense z14 view, 0 remaining). NB ["has"] does NOT work here
+    // (it returns true for the null-then-stripped key). setFilter(buildPermitFilter) re-asserts it.
+    filter: ["!=", ["get", "construction_value"], ["literal", null]],
     layout: {
       // Draw commercial (the ~16% minority) ON TOP so it isn't buried under the
       // residential majority (key 1 sorts above key 0).
@@ -121,7 +135,7 @@ export function permitCircleLayer() {
       "circle-color":  buildColourExpression(),
       // Tween the dot colour if the job-group palette ever changes; reduced-motion
       // safe (paintTransition zeroes the duration under prefers-reduced-motion). A
-      // YEAR change is a data swap (MapView setData on a per-year file), so dots
+      // YEAR change is a data swap (MapView recreates the source per-year file), so dots
       // replace rather than tween — same per-year model as the choropleth.
       "circle-color-transition": paintTransition(DUR_BASE),
       "circle-radius": buildRadiusExpression(),
@@ -267,14 +281,23 @@ export function buildPermitHoverHtml(p) {
 // ---- Client-side filter ----------------------------------------------------
 // Type / month / value-tier filters on the LOADED per-year source (MapLibre
 // setFilter — instant, no refetch). There is deliberately NO year clause: each
-// GeoJSON file already holds exactly one year (the slider swaps the file via
-// MapView's setData), so a year filter would be redundant AND would blank the old
+// GeoJSON file already holds exactly one year (the slider swaps the file — MapView
+// recreates the source), so a year filter would be redundant AND would blank the old
 // dots before the new file finishes loading. group is the "Permit type" pick
 // ("All" / "Residential" / "Commercial"); the data's job_group is lower-case, so
 // we lower-case the picked value. month 0 is the "All months" sentinel.
 // activeBucketIds is the Set of active value tiers.
+//
+// UNCONDITIONAL first clause: ["!=", get, null] excludes no-value permits at EVERY filter state.
+// "No value" is JSON null in the file; ["get","construction_value"] returns null for it, so
+// ["!=", get, null] drops exactly the nulls and KEEPS a legitimate 0 (verified: 48/13,804 in
+// 2023 are a real 0; and on the live map ["!=",get,null] removes 38/366 nulls at a dense z14
+// view while ["has"] removes 0 — has returns true for the null-then-stripped key, so it does NOT
+// work here). It is FIRST so the ["all", …] short-circuits before the value-tier comparison ever
+// evaluates ["number", get] on an absent value. Self-healing: when the City backfills a value it
+// stops being null and the permit renders with no code change (no baked exclusion list).
 export function buildPermitFilter(group, month, activeBucketIds) {
-  const clauses = [];
+  const clauses = [["!=", ["get", "construction_value"], ["literal", null]]];
 
   if (group !== "All") {
     clauses.push(["==", ["get", "job_group"], group.toLowerCase()]);
@@ -293,7 +316,9 @@ export function buildPermitFilter(group, month, activeBucketIds) {
       clauses.push(["==", ["get", "year"], -1]); // show nothing
     } else {
       const bucketClauses = active.map((b) => {
-        const val = ["number", ["get", "construction_value"], 0];
+        // No 0 fallback: the leading ["!=", get, null] clause already excluded no-value permits
+        // and short-circuits ["all"] before this runs, so ["number", get] always sees a value.
+        const val = ["number", ["get", "construction_value"]];
         const above = [">=", val, b.min];
         if (b.max === Infinity) return above;
         return ["all", above, ["<", val, b.max]];

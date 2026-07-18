@@ -6,12 +6,12 @@
 // a POINT-symbol map (orange/violet dots), now on the SHARED components/MapView
 // with a per-year GeoJSON source (one file per year under permit-points/).
 //
-// The Year slider swaps the source file (MapView setData); Permit type
+// The Year slider swaps the source file (MapView recreates the source); Permit type
 // (job_group), Month, and the construction-value tiers are client-side
 // map.setFilter on the loaded year (instant, no refetch).
 // =============================================================================
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import MapView from "../../components/MapView.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
@@ -287,11 +287,24 @@ export default function BuildingPermitsMap() {
   // Year list + default come from the BP manifest (no literals); null until it
   // loads, which gates the slider, the map filter, and the tab title below.
   const [years, setYears] = useState([]);
+  // `year` is the LIVE slider value — it drives the readout so a drag feels instant. `loadedYear`
+  // is the DEBOUNCED value — it drives the data load (pointsUrl → MapView source-swap, the count
+  // fetch, the filter re-assert, the coverage note). So a fast drag updates the readout every step
+  // but issues ONE load, at rest (each year is a 2.6–7.7 MB fetch+parse; a drag would otherwise
+  // fire one per intermediate year). The debounce is a load/UX win on its own — it was first hoped
+  // to also fix the high-zoom point CLIPPING, but a single paced swap still clipped: that was
+  // root-caused to setData and fixed in MapView by RECREATING the source (see MapView.jsx).
+  // Everything data-shaped below reads loadedYear; only the readout reads year.
   const [year, setYear] = useState(null);
+  const [loadedYear, setLoadedYear] = useState(null);
   const [group, setGroup] = useState(DEFAULT_GROUP);
   const [month, setMonth] = useState(DEFAULT_MONTH);
   const [map, setMap] = useState(null);
   const [coverage, setCoverage] = useState([]);
+  // The year's point features, loaded here ONLY to count the honest shown/excluded totals for
+  // the note (the map's own copy lives in MapView's source). Keyed by year so a stale count is
+  // never paired with a new year's coverage row. Same URL as MapView → browser cache serves it.
+  const [points, setPoints] = useState({ year: null, features: [] });
   // Pattern B (point map): stats for the LAST CLICKED dot — point-map hover is
   // on dots, not polygons, so the sidebar panel updates on click, not hover.
   const [clickedFeature, setClickedFeature] = useState(null);
@@ -326,24 +339,36 @@ export default function BuildingPermitsMap() {
       .then((m) => {
         if (cancelled) return;
         setYears(permitYears(m));
+        // Set both together so the FIRST load is immediate (not delayed by the debounce).
         setYear(permitDefaultYear(m));
+        setLoadedYear(permitDefaultYear(m));
       })
       .catch((err) => console.error("[BuildingPermitsMap] year catalogue:", err.message));
     return () => { cancelled = true; };
   }, []);
 
-  // Re-apply the type/month/value filter when the map is ready or a control
-  // changes. setFilter is instant. The YEAR change is a source swap (geojsonUrl
-  // changes below → MapView setData), but `year` stays in the deps so the filter
-  // is re-asserted on the new year's data. Guard on `map` + `year` so we don't
-  // filter before onLoad / the manifest land.
+  // Debounce year → loadedYear: while the slider is moving, `year` updates every step but the
+  // load is deferred. Each change clears the pending timer and starts a fresh one, so loadedYear
+  // only advances 250 ms after the LAST change (drag at rest). setState lives in the timer
+  // callback (async), not the effect body, so it does not trigger cascading renders. The first
+  // value is seeded above, so this only handles subsequent drags.
   useEffect(() => {
-    if (!map || year == null) return;
+    if (year == null || year === loadedYear) return undefined;
+    const t = setTimeout(() => setLoadedYear(year), 250);
+    return () => clearTimeout(t);
+  }, [year, loadedYear]);
+
+  // Re-apply the type/month/value filter when the map is ready or a control changes. setFilter is
+  // instant. A YEAR (loadedYear) change is a source swap (geojsonUrl below → MapView recreates it);
+  // loadedYear stays in the deps so the filter is re-asserted on the newly loaded data. Guard on
+  // `map` + `loadedYear` so we don't filter before onLoad / the manifest land.
+  useEffect(() => {
+    if (!map || loadedYear == null) return;
     map.setFilter(
       LAYER_ID,
       buildPermitFilter(group, month, activeBuckets)
     );
-  }, [map, year, group, month, activeBuckets]);
+  }, [map, loadedYear, group, month, activeBuckets]);
 
   // Load the coverage table ONCE on mount. Supplementary to the map, so a failed
   // load just hides the note (logged, not thrown — the map still works).
@@ -358,6 +383,21 @@ export default function BuildingPermitsMap() {
       .catch((err) => console.error("[BuildingPermitsMap] coverage:", err.message));
     return () => { cancelled = true; };
   }, []);
+
+  // Load the year's points to COUNT the note's shown/excluded totals (separate from the map's
+  // source load — same URL, cache-served; cost is one JSON.parse per year). Keyed on loadedYear,
+  // so it too is debounced — a drag issues ONE parse at rest, not one per intermediate year (§4).
+  // The `cancelled` flag drops a superseded response so a slow load never lands out of order. A
+  // failed load leaves the count empty → the note hides (logged, not thrown).
+  useEffect(() => {
+    if (loadedYear == null) return undefined;
+    let cancelled = false;
+    fetch(resolvePermitPointsUrl(loadedYear))
+      .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then((gj) => { if (!cancelled) setPoints({ year: loadedYear, features: gj.features ?? [] }); })
+      .catch((err) => console.error("[BuildingPermitsMap] point count:", err.message));
+    return () => { cancelled = true; };
+  }, [loadedYear]);
 
   // Reflect the current selection in the browser tab title; restore on unmount.
   useEffect(() => {
@@ -384,18 +424,42 @@ export default function BuildingPermitsMap() {
     };
   }, []);
 
-  // No-coordinate count for the selected year. The map only plots permits that
-  // HAVE coordinates; the no-coord share spikes in recent years (City geocoding
-  // lag), so stating it is honest rather than silently understating.
-  const cov = coverageForYear(coverage, year);
+  // No-coordinate count for the LOADED year (not the live drag value) — the note describes the
+  // data actually on the map. The no-coord share spikes in recent years (City geocoding lag), so
+  // stating it is honest rather than silently understating.
+  const cov = coverageForYear(coverage, loadedYear);
   // Coverage span for the source note — derived from the manifest year list, so
   // it rolls forward with the data (was a "2009–2026" literal).
   const yearSpan = years.length ? `${Math.min(...years)}–${Math.max(...years)}` : "";
   const nNoCoord = cov ? Number(cov.n_no_coord) : 0;
 
-  // The per-year point file the slider's `year` resolves to; null until the
-  // manifest sets `year`. A change here is what drives MapView's setData swap.
-  const pointsUrl = year != null ? resolvePermitPointsUrl(year) : null;
+  // Filter-aware honesty counts, computed from the LOADED features + the live filter (mirrors
+  // buildPermitFilter) so the note describes exactly what's on the map right now, not the whole
+  // year. nShown is the true rendered set (recomputes on type/month/tier). nMappedNoValue is the
+  // mapped permits with NO construction value — counted from the file (not the coverage CSV's
+  // n_no_value, which overlaps n_no_coord and can't resolve coords∩value). points is keyed by
+  // loadedYear, so we only count once its features match the loaded year (never a stale one).
+  const shownStats = useMemo(() => {
+    const feats = points.year === loadedYear ? points.features : [];
+    const g = group === "All" ? null : group.toLowerCase();
+    const allTiers = activeBuckets.size === ALL_BUCKET_IDS.length;
+    let nShown = 0, nMappedNoValue = 0;
+    for (const f of feats) {
+      const p = f.properties;
+      const v = p.construction_value;
+      if (v == null) { nMappedNoValue++; continue; }   // no value (null) → excluded, mirrors the map's ["!=", get, null]
+      if (g && p.job_group !== g) continue;
+      if (month !== 0 && p.month_number !== month) continue;
+      if (!allTiers && !VALUE_BUCKETS.some((b) => activeBuckets.has(b.id) && v >= b.min && v < b.max)) continue;
+      nShown++;
+    }
+    return { nShown, nMappedNoValue };
+  }, [points, loadedYear, group, month, activeBuckets]);
+
+  // The per-year point file, resolved from the DEBOUNCED loadedYear — a change here is what
+  // drives MapView's source-swap (recreate), so the map reloads once at rest, not per drag step. null
+  // until the manifest seeds loadedYear.
+  const pointsUrl = loadedYear != null ? resolvePermitPointsUrl(loadedYear) : null;
 
   return (
     <article className="content-map">
@@ -413,7 +477,7 @@ export default function BuildingPermitsMap() {
               Year <strong className="sb-year-value">{year ?? "…"}</strong>
             </span>
             {/* Each year is its own GeoJSON file: moving the slider swaps the
-                source (MapView setData) and the type/month/value filter re-applies.
+                source (MapView recreates it) and the type/month/value filter re-applies.
                 min/max come from the manifest year list (no literals); years are
                 contiguous so step = 1 maps every position to a real year. */}
             {year != null && (
@@ -515,9 +579,11 @@ export default function BuildingPermitsMap() {
           </div>
         </section>
 
-        {/* Honest-absence note: shown only when some permits for the year lack
-            coordinates. ⚠ prefix + warning styling (existing tokens, no new CSS). */}
-        {nNoCoord > 0 && (
+        {/* Honesty label (§6): ONE combined, filter-aware statement. Headlines the SHOWN count
+            (the true rendered set, recomputes on type/month/tier), then the two involuntary
+            exclusions at year scope — no map location (the geocoding cliff, kept with its %) and
+            no construction value. ⚠ prefix + existing tokens, no new CSS. */}
+        {cov && points.year === loadedYear && (
           <p style={{
             fontSize: "0.75rem",
             color: "var(--text-muted)",
@@ -532,10 +598,11 @@ export default function BuildingPermitsMap() {
               ⚠
             </span>
             <span>
-              {fmtNumber(nNoCoord)} of{" "}
-              {fmtNumber(cov.n_total)} permits{" "}
-              ({Math.round(Number(cov.pct_no_coord) * 100)}%){" "}
-              have no map location for {year} and are not shown.
+              Showing {fmtNumber(shownStats.nShown)} permits.{" "}
+              Of {fmtNumber(Number(cov.n_total))} for {loadedYear},{" "}
+              {fmtNumber(nNoCoord)} ({Math.round(Number(cov.pct_no_coord) * 100)}%){" "}
+              have no map location and {fmtNumber(shownStats.nMappedNoValue)}{" "}
+              have no construction value, so they cannot be shown.
             </span>
           </p>
         )}
@@ -583,7 +650,7 @@ export default function BuildingPermitsMap() {
 
       <div className="canvas-wrap">
         {/* Per-year GeoJSON point map on the shared MapView; skeleton until the
-            first paint. The Year slider changes geojsonUrl -> MapView setData. */}
+            first paint. The Year slider changes geojsonUrl -> MapView recreates the source. */}
         {!map && <MapSkeleton />}
         {pointsUrl && (
           <MapView

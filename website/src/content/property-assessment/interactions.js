@@ -165,26 +165,39 @@ export function installChoroplethInteractions(map, gj, onSelect) {
 const CONSOLE_SVH_DESKTOP = 0.37; // matches the .dt-panel cap calc(37svh - 36px)
 const CONSOLE_SVH_MOBILE = 0.62;  // matches the ≤680px .dt-panel cap (62svh)
 const MOBILE_BP = 680;
+// The tuning bay (.pa-tune-dock) is a FIXED-geometry, bottom-anchored control (Principle 0):
+// year + range sliders + the Data Console handle. Its band from top to the map bottom is a
+// STABLE ~136px at every viewport height. We reserve it as a documented constant (like the
+// console's CONSOLE_SVH) rather than the live rect: the dock SLIDES IN on load (a transform),
+// so a live `rect.top` read while it animates over-measures the band and the home fit lands
+// too far out. Keep this synced to the dock's CSS if its geometry changes.
+const TUNE_DOCK_BAND = 140;
 function chromePadding(map, { reserveConsole = false } = {}) {
   const root = map.getContainer().closest(".content-map") || map.getContainer();
-  const rack = root.querySelector(".pa-rack");
-  const rackH = rack ? Math.round(rack.getBoundingClientRect().height) : 0;
-  // The console is shown when it's already open (a .dt-panel exists) OR about to open
-  // (reserveConsole — set by box-select≥2 before React has mounted .dt-panel). Reserve
-  // its TARGET height (svh), NEVER the live rect — reading it mid-rise under-reserves
-  // and the target lands under the opening console.
+  const M = 40; // breathing margin on the clear edges
+  const rect = map.getContainer().getBoundingClientRect();
+  // BOTTOM chrome — the reserve is whichever bottom element reaches HIGHER up the map:
+  //   • the tuning bay (.pa-tune-dock) — ALWAYS shown at the map's bottom (year + range
+  //     sliders + the Data Console handle). Reserve its stable band (TUNE_DOCK_BAND) so the
+  //     HOME view (console CLOSED) clears it — the occlusion this padding now fixes. A stable
+  //     constant, NOT the live rect: the dock slides in on load, so a mid-animation read
+  //     over-measures and the home lands too far out. (Was the dead .pa-rack query.)
+  //   • the Data Console (.dt-panel) when open, or about to open (reserveConsole — set by
+  //     box-select≥2 before React has mounted .dt-panel): reserve its TARGET height (svh),
+  //     never the live rect (reading it mid-rise under-reserves). Taller than the dock, so it
+  //     dominates when up.
+  const dockBand = root.querySelector(".pa-tune-dock") ? TUNE_DOCK_BAND : 0;
   const consoleShown = reserveConsole || !!root.querySelector(".dt-panel");
   const svh = (window.innerWidth || 1200) <= MOBILE_BP ? CONSOLE_SVH_MOBILE : CONSOLE_SVH_DESKTOP;
   const consoleH = consoleShown ? Math.round((window.innerHeight || 800) * svh) : 0;
+  const bottomChrome = Math.max(dockBand, consoleH);
   // The floating control card overlays the map's LEFT edge — reserve its live width so
   // fits frame clear of it (0 when absent, e.g. the pre-manifest shell).
   const floatEl = root.querySelector(".pa-float");
   const floatW = floatEl ? Math.round(floatEl.getBoundingClientRect().width) : 0;
-  const M = 40; // breathing margin on the clear edges
   // Clamp so the reserves never swallow the map (else fitBounds clamps to an extreme
   // zoom or yields NaN on a short/narrow window). Keep ≥120px of clear band each axis.
-  const rect = map.getContainer().getBoundingClientRect();
-  const bottom = Math.min(M + rackH + consoleH, Math.max(0, Math.round(rect.height) - M - 120));
+  const bottom = Math.min(M + bottomChrome, Math.max(0, Math.round(rect.height) - M - 120));
   const left = Math.min(M + floatW, Math.max(0, Math.round(rect.width) - M - 120));
   return { top: M, right: M, left, bottom };
 }
@@ -224,9 +237,12 @@ export function fitToFeatures(map, features, { ease = true, reserveConsole = fal
   }
 }
 
-// Apply a tuned camera PRESET (HOME_VIEW) — center/zoom/pitch/bearing. easeTo for a
-// gentle landing; jumpTo when reduced-motion is on or a snap is asked for (ease:false,
-// e.g. the first load under the skeleton). Guarded against a mid-teardown map.
+// Apply the tuned camera PRESET (HOME_VIEW) — center/zoom/pitch/bearing applied as-is. This IS
+// the HOME view now: KC's hand-found, ratified framing is a CAPTURED camera, not a fit (the
+// bounds-fitting approach overshot twice — see the HOME_VIEW note in choroplethStyle.js). easeTo
+// for a gentle landing; jumpTo when reduced-motion is on or a snap is asked for (ease:false, e.g.
+// the first load under the skeleton). Shared verbatim by the load/city HOME and the no-selection
+// recentre, so the two are ONE camera and never drift. Guarded against a mid-teardown map.
 export function applyCameraPreset(map, preset, { ease = true } = {}) {
   if (!map || !preset) return;
   try {
