@@ -1,15 +1,16 @@
 # CLAUDE.md
 
-> **Version: v1.12 — authoritative. Supersedes all prior versions (v0.1–v1.11).**
+> **Version: v1.15 — authoritative. Supersedes all prior versions (v0.1–v1.14).**
 > This is the single source of project context for every Claude Code session — read it first.
 > If any other note, comment, or older doc frames *the website* as an "agent-driven platform,"
 > that framing is **retired** — see §1.
 > Owner / **builder**: KC (Research Assistant, UAlberta) — direct-push authority to `main` (§7).
 > Verifier: Olivia (post-hoc review, §7). Supervisor: Prof. Haifang Huang.
-> Last updated: 2026-07-16. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
+> Last updated: 2026-07-17. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
 > current open work tracked in **PHASE2_STATUS.md**. Tier 2 (container-universe reconciliation)
 > is **CLOSED** end-to-end (§12 v1.11). Dwelling Units now carries the full analyst Data Console
-> (§12 v1.12); the DU backend was unfrozen to emit its combined all-years file.
+> (§12 v1.12); the DU backend was unfrozen to emit its combined all-years file. PA/DU/BC + the
+> BP point map now share ONE hand-ratified captured home camera (§12 v1.15).
 
 ---
 
@@ -463,6 +464,69 @@ When in doubt, load §2 (locked architecture) and §9 (negative rules) — the l
 Revise when: a locked decision changes (§2), a new section is wired (§3), a new rule is validated
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
+- **v1.15 (2026-07-17)** — **BP points: clipping fix + year-swap cross-fade + slider debounce. PA
+  home is a hand-ratified CAPTURED camera (not a fit), now the ONE camera PA/DU/BC/BP share.** The
+  polish the BP-points recon deferred to "separate rulings" (v1.14), plus the PA home resolution.
+  **(1) BP year swap RECREATES the source, never `setData`.** `setData` on a live GeoJSON source
+  corrupts its tiles at high zoom (large circles clipped to crescents at tile edges);
+  `removeSource`+`addSource` forces a clean re-tile. MapView's swap effect snapshots the source's
+  layers (with their live `setFilter`, via `getStyle`), drops+re-adds the source, re-attaches at
+  the same anchor. **(2) A genuine year→year CROSS-FADE wraps it** (new
+  `components/crossFadeSource.js`): a throwaway GHOST holds the outgoing year and fades out while
+  the recreated canonical fades in — overlapping, so the map is never empty of points. rAF-driven,
+  RAMP-PRESERVING (folds the fade factor into the zoom-interpolate's OUTPUT STOPS — a zoom
+  interpolate is illegal inside `["*",…]`), `--ease`/`DUR_SLOW` timing, reduced-motion aware,
+  token-guarded interrupts (no orphaned ghosts). **(3) Year-slider DEBOUNCE** — `year` (live
+  readout) vs `loadedYear` (250 ms, drives the load), so a fast drag loads once at rest.
+  **(4) PA home = a hand-ratified CAPTURED camera.** v1.13's padded fit overshot twice (the city
+  floating in rural emptiness); KC hand-found the framing on the live map (pan the city under the
+  tuning bay, keep the pitch; zoom dialled visually to 10.3 at KC's ~900px window) and it is
+  captured verbatim — `{ center: [-113.4927, 53.4862], zoom: 10.3, pitch: 18, bearing: 0 }` —
+  applied via `applyCameraPreset` on load + no-selection reset (`fitToHome`/`developedSouthLat`
+  removed). NOT refresh-by-design: a literal camera won't track data-extent changes (re-dial to
+  re-capture) — a deliberate carve-out from the §6 literal-free rule (a camera is a design
+  constant, not a year/data literal). **(5) ONE camera, four maps.** `components/mapCamera.js` is
+  the SINGLE SOURCE (resolves the deferred de-dup): PA re-exports `HOME_VIEW` from it, DU + BC
+  already imported it, and the BP POINT map (previously a flat `MAP_VIEW`, no pitched home) now
+  lands on it in `onLoad` — change it once, all four follow. BP has NO camera reset (its "reset"
+  is the value-tier filter); PA/DU/BC recentre via the rail button. Shipped `bf2f6ec` (PA
+  home+labels, BP cross-fade, value-honesty) + `1bd8451` (camera unification).
+- **v1.14 (2026-07-17)** — **Building Permits points — value-honesty: no-value exclusion +
+  filter-aware disclosure (the POINT-map standard zoning/amenities/business-licences inherit).**
+  Frontend-only correctness fix from the BP-points recon. **(1) No-value permits are EXCLUDED,
+  not compensated.** ~36–39% of mapped permits have no `construction_value` (JSON null); the old
+  `["number", get, 0]` coalesce laundered them into the `<$10k` tier. Killed the `0` fallback in
+  the radius expression and the value-tier filter clause, and added an UNCONDITIONAL exclusion —
+  `["!=", ["get","construction_value"], ["literal", null]]` — as `buildPermitFilter`'s first
+  clause AND the layer's base `filter`. Verified on the live map: `["get"]` returns null for the
+  null-then-stripped key so `!=`/null drops exactly the nulls and KEEPS a legitimate `0` (48 in
+  2023); **`["has"]` does NOT work** (returns true for the stripped key). **Self-healing:** a
+  City-backfilled value stops being null and renders with no code change — no baked exclusion
+  list, the filter evaluates the data as loaded. Backend/files unchanged (values are being
+  backfilled; the file stays complete, the map decides what it can render). **(2) The coverage
+  note is now ONE combined, filter-aware statement** — headlines the true SHOWN count (counted
+  from the loaded features + live filter, recomputes on type/month/tier), then both involuntary
+  exclusions at year scope: no map location (the geocoding cliff, kept with its %) and no
+  construction value (counted from the file, since the CSV's `n_no_value` overlaps `n_no_coord`
+  and can't resolve coords∩value). Clean decomposition (2023: 8,819 shown + 288 no-coord + 4,985
+  no-value = 14,092). Also removed a dead `VALUE_BUCKETS[].radius` field (never read); the legend
+  `TIER_RADII` vs map tier-multiplier scales stay separate by purpose (flagged, not unified).
+  Not in scope (separate rulings): the clipping bug, year-slider debounce, heatmap→circles, the
+  radius taper, halo standardization.
+- **v1.13 (2026-07-17)** — **PA neighbourhood labels are district-balanced (the standard the other
+  aggregate maps inherit); the PA home-view was reworked here but SUPERSEDED same-day (→ v1.15).**
+  **(1) Labels balanced BY DISTRICT.** `buildCentroidPoints` assigned the zoom-density tier by
+  GLOBAL area rank, which flooded the overview with the largest polygons (the big southern
+  neighbourhoods) and left the north/centre blank. Now it ranks by area **within each of the 15
+  districts** and gives each a per-district quota per tier (low ~z11 = top ⌈8%⌉, 1–3/district;
+  mid ~z12.5 = top ⌈30%⌉; all ~z14) — so tier-1 spreads across all 15 districts (94% of the N-S
+  extent) at the same ~33-label budget. The tier text-size STEP thresholds (z11/z12.5), the
+  collision handling, and the reportable FILTER (suppressed stay suppressed — a separate per-year
+  `setFilter`) are all unchanged. Shipped (`bf2f6ec`). **(2) Home view — a padded `fitToHome` fit
+  (fitBounds to the data extent with chrome-aware padding) was built here, but it OVERSHOT (the
+  city floating in rural emptiness, ~z9); it is SUPERSEDED by v1.15's hand-ratified CAPTURED
+  camera (`fitToHome`/`developedSouthLat` removed).** One lasting artifact: the label layer
+  `minzoom` dropped 9→8.5 (for the fit's low landing) — kept, harmless at the z10.3 captured home.
 - **v1.12 (2026-07-16)** — **Dwelling Units gains the full analyst Data Console — and the DU
   backend was UNFROZEN to feed it.** The aggregate-map standardization (v-note memory
   `agg-map-standardization`) is complete: after DU + Business Counts were re-skinned onto the PA
