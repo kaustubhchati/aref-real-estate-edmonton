@@ -96,15 +96,21 @@ function buildRadiusExpression() {
     5.5,  // > $2M
   ];
 
-  // The single, top-level zoom curve. Each stop multiplies a zoom base by the
-  // tier so dots grow toward street level while keeping value-tier proportions.
+  // The single, top-level zoom curve. Each stop multiplies a zoom base by the tier, so
+  // value-tier PROPORTIONS are preserved at every zoom. The base grows to a PEAK at the
+  // ~200 m scanning sweet spot (z14), then SHRINKS toward building zoom (z18 / ~10 m) so a
+  // big-value dot becomes a small marker sitting ON its parcel instead of sprawling over
+  // neighbours (and, being small, it no longer straddles tile edges → no clipped crescents).
+  // 200–500 m (z13–14) is untouched — that's where value-by-size reads best.
   return [
     "interpolate", ["linear"], ["zoom"],
     9,  ["*", 1.8, tier],
     11, ["*", 2.8, tier],
-    13, ["*", 4.0, tier],
-    16, ["*", 6.0, tier],
-    18, ["*", 8.0, tier],
+    13, ["*", 4.0, tier],   // 500 m — value reading strong (unchanged)
+    14, ["*", 4.6, tier],   // 200 m — the value-reading sweet spot (peak; ≈ the old curve)
+    15, ["*", 3.6, tier],   // 100 m — begin shrinking so dots stop oversizing city blocks
+    16, ["*", 2.8, tier],   // 50 m
+    18, ["*", 1.5, tier],   // 10 m building level — a small marker ON the parcel
   ];
 }
 
