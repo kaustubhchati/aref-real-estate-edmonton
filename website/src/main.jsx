@@ -36,11 +36,32 @@ import "./index.css";
 // section chunk loads. (MapLibre worker prewarm moved to MapView.jsx: it now fires
 // on the first map-chunk load, not app entry — app-entry prewarm would have pulled
 // MapLibre straight back into the boot bundle.)
-const PropertyAssessmentMap = lazy(() => import("./content/property-assessment/PropertyAssessmentMap.jsx"));
-const BuildingPermitsMap    = lazy(() => import("./content/building-permits/BuildingPermitsMap.jsx"));
-const PermitChoroplethMap   = lazy(() => import("./content/building-permits/PermitChoroplethMap.jsx"));
-const BusinessCensusMap     = lazy(() => import("./content/economy/BusinessCensusMap.jsx"));
-const ReportCard            = lazy(() => import("./content/report-card/ReportCard.jsx"));
+// A code-split chunk can fail to load when a NEW version deploys while a tab is still
+// open on the OLD one: the old app requests hashed chunk names the new deploy replaced,
+// so they 404 and the section would break (the exact "maps stopped loading after a
+// deploy" failure). lazyWithReload catches that and reloads ONCE — timestamp-guarded, so
+// a chunk that's genuinely, repeatedly missing shows the error boundary instead of
+// looping — to pull the current deploy's chunks. Standard code-split hardening.
+const RELOAD_KEY = "chunk-reload-at";
+function lazyWithReload(importer) {
+  return lazy(() =>
+    importer().catch((err) => {
+      const last = Number(sessionStorage.getItem(RELOAD_KEY)) || 0;
+      if (Date.now() - last > 10000) {
+        sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
+        window.location.reload();
+        return new Promise(() => {}); // hang until the reload takes over — no error flash
+      }
+      throw err; // reloaded moments ago and still failing → let the boundary show it
+    }),
+  );
+}
+
+const PropertyAssessmentMap = lazyWithReload(() => import("./content/property-assessment/PropertyAssessmentMap.jsx"));
+const BuildingPermitsMap    = lazyWithReload(() => import("./content/building-permits/BuildingPermitsMap.jsx"));
+const PermitChoroplethMap   = lazyWithReload(() => import("./content/building-permits/PermitChoroplethMap.jsx"));
+const BusinessCensusMap     = lazyWithReload(() => import("./content/economy/BusinessCensusMap.jsx"));
+const ReportCard            = lazyWithReload(() => import("./content/report-card/ReportCard.jsx"));
 
 // basename mounts the app under Vite's base path. import.meta.env.BASE_URL is set
 // by vite.config's `base`, so it is "/" by default — basename="/" is a no-op — and
