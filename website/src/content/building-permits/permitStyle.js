@@ -149,90 +149,117 @@ export const HEAT_CATEGORIES = [
   { id: "permits-heat-commercial",  category: "commercial",  label: "Commercial",  colour: COLOURS.commercial  },
 ];
 
-// ---- The INCANDESCENT density ramps (per-category lava / flame tracks) -----
-// Each category ramps from PALE (low density — recedes into the light basemap, "de-fog") to a
-// deep saturated CORE (high density). Crucially the hue ROTATES as density climbs — a lava
-// track — rather than just darkening in place: darkening orange in place walks it into BROWN
-// (brown = dark desaturated orange). Instead residential runs pale-warm → orange → red-orange
-// → deep RED, and commercial runs pale lilac → violet → deep magenta-purple. KC-authorized:
-// orange→red is still "the orange permit colour, incandescent not brown"; the purple stays
-// VIVID; no green anywhere.
+// ---- The INCANDESCENT density ramps (per-category "lava glow" tracks) -------
+// Density should GLOW BRIGHTER as it climbs — like molten lava / incandescent metal: a dull-red
+// crust heats through orange to a bright amber-gold core (the blackbody sequence, cooler→hotter
+// running red→orange→toward-yellow). Luminance RISES toward the core — a deliberate FLIP of the
+// old darken-to-core ramp.
+//
+// The non-obvious part is doing this on a LIGHT basemap. A naive "bright at the core" washes the
+// hottest spots INTO the cream and they vanish — a glow reads through CONTRAST, not brightness
+// alone. Real lava glows because its bright molten centre is ringed by a darker, cooler crust;
+// that dark surround is what makes the centre read as lit FROM WITHIN. So each ramp is
+// NON-MONOTONIC in luminance: transparent → DARK crust (deep maroon / aubergine, ~0.12) →
+// brightening → BRIGHT saturated glowing CORE (luminous amber-gold / pink-magenta, ~1.00). The
+// DARKEST band sits at the crust (~0.12), NOT the core — that dark shoulder is the mechanism that
+// separates a glowing core from the basemap; drop it and the bright cores fade into cream.
+//
+// Guardrails baked into the stops: each core tops out at a SATURATED amber (residential) /
+// pink-magenta (commercial), held SHORT of white — white both washes into cream and kills the
+// molten look. De-fog is preserved by ALPHA: density 0 is the crust hue at alpha 0, so sparse
+// areas fade transparently into the map. Still the orange / purple permit families, now
+// incandescent — no new base hue, no green.
+//
+// SHOULDER-HEAVY weighting: the bright lift covers too much area if the bright stops sit early
+// (Edmonton's wide dense areas then all hit the bright end → broad bright fields). So the dark
+// shoulder OWNS the low-and-mid range (crust 0.15 → still-dark-red 0.45 → warming 0.68) and the
+// bright lift is squeezed into the top ~15% (orange 0.85 → amber 0.94 → gold 1.00). Most of any
+// hotspot's area is dark shoulder; only the dense core lifts to glow (the ArcGIS "raise max-density
+// → fewer hot-spots" principle) — small bright cores riding a broad dark body.
 //
 // These literals ARE the ramp (no HSL derivation) — the ONE source both the map paint AND the
-// density legend read, keyed by CATEGORY. Matched density breakpoints (0.12 / 0.35 / 0.62 /
-// 0.85 / 1.00) so equal density reads equally strong in both hues — only the hue LINE differs.
-// Index 0 is the empty-density stop: the pale colour at ALPHA 0, so empty fades in the true
-// hue (not out of black); the five coloured stops (1..5) are pale → core.
+// density legend read, keyed by CATEGORY. Matched density breakpoints (0.15 / 0.45 / 0.68 / 0.85 /
+// 0.94 / 1.00) and the same crust→glow SHAPE for both, so equal density gives equal shoulder-vs-glow
+// balance per hue (orange→gold, purple→pink-magenta), each ringed by its own dark crust. Index 0 is
+// the empty stop: the crust hue at ALPHA 0, so empty fades in the crust colour; the six coloured
+// stops (1..6) run dark crust → bright glowing core.
 const HEAT_RAMPS = {
   residential: [
-    { d: 0.00, css: "rgba(255,224,160,0)" },   // empty — pale-warm at alpha 0
-    { d: 0.12, css: "rgb(255,224,160)" },       // pale-warm
-    { d: 0.35, css: "rgb(255,168,66)" },        // orange
-    { d: 0.62, css: "rgb(240,110,40)" },        // red-orange
-    { d: 0.85, css: "rgb(214,58,32)" },         // red
-    { d: 1.00, css: "rgb(168,26,24)" },         // deep RED core
+    { d: 0.00, css: "rgba(120,24,12,0)" },     // empty — dark maroon crust at alpha 0
+    { d: 0.15, css: "rgb(120,24,12)" },         // DARK maroon crust — begins early
+    { d: 0.45, css: "rgb(150,34,16)" },         // STILL dark red — shoulder HOLDS through mid-range
+    { d: 0.68, css: "rgb(190,60,22)" },         // deep red-orange — only now warming
+    { d: 0.85, css: "rgb(236,110,28)" },        // orange — the LIFT starts this late
+    { d: 0.94, css: "rgb(255,176,52)" },        // amber
+    { d: 1.00, css: "rgb(255,208,92)" },        // gold-amber GLOW core — only the very peak, NOT white
   ],
   commercial: [
-    { d: 0.00, css: "rgba(230,208,242,0)" },    // empty — pale lilac at alpha 0
-    { d: 0.12, css: "rgb(230,208,242)" },       // pale lilac
-    { d: 0.35, css: "rgb(178,108,212)" },       // violet
-    { d: 0.62, css: "rgb(150,55,192)" },        // violet → magenta
-    { d: 0.85, css: "rgb(146,30,168)" },        // deep magenta-purple
-    { d: 1.00, css: "rgb(118,14,116)" },        // magenta-purple core
+    { d: 0.00, css: "rgba(60,20,80,0)" },       // empty — deep aubergine crust at alpha 0
+    { d: 0.15, css: "rgb(60,20,80)" },          // DEEP aubergine crust — begins early
+    { d: 0.45, css: "rgb(84,28,118)" },         // STILL deep purple — shoulder HOLDS
+    { d: 0.68, css: "rgb(120,44,168)" },        // purple — only now warming
+    { d: 0.85, css: "rgb(176,66,200)" },        // violet-magenta — the LIFT starts this late
+    { d: 0.94, css: "rgb(220,104,214)" },       // magenta
+    { d: 1.00, css: "rgb(242,148,228)" },       // pink-magenta GLOW core — only the very peak, NOT white
   ],
 };
 
-// SMOOTH vs STEPPED — the toggle KC sweeps. "smooth" = the interpolate lava ramp (blended);
-// "stepped" = 5 discrete CONTOUR bands (the same colours, snapped → concentric density rings).
+// SMOOTH vs STEPPED — the toggle KC sweeps. "smooth" = the interpolate incandescent ramp (blended);
+// "stepped" = 6 discrete CONTOUR bands (the same colours, snapped → concentric density rings).
 // heatColor() branches on this; the legend tracks it (gradient vs discrete swatches). Only the
 // map paint + legend rendering change — radius / intensity / opacity / crossover are frozen.
-export const HEAT_RAMP_MODE = "stepped";   // "smooth" | "stepped"
+export const HEAT_RAMP_MODE = "smooth";   // "smooth" | "stepped"
 
 // One category's ramp as CSS colour stops — THE single source both the map paint AND the
 // density legend read, so the legend shows exactly the colours the map paints. Returns
-// [{ d, css }] density-ordered; index 0 is the transparent empty-density stop, 1..5 the five
-// coloured stops (pale → core).
+// [{ d, css }] density-ordered; index 0 is the transparent empty-density stop, 1..6 the six
+// coloured stops (dark crust → bright glow core).
 export function heatRampColours(category) {
   return HEAT_RAMPS[category];
 }
 
+// STEPPED contour thresholds — the LOWER EDGE of each band, one per coloured stop, SHOULDER-HEAVY
+// to match the smooth ramp's weighting: the dark bands (c1..c3) span 0.15→0.80 (most of the range),
+// the bright bands (c4..c6) are squeezed into 0.80→1.0 (the top ~20%). Kept SEPARATE from the
+// smooth `d` values because a step's top band needs a threshold BELOW 1.0 to ever show (density
+// rarely hits exactly 1.0) — so the brightest core rings at ≥0.96, not ≥1.00. Length MUST match the
+// coloured-stop count (6). This is the ONE place the contour balance is tuned.
+const STEP_THRESHOLDS = [0.15, 0.42, 0.62, 0.80, 0.90, 0.96];
+
 // The heatmap-color expression for one category. Density 0 MUST be (near-)transparent (empty
 // stays map-colour). Built from heatRampColours so the colours live in exactly one place.
-//   • smooth  → interpolate along the lava track at the ramp's density stops.
-//   • stepped → step: the SAME five colours as discrete CONTOUR bands at denser-low
-//     thresholds (0.12 / 0.30 / 0.50 / 0.70 / 0.88) — 5 bands = clean concentric rings, not
-//     posterized. The step BREAKS differ from the smooth stops on purpose (fixed density
-//     steps); the band COLOURS are the five coloured stops, identical to smooth.
+//   • smooth  → interpolate along the incandescent track (crust→glow) at the ramp's density stops
+//     (shoulder-heavy: the lift starts at 0.85, so most of the range is dark shoulder).
+//   • stepped → step: the SAME colours as discrete CONTOUR bands, at STEP_THRESHOLDS — wide dark
+//     shoulder bands + narrow bright core rings (concentric ISOTHERMS: dark crust = cool OUTER
+//     ring, bright glow = hot INNER core). Derived from the same coloured stops as smooth, so a
+//     ramp edit re-weights both modes; only the density BREAKS differ (STEP_THRESHOLDS vs the
+//     smooth `d`s), by construction.
 function heatColor(category) {
-  const ramp = heatRampColours(category);
-  const c = ramp.map((s) => s.css);   // [empty, c1, c2, c3, c4, c5]
+  const coloured = heatRampColours(category).filter((s) => s.d > 0);   // drop the empty stop → c1..c6
   if (HEAT_RAMP_MODE === "stepped") {
-    return [
-      "step", ["heatmap-density"],
-      "rgba(0,0,0,0)",   // < 0.12 — transparent
-      0.12, c[1],        // c1 pale
-      0.30, c[2],        // c2
-      0.50, c[3],        // c3
-      0.70, c[4],        // c4
-      0.88, c[5],        // c5 core
-    ];
+    // Pair each coloured stop with its shoulder-heavy lower edge; below the first band → transparent.
+    const bands = coloured.flatMap((s, i) => [STEP_THRESHOLDS[i], s.css]);
+    return ["step", ["heatmap-density"], "rgba(0,0,0,0)", ...bands];
   }
   return [
     "interpolate", ["linear"], ["heatmap-density"],
-    ...ramp.flatMap(({ d, css }) => [d, css]),
+    ...heatRampColours(category).flatMap(({ d, css }) => [d, css]),
   ];
 }
 
 // ---- Heat radius / intensity dials -----------------------------------------
-// The light→dark ramp now does most of the de-fog (pale low density fades into the light
-// map), so radius stays MODERATE — tight enough for defined cores, wide enough to still read
-// as density. Intensity is kept modest so mid areas sit MID-ramp, not blown to the dark core.
-// (The old tailCut / core fields are gone — the ramp itself IS the de-fog now.) Both
-// categories share the dials; each ramps in its OWN hue. Sweep HEAT_TUNING to pick the look.
+// Radius stays MODERATE — tight enough for defined cores, wide enough to still read as density.
+// INTENSITY is the second shoulder-vs-glow lever (Lever 2): it multiplies accumulated density, so
+// LOWERING it makes density climb more slowly and FEWER areas reach the bright top of the ramp —
+// directly shrinking the bright area. Dropped (moderate: 1.0/1.6 → 0.8/1.4) to pair with the
+// shoulder-heavy stops so the glow concentrates into true peaks, not broad bright fields. Lever 1
+// (the late colour stops) controls WHAT COLOUR a density gets; Lever 2 controls HOW MUCH density
+// accumulates. Both categories share the dials; each ramps in its OWN hue. Sweep HEAT_TUNING.
 export const HEAT_TUNINGS = {
-  tight:    { radius: [8, 6,  11, 11, HEAT_CROSSOVER, 15], intensity: [8, 1.1, HEAT_CROSSOVER, 1.8] },
-  moderate: { radius: [8, 8,  11, 14, HEAT_CROSSOVER, 18], intensity: [8, 1.0, HEAT_CROSSOVER, 1.6] },
-  soft:     { radius: [8, 10, 11, 18, HEAT_CROSSOVER, 22], intensity: [8, 0.9, HEAT_CROSSOVER, 1.4] },
+  tight:    { radius: [8, 6,  11, 11, HEAT_CROSSOVER, 15], intensity: [8, 0.9, HEAT_CROSSOVER, 1.6] },
+  moderate: { radius: [8, 8,  11, 14, HEAT_CROSSOVER, 18], intensity: [8, 0.8, HEAT_CROSSOVER, 1.4] },
+  soft:     { radius: [8, 10, 11, 18, HEAT_CROSSOVER, 22], intensity: [8, 0.7, HEAT_CROSSOVER, 1.2] },
 };
 export const HEAT_TUNING = HEAT_TUNINGS.moderate;   // ← the knob KC picks
 
@@ -266,6 +293,76 @@ function buildHeatLayer(id, category) {
 // POINT_LAYERS = [...permitHeatLayers(), permitCircleLayer()].
 export function permitHeatLayers() {
   return HEAT_CATEGORIES.map(({ id, category }) => buildHeatLayer(id, category));
+}
+
+// ---- Figure-ground base tint (inside the Edmonton boundary) ----------------
+// Cartographic figure-ground: the permit glow (the FIGURE) reads best on a subdued, UNIFORM
+// ground. The raw basemap is a variable backdrop — cream PLUS green parkland PLUS water — that the
+// warm glow has to fight. Fill the inside of the city boundary with one quiet tint so the glow has
+// a single consistent ground, and Edmonton itself becomes a coherent figure against the outside.
+//
+// The boundary is the existing 407-neighbourhood universe, dissolved to the city outline and
+// simplified to a ~18 KB single polygon (no new City fetch — FOIP intact; regenerate with:
+//   npx mapshaper public/data/building-permits/permit-neighbourhoods/permit_neighbourhoods_<yr>.geojson \
+//     -dissolve -simplify 20% keep-shapes -clean -each 'city="Edmonton"' -o public/geo/edmonton_boundary.geojson
+// Long-term this belongs in the pipeline shared/ base-geo section as a handoff; committed as a
+// frontend geo asset for now — see the note to KC).
+export const BOUNDARY_SOURCE_ID = "city-boundary";
+export const CITY_BOUNDARY_PATH = "/geo/edmonton_boundary.geojson";
+
+// LAYER ORDER is the whole trick. Insert the tint ABOVE the basemap's land / parkland / landuse
+// but BELOW water, roads, labels, and the heat/dots — so it quiets the cream + green ground while
+// rivers, roads, labels, and the glow all draw ON TOP. "waterway" is the first basemap layer that
+// must stay above the tint (custom-basemap.json order: background → landcover → parks → landuse →
+// [waterway] → water → roads → labels). The heat/dots are added by MapView on top of everything,
+// so they sit above the tint automatically.
+export const TINT_BEFORE_ID = "waterway";
+
+// The three GROUND candidates KC compares — muted, mid-light, LOW-saturation (a ground, never a
+// figure; a saturated ground becomes a second data layer). Warm data pops hardest on a COOL,
+// desaturated ground (azure is orange's complement), so the default is a cool neutral; the
+// blue-grey pushes warm-pop hardest (but can fight the magenta — test both hues); the greige is
+// the subtlest (a deeper cream, no hue shift). Opacity can sit firm because roads/water/labels are
+// ABOVE the tint — a higher opacity unifies land+parks WITHOUT hiding map structure, and the light
+// tint keeps it a LIGHT map (not a dark theme). line = a quiet city-edge stroke (the figure edge).
+export const BASE_TINTS = {
+  "cool-neutral": { label: "Cool neutral grey", fill: "#cdd0cd", opacity: 0.55, line: "#98a29b" },
+  "cool-blue":    { label: "Cool blue-grey",    fill: "#b6c6d2", opacity: 0.52, line: "#8ba0b0" },
+  "warm-greige":  { label: "Warm greige",       fill: "#e5ddcb", opacity: 0.58, line: "#c3b79d" },
+};
+export const ACTIVE_TINT = "warm-greige";   // ← the knob KC picks (key into BASE_TINTS)
+export const SHOW_BOUNDARY_LINE = true;      // thin city-edge stroke on/off (the figure edge)
+
+// The tint FILL (the city ground). `source` is filled by the page (the dissolved boundary). No
+// maxzoom: the tint is a constant ground at every scale (the glow sits on it at the overview, the
+// dots at street level). fill-antialias default keeps a smooth city edge.
+export function cityTintLayer(source) {
+  const t = BASE_TINTS[ACTIVE_TINT];
+  return {
+    id: "city-tint",
+    type: "fill",
+    source,
+    paint: {
+      "fill-color": t.fill,
+      "fill-opacity": t.opacity,
+    },
+  };
+}
+
+// The optional city-edge STROKE — marks the figure boundary crisply. Hairline, low opacity, so it
+// reads as an edge, not a border. Same beforeId as the fill (just above it, below water/roads).
+export function cityBoundaryLineLayer(source) {
+  const t = BASE_TINTS[ACTIVE_TINT];
+  return {
+    id: "city-outline",
+    type: "line",
+    source,
+    paint: {
+      "line-color": t.line,
+      "line-width": 1.2,
+      "line-opacity": 0.7,
+    },
+  };
 }
 
 // ---- The circle layer spec -------------------------------------------------

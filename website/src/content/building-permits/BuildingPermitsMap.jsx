@@ -41,6 +41,12 @@ import {
   ALL_BUCKET_IDS,
   DEFAULT_ACTIVE_BUCKETS,
   stripBuildingCode,
+  BOUNDARY_SOURCE_ID,
+  CITY_BOUNDARY_PATH,
+  TINT_BEFORE_ID,
+  SHOW_BOUNDARY_LINE,
+  cityTintLayer,
+  cityBoundaryLineLayer,
 } from "./permitStyle.js";
 import {
   loadPermitManifest,
@@ -204,8 +210,9 @@ const POINT_LAYERS = [...permitHeatLayers(), permitCircleLayer()];
 
 // The SMOOTH-mode density-legend gradient for one category, from its coloured ramp stops —
 // so the legend bar reads exactly the colours the map paints (one source of truth). Anchor
-// the pale colour at 0% so the bar starts pale (Fewer) and climbs its true non-linear lava
-// path to the deep core at 100% (More). No hue literal here — every colour comes from the ramp.
+// the crust colour at 0% so the bar starts on the DARK crust (Fewer) and climbs its true
+// non-linear incandescent path to the BRIGHT glow core at 100% (More) — the same crust→glow
+// direction the map paints. No hue literal here — every colour comes from the ramp.
 function heatRampGradient(stops) {
   const parts = [
     `${stops[0].css} 0%`,
@@ -427,6 +434,25 @@ export default function BuildingPermitsMap() {
                 // popups/hover/fly-to, and disabling dbl-click-zoom (dbl-click = fly-to).
                 wirePermitPopup(m, setClickedFeature);
                 m.doubleClickZoom.disable();
+                // Figure-ground base tint: quiet the cream + green parkland INSIDE the city
+                // boundary so the permit glow reads against one uniform ground. ONE extra GeoJSON
+                // source (the dissolved ~18 KB boundary), independent of the per-year permit source
+                // so the Year-slider swap never touches it. Inserted at TINT_BEFORE_ID so the tint
+                // sits above land/parks but below water/roads/labels AND the heat/dots (which
+                // MapView draws on top). Guarded so it adds exactly once.
+                if (!m.getSource(BOUNDARY_SOURCE_ID)) {
+                  m.addSource(BOUNDARY_SOURCE_ID, {
+                    type: "geojson",
+                    data: assetUrl(CITY_BOUNDARY_PATH),
+                  });
+                }
+                const beforeId = m.getLayer(TINT_BEFORE_ID) ? TINT_BEFORE_ID : undefined;
+                if (!m.getLayer("city-tint")) {
+                  m.addLayer(cityTintLayer(BOUNDARY_SOURCE_ID), beforeId);
+                }
+                if (SHOW_BOUNDARY_LINE && !m.getLayer("city-outline")) {
+                  m.addLayer(cityBoundaryLineLayer(BOUNDARY_SOURCE_ID), beforeId);
+                }
                 // Land on the SAME pitched HOME camera as PA / DU / BC (the shared mapCamera
                 // preset) — a jump under the skeleton, matching their first-load. The Year slider
                 // swaps the source, never the camera, so this fires once.
