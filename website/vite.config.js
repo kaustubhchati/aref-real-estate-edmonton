@@ -20,4 +20,23 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || '/',
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        // Stable vendor chunks: a change to our own code shouldn't re-hash (and
+        // force re-download of) libraries that never changed. Only the boot-needed
+        // core (React) and MapLibre are split by hand. MapLibre is imported only by
+        // the code-split map sections (see main.jsx), so `vendor-maplibre` is fetched
+        // ONLY when a map route opens — it never touches the home/read-page boot.
+        // Map-only libs (@tanstack/react-table, polylabel) are deliberately left to
+        // Rollup, which keeps them inside the lazy map chunks rather than a
+        // boot-loaded vendor bundle.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+          if (id.includes('maplibre-gl')) return 'vendor-maplibre'
+          if (/[\\/]node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom)[\\/]/.test(id)) return 'vendor-react'
+        },
+      },
+    },
+  },
 })

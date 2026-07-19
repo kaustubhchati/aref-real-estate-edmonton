@@ -57,11 +57,38 @@ const CITY_LINK  = `<a href="${EDMONTON_OPEN_DATA.url}" target="_blank" rel="noo
 const TERMS_LINK = `<a href="${EDMONTON_OPEN_DATA.termsUrl}" target="_blank" rel="noopener noreferrer">Open Government Licence (Terms of Use v2.1)</a>`;
 
 export const siteConfig = {
-  // ---- Identity (placeholders — fill before public launch) ---------------
-  org:    "University of Alberta",
-  centre: "Open Data Centre",
-  dept:   "Department of Economics",
-  funder: "{Funder}",
+  // ---- Identity ----------------------------------------------------------
+  // org/dept/centre are the COMPACT forms the current shell shows; `centreFull`
+  // is the full public title (browser <title>, hero, footer mark). The suite*
+  // strings + coverage note are the approved prototype copy (bundle.html),
+  // consumed by the rebuilt shell (Dir 03) and Home/About (Dir 04-05). The
+  // `{Funder}` placeholder is retired here per Directive 00 §F.
+  org:        "University of Alberta",
+  centre:     "Open Data Centre",
+  centreFull: "Open Data Centre for Alberta Urban Real Estate",
+  dept:       "Department of Economics",
+  funder:     "Alberta Real Estate Foundation",
+
+  // The named dashboard suite + its framing copy (prototype-approved).
+  suite:        "Urban Alberta Dashboards",
+  suiteArticle: "the Urban Alberta Dashboards",
+  suiteTagline: "Interactive dashboards from the Open Data Centre, each pairing a live view with the data behind it.",
+  coverageNote: "Edmonton available now. Calgary in development.",
+  domain:       "realestatedata.srv.ualberta.ca",
+
+  // Feedback contact inbox. PLACEHOLDER (example.com) — set the real address
+  // before launch. The Feedback form opens a pre-filled email here via mailto
+  // (no server/API, per §1); alternatively swap to a form service (Decision 5).
+  contact:      "feedback@example.com",
+
+  // Home-page headline stats (prototype-approved marketing figures, not live-
+  // computed). Update here if the collection grows.
+  stats: [
+    { value: "407",   label: "neighbourhoods" },
+    { value: "3.5M+", label: "records integrated" },
+    { value: "15+",   label: "years of history" },
+    { value: "Free",  label: "no login, no licence" },
+  ],
 
   // ---- Data source + licence (see EDMONTON_OPEN_DATA above) ---------------
   dataSource: EDMONTON_OPEN_DATA,
@@ -85,11 +112,42 @@ export const siteConfig = {
   // ---- Footer copy (placeholders) ----------------------------------------
   // Each line corresponds to one block in the footer (Footer.jsx).
   footer: {
-    funderLine:   "Department of Economics, University of Alberta",
-    partnersLine: "Data: City of Edmonton Open Data Portal",
-    territorial:  "The University of Alberta acknowledges that we are located on Treaty 6 territory, and respects the histories, languages, and cultures of First Nations, Métis, Inuit, and all First Peoples of Canada.",
-    copyright:    "© 2026 University of Alberta — Open Data Centre",
-    logoAlt:      "University of Alberta logo",
+    // Institutional footer content (prototype-approved, transcribed from
+    // bundle.html), consumed by Footer.jsx (Directive 03).
+    territorialAck:
+      "The University of Alberta, its buildings, labs, and research stations are " +
+      "primarily located on the traditional territory of Cree, Blackfoot, Métis, " +
+      "Nakota Sioux, Iroquois, Dene, and Ojibway/Saulteaux/Anishinaabe nations; " +
+      "lands that are now known as part of Treaties 6, 7, and 8 and homeland of " +
+      "the Métis. The University of Alberta respects the sovereignty, lands, " +
+      "histories, languages, knowledge systems, and cultures of First Nations, " +
+      "Métis and Inuit nations.",
+    responsibilityNote:
+      "The Open Data Centre for Alberta Urban Real Estate is responsible for " +
+      "potential errors in the integration, aggregation, and presentation " +
+      "process of the underlying data.",
+    dataPartners: [
+      "Realtors Associations of Edmonton",
+      "Alberta Land Titles",
+      "City of Edmonton",
+      "Edmonton Public School Board",
+      "AltaLIS",
+    ],
+    openSources: [
+      "Edmonton Open Data Portal",
+      "Open Calgary",
+      "Government of Alberta Open Data",
+      "Statistics Canada",
+    ],
+    // Social links — PLACEHOLDER hrefs ("#") pending real URLs (or removal); the
+    // centre may not keep distinct socials. KC decision before launch (Dir 03).
+    socials: [
+      { label: "Facebook",    icon: "brand-facebook",  href: "#" },
+      { label: "X (Twitter)", icon: "brand-x",         href: "#" },
+      { label: "Instagram",   icon: "brand-instagram", href: "#" },
+      { label: "YouTube",     icon: "brand-youtube",   href: "#" },
+    ],
+    copyrightYear: new Date().getFullYear(),
   },
 
   // ---- Download catalogue -------------------------------------------------
@@ -146,46 +204,51 @@ export const siteConfig = {
   ],
 
   // ---- Navigation tree ---------------------------------------------------
-  // Mirrors the live UAlberta site's nav (CLAUDE.md §6). Each node is either:
-  //   • a leaf  — { label, kind: 'page' | 'map' | 'tables', to }
-  //   • a group — { label, kind: 'group', children: [...leaves] }
+  // The SINGLE source for the header nav AND (via the group nodes) the Home
+  // "Urban Alberta Dashboards" card grid. Each node is either:
+  //   • a leaf  — { label, kind: 'page' | 'map' | 'tables', to, status? }
+  //   • a group — { label, kind: 'group', icon, children: [...leaves] }
   //
-  // `kind` is informational (used to label placeholder pages); routing is
-  // driven by `to`. Adding an item here without adding a <Route> in main.jsx
-  // produces a 404 — that is on purpose, so the two stay in sync.
+  // `status` ('live' | 'soon') drives the live/soon badges (nav dropdowns + home
+  // cards). `icon` is an Icon.jsx glyph name (no 'ti-' prefix) for the category
+  // cards. `kind` labels placeholder pages; routing is driven by `to`. Every `to`
+  // needs a matching <Route> in main.jsx or it 404s — the two are kept in sync.
+  //
+  // Live-map paths are HELD STABLE (Directive 00 Decision 4): "Building Permits"
+  // keeps its /activity/construction-improvement URL though the label changed;
+  // Property Assessment / Dwelling Units / Business Counts keep theirs (they are
+  // also Layout's IMMERSIVE_ROUTES). Renamed ("Labour Market", ex-"Salary Ranges")
+  // and new ("Land Titles", "Air Quality", "Community Services", "Crime") leaves
+  // take fresh paths.
   nav: [
     { label: "Home", kind: "page", to: "/" },
 
-    { label: "Properties & Land", kind: "group", children: [
-      { label: "Properties",          kind: "map",    to: "/properties/properties" },
-      { label: "Property Assessment", kind: "map",    to: "/properties/property-assessment" },
-      { label: "Zoning",              kind: "map",    to: "/properties/zoning" },
+    { label: "Properties & Land", kind: "group", icon: "home-dollar", children: [
+      { label: "Property Assessment", kind: "map", status: "live", to: "/properties/property-assessment" },
+      { label: "Zoning",              kind: "map", status: "soon", to: "/properties/zoning" },
+      { label: "Land Titles",         kind: "map", status: "soon", to: "/properties/land-titles" },
     ]},
 
-    { label: "Activity", kind: "group", children: [
-      { label: "Dwelling Units",             kind: "map", to: "/activity/dwelling-units" },
-      { label: "Construction & Improvement", kind: "map", to: "/activity/construction-improvement" },
-      { label: "Land Transfers",             kind: "map", to: "/activity/land-transfers" },
+    { label: "Building Activity", kind: "group", icon: "building-community", children: [
+      { label: "Dwelling Units",  kind: "map", status: "live", to: "/activity/dwelling-units" },
+      { label: "Building Permits", kind: "map", status: "live", to: "/activity/construction-improvement" },
     ]},
 
-    { label: "Amenities", kind: "group", children: [
-      { label: "Public School",         kind: "map", to: "/amenities/public-school" },
-      { label: "Public Transportation", kind: "map", to: "/amenities/public-transportation" },
-      { label: "Parks",                 kind: "map", to: "/amenities/parks" },
-      { label: "Playgrounds",           kind: "map", to: "/amenities/playgrounds" },
-      { label: "Recreation Facilities", kind: "map", to: "/amenities/recreation-facilities" },
-      { label: "Bike Routes",           kind: "map", to: "/amenities/bike-routes" },
-      { label: "EV Charging",           kind: "map", to: "/amenities/ev-charging" },
-      { label: "Vegetation",            kind: "map", to: "/amenities/vegetation" },
+    { label: "Amenities", kind: "group", icon: "map-pin", children: [
+      { label: "Air Quality",           kind: "map", status: "soon", to: "/amenities/air-quality" },
+      { label: "Community Services",    kind: "map", status: "soon", to: "/amenities/community-services" },
+      { label: "Crime",                 kind: "map", status: "soon", to: "/amenities/crime" },
+      { label: "Public School",         kind: "map", status: "soon", to: "/amenities/public-school" },
+      { label: "Public Transportation", kind: "map", status: "soon", to: "/amenities/public-transportation" },
     ]},
 
-    { label: "Economy", kind: "group", children: [
-      { label: "Business Counts",   kind: "map",    to: "/economy/business-counts" },
-      { label: "Business Licences", kind: "map",    to: "/economy/business-licences" },
-      { label: "Salary Ranges",     kind: "tables", to: "/economy/salary-ranges" },
+    { label: "Economy", kind: "group", icon: "briefcase", children: [
+      { label: "Business Counts",   kind: "map", status: "live", to: "/economy/business-counts" },
+      { label: "Business Licences", kind: "map", status: "soon", to: "/economy/business-licences" },
+      { label: "Labour Market",     kind: "map", status: "soon", to: "/economy/labour-market" },
     ]},
 
-    { label: "Neighbourhood Report Card", kind: "tables", to: "/report-card" },
+    { label: "Neighbourhood Report Card", kind: "tables", status: "live", to: "/report-card" },
     { label: "Download",             kind: "page", to: "/download" },
     { label: "Research Competition", kind: "page", to: "/research-competition" },
     { label: "About Us",             kind: "page", to: "/about" },

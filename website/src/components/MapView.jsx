@@ -33,6 +33,14 @@ import { applyAppleClassic } from "./basemapTheme.js";
 import { crossFadeSource, abortCrossFade } from "./crossFadeSource.js";
 import { siteConfig } from "../config/siteConfig.js";
 
+// Warm MapLibre's worker pool + WebGL resources as soon as a map section's chunk
+// loads (this module is the shared MapLibre entry for every map), so worker init
+// overlaps React rendering the map component and the first paint comes sooner.
+// This used to run at app entry (main.jsx), but that pulled MapLibre into the boot
+// bundle; here it fires only once a map route is actually opened. One-time, no
+// teardown (clearing then re-warming for the next map would be net-negative).
+maplibregl.prewarm();
+
 export default function MapView({
   basemapStyle,
   geojsonUrl,

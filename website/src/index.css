@@ -10,7 +10,43 @@
 
 /* ---- Base ---------------------------------------------------------------- */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* ---- Fonts — SELF-HOSTED (FOIP: no Google Fonts / CDN request at runtime) ---
+   Variable woff2, latin subset, pulled once from Google Fonts and committed
+   under ./fonts/. Vite hashes them and rewrites the url() to the deploy base, so
+   a subpath deploy still resolves (CLAUDE.md §2). Each file is ONE variable font
+   spanning the whole weight axis, so font-weight is declared as a range.
+     • Inter       — drives the dark data console, EXACTLY as before (this simply
+                     replaces the old Google-CDN Inter @import; render unchanged).
+     • Roboto      — read-page/shell "bridge" body family (Directive 01), used
+     • Roboto Slab — read-page display family                only under .brand. */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/Inter.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/Roboto.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Roboto";
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/Roboto-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Roboto Slab";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/RobotoSlab.woff2") format("woff2");
+}
 
 :root {
   /* Colour tokens */
@@ -273,6 +309,57 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ============================================================================
+   READ-PAGE BRIDGE PALETTE  (Directive 01 — UAlberta institutional system)
+   A SEPARATE, ADDITIVE palette for the read/marketing surface (home, about,
+   header, nav, footer, shell chrome), transcribed verbatim from the approved
+   prototype (bundle.html). It is deliberately SCOPED to `.brand`: the dark data
+   console keeps the :root tokens above (Inter, slate/green) UNTOUCHED. Opt a
+   surface in by adding `class="… brand"` — the tokens + Roboto then apply to it
+   and its subtree. Directives 03–05 apply the class; on its own this block
+   changes nothing that renders today (no element carries `.brand` yet). Console
+   pages will inherit the branded Header/Nav (site-wide, ratified 2026-07-18),
+   but their BODIES never get `.brand`, so they stay byte-identical.
+   ============================================================================ */
+.brand {
+  /* Brand core */
+  --uofa-green: #275d38;   --uofa-green-deep: #1c4429;   --uofa-green-web: #007c41;
+  --uofa-gold: #ffdb05;    --gold-ink: #f2cd00;
+  --teal: #0f6e56;   --teal-strong: #085041;   --teal-tint: #e1f5ee;   --teal-mid: #1d9e75;
+  --paper: #f4f1ea;   --ink: #14171a;
+
+  /* Surfaces */
+  --page-bg: #fff;   --page-bg-soft: #f7f8f6;   --surface: #fff;   --surface-soft: #f4f6f2;
+
+  /* Text */
+  --text-strong: #16211a;   --text-body: #33403a;   --text-muted: #5a655f;
+  --text-on-green: #fff;   --text-on-green-soft: #c9d9cf;
+
+  /* Semantic roles */
+  --heading: var(--uofa-green);   --link: var(--teal);   --link-hover: var(--teal-strong);
+  --border: #e4e7e2;   --border-strong: #d3d8d1;   --border-green: #275d382e;
+  --band: var(--uofa-green);   --band-deep: var(--uofa-green-deep);
+
+  /* Shape + elevation + measure */
+  --radius: 8px;   --radius-card: 12px;
+  --shadow-card: 0 1px 2px #16211a0a, 0 4px 16px #16211a0d;
+  --shadow-lift: 0 6px 24px #0f6e5624;
+  --maxw: 1120px;
+
+  /* Type — read pages render Roboto. Re-resolving font-family HERE switches this
+     subtree only (the console resolves --font-sans to Inter at :root, above). */
+  --font-sans: "Roboto", system-ui, -apple-system, sans-serif;
+  --font-display: "Roboto Slab", Georgia, serif;
+  font-family: var(--font-sans);
+}
+
+/* Pearl signature: the bands / foil / buttons use a STATIC iridescent conic
+   gradient (fixed `from 0deg`). They were once animated (a rotating --pearl-angle
+   @property), but animating the gradient's angle repaints the WHOLE gradient every
+   frame — and the header + footer bands render on EVERY page, including the WebGL
+   console/map pages, which stalled the map and the site on reload/navigation.
+   Static costs nothing per frame and still looks premium. (2026-07-18 perf fix.) */
+
 /* The duochrome edge-light (button rims + sidebar framing edge) is RATIFIED ON (the mock
    switcher's "plain" off-state was removed with the switcher). --accent-rim-image /
    --accent-edge-image live at their ratified values in :root. */
@@ -329,6 +416,9 @@ p  { margin: 0 0 0.75rem; }
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  /* Header band height — ONE knob shared by the header itself and the immersive
+     edge-reveal offset below, so they can never drift apart. */
+  --header-h: 90px;
 }
 
 .shell-main {
@@ -355,94 +445,139 @@ p  { margin: 0 0 0.75rem; }
    was the "ghost gap"). Text pages (no .content-map) keep the 1100px column. */
 .shell-main:has(.content-map) { max-width: none; }
 
-/* ---- Header -------------------------------------------------------------- */
+/* ---- Read-page shell surfaces (Directive 03) ----------------------------- */
+/* The pearl band (header/footer/hero) + the two content widths. These read the
+   bridge palette, so any element using them sits inside `.brand`. The pearl sheen
+   is a STATIC conic gradient (the animation was removed for perf — see above). */
 
-.shell-header {
-  background: var(--slate-950); border-bottom: none;
-  padding: 0 1.5rem; height: 56px;
-  display: flex; align-items: center;
-  position: sticky; top: 0; z-index: 100;
+/* Content widths: .wrap centres to the reading measure; .wrap--full is the
+   edge-to-edge spread (header + nav). Both keep comfortable side gutters. */
+.wrap       { width:100%; max-width:var(--maxw); margin:0 auto; padding:0 24px; }
+.wrap--full { width:100%; max-width:none;        margin:0;      padding:0 40px; }
+
+/* Skip-to-content / off-screen-until-focused (a11y). */
+.sr-only {
+  position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
 }
-.shell-header::after {
-  content: ""; position: absolute;
-  bottom: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg,#005c26,#007a33,#4caf72);
+
+/* Pearl band: a STATIC conic sheen under a dark veil, content composited on top. */
+.pearl          { position:relative; overflow:hidden; isolation:isolate; background:#21331f; }
+.pearl__sheen   { position:absolute; inset:0; z-index:0; opacity:0.85; pointer-events:none;
+  background:conic-gradient(from 0deg at 30% 16%, #17421d 0deg, #0f6e56 72deg, #63992d 138deg, #d9b23a 200deg, #f2cd00 244deg, #38663a 312deg, #17421d 360deg); }
+.pearl__veil    { position:absolute; inset:0; z-index:1; pointer-events:none;
+  background:linear-gradient(104deg, #132015db 0%, #17281a94 48%, #17281a3d 100%); }
+.pearl__content { position:relative; z-index:2; }
+/* Band variant (header + footer): deep-green base, calmer sheen. */
+.pearl--band               { background:var(--uofa-green-deep); }
+.pearl--band .pearl__sheen { opacity:0.4;
+  background:conic-gradient(from 0deg at 78% 40%, #1c4429 0deg, #0f6e56 90deg, #4d7a30 150deg, #d9b23a 210deg, #2a5a34 300deg, #1c4429 360deg); }
+.pearl--band .pearl__veil  { background:linear-gradient(90deg, #14281ae6 0%, #14281ab3 60%, #14281a8c 100%); }
+
+/* ---- Header (pearl band: shield · centre/dept · wordmark) ----------------- */
+
+/* z-index:100 keeps the header ABOVE the immersive edge-reveal nav (z-index:95),
+   so on the console/map routes the auto-hidden nav slides up BEHIND the header
+   instead of covering it. (Was 50 — that let the hidden nav overlap the header.) */
+.shell-header        { position:relative; z-index:100; height:var(--header-h); }
+/* Fill the fixed band height down the pearl layers so hdr__inner can centre. */
+.shell-header .pearl, .shell-header .pearl__content { height:100%; }
+.hdr__inner    { height:100%; display:flex; align-items:center; gap:18px; }
+.hdr__mark     { display:flex; align-items:center; color:#fff; }
+.hdr__id       { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.hdr__centre   { color:#fff; font-size:15px; font-weight:500; line-height:1.25; letter-spacing:0.005em; }
+.hdr__dept     { color:var(--uofa-gold); font-size:15px; font-weight:700; line-height:1.2; }
+.hdr__spacer   { flex:1; }
+.hdr__wordmark { font-family:var(--font-display); text-align:right; text-transform:uppercase;
+  color:#fff; font-size:13px; font-weight:700; line-height:1.1; letter-spacing:0.16em; }
+.hdr__wordmark span { color:var(--uofa-gold); }
+
+/* ---- Nav (full-width bar; click-to-open dropdowns with live/soon dots) ----
+   The bar spreads edge-to-edge (nav__list: flex:1 + space-between). It is NOT a
+   scroll container (unlike the old nav), so a dropdown can anchor with plain
+   position:absolute — no getBoundingClientRect hack. Dropdowns are click-driven:
+   a group's <li> gets .is-open (Nav.jsx), which fades its .nav__menu in. */
+
+.shell-nav  { position:relative; z-index:40; background:#fff;
+  border-bottom:1px solid var(--border); box-shadow:0 1px #16211a05; }
+.nav__inner { display:flex; align-items:center; gap:4px; min-height:56px; }
+.nav__list  { flex:1; display:flex; flex-wrap:nowrap; justify-content:space-between;
+  align-items:center; gap:2px; margin:0; padding:0; list-style:none; }
+.nav__item  { position:relative; }
+
+.nav__link  { display:inline-flex; align-items:center; gap:4px; padding:10px 9px;
+  color:var(--text-body); background:none; border:none; border-radius:7px;
+  font-family:inherit; font-size:14.5px; font-weight:500; white-space:nowrap;
+  cursor:pointer; text-decoration:none; transition:background 0.14s, color 0.14s; }
+.nav__link:hover { background:var(--surface-soft); color:var(--uofa-green); text-decoration:none; }
+.nav__link--active { color:var(--uofa-green); font-weight:700; }
+.nav__link--active::after { content:""; position:absolute; left:9px; right:9px; bottom:4px;
+  height:2px; border-radius:2px; background:var(--uofa-gold); }
+.nav__caret { opacity:0.7; font-size:14px; transition:transform 0.15s; }
+.nav__link[aria-expanded="true"] .nav__caret,
+.nav__mobile-link[aria-expanded="true"] .nav__caret { transform:rotate(180deg); }
+
+/* Dropdown — always in the DOM (so it can fade), revealed when .is-open. */
+.nav__menu { position:absolute; top:calc(100% + 2px); left:0; min-width:250px;
+  background:#fff; border:1px solid var(--border); border-radius:10px; padding:6px;
+  box-shadow:var(--shadow-card); opacity:0; visibility:hidden; transform:translateY(-4px);
+  transition:opacity 0.14s, transform 0.14s, visibility 0.14s; }
+.nav__item.is-open .nav__menu { opacity:1; visibility:visible; transform:translateY(0); }
+.nav__menu-link { display:flex; justify-content:space-between; align-items:center; gap:12px;
+  width:100%; padding:9px 11px; color:var(--text-body); background:none; border:none;
+  border-radius:7px; font-family:inherit; font-size:14px; text-align:left;
+  text-decoration:none; cursor:pointer; }
+.nav__menu-link:hover { background:var(--teal-tint); color:var(--teal-strong); text-decoration:none; }
+.nav__dot { border-radius:20px; padding:1px 7px; font-size:10.5px; font-weight:500; white-space:nowrap; }
+.nav__dot--live { background:var(--teal-tint); color:var(--teal-strong); }
+.nav__dot--soon { background:#f1efe8; color:#5f5e5a; }
+
+/* Mobile toggle + accordion — hidden until the <=1240px media block shows them. */
+.nav__toggle { display:none; margin-left:auto; padding:8px 10px; background:none;
+  border:1px solid var(--border-strong); border-radius:8px; color:var(--uofa-green);
+  line-height:1; cursor:pointer; }
+.nav__mobile { display:none; }
+
+/* ---- Footer (pearl band: acknowledgement · partners · sources · bar) ------ */
+
+.shell-footer  { color:#fff; }
+.ftr__grid     { display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:40px; padding:48px 0 36px; }
+.ftr__ack-h    { margin:0 0 12px; color:var(--uofa-gold); font-size:15px; font-weight:700; }
+.ftr__ack-body { margin:0; color:var(--text-on-green-soft); font-size:13.5px; line-height:1.65; }
+.ftr__col-h    { margin:0 0 12px; color:var(--uofa-gold); font-size:12px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.08em; }
+.ftr__list     { margin:0; padding:0; list-style:none; }
+.ftr__list li  { padding:3px 0; color:var(--text-on-green-soft); font-size:13.5px; line-height:1.5; }
+.ftr__rule     { height:1px; border:none; margin:0; background:#ffffff29; }
+.ftr__bar      { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center;
+  gap:20px; padding:22px 0 30px; }
+.ftr__social   { display:flex; gap:14px; }
+.ftr__social a { display:inline-flex; color:var(--text-on-green-soft); transition:color 0.14s; }
+.ftr__social a:hover { color:#fff; }
+.ftr__mark-wrap{ display:flex; align-items:center; gap:12px; color:#fff; }
+.ftr__mark-txt { font-family:var(--font-display); font-size:12px; font-weight:700; line-height:1.2;
+  text-transform:uppercase; letter-spacing:0.14em; }
+.ftr__copy     { color:var(--text-on-green-soft); font-size:13px; }
+
+/* ---- Shell responsive (Directive 03) ------------------------------------- */
+/* Below 1240px the wide full-width nav can't fit its ten items, so it folds to a
+   hamburger + in-place accordion. The header sheds its wordmark then shrinks its
+   text; the footer stacks to one column. */
+@media (max-width: 1240px) {
+  .nav__list   { display:none; }
+  .nav__toggle { display:inline-flex; align-items:center; }
+  .nav__mobile { display:block; border-top:1px solid var(--border); padding:8px 0 14px; }
+  .nav__mobile-link { display:flex; justify-content:space-between; align-items:center; width:100%;
+    padding:12px 8px; color:var(--text-body); background:none; border:none; border-radius:8px;
+    font-family:inherit; font-size:15px; font-weight:500; text-align:left; text-decoration:none;
+    cursor:pointer; }
+  .nav__mobile-link:hover { background:var(--surface-soft); text-decoration:none; }
+  .nav__mobile-sub { padding-left:16px; }
+  .nav__mobile-sub .nav__mobile-link { color:var(--text-muted); font-size:14px; font-weight:400; }
 }
-.shell-header-title {
-  display: inline-flex; align-items: baseline;
-  gap: 0.625rem; line-height: 1;
-}
-.shell-header-title:hover { text-decoration: none; }
-.shell-header-centre { font-size:0.9rem; font-weight:700; color:#fff; }
-.shell-header-separator {
-  width:1px; height:14px; background:rgba(255,255,255,0.2);
-}
-.shell-header-org { font-size:0.75rem; color:rgba(255,255,255,0.5); }
-
-/* ---- Nav ----------------------------------------------------------------- */
-
-.shell-nav { background:var(--bg); border-bottom:1px solid var(--border-soft);
-  padding:0 1.5rem; position:sticky; top:56px; z-index:90;
-  box-shadow:var(--shadow-sm); }
-.shell-nav-list { list-style:none; margin:0; padding:0; display:flex;
-  flex-wrap:nowrap; justify-content:space-evenly; overflow-x:auto;
-  scrollbar-width:none; -ms-overflow-style:none; scroll-behavior:smooth;
-  -webkit-overflow-scrolling:touch; }
-.shell-nav-list::-webkit-scrollbar { display:none; }
-
-/* Each top-level item is the positioning context for its dropdown (kept from
-   the prior rules — the absolute sublist anchors to this, not the sticky nav). */
-.shell-nav-item { position: relative; }
-
-.shell-nav-link { display:inline-flex; align-items:center; padding:0 0.875rem;
-  height:44px; color:var(--text-muted); font-size:0.875rem; font-weight:500;
-  white-space:nowrap; border-bottom:2px solid transparent;
-  transition:color 150ms ease, border-color 150ms ease; }
-.shell-nav-link:hover { color:var(--text); background:var(--bg-soft);
-  text-decoration:none; }
-.shell-nav-link.is-active, .shell-nav-link.active {
-  color:var(--accent); border-bottom-color:var(--accent); }
-
-/* The group toggle is a <button> (was <summary>); reset UA button chrome so it
-   matches the leaf links, and keep the ▾ marker. */
-.shell-nav-summary { user-select: none; background: none; border: 0;
-  font-family: inherit; cursor: pointer; }
-.shell-nav-summary::after { content:" ▾"; font-size:0.65em;
-  color:var(--text-subtle); }
-/* The group button has border:0, so .shell-nav-link.is-active's border-bottom-
-   color alone shows no underline — restore the 2px width when active. */
-.shell-nav-summary.is-active { border-bottom:2px solid var(--accent); }
-
-/* position:fixed + coords are set inline by NavGroup (getBoundingClientRect)
-   so the menu escapes the nav row's overflow-x scroll container. */
-.shell-nav-sublist { position:fixed;
-  z-index:500; list-style:none; margin:0; padding:0.375rem 0; min-width:15rem;
-  background:var(--bg); border:1px solid var(--border-soft);
-  border-radius:var(--radius-md); box-shadow:var(--shadow-lg); }
-.shell-nav-sublist .shell-nav-link { height:38px; border-bottom:none;
-  border-radius:0; }
-.shell-nav-sublist .shell-nav-link:hover { background:var(--accent-soft);
-  color:var(--accent-dark); }
-
-/* ---- Footer -------------------------------------------------------------- */
-
-.shell-footer { background:var(--slate-950);
-  border-top:2px solid var(--green-700); padding:0.5rem 1.5rem 0.4rem; }
-.shell-footer-inner { max-width:1100px; margin:0 auto; }
-.shell-footer-grid { display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-  gap:0.4rem; margin-bottom:0.3rem; }
-.shell-footer-col-label { font-size:0.65rem; font-weight:700;
-  text-transform:uppercase; letter-spacing:0.12em;
-  color:#4caf72; margin:0 0 0.25rem; }
-.shell-footer-line { margin:0; font-size:0.75rem;
-  color:rgba(255,255,255,0.55); line-height:1.5; }
-.shell-footer-territorial { display:none; font-style:italic; font-size:0.72rem;
-  color:rgba(255,255,255,0.4); line-height:1.4; }
-.shell-footer-divider { border:none;
-  border-top:1px solid rgba(255,255,255,0.08); margin:0 0 0.5rem; }
-.shell-footer-copy { text-align:center; font-size:0.7rem;
-  color:rgba(255,255,255,0.3); margin:0; padding-top:0.25rem; }
+@media (max-width: 780px) { .ftr__grid { grid-template-columns:1fr; gap:28px; padding:36px 0 24px; } }
+@media (max-width: 640px) { .hdr__wordmark { display:none; } }
+@media (max-width: 520px) { .hdr__centre, .hdr__dept { font-size:13.5px; } }
 
 /* ---- Immersive chrome (the PA map route only) --------------------------- */
 /* Layout adds .shell-immersive on an immersive route and wraps <Nav> + <Footer>
@@ -470,15 +605,15 @@ p  { margin: 0 0 0.75rem; }
   z-index: 95;
   pointer-events: none;
 }
-.edge-reveal--top    { top: 56px; }   /* directly beneath the sticky header (56px) */
+.edge-reveal--top    { top: var(--header-h); }   /* directly beneath the header band */
 .edge-reveal--bottom { bottom: 0; }
 
 /* The chrome itself — slid out of view by default; pointer-events:none while
-   hidden so it can't intercept clicks. NOTE: the transform briefly makes this
-   panel a containing block for the nav dropdown (.shell-nav-sublist, which is
-   position:fixed) DURING the slide; harmless in practice because a dropdown only
-   opens once the panel has settled (the focused group button keeps it revealed →
-   transform:none). A hide-delay gives flicker-free hysteresis at the edge. */
+   hidden so it can't intercept clicks. The nav dropdown (.nav__menu) is now
+   position:absolute, anchored to its own .nav__item, so — unlike the old
+   position:fixed menu — this panel's transform does not affect it; it also only
+   opens while the panel is revealed (transform:none). A hide-delay gives
+   flicker-free hysteresis at the edge. */
 .edge-reveal-panel {
   position: absolute;
   left: 0;
@@ -558,6 +693,223 @@ p  { margin: 0 0 0.75rem; }
   border-radius: 3px;
   color: var(--text-muted);
 }
+
+/* Lazy-route chunk-load placeholder (the <Suspense> fallback in Layout): a neutral
+   full-bleed pulse in the content area while a code-split section downloads. The
+   map's own MapSkeleton takes over once its GeoJSON starts loading. */
+.route-fallback { flex: 1; min-height: 320px; background: var(--bg-soft);
+  animation: route-pulse 1.3s ease-in-out infinite; }
+@keyframes route-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.85; } }
+
+/* ---- Read-page scroll model (Directives 04-06) --------------------------- */
+/* The read pages (home, about, research competition, feedback) are scrolling
+   marketing DOCUMENTS, not fixed-viewport maps. Scoped via :has(.readpage) so
+   every OTHER route keeps the pinned-chrome shell: the shell becomes a normal
+   block that grows with content (the body scrolls), the header scrolls away, the
+   nav sticks to the top, and the footer flows at the end. Every read-page root
+   carries `.readpage brand`. */
+.shell:has(.readpage)             { display:block; height:auto; min-height:100svh; overflow:visible; }
+.shell:has(.readpage) .shell-main { overflow:visible; max-width:none; }
+.shell:has(.readpage) .shell-nav  { position:sticky; top:0; }
+
+/* ---- Home page (Directive 04) -------------------------------------------- */
+
+/* Hero — the vivid pearl band (variant hero, not the calmer --band). */
+.hero          { padding:0; }
+.hero__inner   { max-width:760px; padding:64px 0 56px; }
+.hero__rule    { width:54px; height:4px; margin-bottom:20px; border-radius:2px;
+  background:linear-gradient(90deg, var(--gold-ink), #63992d); }
+.hero__eyebrow { margin:0 0 16px; color:#b7cbb0; font-size:12px; font-weight:500;
+  text-transform:uppercase; letter-spacing:0.13em; }
+.hero__title   { margin:0; font-family:var(--font-display); color:#fff; font-weight:700;
+  font-size:clamp(30px, 4.6vw, 46px); line-height:1.1; letter-spacing:-0.01em; }
+.hero__sub     { max-width:40rem; margin:20px 0 0; color:var(--text-on-green-soft);
+  font-size:clamp(15px, 1.7vw, 17px); line-height:1.6; }
+.hero__cta     { display:flex; flex-wrap:wrap; gap:12px; margin-top:28px; }
+
+/* Gold-foil text (the hero's "Albertans") — a STATIC iridescent gold clip.
+   NOTE: use background-IMAGE, not the `background` shorthand — the shorthand
+   resets background-clip back to border-box, which fills the box with the
+   gradient and (with transparent text) hides the word entirely. Clip comes last. */
+.foil { color:transparent;
+  background-image:conic-gradient(from 0deg, #9bd07a, #f2cd00, #d9b23a, #63992d, #9bd07a);
+  -webkit-background-clip:text; background-clip:text; }
+
+/* Buttons (hero CTAs; solid/outline arrive with the Feedback/About pages). */
+.btn         { display:inline-flex; align-items:center; gap:8px; padding:12px 22px; border:none;
+  border-radius:9px; font-family:inherit; font-size:15px; font-weight:500; text-decoration:none;
+  cursor:pointer; transition:transform 0.12s, box-shadow 0.15s, background 0.15s; }
+.btn:active  { transform:translateY(1px); }
+.btn--pearl  { position:relative; overflow:hidden; background:var(--gold-ink); color:#2a2400; }
+.btn--pearl::before { content:""; position:absolute; inset:-2px; z-index:0;
+  background:conic-gradient(from 0deg, #f2cd00, #ffe680, #d9b23a, #f2cd00); }
+.btn--pearl span { position:relative; z-index:1; display:inline-flex; align-items:center; gap:8px; }
+.btn--pearl:hover { box-shadow:0 6px 20px #f2cd004d; }
+.btn--ghost  { background:none; color:#fff; border:1px solid #6f9179; }
+.btn--ghost:hover { background:#ffffff14; }
+
+/* Stats strip — a centred card overlapping the hero's bottom edge (gap:1px on a
+   --border ground draws the hairlines between white cells). */
+.stats       { position:relative; z-index:3; display:grid; grid-template-columns:repeat(4, 1fr);
+  gap:1px; margin-top:-28px; border-radius:12px; overflow:hidden;
+  background:var(--border); border:1px solid var(--border); box-shadow:var(--shadow-card); }
+.stat        { background:#fff; padding:20px 22px; }
+.stat__value { font-family:var(--font-display); color:var(--uofa-green); font-size:26px;
+  font-weight:700; line-height:1; }
+.stat__label { margin-top:6px; color:var(--text-muted); font-size:13px; }
+
+/* Sections + section heads. */
+.section          { padding:56px 0; }
+.section--soft    { background:var(--page-bg-soft); border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border); }
+.section__head    { margin-bottom:28px; }
+.section__eyebrow { margin:0 0 8px; color:var(--teal); font-size:12px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.09em; }
+.section__title   { margin:0; font-size:clamp(22px, 3vw, 28px); font-weight:700; color:var(--text-strong); }
+.section__lead    { max-width:46rem; margin:14px 0 0; color:var(--text-body); font-size:16px; line-height:1.65; }
+.section__row     { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-start;
+  gap:24px; margin-bottom:24px; }
+.section__row .section__lead { margin-top:12px; }
+.section__note    { color:var(--text-muted); font-size:13.5px; }
+
+/* Dashboards card grid. */
+.catgrid { display:grid; grid-template-columns:repeat(3, 1fr); align-items:start; gap:20px; }
+.catcard { display:flex; flex-direction:column; overflow:hidden; background:#fff;
+  border:1px solid var(--border); border-radius:14px; transition:border-color 0.15s, box-shadow 0.15s; }
+.catcard:hover { box-shadow:var(--shadow-card); }
+.catcard__head { display:flex; align-items:center; gap:11px; padding:18px 18px 14px;
+  border-bottom:1px solid var(--border); }
+.catcard__icon { display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  width:40px; height:40px; border-radius:10px; }
+.catcard__icon--live { background:var(--teal-tint); color:var(--teal); }
+.catcard__icon--soon { background:#eceae3; color:#888780; }
+.catcard__name { flex:1; margin:0; color:var(--uofa-green); font-size:16.5px; font-weight:700; }
+.catcard__status { white-space:nowrap; padding:2px 9px; border-radius:20px; font-size:10.5px;
+  font-weight:500; letter-spacing:0.02em; }
+.catcard__status--live { background:var(--teal-tint); color:var(--teal-strong); }
+.catcard__status--soon { background:#eceae3; color:#5f5e5a; }
+.catcard__topics { display:flex; flex-direction:column; gap:2px; margin:0; padding:8px; list-style:none; }
+
+.subrow       { display:flex; justify-content:space-between; align-items:center; gap:10px; width:100%;
+  padding:11px 12px; border:none; border-radius:8px; background:none; font-family:inherit;
+  text-align:left; text-decoration:none; }
+.subrow--live { color:var(--text-strong); cursor:pointer; transition:background 0.13s; }
+.subrow--live:hover { background:var(--teal-tint); }
+.subrow--live .subrow__name { font-weight:600; }
+.subrow__name { font-size:14px; }
+.subrow__cue  { display:inline-flex; align-items:center; gap:4px; color:var(--teal); font-size:12px;
+  font-weight:500; opacity:0; transition:opacity 0.13s; }
+.subrow--live:hover .subrow__cue { opacity:1; }
+.subrow--soon .subrow__name { color:var(--text-muted); font-weight:500; }
+.subrow__soon { padding:1px 8px; border-radius:20px; background:#eceae3; color:#5f5e5a;
+  font-size:10.5px; font-weight:500; }
+
+/* Funder + partners. */
+.grant        { display:flex; flex-wrap:wrap; align-items:center; gap:28px; padding:28px 32px;
+  background:#fff; border:1px solid var(--border); border-radius:14px; }
+.grant__text  { flex:1; min-width:240px; }
+.grant__label { margin:0 0 4px; color:var(--text-muted); font-size:13px; font-weight:500; }
+.grant__name  { margin:0; color:var(--uofa-green); font-size:18px; font-weight:700; }
+.grant__logo  { display:flex; align-items:center; justify-content:center; min-width:180px; height:72px;
+  padding:12px 20px; border-radius:10px; background:var(--surface-soft); color:var(--uofa-green);
+  text-align:center; }
+.grant__logo-txt { font-family:var(--font-display); font-size:14px; font-weight:700; line-height:1.25;
+  letter-spacing:0.02em; }
+
+/* Home responsive. */
+@media (max-width: 900px) { .catgrid { grid-template-columns:repeat(2, 1fr); } }
+@media (max-width: 680px) { .stats { grid-template-columns:repeat(2, 1fr); } }
+@media (max-width: 560px) { .catgrid { grid-template-columns:1fr; } }
+
+/* ---- Read pages: About / Research Competition / Feedback (Dir 05-06) ------ */
+/* Shared page-hero (a smaller pearl band, variant hero) + a document body that
+   carries either a doc (sticky TOC + prose) or the feedback form. */
+.pagehero          { padding:0; }
+.pagehero__inner   { max-width:760px; padding:48px 0 40px; }
+.pagehero__rule    { width:54px; height:4px; margin-bottom:18px; border-radius:2px;
+  background:linear-gradient(90deg, var(--gold-ink), #63992d); }
+.pagehero__eyebrow { margin:0 0 12px; color:#b7cbb0; font-size:12px; font-weight:500;
+  text-transform:uppercase; letter-spacing:0.13em; }
+.pagehero__title   { margin:0; font-family:var(--font-display); color:#fff; font-weight:700;
+  font-size:clamp(28px, 4vw, 40px); line-height:1.12; letter-spacing:-0.01em; }
+.pagehero__sub     { max-width:40rem; margin:16px 0 0; color:var(--text-on-green-soft);
+  font-size:16px; line-height:1.6; }
+
+.pagebody { padding:52px 0 64px; }
+
+/* About: a sticky table-of-contents beside the prose. */
+.doc         { display:grid; grid-template-columns:200px 1fr; align-items:start; gap:48px; }
+.toc         { position:sticky; top:80px; }
+.toc__h      { margin:0 0 12px; color:var(--text-muted); font-size:12px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.08em; }
+.toc__list   { margin:0; padding:0; list-style:none; }
+.toc__list a { display:block; margin-left:-12px; padding:6px 0 6px 12px; border-left:2px solid transparent;
+  color:var(--text-muted); font-size:14px; text-decoration:none; }
+.toc__list a:hover { color:var(--teal); border-left-color:var(--teal); }
+
+/* Prose. */
+.content        { max-width:44rem; }
+.content h2     { margin:40px 0 14px; scroll-margin-top:80px; color:var(--uofa-green);
+  font-size:22px; font-weight:700; }
+.content h2:first-child { margin-top:0; }
+.content h3     { margin:26px 0 8px; color:var(--text-strong); font-size:17px; font-weight:700; }
+.content p      { margin:0 0 16px; color:var(--text-body); font-size:16px; line-height:1.7; }
+.content ul     { margin:0 0 16px; padding-left:22px; }
+.content li     { margin:0 0 8px; color:var(--text-body); font-size:16px; line-height:1.6; }
+.content strong { color:var(--text-strong); font-weight:700; }
+
+/* Methods note (info-boxed, teal left-rule). */
+.note        { margin:0 0 20px; padding:18px 22px; border:1px solid var(--border);
+  border-left:3px solid var(--teal); border-radius:0 12px 12px 0; background:var(--surface-soft); }
+.note__label { display:inline-flex; align-items:center; gap:6px; margin:0 0 8px; color:var(--teal-strong);
+  font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; }
+.note p            { margin:0 0 10px; color:var(--text-body); font-size:14.5px; line-height:1.62; }
+.note p:last-child { margin-bottom:0; }
+
+/* Three-state legend (has-data / suppressed / no-data). */
+.states       { display:flex; flex-direction:column; gap:12px; margin:8px 0 20px; }
+.state-row    { display:flex; align-items:flex-start; gap:12px; }
+.state-swatch { flex-shrink:0; width:26px; height:26px; margin-top:1px; border-radius:6px;
+  border:1px solid var(--border-strong); }
+.state-row strong { display:block; }   /* label on its own line, description below */
+
+/* Call-to-action card (Research Competition). */
+.cta-card       { display:flex; flex-wrap:wrap; align-items:center; gap:22px; margin-top:8px;
+  padding:28px 30px; background:#fff; border:1px solid var(--border); border-radius:14px; }
+.cta-card__body { flex:1; min-width:240px; }
+.cta-card__body h3 { margin:0 0 6px; color:var(--text-strong); }
+.cta-card__body p  { margin:0; color:var(--text-muted); font-size:15px; line-height:1.55; }
+
+.btn--solid        { background:var(--teal); color:#fff; }
+.btn--solid:hover  { background:var(--teal-strong); }
+.btn--outline      { background:#fff; color:var(--teal); border:1px solid var(--teal); }
+.btn--outline:hover { background:var(--teal-tint); }
+
+/* Feedback form + aside. */
+.fb        { display:grid; grid-template-columns:1.5fr 1fr; align-items:start; gap:40px; max-width:900px; }
+.fb__form  { display:flex; flex-direction:column; gap:18px; }
+.fb__field { display:flex; flex-direction:column; gap:6px; }
+.fb__field label { color:var(--text-strong); font-size:13.5px; font-weight:500; }
+.fb__field input, .fb__field select, .fb__field textarea {
+  padding:11px 13px; border:1px solid var(--border-strong); border-radius:9px; background:#fff;
+  color:var(--text-body); font-family:inherit; font-size:15px; resize:vertical;
+  transition:border-color 0.14s, box-shadow 0.14s; }
+.fb__field input:focus, .fb__field select:focus, .fb__field textarea:focus {
+  border-color:var(--teal); outline:none; box-shadow:0 0 0 3px #0f6e561f; }
+.fb__submit { align-self:flex-start; margin-top:4px; }
+.fb__aside   { padding:22px 24px; background:var(--surface-soft); border:1px solid var(--border); border-radius:12px; }
+.fb__aside-h { margin:0 0 10px; color:var(--uofa-green); font-size:15px; font-weight:700; }
+.fb__aside-p { margin:0; color:var(--text-muted); font-size:14px; line-height:1.6; }
+.fb__thanks  { display:flex; align-items:center; gap:16px; padding:24px 26px; background:var(--teal-tint);
+  border:1px solid #9fe1cb; border-radius:12px; }
+.fb__check   { display:flex; align-items:center; justify-content:center; flex-shrink:0; width:40px; height:40px;
+  border-radius:50%; background:var(--teal); color:#fff; }
+.fb__thanks h3 { margin:0 0 4px; color:var(--teal-strong); font-size:16px; }
+.fb__thanks p  { margin:0; color:var(--text-body); font-size:14px; }
+
+/* Read-page responsive. */
+@media (max-width: 800px) { .doc { grid-template-columns:1fr; gap:0; } .toc { display:none; } }
+@media (max-width: 780px) { .fb  { grid-template-columns:1fr; gap:28px; } }
 
 /* ---- Map pages ----------------------------------------------------------- */
 
@@ -3076,13 +3428,11 @@ p  { margin: 0 0 0.75rem; }
   font-style: italic;
 }
 
-/* ---- Mobile (≤680px): stack the map layout, condense header/footer -------- */
+/* ---- Mobile (≤680px): stack the map layout -------------------------------- */
+/* Header + nav responsiveness now lives in the shell-responsive block above (the
+   header keeps its --header-h; the nav is a hamburger by 1240px). This block is
+   the map/console layout only. */
 @media(max-width:680px){
-  .shell-header { padding:0 1rem; height:50px; }
-  .shell-header-separator, .shell-header-org { display:none; }
-  .shell-nav { top:50px; }
-  /* Header is 50px on mobile, so the top edge-reveal sits just below it. */
-  .edge-reveal--top { top:50px; }
   .content-map { flex-direction:column; }
   /* BP/BC (still .sb-based) stack the sidebar in-flow above the map; PA no longer
      uses .sb (it's full-bleed with floating boxes). */
@@ -3111,7 +3461,6 @@ p  { margin: 0 0 0.75rem; }
   }
   /* Bottom-left so it clears the centred tuning rack + corner controls. */
   .pa-legend { width: 42vw; left: 12px; right: auto; bottom: 10px; }
-  .shell-footer-grid { grid-template-columns:1fr; gap:1.25rem; }
 }
 
 /* ---- Map control focus ring — match site green ----------------------- */

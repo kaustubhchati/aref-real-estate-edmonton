@@ -1,121 +1,167 @@
 // =============================================================================
 // Nav.jsx
 //
-// Renders siteConfig.nav as a single horizontal (scrollable) bar of links and
-// dropdown groups.
+// The primary navigation bar (Directive 03): the categories + utility pages
+// spread full-width edge-to-edge, each category a click-to-open dropdown listing
+// its sub-pages with a live/soon badge. Below 1240px the bar collapses to a
+// hamburger + in-place accordion. Reads siteConfig.nav; the shared shell
+// (Layout) auto-hides this bar on the immersive map routes.
 //
-// Why this shape:
-//   • The nav tree in siteConfig has exactly two node kinds: leaves (a direct
-//     route) and groups (a label with child leaves).
-//   • Leaves use <NavLink> so the active route gets the .is-active class for
-//     free; styling lives in index.css.
-//   • Groups are React-controlled dropdowns: the nav row is a horizontal-scroll
-//     container (overflow-x:auto), which clips anything overflowing vertically
-//     — so a native <details> menu would be cut off. Instead each group renders
-//     its sublist as a position:fixed overlay placed under the button via
-//     getBoundingClientRect(), escaping the scroll container. It closes on
-//     outside click, Escape, child selection, and route change.
+// Dropdowns open on CLICK, not hover (Directive 00, Decision 6 — better for
+// touch + keyboard). A group closes on outside-click, Escape, or choosing a
+// child; clicking another group's button counts as an outside-click on the open
+// one, so opening one closes the others.
 // =============================================================================
 
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { siteConfig } from "../config/siteConfig.js";
+import Icon from "../components/Icon.jsx";
 
-export default function Nav() {
+// A live/soon badge (shown next to dropdown + mobile sub-page links).
+function StatusDot({ status }) {
   return (
-    <nav className="shell-nav" aria-label="Primary">
-      <ul className="shell-nav-list">
-        {siteConfig.nav.map((item) =>
-          item.kind === "group" ? (
-            <NavGroup key={item.label} group={item} />
-          ) : (
-            <NavLeaf key={item.label} leaf={item} />
-          )
-        )}
-      </ul>
-    </nav>
+    <span className={`nav__dot nav__dot--${status}`}>
+      {status === "live" ? "Live" : "Soon"}
+    </span>
   );
 }
 
-// One direct link. `onSelect` (passed for dropdown children) lets the parent
-// group close itself when a child is clicked; top-level leaves omit it.
-function NavLeaf({ leaf, onSelect }) {
-  return (
-    <li className="shell-nav-item">
-      <NavLink
-        to={leaf.to}
-        end={leaf.to === "/"}
-        className="shell-nav-link"
-        onClick={onSelect}
-      >
-        {leaf.label}
-      </NavLink>
-    </li>
-  );
-}
-
-// One top-level group. Its sublist renders as a position:fixed overlay anchored
-// under the button, so the nav row's overflow-x scroll container can't clip it.
+// One category: a click-to-open dropdown of its sub-pages. Closes on
+// outside-click, Escape, or choosing a child.
 function NavGroup({ group }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-  const summaryRef = useRef(null);
+  const itemRef = useRef(null);
   const location = useLocation();
+  const active = group.children.some((c) => location.pathname.startsWith(c.to));
 
-  // Highlight the group label when the current route is one of its children —
-  // works whether the dropdown is open or closed (the children aren't in the
-  // DOM when closed, so a CSS :has() can't do this).
-  const isGroupActive = group.children.some(
-    (child) => location.pathname.startsWith(child.to)
-  );
-
-  function toggle() {
-    if (!open && summaryRef.current) {
-      const r = summaryRef.current.getBoundingClientRect();
-      setPos({ top: r.bottom, left: r.left });
-    }
-    setOpen((o) => !o);
-  }
-
-  // While open, close on a click outside this item or on Escape.
   useEffect(() => {
     if (!open) return undefined;
-    const close = (e) => {
-      if (!summaryRef.current?.closest("li")?.contains(e.target)) setOpen(false);
-    };
-    const esc = (e) => { if (e.key === "Escape") setOpen(false); };
-    document.addEventListener("mousedown", close);
-    document.addEventListener("keydown", esc);
+    const onDown = (e) => { if (!itemRef.current?.contains(e.target)) setOpen(false); };
+    const onEsc = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onEsc);
     return () => {
-      document.removeEventListener("mousedown", close);
-      document.removeEventListener("keydown", esc);
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onEsc);
     };
   }, [open]);
 
-  // Close on route change (e.g. navigating via something other than a child).
-  useEffect(() => { setOpen(false); }, [location.pathname]);
-
   return (
-    <li className="shell-nav-item shell-nav-item-group">
+    <li className={`nav__item${open ? " is-open" : ""}`} ref={itemRef}>
       <button
-        ref={summaryRef}
         type="button"
-        className={`shell-nav-link shell-nav-summary${isGroupActive ? " is-active" : ""}`}
-        onClick={toggle}
+        className={`nav__link${active ? " nav__link--active" : ""}`}
+        aria-haspopup="true"
         aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
       >
         {group.label}
+        <Icon name="chevron-down" size={14} className="nav__caret" />
       </button>
-      {open && (
-        <ul
-          className="shell-nav-sublist"
-          style={{ position: "fixed", top: pos.top, left: pos.left, zIndex: 500 }}
-        >
-          {group.children.map((child) => (
-            <NavLeaf key={child.label} leaf={child} onSelect={() => setOpen(false)} />
-          ))}
-        </ul>
-      )}
+      <div className="nav__menu" role="menu">
+        {group.children.map((child) => (
+          <NavLink
+            key={child.label}
+            to={child.to}
+            role="menuitem"
+            className="nav__menu-link"
+            onClick={() => setOpen(false)}
+          >
+            <span>{child.label}</span>
+            <StatusDot status={child.status} />
+          </NavLink>
+        ))}
+      </div>
     </li>
+  );
+}
+
+// The <1240px accordion: tap a category to expand its sub-pages in place; tap a
+// page to navigate (which closes the whole sheet via onNavigate).
+function NavMobile({ onNavigate }) {
+  const [expanded, setExpanded] = useState(null);
+  return (
+    <div className="nav__mobile">
+      {siteConfig.nav.map((item) =>
+        item.children ? (
+          <div key={item.label}>
+            <button
+              type="button"
+              className="nav__mobile-link"
+              aria-expanded={expanded === item.label}
+              onClick={() => setExpanded((g) => (g === item.label ? null : item.label))}
+            >
+              <span>{item.label}</span>
+              <Icon name="chevron-down" size={16} className="nav__caret" />
+            </button>
+            {expanded === item.label && (
+              <div className="nav__mobile-sub">
+                {item.children.map((child) => (
+                  <NavLink
+                    key={child.label}
+                    to={child.to}
+                    className="nav__mobile-link"
+                    onClick={onNavigate}
+                  >
+                    <span>{child.label}</span>
+                    <StatusDot status={child.status} />
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <NavLink
+            key={item.label}
+            to={item.to}
+            end={item.to === "/"}
+            className="nav__mobile-link"
+            onClick={onNavigate}
+          >
+            <span>{item.label}</span>
+          </NavLink>
+        )
+      )}
+    </div>
+  );
+}
+
+export default function Nav() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  return (
+    <nav className="shell-nav brand" aria-label="Primary">
+      <div className="wrap--full">
+        <div className="nav__inner">
+          <ul className="nav__list">
+            {siteConfig.nav.map((item) =>
+              item.children ? (
+                <NavGroup key={item.label} group={item} />
+              ) : (
+                <li className="nav__item" key={item.label}>
+                  <NavLink
+                    to={item.to}
+                    end={item.to === "/"}
+                    className={({ isActive }) => `nav__link${isActive ? " nav__link--active" : ""}`}
+                  >
+                    {item.label}
+                  </NavLink>
+                </li>
+              )
+            )}
+          </ul>
+          <button
+            type="button"
+            className="nav__toggle"
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileOpen}
+            onClick={() => setMobileOpen((o) => !o)}
+          >
+            <Icon name={mobileOpen ? "x" : "menu-2"} size={22} />
+          </button>
+        </div>
+        {mobileOpen && <NavMobile onNavigate={() => setMobileOpen(false)} />}
+      </div>
+    </nav>
   );
 }

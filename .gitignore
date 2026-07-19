@@ -180,3 +180,7 @@ SESSION_HANDOVER_*.md
 *_capability_reference.md
 section_scaffolding_engine.md
 /Screenshot*
+
+# Frontend design prototype — the throwaway visual-target build (Directive 00).
+# A binding design SPEC to translate, not repo code (CLAUDE.md / Directive 00 §0).
+/bundle.html

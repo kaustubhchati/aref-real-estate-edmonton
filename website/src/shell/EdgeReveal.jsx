@@ -1,59 +1,76 @@
 // =============================================================================
 // EdgeReveal.jsx
 //
-// Wraps a piece of site chrome (the Nav, or the Footer) so it auto-hides and
-// reveals on edge proximity — used only on the immersive Property Assessment map
-// route (see Layout.jsx). The wrapped chrome slides off-screen by default and
-// comes back on:
-//   • pointer  — the cursor coming within REVEAL_PX of this edge (measured here,
-//                so NOTHING overlays the map to catch the hover — the map's own
-//                controls and edge panning stay fully usable)
-//   • dwell    — keeping the cursor on the revealed panel (CSS :hover)
-//   • keyboard — focusing anything inside it (CSS :focus-within)
-//   • touch    — tapping the always-visible grip handle
+// Wraps a piece of site chrome (the Nav) so it auto-hides on the immersive
+// full-bleed map routes and reveals on demand — used for every immersive map
+// (Property Assessment, Dwelling Units, Business Counts) via Layout.jsx, so the
+// behaviour is identical across all of them.
 //
-// The chrome is moved with transform (never display:none), so it stays in the
-// a11y tree and tab order. The grip is a real <button aria-expanded> so the
-// chrome is reachable without a pointer. All the show/hide visuals live in
-// index.css (.edge-reveal*); this component owns the proximity + tap state and
-// toggles the .is-open class.
+// Reveal / persist (all edge-proximity is measured off a zero-height marker, so
+// NOTHING overlays the map to catch the hover — the map keeps every click/drag):
+//   • reveal  — the pointer coming within REVEAL_PX of this edge, ACROSS THE FULL
+//               WIDTH (not a narrow corner). Move toward the top → the nav drops in.
+//   • persist — once open, it stays open while the pointer is anywhere over the
+//               header→nav region (+ KEEP_PX of hysteresis) OR over an open section
+//               dropdown. So you can slide along the whole bar and into its menus,
+//               not thread a narrow strip. Computed in JS (not CSS :hover, which
+//               was unreliable: the panel is pointer-events:none until it opens).
+//   • keyboard — focusing anything inside it (CSS :focus-within).
+//   • touch    — tapping the always-visible grip pins it open (toggle).
 //
-// Props:
-//   side     — "top" (Nav, under the header) | "bottom" (Footer)
-//   label    — what the grip reveals, for the aria-label ("site navigation")
-//   children — the chrome to wrap (<Nav/> or <Footer/>)
+// The chrome moves with transform (never display:none), so it stays in the a11y
+// tree + tab order. All show/hide visuals live in index.css (.edge-reveal*).
+//
+// Props: side ("top"|"bottom") · label (grip aria) · children (the chrome).
 // =============================================================================
 
 import { useEffect, useRef, useState } from "react";
 
-// How close (px) the pointer must come to this edge to reveal the chrome.
-const REVEAL_PX = 28;
-// Only the LEFT band reveals (where the grip lives), so the centred map tools
-// (e.g. the search pill) are never covered by an accidental proximity reveal.
-const REVEAL_X = 220;
+// Proximity (px) beyond the edge that REVEALS the hidden chrome.
+const REVEAL_PX = 44;
+// Extra margin (px) past the revealed chrome that KEEPS it open (hysteresis), so
+// small overshoots toward the map don't snap it shut mid-interaction.
+const KEEP_PX = 56;
 
 export default function EdgeReveal({ side, label, children }) {
   const ref = useRef(null);
-  const [near, setNear] = useState(false);    // pointer near this edge
-  const [pinned, setPinned] = useState(false); // explicit tap/click reveal (touch)
+  const panelRef = useRef(null);
+  const [near, setNear] = useState(false);    // pointer in the reveal / keep zone
+  const [pinned, setPinned] = useState(false); // explicit grip tap (touch/click)
+  const open = near || pinned;
+  // Mirror `open` into a ref so the window pointer listener reads the current
+  // state without re-subscribing on every toggle (synced in an effect, not during
+  // render, per the refs lint rule).
+  const openRef = useRef(open);
+  useEffect(() => { openRef.current = open; }, [open]);
 
-  // Reveal on edge proximity WITHOUT an overlay: a window pointer listener checks
-  // the cursor's distance to this edge (the zero-height marker's screen position),
-  // so the map underneath keeps all of its clicks, drags, and corner controls.
   useEffect(() => {
     function onMove(e) {
-      const el = ref.current;
-      if (!el) return;
-      const edgeY = el.getBoundingClientRect().top; // the marker sits on the edge
-      const nearEdge =
-        side === "top"
-          ? e.clientY <= edgeY + REVEAL_PX
-          : e.clientY >= edgeY - REVEAL_PX;
-      // Gate to the left band so the centred search pill never triggers it — and
-      // on a narrow viewport cap the band left of the pill's centred left edge.
-      const limit = Math.min(REVEAL_X, (window.innerWidth - 280) / 2);
-      const nearGrip = e.clientX <= limit;
-      setNear(nearEdge && nearGrip); // setState bails when unchanged, so this is cheap
+      const marker = ref.current;
+      const panel = panelRef.current;
+      if (!marker || !panel) return;
+      const edgeY = marker.getBoundingClientRect().top; // the edge (header bottom / viewport bottom)
+      const navH = panel.offsetHeight;                  // layout height (unaffected by the transform)
+      const { clientX: x, clientY: y } = e;
+      let active;
+      if (openRef.current) {
+        // KEEP OPEN generously: the whole header→nav band + hysteresis, full width.
+        active = side === "top" ? y <= edgeY + navH + KEEP_PX : y >= edgeY - navH - KEEP_PX;
+        // ...or over an OPEN section dropdown (it overflows the nav's own box).
+        if (!active) {
+          for (const dd of panel.querySelectorAll(".nav__item.is-open .nav__menu")) {
+            const r = dd.getBoundingClientRect();
+            if (r.height > 1 && x >= r.left - 8 && x <= r.right + 8 && y >= r.top - 8 && y <= r.bottom + 8) {
+              active = true;
+              break;
+            }
+          }
+        }
+      } else {
+        // REVEAL: near the edge, across the full width.
+        active = side === "top" ? y <= edgeY + REVEAL_PX : y >= edgeY - REVEAL_PX;
+      }
+      setNear(active); // setState bails when unchanged, so this stays cheap
     }
     function onLeave() { setNear(false); }
     window.addEventListener("pointermove", onMove, { passive: true });
@@ -63,8 +80,6 @@ export default function EdgeReveal({ side, label, children }) {
       window.removeEventListener("pointerleave", onLeave);
     };
   }, [side]);
-
-  const open = near || pinned;
 
   return (
     <div ref={ref} className={`edge-reveal edge-reveal--${side}${open ? " is-open" : ""}`}>
@@ -77,7 +92,7 @@ export default function EdgeReveal({ side, label, children }) {
       >
         <span className="edge-reveal-grip" aria-hidden="true" />
       </button>
-      <div className="edge-reveal-panel">{children}</div>
+      <div ref={panelRef} className="edge-reveal-panel">{children}</div>
     </div>
   );
 }

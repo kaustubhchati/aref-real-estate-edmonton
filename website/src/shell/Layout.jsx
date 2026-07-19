@@ -9,6 +9,7 @@
 // a sibling layout rather than adding props here.
 // =============================================================================
 
+import { useEffect, Suspense } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Header from "./Header.jsx";
 import Nav from "./Nav.jsx";
@@ -25,12 +26,26 @@ const IMMERSIVE_ROUTES = new Set([
   "/economy/business-counts",
 ]);
 
+// Shown in the content area while a code-split section chunk downloads (the maps +
+// Report Card are React.lazy — main.jsx). A neutral pulse, not a spinner; the map's
+// own MapSkeleton takes over once its GeoJSON starts loading.
+function RouteFallback() {
+  return <div className="route-fallback" role="status" aria-label="Loading section" />;
+}
+
 export default function Layout() {
   // Key the boundary by route so a section that errored recovers when the user
   // navigates elsewhere (new key → fresh mount). Header/Nav/Footer sit OUTSIDE
   // the boundary, so a section throw can never blank the chrome/nav.
   const location = useLocation();
   const immersive = IMMERSIVE_ROUTES.has(location.pathname);
+
+  // Reset scroll to the top on every route change. The read pages scroll the
+  // document BODY (index.css :has(.readpage)); without this, navigating away from
+  // a scrolled page would land you part-way down the next one, which reads as the
+  // click doing nothing. Keyed on pathname, so in-page "#anchor" jumps (hash-only
+  // changes) are unaffected; a no-op on the fixed-viewport console routes.
+  useEffect(() => { window.scrollTo(0, 0); }, [location.pathname]);
 
   return (
     <div className={`shell${immersive ? " shell-immersive" : ""}`}>
@@ -44,7 +59,9 @@ export default function Layout() {
       )}
       <main className="shell-main">
         <SectionErrorBoundary key={location.pathname}>
-          <Outlet />
+          <Suspense fallback={<RouteFallback />}>
+            <Outlet />
+          </Suspense>
         </SectionErrorBoundary>
       </main>
       {/* On the immersive map route the footer is fully removed (not just hidden):
