@@ -335,7 +335,7 @@ export const TINT_BEFORE_ID = "waterway";
 export const BASE_TINTS = {
   "cool-neutral": { label: "Cool neutral grey", fill: "#cdd0cd", opacity: 0.55, line: "#98a29b" },
   "cool-blue":    { label: "Cool blue-grey",    fill: "#b6c6d2", opacity: 0.52, line: "#8ba0b0" },
-  "warm-greige":  { label: "Warm greige",       fill: "#e5ddcb", opacity: 0.58, line: "#c3b79d" },
+  "warm-greige":  { label: "Warm greige",       fill: "#e5ddcb", opacity: 0.44, line: "#c3b79d" },
 };
 export const ACTIVE_TINT = "warm-greige";   // ← the knob KC picks (key into BASE_TINTS)
 export const SHOW_BOUNDARY_LINE = true;      // thin city-edge stroke on/off (the figure edge)
