@@ -170,6 +170,41 @@ gzip_static   on;
 This needs **no new dependencies** — `scripts/precompress.mjs` uses node's built-in
 `zlib` (Brotli + gzip), keeping the site's no-third-party-code stance intact.
 
+### Cache headers
+
+Repeat visits shouldn't re-download bytes that haven't changed. The policy lives in
+`website/public/_headers` (Cloudflare Pages format, shipped in `dist/`) and splits by
+how each asset is versioned:
+
+- **`/assets/*`** — content-hashed by Vite (a change ships a new filename), so
+  `Cache-Control: public, max-age=31536000, immutable` — cached forever, never stale.
+- **`/data`, `/downloads`, `/styles`, the manifests** — versioned **in place** (same
+  name, new bytes each quarterly refresh), so `max-age=3600, must-revalidate` — a
+  short cache plus an ETag revalidation (a cheap 304 that skips re-downloading an
+  unchanged multi-MB GeoJSON). Bump the 3600 if you want longer repeat-visit caching
+  at the cost of a slightly longer staleness window right after a refresh.
+- **`index.html`** — `no-cache`, so a new deploy's hashed-asset references are picked
+  up on the next load.
+
+nginx has no `_headers`; set the same policy in the server block (these `location`s
+sit alongside the `try_files` fallback, and `brotli_static`/`gzip_static` go at server
+level so they apply here too):
+
+```nginx
+location /assets/ {                       # hashed → immutable
+    add_header Cache-Control "public, max-age=31536000, immutable";
+}
+location ~ ^/(data|downloads|styles)/ {   # versioned in place → revalidate
+    add_header Cache-Control "public, max-age=3600, must-revalidate";
+}
+location = /manifest.json {
+    add_header Cache-Control "public, max-age=3600, must-revalidate";
+}
+location = /index.html {                  # SPA entry → always revalidate
+    add_header Cache-Control "no-cache";
+}
+```
+
 ### Environment variables (host portability)
 
 Build-time `VITE_`-prefixed env vars let the serve target be configured instead of

@@ -1,0 +1,32 @@
+# Response headers (Cloudflare Pages format). This file is ALSO the source of truth
+# for the cache policy — the nginx equivalent for the UAlberta VM is in README
+# "Deploying the site". Vite copies public/ into dist/, so this ships as-is.
+#
+# The split is by how each asset is versioned:
+#   • /assets/* is content-hashed — a change ships a NEW filename (index-AbC123.js),
+#     so these can be cached forever and can never serve stale code.
+#   • Everything the R pipeline versions IN PLACE (same filename, new bytes at each
+#     quarterly refresh — the data GeoJSON/CSV, the per-section manifests, the
+#     downloads, the basemap style) must REVALIDATE instead of pin. A short max-age
+#     gives repeat-visit speed; the static host's ETag makes the recheck a cheap 304
+#     (no re-download of an unchanged multi-MB file).
+#   • index.html always revalidates, so a new deploy's hashed-asset references are
+#     picked up on the very next load rather than after a cache expiry.
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/data/*
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/downloads/*
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/styles/*
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/manifest.json
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/index.html
+  Cache-Control: no-cache
