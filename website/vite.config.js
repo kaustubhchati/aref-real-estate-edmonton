@@ -33,7 +33,11 @@ export default defineConfig({
         // boot-loaded vendor bundle.
         manualChunks(id) {
           if (!id.includes('node_modules')) return
-          if (id.includes('maplibre-gl')) return 'vendor-maplibre'
+          // maplibre's JS → the lazy chunk. But NOT its CSS: that is imported eagerly
+          // in main.jsx and must stay in the ENTRY bundle, before index.css. Routing it
+          // here would put it in the lazy chunk that loads AFTER index.css, flipping the
+          // cascade and collapsing every map to 0 height (see main.jsx).
+          if (id.includes('maplibre-gl') && !id.includes('.css')) return 'vendor-maplibre'
           if (/[\\/]node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom)[\\/]/.test(id)) return 'vendor-react'
         },
       },

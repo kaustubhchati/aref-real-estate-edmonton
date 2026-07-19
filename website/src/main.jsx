@@ -26,6 +26,13 @@ import Feedback from "./content/pages/Feedback.jsx";
 import ResearchCompetition from "./content/pages/ResearchCompetition.jsx";
 import Placeholder from "./content/Placeholder.jsx";
 
+// MapLibre's base stylesheet MUST load BEFORE index.css so our map overrides win the
+// cascade (equal specificity → later wins). It used to live in MapView.jsx, but the
+// code-split put that in a LAZY chunk that loads AFTER index.css — flipping the order so
+// MapLibre's `.maplibregl-map { position: relative }` beat our `.canvas { position:
+// absolute; inset: 0 }` and collapsed every map to 0 height. Import it here, eagerly,
+// FIRST — this also keeps our popup/control overrides winning.
+import "maplibre-gl/dist/maplibre-gl.css";
 import "./index.css";
 
 // CODE-SPLIT sections: the four maps + the Report Card table are React.lazy(), so
