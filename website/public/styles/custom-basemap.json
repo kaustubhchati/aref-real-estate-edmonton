@@ -160,6 +160,24 @@
       }
     },
     {
+      "id": "landuse_commercial",
+      "type": "fill",
+      "source": "carto",
+      "source-layer": "landuse",
+      "filter": ["any", ["==", "class", "commercial"], ["==", "class", "retail"]],
+      "paint": { "fill-color": "#ebe4ec", "fill-opacity": { "stops": [[10, 0], [12, 0.7]] } },
+      "minzoom": 10
+    },
+    {
+      "id": "landuse_industrial",
+      "type": "fill",
+      "source": "carto",
+      "source-layer": "landuse",
+      "filter": ["any", ["==", "class", "industrial"], ["==", "class", "railway"]],
+      "paint": { "fill-color": "#e6e3de", "fill-opacity": { "stops": [[10, 0], [12, 0.7]] } },
+      "minzoom": 10
+    },
+    {
       "id": "waterway",
       "type": "line",
       "source": "carto",
