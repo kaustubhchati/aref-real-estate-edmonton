@@ -204,6 +204,7 @@
      so even quiet text belongs to ONE system (no cold-grey clash against the accent). */
   --tx:     #f5f6f7;  /* primary text / values — neutral white (kept) */
   --tx-mut: hsl(var(--neutral-hue) var(--neutral-sat) 60%);  /* secondary / labels — warm muted, RECEDED (Fix B move #1: widens the primary→muted luminance gap 2.55x→2.83x so labels recede & the eye lands on values); 5.25:1 on the receded glass barrier ✓§4 */
+  --tx-head: hsl(var(--neutral-hue) var(--neutral-sat) 80%);  /* SECTION-HEADER tier (2026-07-19) — module headers (Permit Type, Metric, Legend…) sit BETWEEN --tx-mut labels and --tx values: a lightness step up from 60%→80% so they anchor their sections without going full white; paired with +size (--t-xs) + weight 600 in the section-header rule. High contrast on --shell/--card ✓§4 */
   --tx-dim: hsl(var(--neutral-hue) var(--neutral-sat) 44%);  /* tertiary / suppressed ONLY — never for text that must be read */
   --tx-key: hsl(var(--neutral-hue) var(--neutral-sat) 79%);  /* inactive console-key label (was raw cool #c7cacd); 10.4:1 on --panel */
   --tx-read: #2dd4bf;  /* ZONE-SPLIT (Part 1, ratified): tuning-bay readouts = T1-BRIGHT teal — the darker/richer shade for the darker tuning-bay glass. Decoupled from the sidebar --accent-int-text (T2). §4 on the dark bay: 9.6:1 (pa-card) / 7.9:1 (glass-cream). YEAR/METRIC values + legend $bounds. */
@@ -1175,6 +1176,49 @@ p  { margin: 0 0 0.75rem; }
 .pa-detail .pa-kv { display: flex; justify-content: space-between; font-size: var(--t-sm); margin-top: 3px; }   /* InfoRail parity — ALL stat-stack VALUES one size (--t-sm, inherited by .pa-kv-v) */
 .pa-kv-k { font-size: var(--t-xs); color: var(--pa-mut); }   /* ALL stat-stack LABELS one size (--t-xs muted) */
 .pa-kv-v { color: var(--pa-ink); font-weight: 600; font-variant-numeric: tabular-nums; }   /* value = --t-sm/600 (from the row), uniform across all four rows */
+/* BP point-map inforail — the SAME .pa-detail frame in every state (Principle 0: the frame
+   is constant, only content swaps). Idle = a muted hint; hover "runner" reuses .pa-detail-name
+   + .pa-kv + .pa-detail-sub (the "click for detail" nudge); select = the shared DetailPanel. */
+.pa-detail-hint { margin: 0; font-size: var(--t-xs); color: var(--pa-mut); line-height: 1.45; }
+/* Fix 6 — the BP inforail is WIDER than the shared 224px .pa-detail so the variable-length
+   Description reads in fewer lines, and the SELECT frame is FIXED-DIMENSION (Principle 0): the
+   fixed fields sit above a Description confined to a FIXED-HEIGHT scroll box, so a 5-word and a
+   200-word permit render the same frame — no data-dictated cascade. `.bp-inforail` applies in
+   ALL states (idle/hover/select) so the frame width is constant. 288px fits alongside the
+   ~196px column with the map centre clear at the smallest supported width. */
+.pa-detail.bp-inforail { width: 288px; }
+.bp-detail-desc-mod { border-top: 1px solid var(--pa-hair); margin-top: 8px; padding-top: 6px; }
+.bp-detail-desc-lab { display: block; margin-bottom: 4px; }
+.bp-detail-desc {
+  height: 88px; overflow-y: auto;                    /* FIXED (taller) height — the frame never cascades; Fix 1 */
+  overscroll-behavior: contain;                      /* the box's scroll stays in the box, never chains to the map */
+  font-size: var(--t-xs); color: var(--pa-ink); line-height: 1.45; padding-right: 6px;
+}
+/* A visible thin scrollbar so it's obvious the whole description region scrolls as one flow. */
+.bp-detail-desc::-webkit-scrollbar { width: 6px; }
+.bp-detail-desc::-webkit-scrollbar-thumb { background: var(--pa-hair); border-radius: 3px; }
+.bp-detail-desc::-webkit-scrollbar-track { background: transparent; }
+/* The FIXED fields are truly fixed-HEIGHT (Fix 2 bleed-proofing): the TITLE clamps to 2 lines
+   (--t-lg, PA detail-title tier) and each value clamps to ONE line, all with an ellipsis + the
+   full text on hover (title=). So a long address / Building Type ("Day Cares, Nursing Ho…") can't
+   bleed or grow the frame. With the description in its fixed box, the SELECT frame is the SAME
+   height for any permit (Principle 0) — only the description's scroll content varies. */
+.bp-inforail .pa-detail-name {
+  flex: 1 1 auto; min-width: 0; font-size: var(--t-lg);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.bp-inforail .pa-kv { gap: 10px; }
+.bp-inforail .pa-kv-k { flex: 0 0 auto; }
+.bp-inforail .pa-kv-v { flex: 1 1 auto; min-width: 0; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* CATEGORY CHIP (Fix 2) — a colour pill below the title in the category's OWN hue (the map +
+   filter encoding), fixed position/size. Data hues (§1.3, permitStyle COLOURS) as light tints
+   legible on the dark card; unknown → neutral. */
+.bp-cat-chip-row { margin: 6px 0 2px; }
+.bp-cat-chip { display: inline-block; font-size: var(--t-2xs); font-weight: 600; padding: 2px 9px; border-radius: 999px; }
+.bp-cat-residential { background: rgba(245,124,0,0.16); border: 1px solid rgba(245,124,0,0.55); color: #ffb066; }
+.bp-cat-commercial  { background: rgba(123,47,160,0.22); border: 1px solid rgba(123,47,160,0.60); color: #d9a6ef; }
+.bp-cat-unknown     { background: var(--pa-card); border: 1px solid var(--pa-hair); color: var(--pa-mut); }
 .pa-detail-note { margin: 7px 0 0; font-size: var(--t-xs); color: var(--pa-mut); line-height: 1.5; }
 @keyframes rail-fade-in { from { opacity: 0; } to { opacity: 1; } }
 .rail-inner { width: 100%; }
@@ -1992,6 +2036,20 @@ p  { margin: 0 0 0.75rem; }
   letter-spacing: 0.01em;
 }
 
+/* SECTION-HEADER TIER (2026-07-19, DESIGN_SYSTEM §1.5a / §1.2) — the module headers that ORGANIZE a
+   sidebar section (Permit Type · Construction Value · Building Permits · Metric · Legend · ⚙ Tuning)
+   were rendering at the SAME muted 11px as inline labels, so they didn't read as headers. Promote
+   them to a distinct tier BETWEEN the muted labels and the white content: lighter (--tx-head, a step
+   up from --tx-mut toward --tx), one size up (--t-xs/13px, not the 11px banner), and MEDIUM WEIGHT
+   (600) — Title Case already (the rule above sets text-transform:none). Defined ONCE here; every
+   sidebar (PA/DU/BC/BP) inherits it via .pa-col-lab + the Metric .seg-label. INLINE labels/tags
+   (Fewer/More, KPI card labels, honesty tags, field labels, and the trend/triplet/console labels
+   grouped above) STAY --tx-mut — they are deliberately NOT in this selector. */
+.pa-column .pa-col-lab,
+.pa-col-metric .seg-label {
+  font-size: var(--t-xs); font-weight: 600; color: var(--tx-head);
+}
+
 /* LEGEND module — flat dark (strip the gel frame; Legend.jsx internals untouched). */
 /* Anchored LOWER (kill-the-void redistribution): extra breathing room above the legend
    so it sits near the footer after the grown metric panel, absorbing the trailing void
@@ -2062,10 +2120,55 @@ p  { margin: 0 0 0.75rem; }
    DATA dot (§1.3, orange/violet) then the label. gap = --s2 between chips, --s1 dot→label,
    matching the metric selector so the two read as one control language (§6). */
 .bp-type-toggle { flex-direction: column; align-items: stretch; gap: var(--s2); }
+/* Fix 1 — MATCH PA's metric-button spec exactly (.pa-col-metric .seg-btn): text at the governed
+   --t-sm/14px, padding --s2/--s3, radius 7px, full-width left-aligned. So Permit Type is
+   visually indistinguishable from PA's Metric module in sizing + typography — it IS BP's metric
+   module, just with category labels instead of metric labels. */
 .pa-column .bp-type-toggle .opt-toggle-btn {
   width: 100%; justify-content: flex-start; gap: var(--s1); text-align: left;
+  font-size: var(--t-sm); padding: var(--s2) var(--s3); border-radius: 7px;
 }
 .bp-type-dot { flex: 0 0 auto; }
+
+/* Fix 2 — CATEGORY-COLOUR active glow (KC-ratified divergence from PA's green-border rule).
+   PA forbids per-metric colour because its metrics have no colour identity, so colour there is
+   noise. BP's categories DO carry a locked colour identity — the whole map is orange=residential
+   / purple=commercial — so the active chip glowing its OWN category colour REINFORCES the
+   encoding rather than adding noise. A quiet echo of the map's cores (subtle fill + rim + glow),
+   white text for legibility, the leading dot already carries the hue. "All" has no category hue,
+   so it keeps the neutral teal interactive accent (the default .opt-toggle-btn.active — NOT
+   overridden here). Data hue as chrome is the §1.3 exception this fix stands on. The hexes are
+   the DATA colours (permitStyle COLOURS: #f57c00 / #7b2fa0), the one sanctioned place. */
+.pa-column .bp-type-toggle .opt-toggle-btn.bp-type-res.active {
+  background: linear-gradient(180deg, rgba(245,124,0,0.18), rgba(245,124,0,0.10));
+  border-color: rgba(245,124,0,0.65); color: var(--pa-ink); text-shadow: none;
+  box-shadow: 0 0 0 1px rgba(245,124,0,0.30), 0 3px 14px rgba(245,124,0,0.22);
+}
+.pa-column .bp-type-toggle .opt-toggle-btn.bp-type-com.active {
+  background: linear-gradient(180deg, rgba(123,47,160,0.24), rgba(123,47,160,0.13));
+  border-color: rgba(123,47,160,0.70); color: var(--pa-ink); text-shadow: none;
+  box-shadow: 0 0 0 1px rgba(123,47,160,0.34), 0 3px 14px rgba(123,47,160,0.24);
+}
+/* Suppress the shared pearl ::after on the CATEGORY chips (its teal↔cyan rim would fight the
+   orange/purple glow — defensive: the pearl is default-off, but stays correct if it turns on). */
+.pa-column .bp-type-toggle .opt-toggle-btn.bp-type-res.active::after,
+.pa-column .bp-type-toggle .opt-toggle-btn.bp-type-com.active::after { background: none; }
+
+/* Fix 4 — ONE consistent active scheme across BP's chips: category chips glow their category
+   colour (above); every NON-category control — the "All" filter chip and the Construction Value
+   tiers (which carry BOTH categories, so no single hue fits) — uses ONE NEUTRAL achromatic active
+   (a light pearl rim + faint fill + soft white glow), NOT the teal interactive accent. This kills
+   the mismatched teal KC flagged (teal on All/tiers next to orange/purple category chips): now it
+   reads category-colour where there's a category, neutral where there isn't. Selected reads by
+   luminance + weight, not a competing hue. */
+.pa-column .bp-type-toggle .opt-toggle-btn.bp-type-all.active,
+.pa-column .bp-tier-btn.active {
+  background: linear-gradient(180deg, rgba(245,246,247,0.15), rgba(245,246,247,0.07));
+  border-color: rgba(245,246,247,0.58); color: var(--pa-ink); text-shadow: none;
+  box-shadow: 0 0 0 1px rgba(245,246,247,0.22), 0 3px 12px rgba(245,246,247,0.14);
+}
+.pa-column .bp-type-toggle .opt-toggle-btn.bp-type-all.active::after,
+.pa-column .bp-tier-btn.active::after { background: none; }
 
 /* COVERAGE note — the §6 honesty label: muted tier, ⚠ + one filter-aware sentence. */
 .pa-col-note {
@@ -2079,12 +2182,16 @@ p  { margin: 0 0 0.75rem; }
    solid swatches (.bp-heat-swatches) that double as a contour key. Both take their colours
    inline from the map ramp (heatRampColours), so no hue literal lives here — only dark chrome
    tokens (§1). Fewer/More end labels + a relative-density caption. */
-.bp-heat-legend { display: flex; flex-direction: column; gap: var(--s2); }
-.bp-heat-row { display: flex; flex-direction: column; gap: 3px; }
+.bp-heat-legend { display: flex; flex-direction: column; gap: var(--s3); }
+.bp-heat-row { display: flex; flex-direction: column; gap: 4px; }
 .bp-heat-cat { font-size: var(--t-2xs); color: var(--pa-ink); }
-.bp-heat-bar { height: 8px; border-radius: 999px; border: 1px solid var(--pa-hair); }
+/* Fix 6 — STRETCHED bars (8px → 14px) so the incandescent crust→glow progression reads (it was
+   compressed into a thin strip). The gradient is heatRampGradient(stops) — the SAME ramp stops
+   the map paints, at their own density positions, so Fewer = the dark maroon/aubergine crust and
+   More = the bright amber/magenta glow: legend and map agree. */
+.bp-heat-bar { height: 14px; border-radius: 7px; border: 1px solid var(--pa-hair); }
 /* STEPPED: five equal solid blocks in one rounded pill — the discrete contour key. */
-.bp-heat-swatches { display: flex; height: 8px; border-radius: 999px; overflow: hidden; border: 1px solid var(--pa-hair); }
+.bp-heat-swatches { display: flex; height: 14px; border-radius: 7px; overflow: hidden; border: 1px solid var(--pa-hair); }
 .bp-heat-swatch { flex: 1 1 0; }
 .bp-heat-ends {
   display: flex; justify-content: space-between;
@@ -2129,7 +2236,12 @@ p  { margin: 0 0 0.75rem; }
   text-shadow: var(--accent-int-text-glow); font-weight: 600;
 }
 .bp-tier-btn:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }
-.bp-tier-lab { font-size: var(--t-2xs); line-height: 1.2; text-align: center; word-break: break-word; hyphens: auto; }
+/* Fix 4 — the tiers are already a fixed-slot row (grid 1fr, align-items:stretch → all chips
+   equal height; no reflow on active/inactive toggle). The labels use the compact formatter
+   (`<$10k` … `>$2M`, from VALUE_BUCKETS) at --t-2xs in a fixed bottom position. `word-break:
+   normal` breaks the range labels cleanly at the en-dash (`$100k–` / `$500k`) rather than
+   mid-token, so placement reads consistent across chips. */
+.bp-tier-lab { font-size: var(--t-2xs); line-height: 1.2; text-align: center; word-break: normal; }
 .bp-tier-hint { margin: 6px 0 0; font-size: var(--t-2xs); color: var(--pa-mut); line-height: 1.4; }
 
 /* SELECTED PERMIT — the last-clicked dot's detail. Fixed-height slot (Principle 0)
@@ -2277,6 +2389,7 @@ p  { margin: 0 0 0.75rem; }
 .pa-tips-honesty ul { list-style: none; margin: 0; padding: 0; }
 .pa-tips-honesty li { position: relative; padding-left: 11px; }
 .pa-tips-honesty li::before { content: "\2022"; position: absolute; left: 1px; }
+.pa-tips-honesty p { margin: 0; }   /* BP coverage caveat is prose, not a bullet list */
 
 /* The .pa-hint block that lived here is GONE (2026-07-15): the separate box-select hint
    is superseded — the About & tips card IS the introduction, and a hint teaching the same
@@ -2537,6 +2650,14 @@ p  { margin: 0 0 0.75rem; }
 
 .pa-tune-dock { pointer-events: auto; }
 .pa-tune-dock-strip { align-self: center; margin-bottom: 6px; }   /* above the handle, centred in .pa-foot */
+/* BP standalone TUNING BAY — the point map has no pull-up Data Console, so its Year+Month bay
+   stands on its own, bottom-centre over the map (the same .pa-tune-instrument chrome PA docks
+   in its console spine). The bottom scale bar + compact attribution are right-anchored, so the
+   centred bay has clearance. Principle 0: fixed tracks, moving handles/readouts. */
+.bp-tune-dock {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: 30px; z-index: 14; pointer-events: auto;
+}
 /* flex-shrink 0: the instrument is a fixed-geometry control (Principle 0) and its two
    heads have hard minimums — a unit-carrying name plus a fixed readout slot. It used to
    shrink alongside .dt-head-l, which starved it below those minimums on narrower

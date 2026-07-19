@@ -150,6 +150,12 @@ export default function MapTipsPopover({
   open, onClose, lastUpdated,
   tips = DEFAULT_TIPS,
   honesty = <SelectionAggregatesHonesty />,
+  // The source/provenance line. `undefined` (default) → PA's renamed-neighbourhoods citation
+  // below (neighbourhood maps: PA/DU/BC). `null` → omit it (a POINT map like BP has no
+  // neighbourhood-naming history to cite, and its source rides the bottom-right attribution).
+  // A node → a section's own citation. Backward-compatible: sections that don't pass it are
+  // unchanged.
+  citation,
 }) {
   const panelRef = useRef(null);
 
@@ -195,15 +201,18 @@ export default function MapTipsPopover({
       {honesty}
       {/* The CITATION/provenance line — a source citation, NOT the honesty hedge above.
           It reads at the primary tier (.pa-box-cite → --pa-ink), lifted out of the muted
-          tier the aggregate-methodology block keeps (KC, 2026-07-16). */}
-      <p className="pa-box-ref pa-box-cite">
-        {lastUpdated ? `Updated ${lastUpdated}. ` : ""}Renamed neighbourhoods (e.g. Oliver →
-        Wîhkwêntôwin, 2025) show their full history under the current name.{" "}
-        <a href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
-           target="_blank" rel="noopener noreferrer">
-          Naming Committee
-        </a>
-      </p>
+          tier the aggregate-methodology block keeps (KC, 2026-07-16). Overridable via the
+          `citation` prop: undefined = this default, null = omit, node = custom. */}
+      {citation === undefined ? (
+        <p className="pa-box-ref pa-box-cite">
+          {lastUpdated ? `Updated ${lastUpdated}. ` : ""}Renamed neighbourhoods (e.g. Oliver →
+          Wîhkwêntôwin, 2025) show their full history under the current name.{" "}
+          <a href="https://www.edmonton.ca/city_government/city_organization/naming-committee"
+             target="_blank" rel="noopener noreferrer">
+            Naming Committee
+          </a>
+        </p>
+      ) : citation}
     </div>
   );
 }

@@ -14,7 +14,6 @@
 //                          → radius tier
 // =============================================================================
 
-import { fmtCurrency } from "../../utils/format.js";
 import { VALUE_BUCKETS, ALL_BUCKET_IDS } from "./dataSources.js";
 import { CITY_BOUNDS } from "../../config/cityBounds.js";
 import { paintTransition, DUR_BASE } from "../../components/motion.js";
@@ -48,6 +47,14 @@ export const LAYER_ID = "permits-circles";
 // Orange (residential) vs violet-magenta (commercial) — ~200° hue separation,
 // colourblind-safe. Violet-magenta (not blue) because a blue dot conflicts with
 // Voyager's water bodies at mid-zoom; violet is absent from the basemap palette.
+//
+// RATIFIED DIVERGENCE (KC) — the ACTIVE Permit-Type chip glows its OWN category colour
+// (residential→orange, commercial→purple), NOT PA's green border / not the generic teal
+// interactive accent. PA forbids per-metric colour because its metrics have no colour identity
+// (colour would be noise); BP's categories ARE a locked colour identity — this whole map is
+// built on orange=residential / purple=commercial — so the chip echoing its category colour
+// REINFORCES the encoding, it is not drift. "All" has no category hue → keeps the neutral teal
+// accent. The active-chip glow recipe lives in index.css (search "Fix 2 — CATEGORY-COLOUR").
 export const COLOURS = {
   residential: "#f57c00",  // deep orange
   commercial:  "#7b2fa0",  // deep violet-magenta
@@ -427,11 +434,13 @@ export function permitCircleLayer() {
   };
 }
 
-// ---- Popups ----------------------------------------------------------------
+// ---- Feature-field formatters ----------------------------------------------
+// Small pure helpers that turn a permit's raw fields into display strings — now consumed by
+// the right INFORAIL (PermitInforail) instead of the retired hand-built popups. Exported so
+// the inforail reads a permit exactly as the map once did.
 // Capitalise the first letter — job_group arrives lower-case in the tile
-// ("residential" → "Residential"). null / undefined / "" → the project em-dash,
-// the same null convention the other popup formatters use.
-const capitalise = (v) =>
+// ("residential" → "Residential"). null / undefined / "" → the project em-dash.
+export const capitalise = (v) =>
   v == null || v === ""
     ? "—"
     : String(v).charAt(0).toUpperCase() + String(v).slice(1);
@@ -445,113 +454,9 @@ export const stripBuildingCode = (v) =>
 
 // Strip the City's internal code prefix from work_type.
 // "(03) Interior Alterations" → "Interior Alterations"
-const stripWorkCode = (v) =>
+export const stripWorkCode = (v) =>
   v == null || v === "" ? "—" : String(v).replace(/^\(\d+\)\s*/, "").trim();
 
-// HTML-escape before interpolating into setHTML() — popup content is the only
-// place we hand-build HTML.
-function escapeHtml(s) {
-  if (s == null) return "";
-  return String(s).replace(/[&<>"']/g, (c) => (
-    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
-  ));
-}
-
-// Click popup — mirrors the assessment popup's shape: address as the bold
-// pop-name header, capitalised permit type as the muted pop-district subtitle, a
-// colour-coded job-group badge, the construction-value headline row, then the
-// detail rows, closing with the pinned-dismiss hint.
-export function buildPermitPopupHtml(p) {
-  const group = capitalise(p.job_group ?? "");
-
-  const badgeBg = p.job_group === "commercial"
-    ? "#f3e8ff" : "#fff3e0";
-  const badgeColor = p.job_group === "commercial"
-    ? "#7b2fa0" : "#e65100";
-
-  return [
-    // Address as location anchor — pop-name role,
-    // mirrors neighbourhood name in assessment popup.
-    `<div class="pop-name">${
-      escapeHtml(p.address ?? "—")
-    }</div>`,
-
-    // Capitalised job group — pop-district role.
-    `<div class="pop-district">${
-      escapeHtml(group)
-    }</div>`,
-
-    // Colour-coded badge matching map dot colour.
-    // Inline style because pop-state CSS classes are
-    // keyed to polygon states, not job groups.
-    `<div style="margin-bottom:0.5rem;">
-      <span class="pop-state" style="
-        background:${badgeBg};
-        color:${badgeColor};
-        border:1px solid ${badgeColor}22;
-      ">${escapeHtml(group)} permit</span>
-    </div>`,
-
-    // Headline row: construction value bold + bordered.
-    // Mirrors median_assessvalue headline in assessment.
-    `<div class="pop-row headline">
-      <span class="pop-k">Construction value</span>
-      <span class="pop-v">${
-        escapeHtml(fmtCurrency(p.construction_value))
-      }</span>
-    </div>`,
-
-    // Standard rows — description, building, work type.
-    `<div class="pop-row">
-      <span class="pop-k">Description</span>
-      <span class="pop-v">${
-        escapeHtml(stripWorkCode(p.job_description ?? ""))
-      }</span>
-    </div>`,
-
-    `<div class="pop-row">
-      <span class="pop-k">Building type</span>
-      <span class="pop-v">${
-        escapeHtml(stripBuildingCode(p.building_type ?? ""))
-      }</span>
-    </div>`,
-
-    `<div class="pop-row">
-      <span class="pop-k">Work type</span>
-      <span class="pop-v">${
-        escapeHtml(stripWorkCode(p.work_type ?? ""))
-      }</span>
-    </div>`,
-
-    // Pinned hint — same pattern as assessment popup.
-    `<div class="pop-pinned-hint">Click map to dismiss</div>`,
-
-  ].join("");
-}
-
-// Tier 2 hover popup: a slim preview shown while the pointer dwells on a dot.
-// Address header + construction value + building type — same fields as the
-// point-map's last-clicked sidebar panel.
-export function buildPermitHoverHtml(p) {
-  return [
-    // Address as the bold header — the location anchor.
-    `<div class="pop-name">${escapeHtml(p.address ?? "—")}</div>`,
-
-    `<div class="pop-row">
-      <span class="pop-k">Construction value</span>
-      <span class="pop-v">${
-        escapeHtml(fmtCurrency(p.construction_value))
-      }</span>
-    </div>`,
-
-    `<div class="pop-row">
-      <span class="pop-k">Building type</span>
-      <span class="pop-v">${
-        escapeHtml(stripBuildingCode(p.building_type ?? ""))
-      }</span>
-    </div>`,
-  ].join("");
-}
 
 // ---- Client-side filter ----------------------------------------------------
 // Type / month / value-tier filters on the LOADED per-year source (MapLibre

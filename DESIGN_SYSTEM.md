@@ -18,7 +18,8 @@ All values below live as CSS variables defined once. Components reference tokens
 
 ### 1.2 Colour — text (all must clear contrast floor §4 on their surface)
 - `--tx: #f5f6f7` — primary text/values
-- `--tx-mut: #9ba1a8` — secondary/labels (RAISED from old #8b8f94 to clear 4.5:1 on --shell)
+- **`--tx-head` — SECTION-HEADER tier (2026-07-19).** The module headers that ORGANIZE a sidebar section (`Permit Type`, `Construction Value`, `Metric`, `Legend`, `⚙ Tuning`) sit **between** the muted inline labels and the white content: a **lightness step up from `--tx-mut` toward `--tx`** (live: `hsl(--neutral-hue --neutral-sat 80%)` ≈ `#cfccc9`, vs `--tx-mut` at 60%) so they **anchor** their sections without going full white. Paired in the section-header rule with **+size (`--t-xs`) + weight 600** (see §1.5a). Defined once; every sidebar (PA/DU/BC/BP) inherits it via `.pa-col-lab` + the Metric `.seg-label`. Fixes the collapse where a section header was styled identically to an inline field label. Clears §4 on `--shell`/`--card` (lighter than `--tx-mut`, which already passes).
+- `--tx-mut: #9ba1a8` — secondary/labels (RAISED from old #8b8f94 to clear 4.5:1 on --shell). **Inline labels/tags ONLY** now — genuine field labels, honesty tags, `Fewer/More`, KPI card labels. *Section headers moved up to `--tx-head`; do not use `--tx-mut` for a header.*
 - `--tx-dim: #6b7076` — tertiary/suppressed ONLY (never for text that must be read)
 - **Interactive text — zone-split (2026-07-14, ratified).** The teal interactive accent (§1.3) is delivered as text in two zone tiers, both in the teal family, differentiated by their surface: **sidebar** metric-button / toggle text = **T2 teal-white `#7defe0`** (legible on the dark teal-petrol active bodies; §4 7.5:1 on petrol-lit); **tuning-bay** value readouts (`--tx-read`, the YEAR/MEDIAN values + legend $bounds) = **T1-bright teal `#2dd4bf`** (the darker/richer shade for the darker tuning-bay glass; §4 9.6:1 on the bay, separates from the warm ramp by hue). Inactive-button text stays the muted key label (`--tx-key`).
   *(NB — the surface tokens `--tx-mut`/`--tx-dim` above are shown at their pre-tonal cool values; the live build derives them warm from `--neutral-hue` at ≤8% sat. That tonal codification is a pending batch, tracked separately — do not treat the cool hexes here as current.)*
@@ -50,7 +51,7 @@ Every text role gets exactly one token. A role rendered at any other size is a d
 
 | Role | Token | px |
 |---|---|---|
-| Module banner (e.g. "Metric", "⚙ Tuning", "Legend") | `--t-2xs` | 11 |
+| **Sidebar SECTION HEADER — module header ("Metric", "Legend", "Permit Type", "Construction Value", "⚙ Tuning")** (2026-07-19: **weight 600 + `--tx-head`**, Title Case — anchors its section, was the muted 11px banner) | `--t-xs` | 13 |
 | **Console label tier — KPI card label, table header, trend label** (uniform across the three console zones, weight 600; 2026-07-14 Fix 1) | `--t-xs` | 13 |
 | Trend readout + axis-end labels (values) | `--t-xs` | 13 |
 | Trend legend | `--t-xs` | 13 |
@@ -70,7 +71,7 @@ Every text role gets exactly one token. A role rendered at any other size is a d
 | **Rail button slot (map controls)** | (chassis) | **30** |
 | **Tips-index glyph (popover)** | (glyph) | **16** |
 
-Labels/tags use `--tx-mut`; values use `--tx`. All numeric roles carry `tabular-nums`. **Parity within a role is mandatory** — e.g. the three InfoRail triplet values are equal to each other; all stat-stack values are equal; no per-row drift.
+**Section headers** use `--tx-head` (13px/600); **inline labels/tags** use `--tx-mut`; **values** use `--tx`. Three tiers — header anchors, label annotates, value shouts; never collapse a header into the label tier. All numeric roles carry `tabular-nums`. **Parity within a role is mandatory** — e.g. the three InfoRail triplet values are equal to each other; all stat-stack values are equal; no per-row drift.
 
 **THE ICON FAMILY IS LUCIDE (ratified 2026-07-15).** ONE open-licensed set dresses the whole rail (search · zoom ± · fullscreen · recentre · info) **and** the tips index — no MapLibre defaults, no hand-drawn glyphs, no mixed sources. The previous "Feather-style" marks were in-house approximations and are **all replaced**.
 - **Source + licence.** Lucide 1.24.0, **ISC** (not MIT — the brief said MIT; the package ships ISC). ISC requires the notice travel with the copies, so it is reproduced in `mapIcons.js`, which also names the upstream icon behind every constant (`lucide: map-pin-search`, …) so any glyph is checkable against source.

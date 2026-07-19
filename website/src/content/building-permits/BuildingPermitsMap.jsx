@@ -18,12 +18,17 @@
 // map.setFilter on the loaded year (instant, no refetch).
 // =============================================================================
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import MapView from "../../components/MapView.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
-import { wirePermitPopup } from "./permitInteractions.js";
+import { wirePermitInteractions } from "./permitInteractions.js";
+import PermitInforail from "./PermitInforail.jsx";
 import { HOME_VIEW, applyCameraPreset } from "../../components/mapCamera.js";
+import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
+import { ICON_RECENTRE, ICON_INFO, ICON_MOUSE, ICON_MOUSE_CLICK, ICON_CLICK, ICON_SLIDERS } from "../../components/mapIcons.js";
+import MapTipsPopover, { Glyph } from "../../components/MapTipsPopover.jsx";
+import { YearSliderRow, CalibTicks } from "../../components/consoleControls.jsx";
 import {
   LAYER_ID,
   SOURCE_ID,
@@ -40,7 +45,6 @@ import {
   VALUE_BUCKETS,
   ALL_BUCKET_IDS,
   DEFAULT_ACTIVE_BUCKETS,
-  stripBuildingCode,
   BOUNDARY_SOURCE_ID,
   CITY_BOUNDARY_PATH,
   TINT_BEFORE_ID,
@@ -58,7 +62,7 @@ import {
   DEFAULT_MONTH,
 } from "./dataSources.js";
 import { parseCsvAsObjects } from "../report-card/parseCsv.js";
-import { fmtNumber, fmtCurrency } from "../../utils/format.js";
+import { fmtNumber } from "../../utils/format.js";
 import { assetUrl } from "../../utils/assetUrl.js";
 
 // Per-year coverage table — how many permits exist vs. how many are mappable.
@@ -221,6 +225,37 @@ function heatRampGradient(stops) {
   return `linear-gradient(to right, ${parts.join(", ")})`;
 }
 
+// Month — the point map's SECOND tuning slider, mirroring consoleControls' YearSliderRow
+// shape (so it inherits the .pa-tune-* bay chrome) but single-value 0–12, where 0 = "All
+// Months". The readout NAMES the month (MONTHS[month].label); the ends read All → Dec.
+// Principle 0: the track is fixed, the handle + readout move. CalibTicks marks all 13 stops,
+// thickening every third (All · Mar · Jun · Sep · Dec).
+function MonthSliderRow({ month, onChange, pct }) {
+  return (
+    <div className="pa-tune-ctrl">
+      <div className="pa-tune-ctrl-head">
+        <span className="pa-tune-ctrl-name">Month</span>
+        <strong className="pa-tune-active">{MONTHS[month]?.label ?? "…"}</strong>
+      </div>
+      <div className="pa-tune-track-wrap">
+        <input
+          type="range"
+          className="pa-slider pa-month-slider"
+          aria-label="Month"
+          min={0}
+          max={12}
+          step={1}
+          value={month}
+          style={{ "--pct": pct }}
+          onChange={(e) => onChange(Number(e.target.value))}
+        />
+        <CalibTicks count={13} majorEvery={3} />
+      </div>
+      <div className="pa-tune-ends"><span>All</span><span>Dec</span></div>
+    </div>
+  );
+}
+
 export default function BuildingPermitsMap() {
   // Year list + default come from the BP manifest (no literals); null until it
   // loads, which gates the slider, the map filter, and the tab title below.
@@ -243,13 +278,17 @@ export default function BuildingPermitsMap() {
   // the note (the map's own copy lives in MapView's source). Keyed by year so a stale count is
   // never paired with a new year's coverage row. Same URL as MapView → browser cache serves it.
   const [points, setPoints] = useState({ year: null, features: [] });
-  // Pattern B (point map): stats for the LAST CLICKED dot — point-map hover is
-  // on dots, not polygons, so the sidebar panel updates on click, not hover.
-  const [clickedFeature, setClickedFeature] = useState(null);
+  // The right INFORAIL's two interaction channels (Principle 0 — one fixed frame, content
+  // swaps): `hoveredFeature` drives the light runner as the cursor moves over dots;
+  // `selectedFeature` drives the pinned full detail on click and takes precedence over hover.
+  const [hoveredFeature, setHoveredFeature] = useState(null);
+  const [selectedFeature, setSelectedFeature] = useState(null);
   // Factory init so new Set(...) runs ONCE on mount, not every render.
   const [activeBuckets, setActiveBuckets] = useState(
     () => new Set(DEFAULT_ACTIVE_BUCKETS)
   );
+  // The "i" (About & tips) popover open state — the coverage/honesty caveat lives inside it.
+  const [infoOpen, setInfoOpen] = useState(false);
 
   // Toggle one value tier on/off (immutably — clone, mutate, return a new Set so
   // React re-renders and the filter effect re-runs).
@@ -370,14 +409,9 @@ export default function BuildingPermitsMap() {
     [coverage]
   );
 
-  // Year slider fill %: 0–100 across the manifest's year range, feeding the PA slider's
-  // thumb-width-aware track fill via `--pct` (matches consoleControls' YearSliderRow).
-  const yearPct = years.length && year != null
-    ? ((year - Math.min(...years)) / ((Math.max(...years) - Math.min(...years)) || 1)) * 100
-    : 0;
-
-  // Month slider fill %: 0 (All Months) → 12 (December), feeding the SAME --pct track fill
-  // as Year so the two column sliders read identically.
+  // Month slider fill %: 0 (All Months) → 12 (December), feeding the `--pct` track fill of
+  // the tuning-bay MonthSliderRow. (Year's fill is computed inside consoleControls'
+  // YearSliderRow from year/yMin/yMax, so it needs no companion here.)
   const monthPct = (month / 12) * 100;
 
   // Filter-aware honesty counts, computed from the LOADED features + the live filter (mirrors
@@ -408,6 +442,76 @@ export default function BuildingPermitsMap() {
   // until the manifest seeds loadedYear.
   const pointsUrl = loadedYear != null ? resolvePermitPointsUrl(loadedYear) : null;
 
+  // ── Nav stack: the two BP-added rail controls (recentre + info "i"), mounted ONCE and
+  // sharing the rail chassis with MapLibre's own zoom / fullscreen (makeIconButtonControl).
+  // recentre → the HOME preset (BP has no selection to fit, so the label is always "home");
+  // info → the About & tips popover. The "i" GLOWS while its panel is open (setActive) —
+  // load-bearing, since the popover has no × (it closes via the "i" or Esc). Order = stack
+  // order: info lands at the bottom, below zoom / fullscreen / recentre.
+  const infoCtrlRef = useRef(null);
+  useEffect(() => { infoCtrlRef.current?.setActive(infoOpen); }, [infoOpen]);
+  useEffect(() => {
+    if (!map) return undefined;
+    const reset = makeIconButtonControl({
+      svg: railGlyph(ICON_RECENTRE),
+      label: "Return to home view",
+      onClick: () => applyCameraPreset(map, HOME_VIEW.Edmonton, { ease: true }),
+    });
+    const info = makeIconButtonControl({
+      svg: railGlyph(ICON_INFO),
+      label: "About & tips",
+      onClick: () => setInfoOpen((o) => !o),
+    });
+    map.addControl(reset, "top-right");
+    map.addControl(info, "top-right");
+    infoCtrlRef.current = info;
+    info.setActive(infoOpen);
+    return () => {
+      infoCtrlRef.current = null;
+      for (const c of [reset, info]) { try { map.removeControl(c); } catch { /* map already gone */ } }
+    };
+    // Controls mount once; the glow rides the setActive effect above. map is the only dep.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map]);
+
+  // The "i" popover content — a VISUAL INDEX (glyph gutter + text), BP interactions only
+  // (no search / area-select / console — BP has none). The glyphs come from the rail's own
+  // Lucide family (mapIcons) so each tip echoes its control.
+  const bpTips = [
+    { key: "scroll", glyph: <Glyph body={ICON_MOUSE} />, body: <>Scroll to Zoom</> },
+    { key: "hover", glyph: <Glyph body={ICON_MOUSE_CLICK} />, body: <>Hover a Permit for a Reading</> },
+    { key: "click", glyph: <Glyph body={ICON_CLICK} />, body: <>Click a Permit for Detail</> },
+    { key: "sliders", glyph: <Glyph body={ICON_SLIDERS} />, body: <>Drag Sliders to Select Year and Month</> },
+  ];
+
+  // The "i" honesty/methodology notes, re-homed from the column (§6, muted tier): the COVERAGE
+  // caveat (Fix in the re-home — the same statement + counts, null until the loaded year's row
+  // is in hand so a stale count is never shown) AND the DENSITY explainer (Fix 3 — the
+  // "relative permit density" prose that stood under the column legend). Two blocks so each
+  // gets its own header + the inter-block spacing.
+  const bpHonesty = (
+    <>
+      {(cov && points.year === loadedYear) && (
+        <div className="pa-tips-honesty">
+          <span className="pa-tips-honesty-h">Coverage</span>
+          <p>
+            Showing {fmtNumber(shownStats.nShown)} permits. Of {fmtNumber(Number(cov.n_total))}{" "}
+            for {loadedYear}, {fmtNumber(nNoCoord)} ({Math.round(Number(cov.pct_no_coord) * 100)}%){" "}
+            have no map location and {fmtNumber(shownStats.nMappedNoValue)} have no construction
+            value, so they cannot be shown.
+          </p>
+        </div>
+      )}
+      <div className="pa-tips-honesty">
+        <span className="pa-tips-honesty-h">Density</span>
+        <p>
+          Relative permit density — the heat shows where permits concentrate at the overview;
+          zoom in for individual permits.
+        </p>
+      </div>
+    </>
+  );
+
   return (
     <article className="content-map pa-map">
       <div className="pa-canvas">
@@ -429,11 +533,19 @@ export default function BuildingPermitsMap() {
               // the heat→dots crossover, and a lower source maxzoom means fewer tiles to
               // build + fewer high-zoom tile edges for the large dots to clip against.
               sourceOptions={{ maxzoom: 12 }}
+              // GESTURE PARITY with PA/DU/BC (the shared convention): opt OUT of
+              // cooperativeGestures so a PLAIN scroll wheel / two-finger pinch zooms — no
+              // ctrl/⌘ modifier. BP is a full-bleed map (the map IS the page), so there is no
+              // scrolling document to hijack; cooperativeGestures only protects an EMBEDDED map.
+              // Every other handler (drag-pan, double-click-zoom, rotate, pitch, keyboard) is
+              // MapLibre-default on the shared MapView, so it already matches PA.
+              cooperativeGestures={false}
               onLoad={(m) => {
                 // MapView is section-agnostic, so the BP-specific wiring lives here:
-                // popups/hover/fly-to, and disabling dbl-click-zoom (dbl-click = fly-to).
-                wirePermitPopup(m, setClickedFeature);
-                m.doubleClickZoom.disable();
+                // hover/click → the right inforail (NO floating popups — map centre sacred).
+                // Double-click is left at the MapLibre default (zoom in) to match PA — BP no
+                // longer overrides it for a fly-to (gesture parity, this directive).
+                wirePermitInteractions(m, { onHover: setHoveredFeature, onSelect: setSelectedFeature });
                 // Figure-ground base tint: quiet the cream + green parkland INSIDE the city
                 // boundary so the permit glow reads against one uniform ground. ONE extra GeoJSON
                 // source (the dissolved ~18 KB boundary), independent of the per-year permit source
@@ -463,39 +575,71 @@ export default function BuildingPermitsMap() {
           )}
         </div>
 
+        {/* ===== RIGHT INFORAIL (fixed frame, Principle 0) — the detail-on-select /
+             hover-runner instrument, mounted below the top-right nav stack. ONE frame
+             whose CONTENT swaps (idle / hover / select); it replaces the floating popups,
+             so the map centre is never covered. Present once the map is up. ===== */}
+        {map && (
+          <PermitInforail
+            hovered={hoveredFeature}
+            selected={selectedFeature}
+            onClear={() => setSelectedFeature(null)}
+          />
+        )}
+
+        {/* ABOUT & TIPS — opened by the "i" in the nav stack. Holds the BP interaction index,
+            the coverage caveat (§6 honesty, re-homed from the column), and the source citation
+            (dataset id + derived point total, re-homed from the column footer; §6 carve-out,
+            primary tier). The bottom-right compact attribution keeps the licence/© (the single
+            control KC ratified for non-console sections, DESIGN_SYSTEM §6). */}
+        <MapTipsPopover
+          open={infoOpen}
+          onClose={() => setInfoOpen(false)}
+          tips={bpTips}
+          honesty={bpHonesty}
+          citation={
+            <p className="pa-box-ref pa-box-cite">
+              Source: City of Edmonton Open Data (24uj-dj8v).{" "}
+              {coverage.length ? fmtNumber(totalPoints) : "…"} permit points, {yearSpan}.
+            </p>
+          }
+        />
+
+        {/* ===== TUNING BAY (standalone, bottom-centre) — Year + Month single sliders in
+             the PA Data-Console spine SHAPE (.pa-tune-instrument), but BP has no pull-up
+             console, so the bay stands on its own over the map. Principle 0: fixed tracks,
+             moving handles/readouts. Year debounces to loadedYear (the source swap); Month
+             filters the loaded year in place. ===== */}
+        {year != null && (
+          <div className="bp-tune-dock">
+            <div className="pa-tune-instrument" role="group" aria-label="Year and month">
+              <YearSliderRow
+                year={year}
+                sliderYear={year}
+                slideYear={setYear}
+                yMin={Math.min(...years)}
+                yMax={Math.max(...years)}
+              />
+              <div className="pa-tune-divider" />
+              <MonthSliderRow month={month} onChange={setMonth} pct={monthPct} />
+            </div>
+          </div>
+        )}
+
         {/* ===== INSTRUMENT COLUMN (PA standard, adapted) — BP is single-city +
              non-console, so ONE .pa-card-instrument holds every module. The transparent
              .pa-float keeps its measured width; the card carries the dark surface. ===== */}
         <div className="pa-float pa-column pa-column-lean">
           <section className="pa-card pa-card-instrument">
 
-            {/* TITLE — the section name (the live year rides the Year readout below). */}
+            {/* TITLE — the section name (the live Year now rides the tuning-bay readout). */}
             <div className="pa-col-mod pa-col-title">
               <h2 className="pa-id-title">Building Permits</h2>
             </div>
 
-            {/* YEAR — the slider swaps the per-year source (MapView recreates it) and the
-                type/month/value filter re-applies. min/max come from the manifest year
-                list (no literals); step = 1 maps every position to a real year. Re-classed
-                to the shared PA dark slider (--pct drives the teal track fill). */}
-            <div className="pa-col-mod pa-col-year">
-              <span className="pa-col-lab">
-                Year <strong className="pa-col-read">{year ?? "…"}</strong>
-              </span>
-              {year != null && (
-                <input
-                  type="range"
-                  className="pa-slider pa-year-slider"
-                  aria-label="Year"
-                  min={Math.min(...years)}
-                  max={Math.max(...years)}
-                  step={1}
-                  value={year}
-                  style={{ "--pct": yearPct }}
-                  onChange={(e) => setYear(Number(e.target.value))}
-                />
-              )}
-            </div>
+            {/* YEAR + MONTH sliders re-homed OUT of the column into the standalone tuning
+                bay (bottom-centre, the PA spine position). The column keeps only the three
+                standing modules: Permit Type · Construction Value · Density legend. */}
 
             {/* PERMIT TYPE — colour-dot chips. The dots are DATA (orange/violet,
                 dual-encoded with the label, §1.3); the chip chrome is the shared §6
@@ -505,16 +649,19 @@ export default function BuildingPermitsMap() {
               <span className="pa-col-lab">Permit Type</span>
               <div className="opt-toggle-buttons bp-type-toggle">
                 {[
-                  { key: "All",         colour: null },
-                  { key: "Residential", colour: COLOURS.residential },
-                  { key: "Commercial",  colour: COLOURS.commercial  },
-                ].map(({ key, colour }) => {
+                  { key: "All",         colour: null,                 cat: "all" },
+                  { key: "Residential", colour: COLOURS.residential,   cat: "res" },
+                  { key: "Commercial",  colour: COLOURS.commercial,    cat: "com" },
+                ].map(({ key, colour, cat }) => {
                   const isActive = group === key;
                   return (
                     <button
                       key={key}
                       type="button"
-                      className={`opt-toggle-btn${isActive ? " active" : ""}`}
+                      // bp-type-<cat> lets the ACTIVE chip glow its OWN category colour
+                      // (Fix 2, a documented divergence from PA's green rule — see permitStyle
+                      // / index.css): res→orange, com→purple, all→the neutral teal accent.
+                      className={`opt-toggle-btn bp-type-${cat}${isActive ? " active" : ""}`}
                       onClick={() => setGroup(key)}
                       aria-pressed={isActive}
                     >
@@ -536,63 +683,41 @@ export default function BuildingPermitsMap() {
               </div>
             </div>
 
-            {/* MONTH — a slider (0 = All Months, 1–12 = Jan–Dec), the standard column
-                control matching Year. The readout names the month; monthPct drives the
-                same teal --pct track fill. Filters the loaded year in place (setMonth). */}
-            <div className="pa-col-mod pa-col-month">
-              <span className="pa-col-lab">
-                Month <strong className="pa-col-read">{MONTHS[month]?.label ?? "…"}</strong>
-              </span>
-              <input
-                type="range"
-                className="pa-slider pa-month-slider"
-                aria-label="Month"
-                min={0}
-                max={12}
-                step={1}
-                value={month}
-                style={{ "--pct": monthPct }}
-                onChange={(e) => setMonth(Number(e.target.value))}
+
+            {/* COVERAGE caveat re-homed from the column into the "i" (About & tips) as its
+                §6 honesty block — the same statement + counts, surfaced on demand instead of
+                standing in the column (coverageHonesty, above). */}
+
+            {/* CONSTRUCTION VALUE — the interactive value-tier filter. Reordered ABOVE the
+                density legend (Fix 3): the column reads Permit Type → Construction Value →
+                Building Permits (density). The title lives in the module label; the tiers +
+                reset are the PermitLegend below. */}
+            <div className="pa-col-mod pa-col-legend">
+              <span className="pa-col-lab">Construction Value</span>
+              <PermitLegend
+                activeBuckets={activeBuckets}
+                onToggle={toggleBucket}
+                onReset={resetBuckets}
+                activeGroup={group}
               />
             </div>
 
-            {/* COVERAGE — the §6 honesty label (muted tier): ONE combined, filter-aware
-                statement. Headlines the SHOWN count (recomputes on type/month/tier), then
-                the two involuntary exclusions at year scope — no map location (the geocoding
-                cliff, with its %) and no construction value. Same condition + text +
-                fmtNumber calls as before. */}
-            {cov && points.year === loadedYear && (
-              <p className="pa-col-mod pa-col-note">
-                <span className="pa-col-note-mark" aria-hidden="true">⚠</span>
-                <span>
-                  Showing {fmtNumber(shownStats.nShown)} permits.{" "}
-                  Of {fmtNumber(Number(cov.n_total))} for {loadedYear},{" "}
-                  {fmtNumber(nNoCoord)} ({Math.round(Number(cov.pct_no_coord) * 100)}%){" "}
-                  have no map location and {fmtNumber(shownStats.nMappedNoValue)}{" "}
-                  have no construction value, so they cannot be shown.
-                </span>
-              </p>
-            )}
-
-            {/* PERMIT DENSITY — the OVERVIEW heatmap legend (the representation you land on).
-                One row per hue (Residential lava orange→red, Commercial violet→magenta), built
-                from the SAME ramp the map paints (heatRampColours) so legend = map. It TRACKS
-                the mode: SMOOTH → a continuous gradient bar; STEPPED → discrete adjacent swatches
-                (the 5 contour-band colours) so it doubles as a contour key. Density is RELATIVE
-                (a KDE, not a count) — labelled honestly. Sits between the coverage note and the
-                dots' Construction Value legend: heat (overview) then dots (street), matching how
-                the map reveals as you zoom in. */}
+            {/* BUILDING PERMITS density legend — the OVERVIEW heatmap key (relabelled, Fix 5:
+                section "Building Permits", the two scales "Residential/Commercial Construction
+                Activity"). One row per hue, built from the SAME ramp the map paints
+                (heatRampColours) so legend = map: SMOOTH → a continuous gradient bar; STEPPED →
+                discrete swatches. Density is RELATIVE (a KDE) — the explainer lives in the "i". */}
             <div className="pa-col-mod pa-col-heat">
-              <span className="pa-col-lab">Permit Density</span>
+              <span className="pa-col-lab">Building Permits</span>
               <div className="bp-heat-legend">
                 {HEAT_CATEGORIES.map(({ category, label }) => {
-                  // The five coloured stops (drop the transparent empty-density stop) — shared
-                  // by the smooth gradient AND the stepped swatches, so both render the map's
-                  // exact colours (one source of truth).
+                  // The coloured stops (drop the transparent empty-density stop) — shared by the
+                  // smooth gradient AND the stepped swatches, so both render the map's exact
+                  // colours (one source of truth).
                   const stops = heatRampColours(category).filter((s) => s.d > 0);
                   return (
                     <div key={category} className="bp-heat-row">
-                      <span className="bp-heat-cat">{label}</span>
+                      <span className="bp-heat-cat">{label} Construction Activity</span>
                       {HEAT_RAMP_MODE === "stepped" ? (
                         <div className="bp-heat-swatches" aria-hidden="true">
                           {stops.map((s) => (
@@ -614,57 +739,15 @@ export default function BuildingPermitsMap() {
                   );
                 })}
               </div>
-              <p className="bp-heat-cap">
-                Relative permit density — heat shows where permits concentrate at the
-                overview; zoom in for individual permits.
-              </p>
             </div>
 
-            {/* CONSTRUCTION VALUE — the interactive value-tier filter. The title lives in
-                the module label; the tiers + reset are the PermitLegend below. */}
-            <div className="pa-col-mod pa-col-legend">
-              <span className="pa-col-lab">Construction Value</span>
-              <PermitLegend
-                activeBuckets={activeBuckets}
-                onToggle={toggleBucket}
-                onReset={resetBuckets}
-                activeGroup={group}
-              />
-            </div>
+            {/* SELECTED-PERMIT detail was re-homed OUT of the column into the fixed right
+                inforail (PermitInforail — hover runner / click detail), so the map centre
+                stays sacred and the column keeps only its standing controls + legends. */}
 
-            {/* SELECTED PERMIT — the last-clicked dot (point map: click, not hover).
-                Fixed-height slot (Principle 0) so the column doesn't jump on pick. */}
-            <div className="pa-col-mod pa-col-detail-mod">
-              {clickedFeature ? (
-                <div className="pa-col-detail">
-                  <p className="pa-col-detail-name">{clickedFeature.address ?? "—"}</p>
-                  <div className="pa-col-detail-rows">
-                    <div className="pa-col-detail-row">
-                      <span className="pa-col-detail-k">Building Type</span>
-                      <span className="pa-col-detail-v">{stripBuildingCode(clickedFeature.building_type ?? "")}</span>
-                    </div>
-                    <div className="pa-col-detail-row">
-                      <span className="pa-col-detail-k">Construction Value</span>
-                      <span className="pa-col-detail-v">{fmtCurrency(clickedFeature.construction_value)}</span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="pa-col-detail-empty">
-                  <p className="pa-col-detail-hint">Click a permit dot for detail</p>
-                </div>
-              )}
-            </div>
-
-            {/* SOURCE — a provenance citation reads at the PRIMARY tier (§6 carve-out).
-                The point total is DERIVED from the coverage table (sum of mapped permits),
-                so it tracks the data instead of a stale literal. */}
-            <div className="pa-col-mod pa-col-foot">
-              <p className="pa-col-cite">
-                Source: City of Edmonton Open Data (24uj-dj8v).{" "}
-                {coverage.length ? fmtNumber(totalPoints) : "…"} permit points, {yearSpan}.
-              </p>
-            </div>
+            {/* SOURCE citation re-homed from the column footer into the "i" (About & tips) —
+                the column now ends on the Construction Value legend, matching PA's silhouette
+                (Identity + instrument modules, no footer citation). */}
 
           </section>
         </div>
