@@ -22,6 +22,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import MapView from "../../components/MapView.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
+import IdentityCard from "../../components/IdentityCard.jsx";
+import EmptyState from "../../components/EmptyState.jsx";
+// City axis reused from PA's config (the single source of the city list) so BP's switcher is in
+// guaranteed parity with PA — same cities, same default. BP mirrors PA's LOCAL city STATE (there
+// is no shared city store; PA's is a useState too).
+import { CITIES, DEFAULT_CITY } from "../property-assessment/dataSources.js";
 import { wirePermitInteractions } from "./permitInteractions.js";
 import PermitInforail from "./PermitInforail.jsx";
 import { HOME_VIEW, applyCameraPreset } from "../../components/mapCamera.js";
@@ -290,6 +296,21 @@ export default function BuildingPermitsMap() {
   // The "i" (About & tips) popover open state — the coverage/honesty caveat lives inside it.
   const [infoOpen, setInfoOpen] = useState(false);
 
+  // City axis — mirrors PA's LOCAL city state + its S-E gating. BP's permit data is Edmonton-only,
+  // so `cityHasData` is BP's equivalent of PA's `url` presence check (PA: years.length ? url : null):
+  // the active city having data. Any other city (Calgary today) → the SAME gated / no-data state PA
+  // shows in S-E — the Identity card + switcher persist, the map/tuning/instrument card are gated
+  // and an EmptyState fills the canvas. The switcher genuinely drives the axis.
+  const [city, setCity] = useState(DEFAULT_CITY);
+  const cityHasData = city === DEFAULT_CITY;
+  function changeCity(next) {
+    setCity(next);
+    setMap(null);              // drop the soon-unmounted map ref so a clean instance mounts on return
+    setSelectedFeature(null);  // clear the inforail + "i" on a city switch (no stale selection)
+    setHoveredFeature(null);
+    setInfoOpen(false);
+  }
+
   // Toggle one value tier on/off (immutably — clone, mutate, return a new Set so
   // React re-renders and the filter effect re-runs).
   function toggleBucket(id) {
@@ -520,8 +541,8 @@ export default function BuildingPermitsMap() {
              shared MapView; the Year slider changes geojsonUrl -> MapView recreates the
              source. Behaviour is UNCHANGED — this is a chrome/layout re-skin. ===== */}
         <div className="canvas-wrap">
-          {!map && <MapSkeleton />}
-          {pointsUrl && (
+          {cityHasData && !map && <MapSkeleton />}
+          {cityHasData && pointsUrl && (
             <MapView
               className="canvas"
               basemapStyle={BASEMAP_STYLE}
@@ -573,13 +594,23 @@ export default function BuildingPermitsMap() {
               }}
             />
           )}
+          {/* S-E (mirrors PA): a city with no BP data → the switcher persists in the Identity
+              card while the canvas shows a no-data EmptyState. Active city read dynamically (no
+              hardcoded literal — `city` is the selection, DEFAULT_CITY the config for the one with
+              data). */}
+          {!cityHasData && (
+            <EmptyState
+              title={`No Building Permits Data for ${city}`}
+              body={`Building permits are currently published for ${DEFAULT_CITY} only. Switch back to ${DEFAULT_CITY} to explore the map.`}
+            />
+          )}
         </div>
 
         {/* ===== RIGHT INFORAIL (fixed frame, Principle 0) — the detail-on-select /
              hover-runner instrument, mounted below the top-right nav stack. ONE frame
              whose CONTENT swaps (idle / hover / select); it replaces the floating popups,
-             so the map centre is never covered. Present once the map is up. ===== */}
-        {map && (
+             so the map centre is never covered. Present once the map is up (Edmonton only). ===== */}
+        {cityHasData && map && (
           <PermitInforail
             hovered={hoveredFeature}
             selected={selectedFeature}
@@ -609,8 +640,8 @@ export default function BuildingPermitsMap() {
              the PA Data-Console spine SHAPE (.pa-tune-instrument), but BP has no pull-up
              console, so the bay stands on its own over the map. Principle 0: fixed tracks,
              moving handles/readouts. Year debounces to loadedYear (the source swap); Month
-             filters the loaded year in place. ===== */}
-        {year != null && (
+             filters the loaded year in place. Gated to the data city (S-E). ===== */}
+        {cityHasData && year != null && (
           <div className="bp-tune-dock">
             <div className="pa-tune-instrument" role="group" aria-label="Year and month">
               <YearSliderRow
@@ -626,20 +657,25 @@ export default function BuildingPermitsMap() {
           </div>
         )}
 
-        {/* ===== INSTRUMENT COLUMN (PA standard, adapted) — BP is single-city +
-             non-console, so ONE .pa-card-instrument holds every module. The transparent
-             .pa-float keeps its measured width; the card carries the dark surface. ===== */}
+        {/* ===== INSTRUMENT COLUMN (PA TWO-CARD standard) — an Identity card (title + city
+             switcher) gap-separated from the Instrument chassis card (the modules), mirroring
+             PA. The transparent .pa-float keeps its measured width; each card carries the dark
+             surface. ===== */}
         <div className="pa-float pa-column pa-column-lean">
+          {/* IDENTITY CARD — its own surface: the section title + the FUNCTIONAL city switcher
+              (shared IdentityCard). Selecting a no-data city (Calgary) drops BP into PA's S-E
+              gated state — this card + the switcher persist, the chassis below is gated and the
+              canvas shows the EmptyState. Title is the --t-lg Identity title, distinct from the
+              section-header tier used inside the chassis. */}
+          <section className="pa-card pa-card-identity">
+            <IdentityCard title="Building Permits" cities={CITIES} city={city} onCityChange={changeCity} />
+          </section>
+
+          {/* INSTRUMENT CHASSIS — gated to the data city (S-E: absent for Calgary). Holds the
+              three standing modules: Permit Type · Construction Value · Density legend. Year +
+              Month live in the standalone tuning bay, not the column. */}
+          {cityHasData && (
           <section className="pa-card pa-card-instrument">
-
-            {/* TITLE — the section name (the live Year now rides the tuning-bay readout). */}
-            <div className="pa-col-mod pa-col-title">
-              <h2 className="pa-id-title">Building Permits</h2>
-            </div>
-
-            {/* YEAR + MONTH sliders re-homed OUT of the column into the standalone tuning
-                bay (bottom-centre, the PA spine position). The column keeps only the three
-                standing modules: Permit Type · Construction Value · Density legend. */}
 
             {/* PERMIT TYPE — colour-dot chips. The dots are DATA (orange/violet,
                 dual-encoded with the label, §1.3); the chip chrome is the shared §6
@@ -750,6 +786,7 @@ export default function BuildingPermitsMap() {
                 (Identity + instrument modules, no footer citation). */}
 
           </section>
+          )}
         </div>
       </div>
     </article>
