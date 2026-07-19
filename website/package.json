@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:vm": "vite build && node scripts/precompress.mjs",
+    "precompress": "node scripts/precompress.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },

@@ -139,6 +139,37 @@ The fallback **must not shadow real static assets** (`/assets`, `/data`, `/style
   }
   ```
 
+### Precompressed static assets (nginx VM)
+
+Cloudflare Pages compresses responses for you. A plain nginx server does not — and
+the map data is the bulk of the transfer (the per-year permit GeoJSON is multi-MB
+text that shrinks ~5–8× under Brotli). For the UAlberta VM, build with:
+
+```bash
+npm run build:vm      # = vite build && node scripts/precompress.mjs
+```
+
+`precompress.mjs` walks `dist/` and writes a `.br` (Brotli quality 11) and `.gz`
+(gzip 9) **sibling** next to every text asset — JS, CSS, HTML, and the `/data`
+GeoJSON/CSV — skipping already-compressed fonts/images and anything under 1 KB. It
+only **adds** siblings; the originals are untouched, so a host without the modules
+just serves the plain file. (The default `npm run build` — what Pages runs — is
+deliberately left as-is; the siblings would be wasted build time there.)
+
+Then have nginx serve the pre-made copy when the client supports it:
+
+```nginx
+# gzip_static ships with nginx (built with --with-http_gzip_static_module).
+# brotli_static needs the ngx_brotli module. With both on, nginx prefers .br,
+# falls back to .gz, then to on-the-fly / plain — all transparent to the app,
+# which still requests the plain URL.
+brotli_static on;
+gzip_static   on;
+```
+
+This needs **no new dependencies** — `scripts/precompress.mjs` uses node's built-in
+`zlib` (Brotli + gzip), keeping the site's no-third-party-code stance intact.
+
 ### Environment variables (host portability)
 
 Build-time `VITE_`-prefixed env vars let the serve target be configured instead of
