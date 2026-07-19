@@ -309,11 +309,15 @@ export function permitCircleLayer() {
         "interpolate", ["linear"], ["zoom"],
         BAND_LO, 0, BAND_HI, 0.75, 18, 0.88,
       ],
+      // Heavier white ring at the 200-500 m scanning zooms (z13-14) so overlapping big dots
+      // in dense areas stay individually legible — the outline delineates each where the
+      // sort-key stacks them (taming the overlap-occlusion crescents). Peaks at z14, then
+      // tapers: past the sweet spot the radius is small, so a lighter ring keeps proportion.
       "circle-stroke-width": [
         "interpolate", ["linear"], ["zoom"],
-        9, 0.8, 14, 1.5, 18, 2.0,
+        9, 1.0, 13, 2.2, 14, 2.6, 16, 1.8, 18, 1.4,
       ],
-      "circle-stroke-color": "rgba(255,255,255,0.9)",
+      "circle-stroke-color": "rgba(255,255,255,0.95)",
       // The white halo MUST fade with the fill across the crossover band. circle-stroke-opacity
       // defaults to 1, so without this the stroke keeps drawing hollow white rings over the heat
       // at the overview (the fill alone at opacity 0 is not enough to hide a dot). Same
