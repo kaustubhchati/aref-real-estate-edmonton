@@ -2074,6 +2074,24 @@ p  { margin: 0 0 0.75rem; }
 }
 .pa-col-note-mark { flex: 0 0 auto; margin-top: 1px; }
 
+/* PERMIT DENSITY — the overview heatmap legend. Per hue (Residential / Commercial) the mode
+   decides the mark: SMOOTH = a continuous gradient bar (.bp-heat-bar); STEPPED = 5 adjacent
+   solid swatches (.bp-heat-swatches) that double as a contour key. Both take their colours
+   inline from the map ramp (heatRampColours), so no hue literal lives here — only dark chrome
+   tokens (§1). Fewer/More end labels + a relative-density caption. */
+.bp-heat-legend { display: flex; flex-direction: column; gap: var(--s2); }
+.bp-heat-row { display: flex; flex-direction: column; gap: 3px; }
+.bp-heat-cat { font-size: var(--t-2xs); color: var(--pa-ink); }
+.bp-heat-bar { height: 8px; border-radius: 999px; border: 1px solid var(--pa-hair); }
+/* STEPPED: five equal solid blocks in one rounded pill — the discrete contour key. */
+.bp-heat-swatches { display: flex; height: 8px; border-radius: 999px; overflow: hidden; border: 1px solid var(--pa-hair); }
+.bp-heat-swatch { flex: 1 1 0; }
+.bp-heat-ends {
+  display: flex; justify-content: space-between;
+  font-size: var(--t-2xs); color: var(--pa-mut); line-height: 1.2;
+}
+.bp-heat-cap { margin: var(--s2) 0 0; font-size: var(--t-2xs); color: var(--pa-mut); line-height: 1.4; }
+
 /* CONSTRUCTION VALUE — the interactive value-tier filter. Each tier is a native
    <button>: inactive = quiet glass key + dimmed (that tier is hidden on the map);
    active = the shared petrol/pearl/teal active material (matches the metric chips).

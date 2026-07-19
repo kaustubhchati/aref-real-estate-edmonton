@@ -38,7 +38,10 @@ import { DUR_SLOW, MOTION_PASS, reduceMotion } from "./motion.js";
 // layer type. The fade scales these. Only the types MapView actually swaps need
 // listing; unknown types get an empty list (→ straight recreate, no fade).
 const OPACITY_PROPS = {
-  circle: ["circle-opacity"],
+  // circle-stroke-opacity rides along so a dot's white halo fades WITH its fill during a
+  // year-swap (BP's point layer gates both across the heat↔dots crossover; the only
+  // source-swapping circle layer, so this is BP-only in practice).
+  circle: ["circle-opacity", "circle-stroke-opacity"],
   fill: ["fill-opacity"],
   line: ["line-opacity"],
   symbol: ["icon-opacity", "text-opacity"],
@@ -101,9 +104,12 @@ function ownedLayers(map, sourceId) {
 
 const anchorArg = (map, anchor) => (anchor && map.getLayer(anchor) ? anchor : undefined);
 
-function addGeojsonSource(map, id, url, promoteId) {
+function addGeojsonSource(map, id, url, promoteId, sourceOptions) {
   const spec = { type: "geojson", data: url };
   if (promoteId) spec.promoteId = promoteId;
+  // Extra geojson source keys (e.g. { maxzoom: 12 }) — merged onto BOTH the canonical
+  // and the ghost so a year-swap re-tiles with the same options the first load used.
+  if (sourceOptions) Object.assign(spec, sourceOptions);
   map.addSource(id, spec);
 }
 
@@ -113,10 +119,10 @@ function addGeojsonSource(map, id, url, promoteId) {
 // with a `duration`-ms opacity transition armed, so the subsequent fadeTo(…, 1)
 // tweens it up. Without it (reduced motion) the layers re-add at their normal
 // opacity — the plain swap the clipping fix shipped.
-function recreateCanonical(map, sourceId, url, promoteId, owned, fade) {
+function recreateCanonical(map, sourceId, url, promoteId, owned, fade, sourceOptions) {
   for (const { spec } of owned) if (map.getLayer(spec.id)) map.removeLayer(spec.id);
   map.removeSource(sourceId);
-  addGeojsonSource(map, sourceId, url, promoteId);
+  addGeojsonSource(map, sourceId, url, promoteId, sourceOptions);
   for (const { spec, anchor } of owned) {
     let toAdd = spec;
     if (fade) {
@@ -240,7 +246,7 @@ export function abortCrossFade(map, stateRef, baseLayers) {
 // motion is on. `stateRef` is a caller-owned ref ({current:{…}}) holding interrupt
 // state across calls. Returns a promise that resolves when the swap is committed
 // (the fade may still be animating — its cleanup is self-scheduled).
-export async function crossFadeSource(map, { sourceId, oldUrl, newUrl, promoteId, baseLayers, stateRef }) {
+export async function crossFadeSource(map, { sourceId, oldUrl, newUrl, promoteId, sourceOptions, baseLayers, stateRef }) {
   // A newer swap supersedes any in-flight one. Snap the previous clean first.
   abortCrossFade(map, stateRef, baseLayers);
 
@@ -254,7 +260,7 @@ export async function crossFadeSource(map, { sourceId, oldUrl, newUrl, promoteId
   // Reduced motion / motion-off / nothing to fade / first load → the plain recreate
   // (the clipping fix's behaviour): straight swap, no ghost, no overlap.
   if (duration <= 0 || owned.length === 0 || oldUrl == null) {
-    recreateCanonical(map, sourceId, newUrl, promoteId, owned);
+    recreateCanonical(map, sourceId, newUrl, promoteId, owned, undefined, sourceOptions);
     return;
   }
   const fade = { baseLayers, duration };
@@ -262,7 +268,7 @@ export async function crossFadeSource(map, { sourceId, oldUrl, newUrl, promoteId
   // 1) GHOST the outgoing year on a throwaway source, at full opacity, at the same
   //    anchor. The old canonical is still visible beneath it → no gap while it loads.
   const ghostSrc = `${sourceId}__xfade`;
-  addGeojsonSource(map, ghostSrc, oldUrl, promoteId);
+  addGeojsonSource(map, ghostSrc, oldUrl, promoteId, sourceOptions);
   stateRef.current.ghostSrc = ghostSrc;
   const ghosts = [];
   for (const { spec, anchor } of owned) {
@@ -279,7 +285,7 @@ export async function crossFadeSource(map, { sourceId, oldUrl, newUrl, promoteId
   await waitSourceLoaded(map, ghostSrc, stateRef.current, token);
   if (!alive()) return;   // superseded — the newer swap's abort already removed our ghost; do NOT
                           // touch stateRef here (it now belongs to that newer swap).
-  recreateCanonical(map, sourceId, newUrl, promoteId, owned, fade);
+  recreateCanonical(map, sourceId, newUrl, promoteId, owned, fade, sourceOptions);
 
   // 3) Once the NEW year has painted (ghost still covering), run the OVERLAP: canonical
   //    0→full while ghost full→0, rAF-driven over `duration`, ramp preserved every frame.

@@ -7,6 +7,10 @@
 //   • view          — { center: [lng,lat], zoom, minZoom, maxZoom }
 //   • sourceId      — what to name the GeoJSON source (referenced by layers)
 //   • promoteId     — optional property name to use as the feature id
+//   • sourceOptions — optional extra keys Object.assign'd into the geojson source
+//                     spec (e.g. { maxzoom: 12 } to cap geojson-vt tiling for a
+//                     point layer). Threaded through the year-swap recreate too, so
+//                     the swapped-in source keeps them.
 //   • layers        — array of MapLibre layer specs to add (source filled in)
 //   • images        — optional [{ id, make: () => ImageData }] for fill-pattern
 //   • onLoad        — optional (map) => void; called once after images +
@@ -47,6 +51,7 @@ export default function MapView({
   view,
   sourceId,
   promoteId,
+  sourceOptions,
   layers,
   images = [],
   onLoad,
@@ -180,6 +185,7 @@ export default function MapView({
 
       const sourceSpec = { type: "geojson", data: geojsonUrl };
       if (promoteId) sourceSpec.promoteId = promoteId;
+      if (sourceOptions) Object.assign(sourceSpec, sourceOptions);
       map.addSource(sourceId, sourceSpec);
 
       // Insert below the first basemap symbol layer so road / city labels
@@ -249,6 +255,7 @@ export default function MapView({
       oldUrl,
       newUrl: geojsonUrl,
       promoteId,
+      sourceOptions,
       baseLayers: layers,
       stateRef: crossFadeRef,
     }).catch((err) => console.warn("[MapView] crossFadeSource", err));

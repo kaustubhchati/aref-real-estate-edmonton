@@ -31,7 +31,12 @@ import {
   BASEMAP_STYLE,
   MAP_VIEW,
   permitCircleLayer,
+  permitHeatLayers,
+  HEAT_CATEGORIES,
+  heatRampColours,
+  HEAT_RAMP_MODE,
   buildPermitFilter,
+  buildHeatFilter,
   VALUE_BUCKETS,
   ALL_BUCKET_IDS,
   DEFAULT_ACTIVE_BUCKETS,
@@ -192,8 +197,22 @@ function PermitLegend({ activeBuckets, onToggle, onReset, activeGroup }) {
   );
 }
 
-// The circle layer spec — built once (MapView reads `layers` only at mount).
-const POINT_LAYERS = [permitCircleLayer()];
+// The map layers — built once (MapView reads `layers` only at mount). Two single-hue
+// heatmaps (the city OVERVIEW) UNDER the categorical dots (STREET level); they cross-fade
+// across the crossover band. Heatmaps first so the dots draw on top.
+const POINT_LAYERS = [...permitHeatLayers(), permitCircleLayer()];
+
+// The SMOOTH-mode density-legend gradient for one category, from its coloured ramp stops —
+// so the legend bar reads exactly the colours the map paints (one source of truth). Anchor
+// the pale colour at 0% so the bar starts pale (Fewer) and climbs its true non-linear lava
+// path to the deep core at 100% (More). No hue literal here — every colour comes from the ramp.
+function heatRampGradient(stops) {
+  const parts = [
+    `${stops[0].css} 0%`,
+    ...stops.map((s) => `${s.css} ${Math.round(s.d * 100)}%`),
+  ];
+  return `linear-gradient(to right, ${parts.join(", ")})`;
+}
 
 export default function BuildingPermitsMap() {
   // Year list + default come from the BP manifest (no literals); null until it
@@ -276,10 +295,17 @@ export default function BuildingPermitsMap() {
   // `map` + `loadedYear` so we don't filter before onLoad / the manifest land.
   useEffect(() => {
     if (!map || loadedYear == null) return;
+    // Dots: the type/month/value filter (includes the no-value exclusion).
     map.setFilter(
       LAYER_ID,
       buildPermitFilter(group, month, activeBuckets)
     );
+    // Heatmaps: the SAME filtered set, each ALSO gated to its own job_group, so heat and
+    // dots always show identical data. Picking a single Permit Type empties the other
+    // category's heatmap (its category ∩ the picked category = ∅) — same as the dots.
+    for (const { id, category } of HEAT_CATEGORIES) {
+      map.setFilter(id, buildHeatFilter(category, group, month, activeBuckets));
+    }
   }, [map, loadedYear, group, month, activeBuckets]);
 
   // Load the coverage table ONCE on mount. Supplementary to the map, so a failed
@@ -392,6 +418,10 @@ export default function BuildingPermitsMap() {
               view={MAP_VIEW}
               sourceId={SOURCE_ID}
               layers={POINT_LAYERS}
+              // Cap the geojson-vt tiling at z12: the points don't need finer tiles than
+              // the heat→dots crossover, and a lower source maxzoom means fewer tiles to
+              // build + fewer high-zoom tile edges for the large dots to clip against.
+              sourceOptions={{ maxzoom: 12 }}
               onLoad={(m) => {
                 // MapView is section-agnostic, so the BP-specific wiring lives here:
                 // popups/hover/fly-to, and disabling dbl-click-zoom (dbl-click = fly-to).
@@ -517,6 +547,52 @@ export default function BuildingPermitsMap() {
                 </span>
               </p>
             )}
+
+            {/* PERMIT DENSITY — the OVERVIEW heatmap legend (the representation you land on).
+                One row per hue (Residential lava orange→red, Commercial violet→magenta), built
+                from the SAME ramp the map paints (heatRampColours) so legend = map. It TRACKS
+                the mode: SMOOTH → a continuous gradient bar; STEPPED → discrete adjacent swatches
+                (the 5 contour-band colours) so it doubles as a contour key. Density is RELATIVE
+                (a KDE, not a count) — labelled honestly. Sits between the coverage note and the
+                dots' Construction Value legend: heat (overview) then dots (street), matching how
+                the map reveals as you zoom in. */}
+            <div className="pa-col-mod pa-col-heat">
+              <span className="pa-col-lab">Permit Density</span>
+              <div className="bp-heat-legend">
+                {HEAT_CATEGORIES.map(({ category, label }) => {
+                  // The five coloured stops (drop the transparent empty-density stop) — shared
+                  // by the smooth gradient AND the stepped swatches, so both render the map's
+                  // exact colours (one source of truth).
+                  const stops = heatRampColours(category).filter((s) => s.d > 0);
+                  return (
+                    <div key={category} className="bp-heat-row">
+                      <span className="bp-heat-cat">{label}</span>
+                      {HEAT_RAMP_MODE === "stepped" ? (
+                        <div className="bp-heat-swatches" aria-hidden="true">
+                          {stops.map((s) => (
+                            <span key={s.d} className="bp-heat-swatch" style={{ background: s.css }} />
+                          ))}
+                        </div>
+                      ) : (
+                        <div
+                          className="bp-heat-bar"
+                          style={{ background: heatRampGradient(stops) }}
+                          aria-hidden="true"
+                        />
+                      )}
+                      <div className="bp-heat-ends">
+                        <span>Fewer</span>
+                        <span>More</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="bp-heat-cap">
+                Relative permit density — heat shows where permits concentrate at the
+                overview; zoom in for individual permits.
+              </p>
+            </div>
 
             {/* CONSTRUCTION VALUE — the interactive value-tier filter. The title lives in
                 the module label; the tiers + reset are the PermitLegend below. */}

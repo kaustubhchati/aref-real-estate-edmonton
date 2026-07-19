@@ -108,15 +108,171 @@ function buildRadiusExpression() {
   ];
 }
 
+// ---- Scale-dependent representation: heat (overview) ↔ dots (street) --------
+// The POINT map shows TWO things depending on scale:
+//   • zoomed OUT (city overview) — two single-hue HEATMAPS (residential orange +
+//     commercial violet), so the eye reads DENSITY, not thousands of overlapping dots;
+//   • zoomed IN (street level)  — the categorical DOTS (the circle layer below).
+// They CROSS-FADE across a band just below the crossover: heat fades OUT while dots
+// fade IN over the SAME band, so neither pops. The crossover ≈ the "1 km" mark on the
+// scale bar at Edmonton's latitude (≈ zoom 12 — the "1 km" mark; MapLibre's 512px tiles).
+//
+// ONE knob re-dials the whole flip — HEAT_CROSSOVER. Move it and the band edges, the
+// heat fade-out, the dots fade-in AND the dots minzoom all follow (all derived below).
+// HEAT_BAND widens/narrows the crossfade. (Sweep HEAT_CROSSOVER to pick the flip point.)
+export const HEAT_CROSSOVER = 12;   // zoom of the heat→dots flip (~1 km scale bar, 53.5°N)
+export const HEAT_BAND = 1;         // crossfade width in zoom levels, immediately BELOW the crossover
+
+// Derived band edges — the SAME band drives heat-out and dots-in (a true crossfade).
+//   BAND_LO — heat FULL / dots ZERO.   BAND_HI (= the crossover) — heat ZERO / dots FULL.
+// HEAT_BAND must be > 0 (two equal interpolate inputs are illegal).
+const BAND_LO = HEAT_CROSSOVER - HEAT_BAND;   // heat FULL / dots ZERO (band low edge)
+const BAND_HI = HEAT_CROSSOVER;               // = the crossover: heat ZERO / dots FULL
+// The dots layer becomes AVAILABLE at the band start (BAND_LO), where its opacity is
+// still 0 — so it fades in with no pop-in AND never renders below the band. Tracking the
+// band (not HEAT_CROSSOVER-2) keeps invisible dots from being hover/click targets over
+// the heat at the overview (they don't exist below the crossover band at all).
+const DOTS_MINZOOM = BAND_LO;                 // dots exist only from the band up
+
+// The two categories that each get a heatmap: id + job_group value + its inherited hue +
+// a display label. One row = one heatmap layer AND one density-legend row. Declared ONCE so
+// the layer builder, the filter effect, AND the density legend (BuildingPermitsMap) iterate
+// the same pair — no restated id / colour / label anywhere else.
+export const HEAT_CATEGORIES = [
+  { id: "permits-heat-residential", category: "residential", label: "Residential", colour: COLOURS.residential },
+  { id: "permits-heat-commercial",  category: "commercial",  label: "Commercial",  colour: COLOURS.commercial  },
+];
+
+// ---- The INCANDESCENT density ramps (per-category lava / flame tracks) -----
+// Each category ramps from PALE (low density — recedes into the light basemap, "de-fog") to a
+// deep saturated CORE (high density). Crucially the hue ROTATES as density climbs — a lava
+// track — rather than just darkening in place: darkening orange in place walks it into BROWN
+// (brown = dark desaturated orange). Instead residential runs pale-warm → orange → red-orange
+// → deep RED, and commercial runs pale lilac → violet → deep magenta-purple. KC-authorized:
+// orange→red is still "the orange permit colour, incandescent not brown"; the purple stays
+// VIVID; no green anywhere.
+//
+// These literals ARE the ramp (no HSL derivation) — the ONE source both the map paint AND the
+// density legend read, keyed by CATEGORY. Matched density breakpoints (0.12 / 0.35 / 0.62 /
+// 0.85 / 1.00) so equal density reads equally strong in both hues — only the hue LINE differs.
+// Index 0 is the empty-density stop: the pale colour at ALPHA 0, so empty fades in the true
+// hue (not out of black); the five coloured stops (1..5) are pale → core.
+const HEAT_RAMPS = {
+  residential: [
+    { d: 0.00, css: "rgba(255,224,160,0)" },   // empty — pale-warm at alpha 0
+    { d: 0.12, css: "rgb(255,224,160)" },       // pale-warm
+    { d: 0.35, css: "rgb(255,168,66)" },        // orange
+    { d: 0.62, css: "rgb(240,110,40)" },        // red-orange
+    { d: 0.85, css: "rgb(214,58,32)" },         // red
+    { d: 1.00, css: "rgb(168,26,24)" },         // deep RED core
+  ],
+  commercial: [
+    { d: 0.00, css: "rgba(230,208,242,0)" },    // empty — pale lilac at alpha 0
+    { d: 0.12, css: "rgb(230,208,242)" },       // pale lilac
+    { d: 0.35, css: "rgb(178,108,212)" },       // violet
+    { d: 0.62, css: "rgb(150,55,192)" },        // violet → magenta
+    { d: 0.85, css: "rgb(146,30,168)" },        // deep magenta-purple
+    { d: 1.00, css: "rgb(118,14,116)" },        // magenta-purple core
+  ],
+};
+
+// SMOOTH vs STEPPED — the toggle KC sweeps. "smooth" = the interpolate lava ramp (blended);
+// "stepped" = 5 discrete CONTOUR bands (the same colours, snapped → concentric density rings).
+// heatColor() branches on this; the legend tracks it (gradient vs discrete swatches). Only the
+// map paint + legend rendering change — radius / intensity / opacity / crossover are frozen.
+export const HEAT_RAMP_MODE = "stepped";   // "smooth" | "stepped"
+
+// One category's ramp as CSS colour stops — THE single source both the map paint AND the
+// density legend read, so the legend shows exactly the colours the map paints. Returns
+// [{ d, css }] density-ordered; index 0 is the transparent empty-density stop, 1..5 the five
+// coloured stops (pale → core).
+export function heatRampColours(category) {
+  return HEAT_RAMPS[category];
+}
+
+// The heatmap-color expression for one category. Density 0 MUST be (near-)transparent (empty
+// stays map-colour). Built from heatRampColours so the colours live in exactly one place.
+//   • smooth  → interpolate along the lava track at the ramp's density stops.
+//   • stepped → step: the SAME five colours as discrete CONTOUR bands at denser-low
+//     thresholds (0.12 / 0.30 / 0.50 / 0.70 / 0.88) — 5 bands = clean concentric rings, not
+//     posterized. The step BREAKS differ from the smooth stops on purpose (fixed density
+//     steps); the band COLOURS are the five coloured stops, identical to smooth.
+function heatColor(category) {
+  const ramp = heatRampColours(category);
+  const c = ramp.map((s) => s.css);   // [empty, c1, c2, c3, c4, c5]
+  if (HEAT_RAMP_MODE === "stepped") {
+    return [
+      "step", ["heatmap-density"],
+      "rgba(0,0,0,0)",   // < 0.12 — transparent
+      0.12, c[1],        // c1 pale
+      0.30, c[2],        // c2
+      0.50, c[3],        // c3
+      0.70, c[4],        // c4
+      0.88, c[5],        // c5 core
+    ];
+  }
+  return [
+    "interpolate", ["linear"], ["heatmap-density"],
+    ...ramp.flatMap(({ d, css }) => [d, css]),
+  ];
+}
+
+// ---- Heat radius / intensity dials -----------------------------------------
+// The light→dark ramp now does most of the de-fog (pale low density fades into the light
+// map), so radius stays MODERATE — tight enough for defined cores, wide enough to still read
+// as density. Intensity is kept modest so mid areas sit MID-ramp, not blown to the dark core.
+// (The old tailCut / core fields are gone — the ramp itself IS the de-fog now.) Both
+// categories share the dials; each ramps in its OWN hue. Sweep HEAT_TUNING to pick the look.
+export const HEAT_TUNINGS = {
+  tight:    { radius: [8, 6,  11, 11, HEAT_CROSSOVER, 15], intensity: [8, 1.1, HEAT_CROSSOVER, 1.8] },
+  moderate: { radius: [8, 8,  11, 14, HEAT_CROSSOVER, 18], intensity: [8, 1.0, HEAT_CROSSOVER, 1.6] },
+  soft:     { radius: [8, 10, 11, 18, HEAT_CROSSOVER, 22], intensity: [8, 0.9, HEAT_CROSSOVER, 1.4] },
+};
+export const HEAT_TUNING = HEAT_TUNINGS.moderate;   // ← the knob KC picks
+
+// One heatmap layer for a job_group. Returned WITHOUT `source` (MapView fills it in), like
+// permitCircleLayer(). Residential ramps the LAVA track (orange→red), commercial the
+// violet→magenta track, so the masses read separately where they overlap. Radius / intensity
+// from HEAT_TUNING; the incandescent colour ramp from heatColor (category-keyed, mode-aware).
+function buildHeatLayer(id, category) {
+  return {
+    id,
+    type: "heatmap",
+    // No heat above the crossover (dots own street level); +0.5 so it's fully faded before drop.
+    maxzoom: HEAT_CROSSOVER + 0.5,
+    filter: ["==", ["get", "job_group"], category],
+    paint: {
+      // Every permit counts equally — density is how many fall together (construction value is
+      // the DOTS' encoding, not the heat's).
+      "heatmap-weight": 1,
+      "heatmap-radius": ["interpolate", ["linear"], ["zoom"], ...HEAT_TUNING.radius],
+      "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], ...HEAT_TUNING.intensity],
+      "heatmap-color": heatColor(category),
+      // The crossfade OUT: full-ish at/below BAND_LO → gone at/above BAND_HI (the crossover) —
+      // mirrors the dots' fade-IN across the SAME band. Kept HIGH in-band (its job is the
+      // crossfade, not softening the heat). Ramp-preserving under the year-swap.
+      "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], BAND_LO, 0.95, BAND_HI, 0],
+    },
+  };
+}
+
+// Both heatmap layers, WITHOUT `source` (MapView fills it), in stack order UNDER the dots.
+// POINT_LAYERS = [...permitHeatLayers(), permitCircleLayer()].
+export function permitHeatLayers() {
+  return HEAT_CATEGORIES.map(({ id, category }) => buildHeatLayer(id, category));
+}
+
 // ---- The circle layer spec -------------------------------------------------
 // Returned WITHOUT `source` (the shared MapView fills that in). Colour by
 // job_group, size by construction-value tier, white halo so dots stay distinct
 // on the light Voyager basemap. No "source-layer": the source is plain GeoJSON.
+// minzoom = DOTS_MINZOOM: the dots live only from just below the crossover up, so the
+// overview belongs to the heatmaps; circle-opacity fades them in across [BAND_LO, BAND_HI].
 export function permitCircleLayer() {
   return {
     id: LAYER_ID,
     type: "circle",
-    minzoom: 9,
+    minzoom: DOTS_MINZOOM,
     // Base exclusion: no-value permits NEVER render. Present in the layer spec (not only in
     // buildPermitFilter's setFilter) so the exclusion holds from mount — before the React filter
     // effect runs — which keeps the no-fallback radius above from ever seeing an absent value.
@@ -139,15 +295,27 @@ export function permitCircleLayer() {
       // replace rather than tween — same per-year model as the choropleth.
       "circle-color-transition": paintTransition(DUR_BASE),
       "circle-radius": buildRadiusExpression(),
+      // The crossfade IN — mirror of the heatmaps' fade OUT over the SAME band:
+      // 0 at/below BAND_LO (hidden beneath the heat over the overview) → 0.75 at BAND_HI
+      // (the crossover), then the unchanged 0.88 far stop. Below BAND_LO the interpolate
+      // clamps to 0, so the dots are fully transparent under the heat.
       "circle-opacity": [
         "interpolate", ["linear"], ["zoom"],
-        9, 0.55, 13, 0.75, 18, 0.88,
+        BAND_LO, 0, BAND_HI, 0.75, 18, 0.88,
       ],
       "circle-stroke-width": [
         "interpolate", ["linear"], ["zoom"],
         9, 0.8, 14, 1.5, 18, 2.0,
       ],
       "circle-stroke-color": "rgba(255,255,255,0.9)",
+      // The white halo MUST fade with the fill across the crossover band. circle-stroke-opacity
+      // defaults to 1, so without this the stroke keeps drawing hollow white rings over the heat
+      // at the overview (the fill alone at opacity 0 is not enough to hide a dot). Same
+      // [BAND_LO, BAND_HI] gate as circle-opacity: 0 beneath the heat → full at the crossover.
+      "circle-stroke-opacity": [
+        "interpolate", ["linear"], ["zoom"],
+        BAND_LO, 0, BAND_HI, 1,
+      ],
     },
   };
 }
@@ -332,6 +500,21 @@ export function buildPermitFilter(group, month, activeBucketIds) {
   }
 
   return ["all", ...clauses];
+}
+
+// Heatmap filter = the SAME filtered set as the dots, PLUS this heatmap's own category.
+// So a heatmap shows exactly the permits of its job_group that ALSO pass the type / month /
+// value filter (and the no-value exclusion — that lives inside buildPermitFilter, shared).
+// When the user picks Permit Type = Commercial, buildPermitFilter adds
+// job_group==commercial, so the RESIDENTIAL heatmap resolves to residential ∩ commercial =
+// ∅ (empty) and vice-versa — exactly the behaviour we want. A nested ["all", …] inside an
+// ["all", …] is legal MapLibre (flattens to one AND).
+export function buildHeatFilter(category, group, month, activeBucketIds) {
+  return [
+    "all",
+    ["==", ["get", "job_group"], category],
+    buildPermitFilter(group, month, activeBucketIds),
+  ];
 }
 
 // Re-export the bucket symbols so BuildingPermitsMap only needs one import
