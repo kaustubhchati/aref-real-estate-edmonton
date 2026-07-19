@@ -1,17 +1,24 @@
 // =============================================================================
 // BuildingPermitsMap.jsx
 //
-// The Building Permits route (nav leaf "Construction & Improvement"). A .sb
-// sidebar of controls beside a full-bleed .canvas-wrap holding the map. This is
-// a POINT-symbol map (orange/violet dots), now on the SHARED components/MapView
-// with a per-year GeoJSON source (one file per year under permit-points/).
+// The Building Permits route (nav leaf "Construction & Improvement"). STANDARDIZED
+// to the Property Assessment instrument chrome (DESIGN_SYSTEM.md): a full-bleed
+// .canvas-wrap map underlaid by the transparent .pa-float instrument column. BP is
+// single-city + NON-console, so it carries ONE .pa-card-instrument holding every
+// module (title → year → permit type → month → coverage → construction value →
+// selected permit → source) — no Data Console, no KPI rail, no city switcher.
+//
+// This is a POINT-symbol map (orange/violet dots) on the SHARED components/MapView
+// with a per-year GeoJSON source (one file per year under permit-points/). The map,
+// filters, popups, dots, cross-fade and camera are UNCHANGED — this file is a
+// chrome/layout re-skin only.
 //
 // The Year slider swaps the source file (MapView recreates the source); Permit type
 // (job_group), Month, and the construction-value tiers are client-side
 // map.setFilter on the loaded year (instant, no refetch).
 // =============================================================================
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import MapView from "../../components/MapView.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
@@ -56,8 +63,11 @@ function coverageForYear(rows, year) {
 // The construction-value tier selector: a 5-card grid. Each card is a native
 // <button> (free keyboard + touch a11y) showing a proportional circle coloured
 // to the active permit type — solid for a single group, a diagonal split
-// gradient (orange/violet) for "All". Active cards carry a coloured border + bg;
-// inactive cards a dashed ring + dimmed. Reuses existing tokens (no new CSS).
+// gradient (orange/violet) for "All". Dark-skinned to the DESIGN_SYSTEM instrument
+// column: inactive = quiet glass key + dimmed (that tier is hidden on the map);
+// active = the shared petrol/pearl/teal active material (§6, matches the metric
+// chips). The circle FILLS are DATA (§1.3, unchanged); the "Construction Value"
+// title now lives in the module's .pa-col-lab above, not in here.
 function PermitLegend({ activeBuckets, onToggle, onReset, activeGroup }) {
   const allActive = activeBuckets.size === ALL_BUCKET_IDS.length;
 
@@ -65,8 +75,8 @@ function PermitLegend({ activeBuckets, onToggle, onReset, activeGroup }) {
   // "All" → diagonal split gradient (both colours visible).
   // Single group → solid colour matching map dots.
   const isAll = activeGroup === "All";
-  const resColour = COLOURS.residential;  // #f57c00 orange
-  const comColour = COLOURS.commercial;   // #7b2fa0 violet
+  const resColour = COLOURS.residential;  // #f57c00 orange (DATA — §1.3)
+  const comColour = COLOURS.commercial;   // #7b2fa0 violet (DATA — §1.3)
 
   // Gradient id must be unique per bucket to avoid SVG id collisions.
   function circleContent(bucketId, radius) {
@@ -87,7 +97,7 @@ function PermitLegend({ activeBuckets, onToggle, onReset, activeGroup }) {
           </defs>
           <circle cx={cx} cy={cy} r={radius}
             fill={`url(#${gradId})`}
-            stroke="rgba(255,255,255,0.8)"
+            stroke="rgba(255,255,255,0.85)"
             strokeWidth="1.2"
           />
         </svg>
@@ -100,7 +110,7 @@ function PermitLegend({ activeBuckets, onToggle, onReset, activeGroup }) {
         aria-hidden="true">
         <circle cx={cx} cy={cy} r={radius}
           fill={colour}
-          stroke="rgba(255,255,255,0.8)"
+          stroke="rgba(255,255,255,0.85)"
           strokeWidth="1.2"
         />
       </svg>
@@ -108,64 +118,30 @@ function PermitLegend({ activeBuckets, onToggle, onReset, activeGroup }) {
   }
 
   // Tier radii matching VALUE_BUCKETS proportions:
-  // micro=4, small=6, medium=8, large=11, major=15
+  // micro=4, small=6, medium=8, large=11, major=15. Legend-only scale (kept
+  // separate from the map tier-multiplier by purpose).
   const TIER_RADII = [4, 6, 8, 11, 15];
 
   return (
-    <div className="legend">
+    <div className="bp-tiers">
 
-      {/* ── Section header + reset ─────────────────── */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginBottom: 8,
-      }}>
-        <span className="legend-title" style={{ margin: 0 }}>
-          Construction value
-        </span>
-        {!allActive && (
-          <button
-            type="button"
-            onClick={onReset}
-            style={{
-              fontSize: "0.66rem",
-              padding: "2px 9px",
-              borderRadius: 999,
-              border: "1px solid var(--border)",
-              background: "var(--bg-soft)",
-              color: "var(--text-muted)",
-              fontFamily: "inherit",
-              cursor: "pointer",
-              lineHeight: 1.6,
-              transition: "border-color 120ms, color 120ms",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "var(--text-muted)";
-              e.currentTarget.style.color = "var(--text)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "var(--border)";
-              e.currentTarget.style.color = "var(--text-muted)";
-            }}
-          >
-            Show all
-          </button>
-        )}
+      {/* Reset — the §6 both-clears idiom: coral when there's a hidden tier to
+          restore, muted + inert (slot held — Principle 0) when every tier shows. */}
+      <div className="bp-tiers-head">
+        <button
+          type="button"
+          className="bp-tier-reset"
+          onClick={onReset}
+          disabled={allActive}
+        >
+          Show All
+        </button>
       </div>
 
-      {/* ── 5-card grid ────────────────────────────── */}
-      {/* Each card is a native <button> — pointer cursor,
-          keyboard (Tab/Enter/Space), and 44px+ touch
-          targets come for free. No SVG role="button"
-          fragility. Card border = on/off signal,
-          independent of circle size. */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(5, 1fr)",
-        gap: 4,
-        marginBottom: 6,
-      }}>
+      {/* 5-card grid — each card is a native <button>: pointer cursor, keyboard
+          (Tab/Enter/Space) and touch targets for free. The .active class carries
+          the on/off signal (independent of circle size). */}
+      <div className="bp-tier-grid">
         {VALUE_BUCKETS.map((b, i) => {
           const active = activeBuckets.has(b.id);
           const radius = TIER_RADII[i];
@@ -174,61 +150,16 @@ function PermitLegend({ activeBuckets, onToggle, onReset, activeGroup }) {
             <button
               key={b.id}
               type="button"
+              className={`bp-tier-btn${active ? " active" : ""}`}
               onClick={() => onToggle(b.id)}
               aria-pressed={active}
               aria-label={`${b.label}: ${
                 active ? "visible, click to hide"
                        : "hidden, click to show"
               }`}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "flex-end",
-                gap: 4,
-                padding: "7px 3px 6px",
-                minHeight: 52,
-                borderRadius: 7,
-                // Gel tier card: green raised when active, cream raised when
-                // inactive. The group colour (orange/violet/split) still reads
-                // from the circle inside the card, so coding isn't lost.
-                border: active
-                  ? "1.5px solid rgba(46,125,50,0.35)"
-                  : "1px solid rgba(0,0,0,0.12)",
-                background: active
-                  ? "linear-gradient(180deg, #e8f5e9 0%, #c8e6c9 100%)"
-                  : "linear-gradient(180deg, #f8f6f2 0%, #e8e4dc 100%)",
-                boxShadow: active
-                  ? "0 1px 0 rgba(255,255,255,0.8) inset, 0 -1px 0 rgba(0,0,0,0.08) inset, 0 1px 3px rgba(46,125,50,0.18)"
-                  : "0 1px 0 rgba(255,255,255,0.9) inset, 0 -1px 0 rgba(0,0,0,0.06) inset, 0 1px 2px rgba(0,0,0,0.10)",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                transition:
-                  "opacity 150ms, border-color 150ms, background 150ms",
-                opacity: active ? 1 : 0.42,
-              }}
-              onMouseEnter={(e) => {
-                if (!activeBuckets.has(b.id)) {
-                  e.currentTarget.style.opacity = "0.72";
-                  e.currentTarget.style.borderColor =
-                    "var(--text-muted)";
-                } else {
-                  // Slight deepen on hover for active cards
-                  e.currentTarget.style.filter =
-                    "brightness(0.94)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity =
-                  activeBuckets.has(b.id) ? "1" : "0.42";
-                e.currentTarget.style.borderColor = active
-                  ? "rgba(46,125,50,0.35)"
-                  : "rgba(0,0,0,0.12)";
-                e.currentTarget.style.filter = "";
-              }}
             >
-              {/* Circle — filled when active, dashed
-                  outline when inactive. Size = tier size. */}
+              {/* Circle — filled (DATA colour) when active, dashed outline when
+                  inactive. Size = tier size. */}
               {active
                 ? circleContent(b.id, radius)
                 : (
@@ -243,40 +174,20 @@ function PermitLegend({ activeBuckets, onToggle, onReset, activeGroup }) {
                       cy={radius + 2}
                       r={radius}
                       fill="none"
-                      stroke="var(--text-muted)"
+                      stroke="var(--pa-mut)"
                       strokeWidth="1.2"
                       strokeDasharray="2 1.5"
                     />
                   </svg>
                 )
               }
-
-              {/* Label below circle */}
-              <span style={{
-                fontSize: "0.58rem",
-                lineHeight: 1.2,
-                textAlign: "center",
-                color: active
-                  ? "var(--text)"
-                  : "var(--text-muted)",
-                wordBreak: "break-all",
-                hyphens: "auto",
-                maxWidth: "100%",
-              }}>
-                {b.label}
-              </span>
+              <span className="bp-tier-lab">{b.label}</span>
             </button>
           );
         })}
       </div>
 
-      <p style={{
-        fontSize: "0.66rem",
-        color: "var(--text-muted)",
-        lineHeight: 1.4,
-      }}>
-        Click any tier to show or hide.
-      </p>
+      <p className="bp-tier-hint">Click any tier to show or hide.</p>
     </div>
   );
 }
@@ -407,24 +318,6 @@ export default function BuildingPermitsMap() {
     return () => { document.title = "Open Data Centre"; };
   }, [year]);
 
-  // Bottom-shadow cue when the sidebar overflows (content continues below).
-  const sbRef = useRef(null);
-  useEffect(() => {
-    const el = sbRef.current;
-    if (!el) return;
-    const check = () => {
-      const overflows = el.scrollHeight > el.clientHeight + 4;
-      el.classList.toggle("sb-scroll-shadow", overflows);
-    };
-    check();
-    el.addEventListener("scroll", check);
-    window.addEventListener("resize", check);
-    return () => {
-      el.removeEventListener("scroll", check);
-      window.removeEventListener("resize", check);
-    };
-  }, []);
-
   // No-coordinate count for the LOADED year (not the live drag value) — the note describes the
   // data actually on the map. The no-coord share spikes in recent years (City geocoding lag), so
   // stating it is honest rather than silently understating.
@@ -433,6 +326,26 @@ export default function BuildingPermitsMap() {
   // it rolls forward with the data (was a "2009–2026" literal).
   const yearSpan = years.length ? `${Math.min(...years)}–${Math.max(...years)}` : "";
   const nNoCoord = cov ? Number(cov.n_no_coord) : 0;
+
+  // Total mapped permit points across all years, for the source citation — the sum of
+  // the per-year mapped counts (n_mapped = permits WITH coordinates = the dots this map
+  // serves). Derived from the coverage table so it tracks the data on refresh, replacing
+  // a stale hardcoded "226,184". Verified equal to the total feature count across the
+  // per-year GeoJSONs (§6/§9 refresh-by-design — no year/data literals in the frontend).
+  const totalPoints = useMemo(
+    () => coverage.reduce((sum, r) => sum + (Number(r.n_mapped) || 0), 0),
+    [coverage]
+  );
+
+  // Year slider fill %: 0–100 across the manifest's year range, feeding the PA slider's
+  // thumb-width-aware track fill via `--pct` (matches consoleControls' YearSliderRow).
+  const yearPct = years.length && year != null
+    ? ((year - Math.min(...years)) / ((Math.max(...years) - Math.min(...years)) || 1)) * 100
+    : 0;
+
+  // Month slider fill %: 0 (All Months) → 12 (December), feeding the SAME --pct track fill
+  // as Year so the two column sliders read identically.
+  const monthPct = (month / 12) * 100;
 
   // Filter-aware honesty counts, computed from the LOADED features + the live filter (mirrors
   // buildPermitFilter) so the note describes exactly what's on the map right now, not the whole
@@ -463,217 +376,196 @@ export default function BuildingPermitsMap() {
   const pointsUrl = loadedYear != null ? resolvePermitPointsUrl(loadedYear) : null;
 
   return (
-    <article className="content-map">
-      <aside ref={sbRef} className="sb" aria-label="Map sidebar">
-        {/* Fixed-width holder so content never reflows as .sb animates its width — see .sb-inner in index.css. */}
-        <div className="sb-inner">
-        <div className="sb-header">
-          <p className="eyebrow">Building Activity</p>
-          <h1 className="sb-title">Edmonton — {year ?? "…"}</h1>
+    <article className="content-map pa-map">
+      <div className="pa-canvas">
+        {/* ===== FULL-BLEED MAP CANVAS (PA standard) — the map is the FIRST child so it
+             underlays the floating instrument column. Per-year GeoJSON point map on the
+             shared MapView; the Year slider changes geojsonUrl -> MapView recreates the
+             source. Behaviour is UNCHANGED — this is a chrome/layout re-skin. ===== */}
+        <div className="canvas-wrap">
+          {!map && <MapSkeleton />}
+          {pointsUrl && (
+            <MapView
+              className="canvas"
+              basemapStyle={BASEMAP_STYLE}
+              geojsonUrl={pointsUrl}
+              view={MAP_VIEW}
+              sourceId={SOURCE_ID}
+              layers={POINT_LAYERS}
+              onLoad={(m) => {
+                // MapView is section-agnostic, so the BP-specific wiring lives here:
+                // popups/hover/fly-to, and disabling dbl-click-zoom (dbl-click = fly-to).
+                wirePermitPopup(m, setClickedFeature);
+                m.doubleClickZoom.disable();
+                // Land on the SAME pitched HOME camera as PA / DU / BC (the shared mapCamera
+                // preset) — a jump under the skeleton, matching their first-load. The Year slider
+                // swaps the source, never the camera, so this fires once.
+                applyCameraPreset(m, HOME_VIEW.Edmonton, { ease: false });
+                setMap(m);
+              }}
+            />
+          )}
         </div>
 
-        <section className="sb-section">
-          <div className="sb-select-field">
-            <span className="sb-select-label">
-              Year <strong className="sb-year-value">{year ?? "…"}</strong>
-            </span>
-            {/* Each year is its own GeoJSON file: moving the slider swaps the
-                source (MapView recreates it) and the type/month/value filter re-applies.
-                min/max come from the manifest year list (no literals); years are
-                contiguous so step = 1 maps every position to a real year. */}
-            {year != null && (
+        {/* ===== INSTRUMENT COLUMN (PA standard, adapted) — BP is single-city +
+             non-console, so ONE .pa-card-instrument holds every module. The transparent
+             .pa-float keeps its measured width; the card carries the dark surface. ===== */}
+        <div className="pa-float pa-column pa-column-lean">
+          <section className="pa-card pa-card-instrument">
+
+            {/* TITLE — the section name (the live year rides the Year readout below). */}
+            <div className="pa-col-mod pa-col-title">
+              <h2 className="pa-id-title">Building Permits</h2>
+            </div>
+
+            {/* YEAR — the slider swaps the per-year source (MapView recreates it) and the
+                type/month/value filter re-applies. min/max come from the manifest year
+                list (no literals); step = 1 maps every position to a real year. Re-classed
+                to the shared PA dark slider (--pct drives the teal track fill). */}
+            <div className="pa-col-mod pa-col-year">
+              <span className="pa-col-lab">
+                Year <strong className="pa-col-read">{year ?? "…"}</strong>
+              </span>
+              {year != null && (
+                <input
+                  type="range"
+                  className="pa-slider pa-year-slider"
+                  aria-label="Year"
+                  min={Math.min(...years)}
+                  max={Math.max(...years)}
+                  step={1}
+                  value={year}
+                  style={{ "--pct": yearPct }}
+                  onChange={(e) => setYear(Number(e.target.value))}
+                />
+              )}
+            </div>
+
+            {/* PERMIT TYPE — colour-dot chips. The dots are DATA (orange/violet,
+                dual-encoded with the label, §1.3); the chip chrome is the shared §6
+                glass-key chassis (the .opt-toggle-btn dark skin — active = petrol/pearl/
+                teal). Not the monochrome SegmentedControl — it can't carry the data colour. */}
+            <div className="pa-col-mod pa-col-type">
+              <span className="pa-col-lab">Permit Type</span>
+              <div className="opt-toggle-buttons bp-type-toggle">
+                {[
+                  { key: "All",         colour: null },
+                  { key: "Residential", colour: COLOURS.residential },
+                  { key: "Commercial",  colour: COLOURS.commercial  },
+                ].map(({ key, colour }) => {
+                  const isActive = group === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`opt-toggle-btn${isActive ? " active" : ""}`}
+                      onClick={() => setGroup(key)}
+                      aria-pressed={isActive}
+                    >
+                      {colour && (
+                        <svg className="bp-type-dot" width="8" height="8" viewBox="0 0 8 8"
+                          aria-hidden="true">
+                          <circle
+                            cx="4" cy="4" r="3.5"
+                            fill={isActive ? colour : "none"}
+                            stroke={colour}
+                            strokeWidth="1.2"
+                          />
+                        </svg>
+                      )}
+                      {key}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* MONTH — a slider (0 = All Months, 1–12 = Jan–Dec), the standard column
+                control matching Year. The readout names the month; monthPct drives the
+                same teal --pct track fill. Filters the loaded year in place (setMonth). */}
+            <div className="pa-col-mod pa-col-month">
+              <span className="pa-col-lab">
+                Month <strong className="pa-col-read">{MONTHS[month]?.label ?? "…"}</strong>
+              </span>
               <input
                 type="range"
-                className="sb-year-slider"
-                aria-label="Year"
-                min={Math.min(...years)}
-                max={Math.max(...years)}
+                className="pa-slider pa-month-slider"
+                aria-label="Month"
+                min={0}
+                max={12}
                 step={1}
-                value={year}
-                onChange={(e) => setYear(Number(e.target.value))}
+                value={month}
+                style={{ "--pct": monthPct }}
+                onChange={(e) => setMonth(Number(e.target.value))}
               />
+            </div>
+
+            {/* COVERAGE — the §6 honesty label (muted tier): ONE combined, filter-aware
+                statement. Headlines the SHOWN count (recomputes on type/month/tier), then
+                the two involuntary exclusions at year scope — no map location (the geocoding
+                cliff, with its %) and no construction value. Same condition + text +
+                fmtNumber calls as before. */}
+            {cov && points.year === loadedYear && (
+              <p className="pa-col-mod pa-col-note">
+                <span className="pa-col-note-mark" aria-hidden="true">⚠</span>
+                <span>
+                  Showing {fmtNumber(shownStats.nShown)} permits.{" "}
+                  Of {fmtNumber(Number(cov.n_total))} for {loadedYear},{" "}
+                  {fmtNumber(nNoCoord)} ({Math.round(Number(cov.pct_no_coord) * 100)}%){" "}
+                  have no map location and {fmtNumber(shownStats.nMappedNoValue)}{" "}
+                  have no construction value, so they cannot be shown.
+                </span>
+              </p>
             )}
-          </div>
 
-          {/* Permit type — colour-coded filter chips (the real control). Each
-              chip carries the same hue as its map dots, so selecting one reads
-              directly: "show the orange/violet dots". */}
-          <div style={{ marginBottom: 12 }}>
-            <div className="opt-toggle-label">Permit type</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "nowrap", overflow: "hidden" }}>
-              {[
-                { key: "All",         colour: null },
-                { key: "Residential", colour: COLOURS.residential },
-                { key: "Commercial",  colour: COLOURS.commercial  },
-              ].map(({ key, colour }) => {
-                const isActive = group === key;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setGroup(key)}
-                    aria-pressed={isActive}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: colour ? 5 : 0,
-                      padding: "4px 11px",
-                      borderRadius: 999,
-                      border: `1.5px solid ${
-                        isActive && colour ? colour
-                        : isActive        ? "var(--accent)"
-                        :                   "var(--border)"
-                      }`,
-                      background: isActive && colour
-                        ? colour + "18"
-                        : isActive
-                          ? "var(--accent-soft)"
-                          : "transparent",
-                      color: isActive && colour
-                        ? colour
-                        : isActive
-                          ? "var(--accent-dark)"
-                          : "var(--text-muted)",
-                      fontSize: "0.78rem",
-                      fontWeight: isActive ? 600 : 400,
-                      fontFamily: "inherit",
-                      cursor: "pointer",
-                      lineHeight: 1.5,
-                      // Gel: raised glossy lift on the active chip only.
-                      boxShadow: isActive
-                        ? "0 1px 0 rgba(255,255,255,0.8) inset, 0 1px 3px rgba(0,0,0,0.14)"
-                        : undefined,
-                      transition:
-                        "background 150ms, border-color 150ms, color 150ms",
-                    }}
-                  >
-                    {colour && (
-                      <svg width="8" height="8" viewBox="0 0 8 8"
-                        aria-hidden="true">
-                        <circle
-                          cx="4" cy="4" r="3.5"
-                          fill={isActive ? colour : "none"}
-                          stroke={colour}
-                          strokeWidth="1.2"
-                        />
-                      </svg>
-                    )}
-                    {key}
-                  </button>
-                );
-              })}
+            {/* CONSTRUCTION VALUE — the interactive value-tier filter. The title lives in
+                the module label; the tiers + reset are the PermitLegend below. */}
+            <div className="pa-col-mod pa-col-legend">
+              <span className="pa-col-lab">Construction Value</span>
+              <PermitLegend
+                activeBuckets={activeBuckets}
+                onToggle={toggleBucket}
+                onReset={resetBuckets}
+                activeGroup={group}
+              />
             </div>
-          </div>
 
-          <div className="sb-select-field">
-            <span className="sb-select-label">Month</span>
-            <select
-              className="sb-select"
-              aria-label="Month"
-              value={month}
-              onChange={(e) => setMonth(Number(e.target.value))}
-            >
-              {MONTHS.map((m) => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
-          </div>
-        </section>
-
-        {/* Honesty label (§6): ONE combined, filter-aware statement. Headlines the SHOWN count
-            (the true rendered set, recomputes on type/month/tier), then the two involuntary
-            exclusions at year scope — no map location (the geocoding cliff, kept with its %) and
-            no construction value. ⚠ prefix + existing tokens, no new CSS. */}
-        {cov && points.year === loadedYear && (
-          <p style={{
-            fontSize: "0.75rem",
-            color: "var(--text-muted)",
-            lineHeight: 1.45,
-            margin: "4px 0 10px",
-            display: "flex",
-            gap: 5,
-            alignItems: "flex-start",
-          }}>
-            <span aria-hidden="true"
-              style={{ flex: "0 0 auto", marginTop: 1 }}>
-              ⚠
-            </span>
-            <span>
-              Showing {fmtNumber(shownStats.nShown)} permits.{" "}
-              Of {fmtNumber(Number(cov.n_total))} for {loadedYear},{" "}
-              {fmtNumber(nNoCoord)} ({Math.round(Number(cov.pct_no_coord) * 100)}%){" "}
-              have no map location and {fmtNumber(shownStats.nMappedNoValue)}{" "}
-              have no construction value, so they cannot be shown.
-            </span>
-          </p>
-        )}
-
-        <section className="sb-section">
-          <PermitLegend
-            activeBuckets={activeBuckets}
-            onToggle={toggleBucket}
-            onReset={resetBuckets}
-            activeGroup={group}
-          />
-        </section>
-
-        {/* Pattern B — last-clicked dot panel (point map: click, not hover). */}
-        {clickedFeature ? (
-          <section className="sb-section sb-hover-panel">
-            <p className="sb-hover-name">{clickedFeature.address ?? "—"}</p>
-            <div className="sb-hover-rows">
-              <div className="sb-hover-row">
-                <span className="sb-hover-k">Building type</span>
-                <span className="sb-hover-v">{stripBuildingCode(clickedFeature.building_type ?? "")}</span>
-              </div>
-              <div className="sb-hover-row">
-                <span className="sb-hover-k">Construction value</span>
-                <span className="sb-hover-v">{fmtCurrency(clickedFeature.construction_value)}</span>
-              </div>
+            {/* SELECTED PERMIT — the last-clicked dot (point map: click, not hover).
+                Fixed-height slot (Principle 0) so the column doesn't jump on pick. */}
+            <div className="pa-col-mod pa-col-detail-mod">
+              {clickedFeature ? (
+                <div className="pa-col-detail">
+                  <p className="pa-col-detail-name">{clickedFeature.address ?? "—"}</p>
+                  <div className="pa-col-detail-rows">
+                    <div className="pa-col-detail-row">
+                      <span className="pa-col-detail-k">Building Type</span>
+                      <span className="pa-col-detail-v">{stripBuildingCode(clickedFeature.building_type ?? "")}</span>
+                    </div>
+                    <div className="pa-col-detail-row">
+                      <span className="pa-col-detail-k">Construction Value</span>
+                      <span className="pa-col-detail-v">{fmtCurrency(clickedFeature.construction_value)}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="pa-col-detail-empty">
+                  <p className="pa-col-detail-hint">Click a permit dot for detail</p>
+                </div>
+              )}
             </div>
-          </section>
-        ) : (
-          <section className="sb-section sb-hover-panel sb-hover-empty">
-            <p className="sb-hover-hint">Click a permit dot for detail</p>
-          </section>
-        )}
 
-        <p className="sb-ref" style={{
-          borderTop: "1px solid var(--border-soft)",
-          paddingTop: 10,
-          marginTop: 8,
-        }}>
-          Source: City of Edmonton Open Data (24uj-dj8v). 226,184 permit points,
-          {yearSpan}.
-        </p>
-        </div>{/* /sb-inner */}
-      </aside>
+            {/* SOURCE — a provenance citation reads at the PRIMARY tier (§6 carve-out).
+                The point total is DERIVED from the coverage table (sum of mapped permits),
+                so it tracks the data instead of a stale literal. */}
+            <div className="pa-col-mod pa-col-foot">
+              <p className="pa-col-cite">
+                Source: City of Edmonton Open Data (24uj-dj8v).{" "}
+                {coverage.length ? fmtNumber(totalPoints) : "…"} permit points, {yearSpan}.
+              </p>
+            </div>
 
-      <div className="canvas-wrap">
-        {/* Per-year GeoJSON point map on the shared MapView; skeleton until the
-            first paint. The Year slider changes geojsonUrl -> MapView recreates the source. */}
-        {!map && <MapSkeleton />}
-        {pointsUrl && (
-          <MapView
-            className="canvas"
-            basemapStyle={BASEMAP_STYLE}
-            geojsonUrl={pointsUrl}
-            view={MAP_VIEW}
-            sourceId={SOURCE_ID}
-            layers={POINT_LAYERS}
-            onLoad={(m) => {
-              // MapView is section-agnostic, so the BP-specific wiring lives here:
-              // popups/hover/fly-to, and disabling dbl-click-zoom (dbl-click = fly-to).
-              wirePermitPopup(m, setClickedFeature);
-              m.doubleClickZoom.disable();
-              // Land on the SAME pitched HOME camera as PA / DU / BC (the shared mapCamera
-              // preset) — a jump under the skeleton, matching their first-load. The Year slider
-              // swaps the source, never the camera, so this fires once.
-              applyCameraPreset(m, HOME_VIEW.Edmonton, { ease: false });
-              setMap(m);
-            }}
-          />
-        )}
+          </section>
+        </div>
       </div>
     </article>
   );

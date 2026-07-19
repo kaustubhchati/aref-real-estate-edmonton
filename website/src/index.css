@@ -1902,9 +1902,11 @@ p  { margin: 0 0 0.75rem; }
    periwinkle band. Static, GPU-cheap (only the 1–2 active elements), text/fill untouched. */
 .pa-col-metric .seg-btn.active,
 .pa-column .opt-toggle-btn.active,
+.pa-column .bp-tier-btn.active,
 .dt-panel .dt-metric .seg-btn.active { position: relative; }
 .pa-col-metric .seg-btn.active::after,
 .pa-column .opt-toggle-btn.active::after,
+.pa-column .bp-tier-btn.active::after,
 .dt-panel .dt-metric .seg-btn.active::after {
   content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
   background: var(--accent-rim-image); pointer-events: none;
@@ -1954,12 +1956,14 @@ p  { margin: 0 0 0.75rem; }
 /* C1 — thumb-width-aware fill: the fill's right edge tracks the 13px thumb's CENTRE
    (6.5px + pct·(track − thumb)) instead of the raw pct%, so it never overshoots the thumb
    at the extremes. --pct is unitless 0–100 (set by the JSX). */
-.pa-column .pa-year-slider::-webkit-slider-runnable-track {
+.pa-column .pa-year-slider::-webkit-slider-runnable-track,
+.pa-column .pa-month-slider::-webkit-slider-runnable-track {
   background: linear-gradient(to right,
     var(--accent-int-track) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
     var(--pa-hair) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100));
 }
-.pa-column .pa-year-slider::-moz-range-track {
+.pa-column .pa-year-slider::-moz-range-track,
+.pa-column .pa-month-slider::-moz-range-track {
   background: linear-gradient(to right,
     var(--accent-int-track) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100),
     var(--pa-hair) calc(6.5px + var(--pct, 0) * (100% - 13px) / 100));
@@ -2034,6 +2038,100 @@ p  { margin: 0 0 0.75rem; }
 
 .pa-box-ref { font-size: var(--t-2xs); color: var(--text-muted); line-height: 1.45; margin: 8px 0 0; }   /* Fix 4 — to the --t-2xs floor (was sub-spec 10px) */
 .pa-box-ref a { color: var(--accent); }
+
+/* ============================================================================
+   BUILDING PERMITS — instrument-column chrome (BP-specific)
+   The Construction & Improvement point map adopts the PA instrument column
+   (.pa-float .pa-column). These rules dark-skin only what the shared PA + opt-toggle
+   classes don't already cover: the Year readout, the permit-type colour dots, the
+   Month select, the coverage honesty note, the value-tier filter, the selected-
+   permit detail, and the source citation. Tokens only (§1 — no raw hex/px); the
+   active material reuses the shared --accent-int-* recipe + pearl ::after (§6).
+   ============================================================================ */
+
+/* YEAR — the live year inside the "Year" label reads at the teal readout tier. */
+.pa-col-read { color: var(--tx-read); font-weight: 600; font-variant-numeric: tabular-nums; }   /* the teal slider readout value — shared by the Year + Month sliders */
+
+/* PERMIT TYPE — the colour-dot chips ride the shared glass-key .opt-toggle-btn
+   chassis (its .pa-column dark skin + active petrol/pearl/teal apply as-is). BP-scoped
+   layout so the shared city-switcher chips elsewhere are untouched: natural-width chips
+   that wrap if the row is tight, dot + label inline-centred. */
+/* Permit Type = the column's option selector — mirror .pa-col-metric's VERTICAL stack
+   of full-width glass keys (index.css:1873/1880), NOT a wrapping row: three chips
+   (All / Residential / Commercial), each full-width + left-aligned with its leading
+   DATA dot (§1.3, orange/violet) then the label. gap = --s2 between chips, --s1 dot→label,
+   matching the metric selector so the two read as one control language (§6). */
+.bp-type-toggle { flex-direction: column; align-items: stretch; gap: var(--s2); }
+.pa-column .bp-type-toggle .opt-toggle-btn {
+  width: 100%; justify-content: flex-start; gap: var(--s1); text-align: left;
+}
+.bp-type-dot { flex: 0 0 auto; }
+
+/* COVERAGE note — the §6 honesty label: muted tier, ⚠ + one filter-aware sentence. */
+.pa-col-note {
+  display: flex; gap: 5px; align-items: flex-start;
+  font-size: var(--t-xs); line-height: 1.45; color: var(--pa-mut);
+}
+.pa-col-note-mark { flex: 0 0 auto; margin-top: 1px; }
+
+/* CONSTRUCTION VALUE — the interactive value-tier filter. Each tier is a native
+   <button>: inactive = quiet glass key + dimmed (that tier is hidden on the map);
+   active = the shared petrol/pearl/teal active material (matches the metric chips).
+   The per-tier circle FILL is DATA (orange/violet/split, §1.3) — set inline, kept. */
+.bp-tiers { display: flex; flex-direction: column; }
+.bp-tiers-head { display: flex; justify-content: flex-end; margin-bottom: var(--s1); }
+/* Reset — the §6 both-clears idiom (mirrors .dt-clear): coral when a hidden tier can be
+   restored, muted + inert when every tier already shows (slot held — Principle 0). */
+.bp-tier-reset {
+  font-family: inherit; font-size: var(--t-2xs); line-height: 1.5;
+  padding: 2px 9px; border-radius: 999px;
+  background: transparent; border: 1px solid var(--pa-sel); color: var(--pa-sel);
+  cursor: pointer; transition: background 120ms, color 120ms, border-color 120ms;
+}
+.bp-tier-reset:hover:not(:disabled) { background: rgba(232,115,74,0.10); }
+.bp-tier-reset:disabled { color: var(--pa-mut); border-color: var(--pa-hair); opacity: 0.55; cursor: default; pointer-events: none; }
+.bp-tier-reset:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }
+
+.bp-tier-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.bp-tier-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px;
+  min-height: 56px; padding: 7px 3px 6px;
+  border-radius: var(--r-sm);
+  background: var(--btn-body-grad); border: 1px solid var(--btn-body-rim);
+  box-shadow: var(--btn-body-hi);
+  color: var(--tx-key); cursor: pointer; font-family: inherit;
+  opacity: 0.55;   /* inactive = dimmed: this tier is hidden on the map */
+  transition: opacity 150ms, border-color 150ms, background 150ms;
+}
+.bp-tier-btn:hover:not(.active) { opacity: 0.82; background: var(--btn-body-hover); }
+.bp-tier-btn.active {
+  opacity: 1;
+  background: var(--accent-int-fill); border-color: var(--accent-int-border); color: var(--accent-int-text);
+  box-shadow: var(--accent-int-specular), var(--accent-int-glow);
+  text-shadow: var(--accent-int-text-glow); font-weight: 600;
+}
+.bp-tier-btn:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }
+.bp-tier-lab { font-size: var(--t-2xs); line-height: 1.2; text-align: center; word-break: break-word; hyphens: auto; }
+.bp-tier-hint { margin: 6px 0 0; font-size: var(--t-2xs); color: var(--pa-mut); line-height: 1.4; }
+
+/* SELECTED PERMIT — the last-clicked dot's detail. Fixed-height slot (Principle 0)
+   so the column doesn't jump when a permit is picked vs the empty prompt. */
+.pa-col-detail, .pa-col-detail-empty { min-height: 58px; border-radius: var(--r-sm); box-sizing: border-box; }
+.pa-col-detail { background: var(--pa-card); border: 1px solid var(--pa-hair); padding: var(--s2) 10px; }
+.pa-col-detail-empty {
+  display: flex; align-items: center; justify-content: center;
+  border: 1px dashed var(--pa-hair); padding: var(--s2) 10px;
+}
+.pa-col-detail-name { margin: 0 0 4px; font-size: var(--t-xs); font-weight: 600; color: var(--pa-ink); line-height: 1.3; }
+.pa-col-detail-rows { display: flex; flex-direction: column; gap: 2px; }
+.pa-col-detail-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: var(--t-xs); }
+.pa-col-detail-k { color: var(--pa-mut); }
+.pa-col-detail-v { color: var(--pa-ink); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.pa-col-detail-hint { margin: 0; font-size: var(--t-xs); font-style: italic; color: var(--pa-mut); text-align: center; }
+
+/* SOURCE — a provenance citation reads at the PRIMARY tier (§6 carve-out: a citation is
+   not a muted honesty hedge). Fine-print size, primary ink. */
+.pa-col-cite { margin: 0; font-size: var(--t-2xs); color: var(--pa-ink); line-height: 1.5; }
 
 /* ---- About & tips popover (2026-07-15) — opens from the "i" in the right rail ------
    Replaces the old .pa-info-* family (a gel pill + an in-flow expansion in the left

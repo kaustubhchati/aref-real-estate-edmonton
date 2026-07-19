@@ -162,7 +162,7 @@ export const DEFAULT_GROUP = ALL_GROUPS;
 
 // Month filter — 0 = all months sentinel.
 export const MONTHS = [
-  { value: 0,  label: "All months" },
+  { value: 0,  label: "All Months" },
   { value: 1,  label: "Jan" },
   { value: 2,  label: "Feb" },
   { value: 3,  label: "Mar" },

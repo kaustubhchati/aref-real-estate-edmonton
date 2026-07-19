@@ -18,12 +18,14 @@ import EdgeReveal from "./EdgeReveal.jsx";
 import SectionErrorBoundary from "../components/SectionErrorBoundary.jsx";
 
 // Routes that run the immersive map chrome (Nav + Footer auto-hide so the map
-// fills the frame). Property Assessment is the standard; Dwelling Units adopts it.
+// fills the frame). Property Assessment is the standard; Dwelling Units, Business
+// Counts, and the Building Permits point map all adopt it.
 // useLocation().pathname has the router basename stripped, so match the bare path.
 const IMMERSIVE_ROUTES = new Set([
   "/properties/property-assessment",
   "/activity/dwelling-units",
   "/economy/business-counts",
+  "/activity/construction-improvement",
 ]);
 
 // Shown in the content area while a code-split section chunk downloads (the maps +
