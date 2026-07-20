@@ -50,7 +50,10 @@ export const STATE_STYLE = {
   },
   suppressed_low_n: {
     label:        "Suppressed (N < 10 permits)",
-    fillColor:    "rgba(255,255,255,0.08)",
+    // Grey wash (was white glass): fills non-reportable land (mostly peripheral industrial parks
+    // where CARTO landuse is patchy at low zoom) so it isn't a blank whiteout at the home view;
+    // basemap landuse still reads through. Matches PA's choroplethStyle fix — shared palette.
+    fillColor:    "rgba(139,152,167,0.30)",
     pattern:      null,
     outlineColor: "#7a7468",
     outlineWidth: 0.7,
@@ -58,7 +61,9 @@ export const STATE_STYLE = {
   },
   no_data: {
     label:        "No permit data",
-    fillColor:    "rgba(255,255,255,0.08)",
+    // Grey wash (was white glass) — same as suppressed_low_n: fill non-reportable land so it
+    // isn't a blank whiteout at the home view; basemap landuse still reads through.
+    fillColor:    "rgba(139,152,167,0.30)",
     pattern:      null,
     outlineColor: "#5a554c",
     outlineWidth: 0.8,

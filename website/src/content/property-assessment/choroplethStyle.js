@@ -358,7 +358,12 @@ export const STATE_STYLE = {
   },
   suppressed_low_n: {
     label:        "Suppressed (N < 100)",
-    fillColor:    "rgba(255,255,255,0.08)",   // glass — basemap shows through; outline carries the state
+    // Grey wash (was white glass): these low-N polygons are mostly the peripheral INDUSTRIAL
+    // parks (Mistatim, Ellerslie, Southeast Industrial, Energy & Tech Park, Clover Bar), where
+    // CARTO's landuse_industrial coverage is patchy at the home-view zoom — so a white glass
+    // whited out. A subtle cool grey fills them as "non-reportable ground" (industrial-consistent)
+    // yet stays light enough that basemap landuse still reads through where present.
+    fillColor:    "rgba(139,152,167,0.30)",
     pattern:      null,
     outlineColor: "#7a7468",
     outlineWidth: 0.7,
@@ -382,7 +387,9 @@ export const STATE_STYLE = {
   },
   no_data: {
     label:        "No data (legitimately empty)",
-    fillColor:    "rgba(255,255,255,0.08)",   // glass — basemap shows through; outline carries the state
+    // Grey wash (was white glass) — same reasoning as suppressed_low_n: fill the non-reportable
+    // land so it isn't a blank whiteout at low zoom; basemap landuse still reads through.
+    fillColor:    "rgba(139,152,167,0.30)",
     pattern:      null,
     outlineColor: "#5a554c",
     outlineWidth: 0.8,
