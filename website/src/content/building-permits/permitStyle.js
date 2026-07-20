@@ -372,6 +372,17 @@ export function cityBoundaryLineLayer(source) {
   };
 }
 
+// ---- BP land-use zones: lift above the boundary tint -----------------------
+// The land-use fill COLOURS are shared across ALL maps — set once in
+// components/basemapTheme.js (land-use-convention hue + muted tone + value separation), so
+// PA/DU/BC/BP read the same palette. BP's only section-specific need is ORDER: on the points
+// map these fills sit UNDER the greige boundary tint, which washes them out, so BP lifts the
+// three DESCRIPTIVE land-use classes ABOVE the tint (BuildingPermitsMap onLoad consumes this
+// list) to keep them legible — they still stay below water / roads / labels and the permit
+// dots. Residential + parks intentionally stay BELOW the tint (the quiet base ground the glow
+// reads on). Just the id list + order here; NO colour (the theme owns it).
+export const LANDUSE_ABOVE_TINT = ["landuse_commercial", "landuse_industrial", "landuse_institutional"];
+
 // ---- The circle layer spec -------------------------------------------------
 // Returned WITHOUT `source` (the shared MapView fills that in). Colour by
 // job_group, size by construction-value tier, white halo so dots stay distinct

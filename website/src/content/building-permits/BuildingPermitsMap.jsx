@@ -57,6 +57,7 @@ import {
   SHOW_BOUNDARY_LINE,
   cityTintLayer,
   cityBoundaryLineLayer,
+  LANDUSE_ABOVE_TINT,
 } from "./permitStyle.js";
 import {
   loadPermitManifest,
@@ -585,6 +586,16 @@ export default function BuildingPermitsMap() {
                 }
                 if (SHOW_BOUNDARY_LINE && !m.getLayer("city-outline")) {
                   m.addLayer(cityBoundaryLineLayer(BOUNDARY_SOURCE_ID), beforeId);
+                }
+                // BP land-use emphasis: lift the three DESCRIPTIVE land-use fills ABOVE the boundary
+                // tint so they stay legible on the points map (the tint would otherwise wash them
+                // out). Colours are shared and already set by the theme (applyAppleClassic, run just
+                // before this onLoad) — this is ORDER only. BP-scoped: moveLayer mutates THIS map
+                // instance, so the shared basemap order (and PA/DU/BC) is unchanged. The fills stay
+                // BELOW water / roads / labels / dots (MapView draws those on top); residential +
+                // parks intentionally stay muted below the tint (the quiet base ground for the glow).
+                for (const id of LANDUSE_ABOVE_TINT) {
+                  if (m.getLayer(id) && m.getLayer(TINT_BEFORE_ID)) m.moveLayer(id, TINT_BEFORE_ID);
                 }
                 // Land on the SAME pitched HOME camera as PA / DU / BC (the shared mapCamera
                 // preset) — a jump under the skeleton, matching their first-load. The Year slider

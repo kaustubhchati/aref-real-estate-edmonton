@@ -30,10 +30,20 @@ export const ROAD_MINOR_COLOR = "#f3e9c4"; // minor / residential fill
 const C = {
   land:        "#f7f1df",  // background / land
   water:       "#a9d3e8",  // water bodies + rivers
-  green:       "#bde6ab",  // park / grass
+  green:       "#c0dcb1",  // park / grass — muted + lightened (CVD-safe vs commercial pink)
   wood:        "#aee09a",  // forest / wood (deeper)
-  landuseRes:  "#f4eeda",  // residential landuse
-  landuseComm: "#efe9d6",  // commercial / industrial landuse
+  // ---- Land-use fills: convention hue + muted tone + value separation --------------------
+  // LAND-USE CONVENTION hues (Esri / APA / planning practice), rendered as the muted 70%
+  // GROUND of the 70-20-10 rule: LOW saturation for subtlety, DISTINCT VALUE (lightness) for
+  // legibility — so the categories separate even when muted, and the CVD-risky green/pink pair
+  // is told apart by BRIGHTNESS, not hue. Perceived-luminance ladder (lightest→darkest,
+  // Y≈0.299R+0.587G+0.114B): residential 226 · parks 207 · institutional 183 · commercial 168
+  // · industrial 150 — every step ≥15; green↔commercial Δ39 (Δ44 under deuteranopia → CVD-safe).
+  // Saturations 14–42% (all within the 30-50% "muted ground" band; grey is definitionally low).
+  landuseRes:  "#eae2cc",  // residential   → pale GOLD  (lightest; the dominant, most-background use)
+  landuseComm: "#d392a6",  // commercial    → dusty PINK (retail; convention pink, darker than parks)
+  landuseInd:  "#8b98a7",  // industrial    → cool GREY  (darkest; convention grey = heavy / serious)
+  landuseInst: "#a2bbd7",  // institutional → mid BLUE   (schools / hospitals / civic; convention blue)
   sand:        "#f5ecd0",  // sand / beach
   wetland:     "#cfe0c8",  // wetland / marsh
   motCase:     "#efd151",  // motorway/trunk casing
@@ -76,10 +86,15 @@ function colourFor(id) {
   if (/waterway/.test(id))                 return [C.water, "water-river"];
   if (/^park|wood|forest|grass|cemeter|golf|pitch/.test(id)) return [C.green, "green"];
   if (id === "landcover")                  return [C.green, "green(landcover?)"];      // FLAG
-  if (/landuse_residential/.test(id))      return [C.landuseRes, "landuse-residential"];
+  // Land-use classes — each its own CONVENTION hue (see the C palette above). Specific ids
+  // first; the generic `landuse` layer (cemetery / stadium) falls to green (open space).
+  if (/landuse_residential/.test(id))      return [C.landuseRes,  "landuse-residential"];  // gold
+  if (/landuse_commercial/.test(id))       return [C.landuseComm, "landuse-commercial"];   // pink
+  if (/landuse_industrial/.test(id))       return [C.landuseInd,  "landuse-industrial"];   // grey
+  if (/landuse_institutional/.test(id))    return [C.landuseInst, "landuse-institutional"];// blue
   if (/sand|beach/.test(id))               return [C.sand, "sand"];
   if (/wetland|marsh|swamp/.test(id))      return [C.wetland, "wetland"];
-  if (/landuse/.test(id))                  return [C.landuseComm, "landuse-commercial?"]; // FLAG generic
+  if (/landuse/.test(id))                  return [C.green, "landuse-open(cemetery/stadium)"];
   if (/building/.test(id))                 return [C.building, "building"];
   if (/boundary|admin/.test(id))           return [C.boundary, "boundary"];
   const r = roadColour(id);
