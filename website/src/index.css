@@ -327,6 +327,22 @@
   /* Brand core */
   --uofa-green: #275d38;   --uofa-green-deep: #1c4429;   --uofa-green-web: #007c41;
   --uofa-gold: #ffdb05;    --gold-ink: #f2cd00;
+
+  /* UAlberta institutional palette — the canonical cream/green/gold system for the
+     site CHROME (nav drawer now; home page next). Green LEADS, gold ACCENTS sparingly
+     (marks only, never body text — gold fails contrast on cream), cream GROUNDS.
+     Official values: green #275d38 (via --uofa-green), gold #f2cd00 (via --gold-ink —
+     NOT the brighter --uofa-gold #ffdb05). New chrome work references --ua-* as the
+     single source; the dark map consoles keep the :root dark tokens, untouched. */
+  --ua-green:      var(--uofa-green);        /* #275d38 — primary / active / interactive */
+  --ua-green-deep: var(--uofa-green-deep);   /* #1c4429 — pressed / emphasis */
+  --ua-green-soft: #e7efe7;                  /* pale green tint — hover + active-soft bg on cream */
+  --ua-gold:       var(--gold-ink);          /* #f2cd00 — jewel accent (marks only, never text) */
+  --ua-cream:      #f7f4ec;                  /* warm off-white — the ground */
+  --ua-cream-2:    #efe9db;                  /* deeper warm cream — raised / hover panels */
+  --ua-ink:        #1b2a20;                  /* primary text on cream (very dark green, ~13:1) */
+  --ua-muted:      #565b4f;                  /* muted text / secondary on cream (~5.9:1) */
+  --ua-hair:       #e5ded0;                  /* warm hairline / divider on cream */
   --teal: #0f6e56;   --teal-strong: #085041;   --teal-tint: #e1f5ee;   --teal-mid: #1d9e75;
   --paper: #f4f1ea;   --ink: #14171a;
 
@@ -510,8 +526,9 @@ p  { margin: 0 0 0.75rem; }
 /* ---- Navigation drawer (off-canvas; the header hamburger opens it) ---------
    The site's single navigation surface — it REPLACES the old horizontal nav bar
    (Nav.jsx, retired) on every screen. A LEFT slide-over on a dark scrim, portaled
-   to <body> and layered above all chrome. Dark-chrome surface language
-   (DESIGN_SYSTEM §1.1): --shell ground, --hair hairlines, teal active state.
+   to <body> and layered above all chrome. UAlberta cream/green/gold palette (the
+   --ua-* tokens in .brand): cream ground, dark/green text, GREEN active state,
+   GOLD as a sparing accent (the active item's left marker — never body text).
    Motion is transform/opacity only; the global reduced-motion rule collapses the
    slide to an instant show/hide. Open/close + focus-trap live in Drawer.jsx.
    z-index:300 clears the header (100) and the portaled console menus (200). */
@@ -519,7 +536,7 @@ p  { margin: 0 0 0.75rem; }
 .drawer          { position:fixed; inset:0; z-index:300; pointer-events:none; }
 .drawer.is-open  { pointer-events:auto; }
 
-.drawer__scrim   { position:absolute; inset:0; background:rgba(0,0,0,0.5);
+.drawer__scrim   { position:absolute; inset:0; background:rgba(0,0,0,0.45);
   opacity:0; transition:opacity var(--dur-base) var(--ease); }
 .drawer.is-open .drawer__scrim { opacity:1; }
 
@@ -527,46 +544,57 @@ p  { margin: 0 0 0.75rem; }
    slide-out finishes (delayed transition) so its links leave the tab order once
    out of view, not while sliding. */
 .drawer__panel   { position:absolute; top:0; left:0; bottom:0; width:min(86vw, 344px);
-  display:flex; flex-direction:column; background:var(--shell);
-  border-right:1px solid var(--hair); box-shadow:6px 0 40px rgba(0,0,0,0.5);
+  display:flex; flex-direction:column; background:var(--ua-cream);
+  border-right:1px solid var(--ua-hair); box-shadow:6px 0 34px rgba(24,36,27,0.30);
   transform:translateX(-100%); visibility:hidden;
   transition:transform var(--dur-base) var(--ease), visibility 0s linear var(--dur-base); }
 .drawer.is-open .drawer__panel { transform:none; visibility:visible;
   transition:transform var(--dur-base) var(--ease); }
 
 .drawer__head    { display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
-  padding:16px 18px; border-bottom:1px solid var(--hair); }
-.drawer__title   { font-family:var(--font-display); color:var(--tx-head); font-size:13px;
+  padding:16px 18px; border-bottom:1px solid var(--ua-hair); }
+.drawer__title   { font-family:var(--font-display); color:var(--ua-green); font-size:13px;
   font-weight:700; text-transform:uppercase; letter-spacing:0.12em; }
 .drawer__close   { display:flex; align-items:center; justify-content:center; width:36px; height:36px;
-  padding:0; color:var(--tx-mut); background:none; border:1px solid var(--hair); border-radius:8px;
+  padding:0; color:var(--ua-muted); background:none; border:1px solid var(--ua-hair); border-radius:8px;
   cursor:pointer; transition:color 0.14s, border-color 0.14s, background 0.14s; }
-.drawer__close:hover         { color:var(--tx); background:#ffffff0f; border-color:var(--tx-dim); }
-.drawer__close:focus-visible { outline:2px solid var(--accent-teal); outline-offset:2px; }
+.drawer__close:hover         { color:var(--ua-ink); background:var(--ua-cream-2); border-color:var(--ua-muted); }
+.drawer__close:focus-visible { outline:2px solid var(--ua-green); outline-offset:2px; }
 
 .drawer__nav     { flex:1; overflow-y:auto; padding:10px 12px 24px; }
 
-/* Category = a labelled section (icon + name) with its pages listed beneath.
-   A hairline divides each section; the first section carries none. */
-.drawer__group   { padding-top:8px; margin-top:8px; border-top:1px solid var(--hair); }
+/* Category = a labelled section (icon + name) with its pages listed beneath. Green
+   header tier; the icon inherits it via currentColor. A hairline divides each
+   section; the first section carries none. */
+.drawer__group   { padding-top:8px; margin-top:8px; border-top:1px solid var(--ua-hair); }
 .drawer__nav > .drawer__group:first-child { border-top:none; margin-top:0; }
 .drawer__group-label { display:flex; align-items:center; gap:8px; margin:0 0 2px; padding:6px 12px;
-  color:var(--tx-mut); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; }
+  color:var(--ua-green); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; }
 /* A top-level page that follows a category gets its own divider. */
-.drawer__group + .drawer__link { margin-top:8px; padding-top:14px; border-top:1px solid var(--hair); }
+.drawer__group + .drawer__link { margin-top:8px; padding-top:14px; border-top:1px solid var(--ua-hair); }
 
-.drawer__link    { display:flex; align-items:center; justify-content:space-between; gap:12px;
-  padding:11px 12px; border-radius:8px; color:var(--tx); font-size:15px; font-weight:500;
+.drawer__link    { position:relative; display:flex; align-items:center; justify-content:space-between;
+  gap:12px; padding:11px 12px; border-radius:8px; color:var(--ua-ink); font-size:15px; font-weight:500;
   text-decoration:none; transition:background 0.13s, color 0.13s; }
-.drawer__link:hover      { background:#ffffff0f; text-decoration:none; }
-.drawer__link--sub       { padding-left:20px; color:var(--tx-mut); font-size:14px; font-weight:400; }
-.drawer__link--sub:hover { color:var(--tx); }
-.drawer__link.is-active  { color:var(--accent-teal); font-weight:700; background:var(--accent-soft); }
+.drawer__link:hover      { background:var(--ua-green-soft); color:var(--ua-green); text-decoration:none; }
+.drawer__link--sub       { padding-left:20px; color:var(--ua-muted); font-size:14px; font-weight:400; }
+.drawer__link--sub:hover { color:var(--ua-green); }
+.drawer__link.is-active  { color:var(--ua-green); font-weight:700; background:var(--ua-green-soft); }
+/* GOLD ACCENT (sparing) — the jewel, as marks only, never text (gold fails
+   contrast on cream). Two placements (ratified 2026-07-20):
+   1. the active item's left-edge marker ("you are here"), and
+   2. a hover underline under the label that follows the pointer.
+   The underline targets the label span (first child) only, so the Live/Soon
+   badge is never underlined. */
+.drawer__link.is-active::before { content:""; position:absolute; left:0; top:50%;
+  transform:translateY(-50%); width:3px; height:58%; border-radius:0 2px 2px 0; background:var(--ua-gold); }
+.drawer__link:hover > span:first-child { text-decoration:underline; text-decoration-color:var(--ua-gold);
+  text-decoration-thickness:2px; text-underline-offset:3px; }
 
 .drawer__dot       { flex-shrink:0; border-radius:20px; padding:1px 7px; font-size:10.5px;
   font-weight:500; white-space:nowrap; }
-.drawer__dot--live { background:var(--accent-soft); color:var(--accent-teal); }
-.drawer__dot--soon { background:#ffffff14; color:var(--tx-dim); }
+.drawer__dot--live { background:var(--ua-green-soft); color:var(--ua-green); }
+.drawer__dot--soon { background:var(--chip-soft-bg); color:var(--chip-soft-ink); }
 
 /* ---- Footer (pearl band: acknowledgement · partners · sources · bar) ------ */
 
