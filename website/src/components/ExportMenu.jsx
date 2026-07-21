@@ -127,14 +127,14 @@ export default function ExportMenu({ onExport, year, years = [], scopeCount = 0,
       key: "data", heading: "Data",
       items: [
         { format: "csv-current", title: `This Year (${year})`,
-          sub: "One row per neighbourhood — spreadsheet / GIS.", sidecar: true },
+          sub: "One row per neighbourhood: spreadsheet / GIS.", sidecar: true },
         { format: "csv-timeseries", title: `All Years (${span})`,
-          sub: "One row per neighbourhood × year — panel analysis.", sidecar: true },
+          sub: "One row per neighbourhood × year: panel analysis.", sidecar: true },
         // Selection summary (item 7) — only with an aggregate (≥2 selected): the
         // honest rollup + city comparison, distinct from the per-neighbourhood rows.
         ...(scopeCount >= 2
           ? [{ format: "csv-aggregate", title: "Selection Summary",
-              sub: "Aggregate figures + city comparison — one row per measure.", sidecar: true }]
+              sub: "Aggregate figures + city comparison, one row per measure.", sidecar: true }]
           : []),
       ],
     },
@@ -142,7 +142,7 @@ export default function ExportMenu({ onExport, year, years = [], scopeCount = 0,
       key: "map", heading: "Map",
       items: [
         { format: "geojson", title: "GeoJSON",
-          sub: "Polygons — every year on each feature.", sidecar: false },
+          sub: "Polygons: every year on each feature.", sidecar: false },
         { format: "png", title: "PNG",
           sub: "The current map image.", sidecar: false },
       ],
@@ -152,7 +152,7 @@ export default function ExportMenu({ onExport, year, years = [], scopeCount = 0,
   // Screen-reader name carrying the SHAPE + the pair cue (the cue is in the name,
   // never icon/colour-only).
   const a11yName = (it) =>
-    `${it.title} — ${it.sub}${it.sidecar ? " Downloads a CSV plus a provenance text file." : ""}`;
+    `${it.title}: ${it.sub}${it.sidecar ? " Downloads a CSV plus a provenance text file." : ""}`;
 
   return (
     <div className="export-menu" ref={wrapRef}>
@@ -178,7 +178,7 @@ export default function ExportMenu({ onExport, year, years = [], scopeCount = 0,
             <div
               className="export-menu-group"
               role="group"
-              aria-label={g.key === "data" ? `Data exports — ${scopeLabel}` : "Map exports"}
+              aria-label={g.key === "data" ? `Data exports: ${scopeLabel}` : "Map exports"}
               key={g.key}
             >
               <div className="export-menu-head" aria-hidden="true">

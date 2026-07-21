@@ -45,7 +45,7 @@ export default class SectionErrorBoundary extends Component {
           <h2>This view couldn’t load.</h2>
           <p>
             Something went wrong rendering this section. The rest of the site
-            still works — use the navigation above to continue, or try again.
+            still works. Use the navigation above to continue, or try again.
           </p>
           <p><small>{this.state.error.message}</small></p>
           {/* setState (not mutation) so React re-renders and retries children. */}

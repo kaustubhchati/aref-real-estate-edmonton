@@ -66,7 +66,7 @@ export function buildProvenanceText({ file, shape, city, metric, scope, coverage
   const date = new Date().toISOString().slice(0, 10);
   const ds = siteConfig.dataSource;
   return [
-    `${siteConfig.org} — ${siteConfig.centre}`,
+    `${siteConfig.org} · ${siteConfig.centre}`,
     `dataset: Property Assessment`,
     `file: ${file}`,
     `shape: ${shape}`,
@@ -180,14 +180,14 @@ export function buildGeoJson(features) {
   const ds = siteConfig.dataSource;
   return JSON.stringify({
     type: "FeatureCollection",
-    attribution: `${ds.name} — ${ds.licence}. ${ds.termsUrl}`,
+    attribution: `${ds.name} · ${ds.licence}. ${ds.termsUrl}`,
     metadata: {
       source: ds.name,
       source_url: ds.url,
       licence: ds.licence,
       terms_of_use: ds.termsUrl,
       disclaimer: ds.disclaimer,
-      produced_by: `${siteConfig.org} — ${siteConfig.centre}`,
+      produced_by: `${siteConfig.org} · ${siteConfig.centre}`,
     },
     features,
   });
@@ -237,7 +237,7 @@ export function exportPng(map, filename) {
   const ds = siteConfig.dataSource;
   const lines = [
     BASEMAP_CREDIT,                                  // legally required, verbatim
-    `Data: ${ds.name} — ${ds.licence}`,
+    `Data: ${ds.name} · ${ds.licence}`,
     ds.termsUrl,                                     // the Terms URL travels with the image
   ];
   // Scale the text to the export's device-pixel size (getCanvas() is at DPR) so it reads

@@ -1301,14 +1301,14 @@ export default function PropertyAssessmentMap() {
       const csvName = `${base}_${year}.csv`;
       downloadCsvWithSidecar(csvName, buildSnapshotCsv(scoped, year),
         buildProvenanceText({ ...meta, file: csvName, coverage: String(year),
-          shape: `wide — one row per neighbourhood, single year ${year}` }));
+          shape: `wide: one row per neighbourhood, single year ${year}` }));
     } else if (format === "csv-timeseries") {
       const csvName = `${base}_timeseries.csv`;
       const asc = [...years].sort((a, b) => a - b);
       const span = asc.length ? `${asc[0]}–${asc[asc.length - 1]}` : "";
       downloadCsvWithSidecar(csvName, buildTimeseriesCsv(scoped, years),
         buildProvenanceText({ ...meta, file: csvName, coverage: span,
-          shape: `long panel — one row per neighbourhood × year, ${span}` }));
+          shape: `long panel: one row per neighbourhood × year, ${span}` }));
     } else if (format === "csv-aggregate") {
       // Scope SUMMARY (item 7): the honest aggregate + city comparison (the item-8
       // figures), NOT the per-neighbourhood rows. Reads whichever aggregate is driving
@@ -1320,7 +1320,7 @@ export default function PropertyAssessmentMap() {
       const csvName = `${base}_${year}_summary.csv`;
       downloadCsvWithSidecar(csvName, buildAggregateCsv(scopeAggregate, cityBaseline),
         buildProvenanceText({ ...meta, file: csvName, coverage: String(year),
-          shape: "selection summary — one row per measure; selection figure vs city baseline" }));
+          shape: "selection summary: one row per measure; selection figure vs city baseline" }));
     } else if (format === "geojson") {
       downloadText(`${base}.geojson`, buildGeoJson(scoped), "application/geo+json");
     } else if (format === "png" && map) {

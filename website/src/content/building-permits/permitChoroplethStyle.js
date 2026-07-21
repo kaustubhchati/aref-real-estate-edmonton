@@ -512,7 +512,7 @@ export function buildPopupHtml(p, detail, year, metric) {
         `<span class="pop-k">Residential Permits</span>` +
         `<span class="pop-v">${fmtInt(p.n_permits)}</span>` +
       `</div>`,
-      `<div class="pop-reason">Fewer than 10 permits — ` +
+      `<div class="pop-reason">Fewer than 10 permits: ` +
         `aggregate values suppressed.</div>`
     );
   } else {

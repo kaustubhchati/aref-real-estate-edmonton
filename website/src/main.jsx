@@ -22,7 +22,6 @@ import Layout from "./shell/Layout.jsx";
 import Home from "./content/pages/Home.jsx";
 import About from "./content/pages/About.jsx";
 import DownloadPage from "./content/download/DownloadPage.jsx";
-import Feedback from "./content/pages/Feedback.jsx";
 import ResearchCompetition from "./content/pages/ResearchCompetition.jsx";
 import Placeholder from "./content/Placeholder.jsx";
 
@@ -82,7 +81,6 @@ createRoot(document.getElementById("root")).render(
           <Route path="/"                      element={<Home />} />
           <Route path="/about"                 element={<About />} />
           <Route path="/download"              element={<DownloadPage />} />
-          <Route path="/feedback"              element={<Feedback />} />
           <Route path="/research-competition"  element={<ResearchCompetition />} />
 
           {/* Map / tables routes — mirror siteConfig.nav exactly (every nav `to`

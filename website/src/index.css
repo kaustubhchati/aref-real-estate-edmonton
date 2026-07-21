@@ -93,6 +93,7 @@
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
+  --space-7: 28px;
   --space-8: 32px;
 
   /* Elevation */
@@ -339,6 +340,8 @@
   /* Semantic roles */
   --heading: var(--uofa-green);   --link: var(--teal);   --link-hover: var(--teal-strong);
   --border: #e4e7e2;   --border-strong: #d3d8d1;   --border-green: #275d382e;
+  /* Soft "coming soon" / inert chip chrome (warm grey), shared by cards + rows. */
+  --chip-soft-bg: #eceae3;   --chip-soft-ink: #5f5e5a;   --chip-soft-ink-strong: #888780;
   --band: var(--uofa-green);   --band-deep: var(--uofa-green-deep);
 
   /* Shape + elevation + measure */
@@ -417,8 +420,7 @@ p  { margin: 0 0 0.75rem; }
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  /* Header band height — ONE knob shared by the header itself and the immersive
-     edge-reveal offset below, so they can never drift apart. */
+  /* Header band height — the ONE knob for the fixed header band (.shell-header). */
   --header-h: 90px;
 }
 
@@ -475,69 +477,96 @@ p  { margin: 0 0 0.75rem; }
   background:conic-gradient(from 0deg at 78% 40%, #1c4429 0deg, #0f6e56 90deg, #4d7a30 150deg, #d9b23a 210deg, #2a5a34 300deg, #1c4429 360deg); }
 .pearl--band .pearl__veil  { background:linear-gradient(90deg, #14281ae6 0%, #14281ab3 60%, #14281a8c 100%); }
 
-/* ---- Header (pearl band: shield · centre/dept · wordmark) ----------------- */
+/* ---- Header (pearl band: hamburger · shield · institutional lockup) ------- */
 
-/* z-index:100 keeps the header ABOVE the immersive edge-reveal nav (z-index:95),
-   so on the console/map routes the auto-hidden nav slides up BEHIND the header
-   instead of covering it. (Was 50 — that let the hidden nav overlap the header.) */
+/* z-index:100 keeps the header ABOVE the immersive map chrome. The navigation
+   drawer (Drawer.jsx) opens from the hamburger and portals ABOVE everything. */
 .shell-header        { position:relative; z-index:100; height:var(--header-h); }
 /* Fill the fixed band height down the pearl layers so hdr__inner can centre. */
 .shell-header .pearl, .shell-header .pearl__content { height:100%; }
-.hdr__inner    { height:100%; display:flex; align-items:center; gap:18px; }
+.hdr__inner    { height:100%; display:flex; align-items:center; gap:14px; }
+
+/* Hamburger — the sole navigation entry point (opens the drawer). Quiet glass
+   button on the dark band; gold focus ring for keyboard users. */
+.hdr__burger   { display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  width:42px; height:42px; padding:0; color:#fff; background:#ffffff14;
+  border:1px solid #ffffff3d; border-radius:10px; cursor:pointer;
+  transition:background 0.14s, border-color 0.14s; }
+.hdr__burger:hover         { background:#ffffff26; border-color:#ffffff5c; }
+.hdr__burger:focus-visible { outline:2px solid var(--uofa-gold); outline-offset:2px; }
+
 .hdr__mark     { display:flex; align-items:center; color:#fff; }
-.hdr__id       { display:flex; flex-direction:column; gap:2px; min-width:0; }
-.hdr__centre   { color:#fff; font-size:15px; font-weight:500; line-height:1.25; letter-spacing:0.005em; }
-.hdr__dept     { color:var(--uofa-gold); font-size:15px; font-weight:700; line-height:1.2; }
-.hdr__spacer   { flex:1; }
-.hdr__wordmark { font-family:var(--font-display); text-align:right; text-transform:uppercase;
-  color:#fff; font-size:13px; font-weight:700; line-height:1.1; letter-spacing:0.16em; }
-.hdr__wordmark span { color:var(--uofa-gold); }
 
-/* ---- Nav (full-width bar; click-to-open dropdowns with live/soon dots) ----
-   The bar spreads edge-to-edge (nav__list: flex:1 + space-between). It is NOT a
-   scroll container (unlike the old nav), so a dropdown can anchor with plain
-   position:absolute — no getBoundingClientRect hack. Dropdowns are click-driven:
-   a group's <li> gets .is-open (Nav.jsx), which fades its .nav__menu in. */
+/* Institutional lockup: parent org (small caps, white) over the unit (gold),
+   framed by a hairline with a gold left spine. Reads siteConfig org + dept. */
+.hdr__lockup      { display:flex; flex-direction:column; gap:1px; min-width:0;
+  padding:5px 12px; border:1px solid #ffffff2e; border-left:3px solid var(--uofa-gold);
+  border-radius:6px; background:#ffffff0f; }
+.hdr__lockup-org  { font-family:var(--font-display); color:#fff; font-size:11.5px; font-weight:700;
+  line-height:1.25; text-transform:uppercase; letter-spacing:0.11em; }
+.hdr__lockup-dept { color:var(--uofa-gold); font-size:13.5px; font-weight:600; line-height:1.25;
+  letter-spacing:0.005em; white-space:nowrap; }
 
-.shell-nav  { position:relative; z-index:40; background:#fff;
-  border-bottom:1px solid var(--border); box-shadow:0 1px #16211a05; }
-.nav__inner { display:flex; align-items:center; gap:4px; min-height:56px; }
-.nav__list  { flex:1; display:flex; flex-wrap:nowrap; justify-content:space-between;
-  align-items:center; gap:2px; margin:0; padding:0; list-style:none; }
-.nav__item  { position:relative; }
+/* ---- Navigation drawer (off-canvas; the header hamburger opens it) ---------
+   The site's single navigation surface — it REPLACES the old horizontal nav bar
+   (Nav.jsx, retired) on every screen. A LEFT slide-over on a dark scrim, portaled
+   to <body> and layered above all chrome. Dark-chrome surface language
+   (DESIGN_SYSTEM §1.1): --shell ground, --hair hairlines, teal active state.
+   Motion is transform/opacity only; the global reduced-motion rule collapses the
+   slide to an instant show/hide. Open/close + focus-trap live in Drawer.jsx.
+   z-index:300 clears the header (100) and the portaled console menus (200). */
 
-.nav__link  { display:inline-flex; align-items:center; gap:4px; padding:10px 9px;
-  color:var(--text-body); background:none; border:none; border-radius:7px;
-  font-family:inherit; font-size:14.5px; font-weight:500; white-space:nowrap;
-  cursor:pointer; text-decoration:none; transition:background 0.14s, color 0.14s; }
-.nav__link:hover { background:var(--surface-soft); color:var(--uofa-green); text-decoration:none; }
-.nav__link--active { color:var(--uofa-green); font-weight:700; }
-.nav__link--active::after { content:""; position:absolute; left:9px; right:9px; bottom:4px;
-  height:2px; border-radius:2px; background:var(--uofa-gold); }
-.nav__caret { opacity:0.7; font-size:14px; transition:transform 0.15s; }
-.nav__link[aria-expanded="true"] .nav__caret,
-.nav__mobile-link[aria-expanded="true"] .nav__caret { transform:rotate(180deg); }
+.drawer          { position:fixed; inset:0; z-index:300; pointer-events:none; }
+.drawer.is-open  { pointer-events:auto; }
 
-/* Dropdown — always in the DOM (so it can fade), revealed when .is-open. */
-.nav__menu { position:absolute; top:calc(100% + 2px); left:0; min-width:250px;
-  background:#fff; border:1px solid var(--border); border-radius:10px; padding:6px;
-  box-shadow:var(--shadow-card); opacity:0; visibility:hidden; transform:translateY(-4px);
-  transition:opacity 0.14s, transform 0.14s, visibility 0.14s; }
-.nav__item.is-open .nav__menu { opacity:1; visibility:visible; transform:translateY(0); }
-.nav__menu-link { display:flex; justify-content:space-between; align-items:center; gap:12px;
-  width:100%; padding:9px 11px; color:var(--text-body); background:none; border:none;
-  border-radius:7px; font-family:inherit; font-size:14px; text-align:left;
-  text-decoration:none; cursor:pointer; }
-.nav__menu-link:hover { background:var(--teal-tint); color:var(--teal-strong); text-decoration:none; }
-.nav__dot { border-radius:20px; padding:1px 7px; font-size:10.5px; font-weight:500; white-space:nowrap; }
-.nav__dot--live { background:var(--teal-tint); color:var(--teal-strong); }
-.nav__dot--soon { background:#f1efe8; color:#5f5e5a; }
+.drawer__scrim   { position:absolute; inset:0; background:rgba(0,0,0,0.5);
+  opacity:0; transition:opacity var(--dur-base) var(--ease); }
+.drawer.is-open .drawer__scrim { opacity:1; }
 
-/* Mobile toggle + accordion — hidden until the <=1240px media block shows them. */
-.nav__toggle { display:none; margin-left:auto; padding:8px 10px; background:none;
-  border:1px solid var(--border-strong); border-radius:8px; color:var(--uofa-green);
-  line-height:1; cursor:pointer; }
-.nav__mobile { display:none; }
+/* The panel — parked off-screen left. `visibility` flips to hidden only AFTER the
+   slide-out finishes (delayed transition) so its links leave the tab order once
+   out of view, not while sliding. */
+.drawer__panel   { position:absolute; top:0; left:0; bottom:0; width:min(86vw, 344px);
+  display:flex; flex-direction:column; background:var(--shell);
+  border-right:1px solid var(--hair); box-shadow:6px 0 40px rgba(0,0,0,0.5);
+  transform:translateX(-100%); visibility:hidden;
+  transition:transform var(--dur-base) var(--ease), visibility 0s linear var(--dur-base); }
+.drawer.is-open .drawer__panel { transform:none; visibility:visible;
+  transition:transform var(--dur-base) var(--ease); }
+
+.drawer__head    { display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+  padding:16px 18px; border-bottom:1px solid var(--hair); }
+.drawer__title   { font-family:var(--font-display); color:var(--tx-head); font-size:13px;
+  font-weight:700; text-transform:uppercase; letter-spacing:0.12em; }
+.drawer__close   { display:flex; align-items:center; justify-content:center; width:36px; height:36px;
+  padding:0; color:var(--tx-mut); background:none; border:1px solid var(--hair); border-radius:8px;
+  cursor:pointer; transition:color 0.14s, border-color 0.14s, background 0.14s; }
+.drawer__close:hover         { color:var(--tx); background:#ffffff0f; border-color:var(--tx-dim); }
+.drawer__close:focus-visible { outline:2px solid var(--accent-teal); outline-offset:2px; }
+
+.drawer__nav     { flex:1; overflow-y:auto; padding:10px 12px 24px; }
+
+/* Category = a labelled section (icon + name) with its pages listed beneath.
+   A hairline divides each section; the first section carries none. */
+.drawer__group   { padding-top:8px; margin-top:8px; border-top:1px solid var(--hair); }
+.drawer__nav > .drawer__group:first-child { border-top:none; margin-top:0; }
+.drawer__group-label { display:flex; align-items:center; gap:8px; margin:0 0 2px; padding:6px 12px;
+  color:var(--tx-mut); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; }
+/* A top-level page that follows a category gets its own divider. */
+.drawer__group + .drawer__link { margin-top:8px; padding-top:14px; border-top:1px solid var(--hair); }
+
+.drawer__link    { display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:11px 12px; border-radius:8px; color:var(--tx); font-size:15px; font-weight:500;
+  text-decoration:none; transition:background 0.13s, color 0.13s; }
+.drawer__link:hover      { background:#ffffff0f; text-decoration:none; }
+.drawer__link--sub       { padding-left:20px; color:var(--tx-mut); font-size:14px; font-weight:400; }
+.drawer__link--sub:hover { color:var(--tx); }
+.drawer__link.is-active  { color:var(--accent-teal); font-weight:700; background:var(--accent-soft); }
+
+.drawer__dot       { flex-shrink:0; border-radius:20px; padding:1px 7px; font-size:10.5px;
+  font-weight:500; white-space:nowrap; }
+.drawer__dot--live { background:var(--accent-soft); color:var(--accent-teal); }
+.drawer__dot--soon { background:#ffffff14; color:var(--tx-dim); }
 
 /* ---- Footer (pearl band: acknowledgement · partners · sources · bar) ------ */
 
@@ -560,115 +589,24 @@ p  { margin: 0 0 0.75rem; }
   text-transform:uppercase; letter-spacing:0.14em; }
 .ftr__copy     { color:var(--text-on-green-soft); font-size:13px; }
 
-/* ---- Shell responsive (Directive 03) ------------------------------------- */
-/* Below 1240px the wide full-width nav can't fit its ten items, so it folds to a
-   hamburger + in-place accordion. The header sheds its wordmark then shrinks its
-   text; the footer stacks to one column. */
-@media (max-width: 1240px) {
-  .nav__list   { display:none; }
-  .nav__toggle { display:inline-flex; align-items:center; }
-  .nav__mobile { display:block; border-top:1px solid var(--border); padding:8px 0 14px; }
-  .nav__mobile-link { display:flex; justify-content:space-between; align-items:center; width:100%;
-    padding:12px 8px; color:var(--text-body); background:none; border:none; border-radius:8px;
-    font-family:inherit; font-size:15px; font-weight:500; text-align:left; text-decoration:none;
-    cursor:pointer; }
-  .nav__mobile-link:hover { background:var(--surface-soft); text-decoration:none; }
-  .nav__mobile-sub { padding-left:16px; }
-  .nav__mobile-sub .nav__mobile-link { color:var(--text-muted); font-size:14px; font-weight:400; }
-}
+/* ---- Shell responsive ---------------------------------------------------- */
+/* Navigation is the off-canvas drawer at every width (no bar to fold). Here the
+   header lockup tightens on narrow screens and the footer stacks to one column. */
 @media (max-width: 780px) { .ftr__grid { grid-template-columns:1fr; gap:28px; padding:36px 0 24px; } }
-@media (max-width: 640px) { .hdr__wordmark { display:none; } }
-@media (max-width: 520px) { .hdr__centre, .hdr__dept { font-size:13.5px; } }
+@media (max-width: 520px) {
+  .hdr__inner       { gap:10px; }
+  .hdr__lockup      { padding:4px 9px; }
+  .hdr__lockup-org  { font-size:10.5px; letter-spacing:0.08em; }
+  .hdr__lockup-dept { font-size:12px; }
+}
 
-/* ---- Immersive chrome (the PA map route only) --------------------------- */
-/* Layout adds .shell-immersive on an immersive route and wraps <Nav> + <Footer>
-   in <EdgeReveal> (EdgeReveal.jsx). The Nav (section selector) and Footer become
-   absolute overlays that slide off-screen and reveal on edge-hover / keyboard
-   focus / a tap on the grip — so the map fills the frame while the map's own
-   controls and the left/right overlays stay put. Scoped entirely to
-   .shell-immersive, so every other route (incl. Building Permits) is unchanged. */
-
-/* The shell becomes the positioning context; with the chrome pulled out of the
-   flex flow (absolute, below), shell-main grows to fill the freed space — and a
-   reveal overlays the map instead of resizing it. */
+/* ---- Immersive chrome (the map / console routes) ------------------------ */
+/* Layout adds .shell-immersive on an immersive route and REMOVES the footer so
+   the map's data table can own the bottom edge (Layout.jsx). position:relative
+   keeps .shell as the positioning context for the map chrome. (The old EdgeReveal
+   nav auto-hide was retired with the horizontal nav bar — the drawer is the nav
+   now, and it opens from the always-present header on every route.) */
 .shell-immersive { position: relative; }
-
-/* The edge marker: a zero-height anchor at the very top (under the header) /
-   bottom. pointer-events:none — it NEVER covers the map, its controls, or the
-   side panels. Edge-proximity reveal is driven in JS (EdgeReveal.jsx) from the
-   pointer's distance to this edge, so nothing overlays the map to catch the hover.
-   z-index:95 only affects the revealed panel's stacking (over .sb/popup 10/20). */
-.edge-reveal {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 0;
-  z-index: 95;
-  pointer-events: none;
-}
-.edge-reveal--top    { top: var(--header-h); }   /* directly beneath the header band */
-.edge-reveal--bottom { bottom: 0; }
-
-/* The chrome itself — slid out of view by default; pointer-events:none while
-   hidden so it can't intercept clicks. The nav dropdown (.nav__menu) is now
-   position:absolute, anchored to its own .nav__item, so — unlike the old
-   position:fixed menu — this panel's transform does not affect it; it also only
-   opens while the panel is revealed (transform:none). A hide-delay gives
-   flicker-free hysteresis at the edge. */
-.edge-reveal-panel {
-  position: absolute;
-  left: 0;
-  right: 0;
-  pointer-events: none;
-  transition: transform var(--dur-base) var(--ease);
-  transition-delay: 120ms;
-}
-.edge-reveal--top    .edge-reveal-panel { top: 0;    transform: translateY(-100%); }
-.edge-reveal--bottom .edge-reveal-panel { bottom: 0; transform: translateY(100%); }
-
-/* Reveal — JS sets .is-open from pointer-proximity + tap; CSS adds keyboard
-   focus-within and dwelling on the already-shown panel. Shows promptly (delay 0). */
-.edge-reveal.is-open .edge-reveal-panel,
-.edge-reveal:focus-within .edge-reveal-panel,
-.edge-reveal-panel:hover {
-  transform: none;
-  pointer-events: auto;
-  transition-delay: 0ms;
-}
-
-/* The grip — a small handle: the discoverable touch affordance and the
-   keyboard/click toggle. The ONLY part of the edge that takes pointer events.
-   Anchored to the LEFT corner so it clears the centred map zones (search pill +
-   bottom table pill) and the right-corner map controls — keeping it tappable on
-   touch even with those zones present. */
-.edge-reveal-tab {
-  position: absolute;
-  left: 16px;
-  width: 46px;
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  pointer-events: auto;
-  z-index: 1;   /* above the hidden panel within this edge-reveal */
-}
-.edge-reveal--top    .edge-reveal-tab { top: 0; }
-.edge-reveal--bottom .edge-reveal-tab { bottom: 0; }
-.edge-reveal-grip {
-  width: 30px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--border);
-  box-shadow: var(--shadow-sm);
-  transition: background 120ms;
-}
-.edge-reveal-tab:hover .edge-reveal-grip,
-.edge-reveal-tab:focus-visible .edge-reveal-grip { background: var(--accent); }
-.edge-reveal-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ---- Content pages ------------------------------------------------------- */
 
@@ -711,22 +649,21 @@ p  { margin: 0 0 0.75rem; }
    carries `.readpage brand`. */
 .shell:has(.readpage)             { display:block; height:auto; min-height:100svh; overflow:visible; }
 .shell:has(.readpage) .shell-main { overflow:visible; max-width:none; }
-.shell:has(.readpage) .shell-nav  { position:sticky; top:0; }
 
 /* ---- Home page (Directive 04) -------------------------------------------- */
 
 /* Hero — the vivid pearl band (variant hero, not the calmer --band). */
 .hero          { padding:0; }
 .hero__inner   { max-width:760px; padding:64px 0 56px; }
-.hero__rule    { width:54px; height:4px; margin-bottom:20px; border-radius:2px;
+.hero__rule    { width:54px; height:4px; margin-bottom:var(--space-5); border-radius:2px;
   background:linear-gradient(90deg, var(--gold-ink), #63992d); }
-.hero__eyebrow { margin:0 0 16px; color:#b7cbb0; font-size:12px; font-weight:500;
+.hero__eyebrow { margin:0 0 var(--space-4); color:var(--text-on-green-soft); font-size:12px; font-weight:500;
   text-transform:uppercase; letter-spacing:0.13em; }
-.hero__title   { margin:0; font-family:var(--font-display); color:#fff; font-weight:700;
+.hero__title   { margin:0; font-family:var(--font-display); color:var(--text-on-green); font-weight:700;
   font-size:clamp(30px, 4.6vw, 46px); line-height:1.1; letter-spacing:-0.01em; }
-.hero__sub     { max-width:40rem; margin:20px 0 0; color:var(--text-on-green-soft);
+.hero__sub     { max-width:40rem; margin:var(--space-5) 0 0; color:var(--text-on-green-soft);
   font-size:clamp(15px, 1.7vw, 17px); line-height:1.6; }
-.hero__cta     { display:flex; flex-wrap:wrap; gap:12px; margin-top:28px; }
+.hero__cta     { display:flex; flex-wrap:wrap; gap:var(--space-3); margin-top:var(--space-7); }
 
 /* Gold-foil text (the hero's "Albertans") — a STATIC iridescent gold clip.
    NOTE: use background-IMAGE, not the `background` shorthand — the shorthand
@@ -736,7 +673,7 @@ p  { margin: 0 0 0.75rem; }
   background-image:conic-gradient(from 0deg, #9bd07a, #f2cd00, #d9b23a, #63992d, #9bd07a);
   -webkit-background-clip:text; background-clip:text; }
 
-/* Buttons (hero CTAs; solid/outline arrive with the Feedback/About pages). */
+/* Buttons (hero CTAs; solid/outline are shared read-page button variants). */
 .btn         { display:inline-flex; align-items:center; gap:8px; padding:12px 22px; border:none;
   border-radius:9px; font-family:inherit; font-size:15px; font-weight:500; text-decoration:none;
   cursor:pointer; transition:transform 0.12s, box-shadow 0.15s, background 0.15s; }
@@ -751,78 +688,291 @@ p  { margin: 0 0 0.75rem; }
 
 /* Stats strip — a centred card overlapping the hero's bottom edge (gap:1px on a
    --border ground draws the hairlines between white cells). */
-.stats       { position:relative; z-index:3; display:grid; grid-template-columns:repeat(4, 1fr);
-  gap:1px; margin-top:-28px; border-radius:12px; overflow:hidden;
+.stats       { position:relative; z-index:3; display:grid; grid-template-columns:repeat(3, 1fr);
+  gap:1px; margin-top:calc(var(--space-7) * -1); border-radius:var(--radius-card); overflow:hidden;
   background:var(--border); border:1px solid var(--border); box-shadow:var(--shadow-card); }
-.stat        { background:#fff; padding:20px 22px; }
+.stat        { background:var(--surface); padding:var(--space-5) var(--space-6); }
 .stat__value { font-family:var(--font-display); color:var(--uofa-green); font-size:26px;
-  font-weight:700; line-height:1; }
-.stat__label { margin-top:6px; color:var(--text-muted); font-size:13px; }
+  font-weight:700; line-height:1; font-variant-numeric:tabular-nums; }
+.stat__label { margin-top:6px; color:var(--text-muted); font-size:var(--t-xs); }
 
 /* Sections + section heads. */
 .section          { padding:56px 0; }
 .section--soft    { background:var(--page-bg-soft); border-top:1px solid var(--border);
   border-bottom:1px solid var(--border); }
-.section__head    { margin-bottom:28px; }
-.section__eyebrow { margin:0 0 8px; color:var(--teal); font-size:12px; font-weight:700;
+.section__head    { margin-bottom:var(--space-7); }
+.section__eyebrow { margin:0 0 var(--space-2); color:var(--teal); font-size:12px; font-weight:700;
   text-transform:uppercase; letter-spacing:0.09em; }
 .section__title   { margin:0; font-size:clamp(22px, 3vw, 28px); font-weight:700; color:var(--text-strong); }
-.section__lead    { max-width:46rem; margin:14px 0 0; color:var(--text-body); font-size:16px; line-height:1.65; }
+.section__lead    { max-width:46rem; margin:14px 0 0; color:var(--text-body); font-size:var(--t-md); line-height:1.65; }
 .section__row     { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-start;
-  gap:24px; margin-bottom:24px; }
-.section__row .section__lead { margin-top:12px; }
-.section__note    { color:var(--text-muted); font-size:13.5px; }
+  gap:var(--space-6); margin-bottom:var(--space-6); }
+.section__row .section__lead { margin-top:var(--space-3); }
+.section__note    { color:var(--text-muted); font-size:var(--t-xs); }
 
-/* Dashboards card grid. */
-.catgrid { display:grid; grid-template-columns:repeat(3, 1fr); align-items:start; gap:20px; }
-.catcard { display:flex; flex-direction:column; overflow:hidden; background:#fff;
-  border:1px solid var(--border); border-radius:14px; transition:border-color 0.15s, box-shadow 0.15s; }
-.catcard:hover { box-shadow:var(--shadow-card); }
-.catcard__head { display:flex; align-items:center; gap:11px; padding:18px 18px 14px;
+/* Dashboards card grid. The cards ride the shared "gel" card material (§ gel
+   recipe in :root) — a convex glossy surface that lifts + glosses on hover. */
+.catgrid { display:grid; grid-template-columns:repeat(3, 1fr); align-items:start; gap:var(--space-5); }
+.catcard { display:flex; flex-direction:column; overflow:hidden; background:var(--gel-grad);
+  border:var(--gel-border); border-radius:var(--radius-card); box-shadow:var(--gel-bevel), var(--gel-lift);
+  transition:background 0.15s, box-shadow 0.15s, transform 0.15s; }
+.catcard:hover { background:var(--gel-grad-gloss); box-shadow:var(--gel-bevel), var(--gel-lift-float);
+  transform:translateY(-2px); }
+.catcard__head { display:flex; align-items:center; gap:var(--space-3); padding:18px 18px 14px;
   border-bottom:1px solid var(--border); }
 .catcard__icon { display:flex; align-items:center; justify-content:center; flex-shrink:0;
-  width:40px; height:40px; border-radius:10px; }
+  width:40px; height:40px; border-radius:var(--radius-lg); }
 .catcard__icon--live { background:var(--teal-tint); color:var(--teal); }
-.catcard__icon--soon { background:#eceae3; color:#888780; }
-.catcard__name { flex:1; margin:0; color:var(--uofa-green); font-size:16.5px; font-weight:700; }
-.catcard__status { white-space:nowrap; padding:2px 9px; border-radius:20px; font-size:10.5px;
+.catcard__icon--soon { background:var(--chip-soft-bg); color:var(--chip-soft-ink-strong); }
+.catcard__name { flex:1; margin:0; color:var(--uofa-green); font-size:var(--t-md); font-weight:700; }
+.catcard__status { white-space:nowrap; padding:2px 9px; border-radius:20px; font-size:var(--t-2xs);
   font-weight:500; letter-spacing:0.02em; }
 .catcard__status--live { background:var(--teal-tint); color:var(--teal-strong); }
-.catcard__status--soon { background:#eceae3; color:#5f5e5a; }
-.catcard__topics { display:flex; flex-direction:column; gap:2px; margin:0; padding:8px; list-style:none; }
+.catcard__status--soon { background:var(--chip-soft-bg); color:var(--chip-soft-ink); }
+.catcard__topics { display:flex; flex-direction:column; gap:2px; margin:0; padding:var(--space-2); list-style:none; }
 
 .subrow       { display:flex; justify-content:space-between; align-items:center; gap:10px; width:100%;
-  padding:11px 12px; border:none; border-radius:8px; background:none; font-family:inherit;
+  padding:var(--space-3); border:none; border-radius:var(--radius); background:none; font-family:inherit;
   text-align:left; text-decoration:none; }
 .subrow--live { color:var(--text-strong); cursor:pointer; transition:background 0.13s; }
 .subrow--live:hover { background:var(--teal-tint); }
 .subrow--live .subrow__name { font-weight:600; }
-.subrow__name { font-size:14px; }
-.subrow__cue  { display:inline-flex; align-items:center; gap:4px; color:var(--teal); font-size:12px;
+.subrow__name { font-size:var(--t-sm); }
+.subrow__cue  { display:inline-flex; align-items:center; gap:var(--space-1); color:var(--teal); font-size:12px;
   font-weight:500; opacity:0; transition:opacity 0.13s; }
 .subrow--live:hover .subrow__cue { opacity:1; }
 .subrow--soon .subrow__name { color:var(--text-muted); font-weight:500; }
-.subrow__soon { padding:1px 8px; border-radius:20px; background:#eceae3; color:#5f5e5a;
-  font-size:10.5px; font-weight:500; }
+.subrow__soon { padding:1px 8px; border-radius:20px; background:var(--chip-soft-bg); color:var(--chip-soft-ink);
+  font-size:var(--t-2xs); font-weight:500; }
 
 /* Funder + partners. */
-.grant        { display:flex; flex-wrap:wrap; align-items:center; gap:28px; padding:28px 32px;
-  background:#fff; border:1px solid var(--border); border-radius:14px; }
+.grant        { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-7); padding:var(--space-7) var(--space-8);
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-card); }
 .grant__text  { flex:1; min-width:240px; }
-.grant__label { margin:0 0 4px; color:var(--text-muted); font-size:13px; font-weight:500; }
+.grant__label { margin:0 0 var(--space-1); color:var(--text-muted); font-size:13px; font-weight:500; }
 .grant__name  { margin:0; color:var(--uofa-green); font-size:18px; font-weight:700; }
 .grant__logo  { display:flex; align-items:center; justify-content:center; min-width:180px; height:72px;
-  padding:12px 20px; border-radius:10px; background:var(--surface-soft); color:var(--uofa-green);
+  padding:12px 20px; border-radius:var(--radius-lg); background:var(--surface-soft); color:var(--uofa-green);
   text-align:center; }
 .grant__logo-txt { font-family:var(--font-display); font-size:14px; font-weight:700; line-height:1.25;
   letter-spacing:0.02em; }
 
 /* Home responsive. */
 @media (max-width: 900px) { .catgrid { grid-template-columns:repeat(2, 1fr); } }
-@media (max-width: 680px) { .stats { grid-template-columns:repeat(2, 1fr); } }
+@media (max-width: 560px) { .stats { grid-template-columns:1fr; } }
 @media (max-width: 560px) { .catgrid { grid-template-columns:1fr; } }
 
-/* ---- Read pages: About / Research Competition / Feedback (Dir 05-06) ------ */
+/* ---- Feature-demo band (home) — image demos of what each control does ------ */
+/* Under the dashboard cards: auto-looping REAL stills with Ken Burns (slow zoom),
+   cross-fades, and motion overlays (cursor, drag marquee, click ripple, rising
+   chip). ALL motion is transform/opacity only (GPU-composited); ONE animating
+   container per tile; an IntersectionObserver adds .is-playing only in view.
+   prefers-reduced-motion (bottom of this block) drops the motion and leaves the
+   representative still — the text label carries the meaning either way. */
+
+/* Each tile is matted in the shared "gel" card material (§ gel recipe in :root):
+   a convex glossy frame around the image stage + caption. Static (the tiles are
+   not clickable), so it carries the resting gel look with no hover. */
+.fdemo { margin: 0; padding: 9px 10px 12px; background: var(--gel-grad);
+  border: var(--gel-border); border-radius: 15px; box-shadow: var(--gel-bevel), var(--gel-lift); }
+/* The gallery is exactly THREE uniform tiles in a row (stacks on narrow). */
+/* The three demo tiles lead the dashboards section; the bottom gap separates
+   them from the category cards below. */
+.demoband__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-6);
+  align-items: start; margin: 0 0 var(--space-8); }
+
+/* The stage: fixed aspect, clips the Ken Burns overscan. A warm shadow + border
+   settle the (dark) dashboard stills into the warm read-page palette. */
+.fdemo-frame { position: relative; overflow: hidden; aspect-ratio: 1360 / 850;
+  border-radius: var(--radius-card); border: 1px solid rgba(196, 166, 112, 0.42);
+  background: #0e1a16;
+  box-shadow: 0 8px 26px rgba(78, 46, 12, 0.16), 0 1px 3px rgba(78, 46, 12, 0.12); }
+
+/* Warm colour grade — a soft-light wash (amber top glow + a warm veil deepening
+   downward) so the cool dark dashboards pick up the site's warmth. Above the
+   stills, below pointer events; kept subtle so the UI stays legible. */
+.fdemo-frame::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 3;
+  background:
+    radial-gradient(120% 88% at 50% 0%, rgba(255, 208, 132, 0.17), rgba(255, 208, 132, 0) 52%),
+    linear-gradient(180deg, rgba(255, 180, 96, 0.05), rgba(58, 33, 8, 0.13));
+  mix-blend-mode: soft-light; }
+
+/* Each still: an absolute slide (opacity envelope) wrapping the zooming image. */
+.fdemo-slide { position: absolute; inset: 0; opacity: 0; }
+.fdemo-slide[data-key="true"] { opacity: 1; }   /* resting + reduced-motion frame */
+.fdemo-still { position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; transform: scale(1.05); -webkit-user-drag: none;
+  filter: saturate(1.06) brightness(1.02); }
+
+/* Caption — carries the meaning in TEXT (reads with motion off). Compact for the
+   uniform grid tiles: label + one short line. */
+.fdemo-cap { padding-top: 11px; }
+.fdemo-cap__label { display: block; font-family: var(--font-display);
+  color: var(--uofa-green); font-size: 15.5px; font-weight: 700; line-height: 1.3; }
+.fdemo-cap__blurb { display: block; margin-top: 5px; color: var(--text-body);
+  font-size: 12.5px; line-height: 1.55; }
+
+/* -- Motion overlays (transform/opacity only; placed in % of the frame) ------ */
+.fdemo-ov { position: absolute; opacity: 0; pointer-events: none; }
+.fdemo-ov--marquee { border: 2px dashed var(--accent-teal); border-radius: 8px;
+  background: rgba(45, 212, 191, 0.12); transform-origin: top left; transform: scale(0.15); }
+.fdemo-ov--cursor { filter: drop-shadow(0 2px 3px rgba(0,0,0,0.35)); transform: translateY(6px); }
+.fdemo-ov--cursor svg { display: block; }
+.fdemo-ov--chip { padding: 4px 10px; border-radius: 999px; background: var(--uofa-green);
+  color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap;
+  box-shadow: var(--shadow-lift); transform: translateY(10px); }
+
+/* -- Playback: animations run ONLY while .is-playing (in view). will-change is
+   scoped here so off-screen tiles promote no layers. ------------------------- */
+.fdemo.is-playing .fdemo-slide { animation-duration: var(--fdemo-cycle);
+  animation-timing-function: linear; animation-iteration-count: infinite;
+  animation-delay: var(--fdemo-delay); }
+.fdemo--n2.is-playing .fdemo-slide { animation-name: fdemo-fade-2; }
+.fdemo--n3.is-playing .fdemo-slide { animation-name: fdemo-fade-3; }
+.fdemo--n4.is-playing .fdemo-slide { animation-name: fdemo-fade-4; }
+.fdemo.is-playing .fdemo-still,
+.fdemo.is-playing .fdemo-ov { will-change: transform, opacity; }
+.fdemo.is-playing .fdemo-still {
+  animation: fdemo-kb var(--fdemo-cycle) linear infinite var(--fdemo-delay); }
+.fdemo.is-playing .fdemo-ov--marquee {
+  animation: fdemo-marquee var(--fdemo-cycle) linear infinite var(--fdemo-delay); }
+.fdemo.is-playing .fdemo-ov--cursor {
+  animation: fdemo-cursor var(--fdemo-cycle) linear infinite var(--fdemo-delay); }
+.fdemo.is-playing .fdemo-ov--chip {
+  animation: fdemo-chip var(--fdemo-cycle) linear infinite var(--fdemo-delay); }
+
+/* -- Keyframes --------------------------------------------------------------- */
+/* Opacity envelopes — one per still count. Each still is visible ~1/n of the
+   loop; its fade-out overlaps the NEXT still's fade-in EXACTLY (including the
+   loop wrap), so a cross-fade never dips to black. Zoom is separate + slower. */
+@keyframes fdemo-fade-2 { 0%{opacity:0} 5%{opacity:1} 50%{opacity:1} 55%{opacity:0} 100%{opacity:0} }
+@keyframes fdemo-fade-3 { 0%{opacity:0} 4%{opacity:1} 33.33%{opacity:1} 37.33%{opacity:0} 100%{opacity:0} }
+@keyframes fdemo-fade-4 { 0%{opacity:0} 3.5%{opacity:1} 25%{opacity:1} 28.5%{opacity:0} 100%{opacity:0} }
+
+/* Ken Burns — gentle slow zoom toward each still's transform-origin (set inline).
+   This is the BED, not the action: it stays slow/subtle while the overlays snap.
+   Kept mild so a big zoom never pushes edge content (table columns, KPI labels). */
+@keyframes fdemo-kb { 0%{transform:scale(var(--kb-a,1.015))} 50%{transform:scale(var(--kb-b,1.05))} 100%{transform:scale(var(--kb-c,1.075))} }
+
+/* Overlays — CRISP + decisive, no sonar/ripple rings. Authored against the n=3
+   window (a still is prominent ≈ 4–33% of the loop): the cursor glides in fast
+   (front-loaded) then TAPS with a sharp scale-press; the marquee draws quickly;
+   the chip pops in. */
+@keyframes fdemo-marquee {
+  0%{opacity:0; transform:scale(0.2)} 5%{opacity:0; transform:scale(0.2)}
+  7%{opacity:1} 11%{opacity:1; transform:scale(1)} 30%{opacity:1; transform:scale(1)}
+  34%{opacity:0} 100%{opacity:0; transform:scale(1)} }
+@keyframes fdemo-cursor {
+  0%{opacity:0; transform:translate(15px,12px) scale(1)}
+  5%{opacity:0; transform:translate(15px,12px) scale(1)}
+  8%{opacity:1; transform:translate(4px,3px) scale(1)}
+  10%{opacity:1; transform:translate(0,0) scale(1)}
+  11%{transform:translate(0,0) scale(0.8)}
+  12.4%{transform:translate(0,0) scale(1)}
+  30%{opacity:1; transform:translate(0,0) scale(1)}
+  34%{opacity:0; transform:translate(0,0) scale(1)}
+  100%{opacity:0; transform:translate(0,0) scale(1)} }
+@keyframes fdemo-chip {
+  0%{opacity:0; transform:translateY(6px) scale(0.85)}
+  16%{opacity:0; transform:translateY(6px) scale(0.85)}
+  19%{opacity:1; transform:translateY(0) scale(1.06)}
+  21%{transform:translateY(0) scale(1)}
+  32%{opacity:1; transform:translateY(0) scale(1)}
+  36%{opacity:0; transform:translateY(-4px) scale(1)}
+  100%{opacity:0; transform:translateY(-4px) scale(1)} }
+
+/* -- Tile 2: the slider demo — a SPLIT frame. RIGHT: the choropleth cross-fades
+   between two years (A=2012, B=2026 = resting frame). LEFT: a fully SYNTHETIC
+   year slider (design-token styled to match the real tuning bay) that GLIDES —
+   knob + teal fill + a swapping readout — synced to the recolour, so the slider
+   visibly CAUSES it. (Synthetic, not two real slider crops cross-faded, which
+   produced overlapping handles + a garbled readout.) */
+.fdemo-split { position: absolute; inset: 0; display: grid; grid-template-columns: 44% 56%; }
+.fdemo-split__panel { position: relative; overflow: hidden; }
+.fdemo-split__panel--left { background: #17140d; }        /* dark tuning-bay ground */
+.fdemo-split__panel--right { border-left: 1px solid rgba(0,0,0,0.4); }
+.sld-img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0;
+  object-fit: cover; filter: saturate(1.06) brightness(1.02); }
+.sld-b { opacity: 1; }                                     /* resting frame = end state (2026) */
+.sld-a { opacity: 0; }
+.fdemo.is-playing .sld-a { animation: sld-a var(--fdemo-cycle) linear infinite; }
+.fdemo.is-playing .sld-b { animation: sld-b var(--fdemo-cycle) linear infinite; }
+.fdemo.is-playing .sld-img { will-change: opacity; }
+/* The shared timeline: 2012 dwells 0–45%, glides to 2026 over 45–49%, dwells
+   49–91%, glides back 91–95% — crisp + snappy. The synthetic slider (below) uses
+   the SAME windows so the glide and the recolour move together. */
+@keyframes sld-a { 0%{opacity:1} 45%{opacity:1} 49%{opacity:0} 91%{opacity:0} 95%{opacity:1} 100%{opacity:1} }
+@keyframes sld-b { 0%{opacity:0} 45%{opacity:0} 49%{opacity:1} 91%{opacity:1} 95%{opacity:0} 100%{opacity:0} }
+
+/* The synthetic year slider (resting state = 2026: knob right, fill full, "2026"). */
+.synslider { position: absolute; inset: 0; display: flex; flex-direction: column;
+  justify-content: center; gap: 10%; padding: 0 12%; }
+.synslider__head { display: flex; align-items: baseline; justify-content: space-between; }
+.synslider__label { color: hsl(34 6% 58%); font-size: clamp(8px, 5%, 13px);
+  font-weight: 600; letter-spacing: 0.12em; }
+.synslider__val { position: relative; min-width: 3.4em; text-align: right; }
+.synslider__val > span { font-family: var(--font-mono, ui-monospace); color: var(--accent-teal, #2dd4bf);
+  font-size: clamp(12px, 8.5%, 22px); font-weight: 700; }
+.synslider__val-a { opacity: 0; }
+.synslider__val-b { position: absolute; right: 0; top: 0; opacity: 1; }
+.synslider__track { position: relative; height: clamp(4px, 2%, 6px); border-radius: 999px;
+  background: hsl(34 6% 24%); container-type: size; }
+.synslider__fill { position: absolute; left: 0; top: 0; height: 100%; width: 100%;
+  border-radius: 999px; background: var(--accent-teal, #2dd4bf);
+  transform-origin: left center; transform: scaleX(0.87); }
+.synslider__knob { position: absolute; left: 0; top: 50%;
+  width: clamp(11px, 9%, 17px); aspect-ratio: 1; border-radius: 999px;
+  background: radial-gradient(circle at 38% 32%, #ffffff, #d0d5da);
+  border: 2px solid var(--accent-teal, #2dd4bf); box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  transform: translate(82cqw, -50%); }
+.synslider__ticks { display: flex; justify-content: space-between;
+  color: hsl(34 6% 50%); font-size: clamp(7px, 4%, 11px); }
+
+.fdemo.is-playing .synslider__knob { animation: syn-knob var(--fdemo-cycle) linear infinite; will-change: transform; }
+.fdemo.is-playing .synslider__fill { animation: syn-fill var(--fdemo-cycle) linear infinite; will-change: transform; }
+.fdemo.is-playing .synslider__val-a { animation: syn-val-a var(--fdemo-cycle) linear infinite; }
+.fdemo.is-playing .synslider__val-b { animation: syn-val-b var(--fdemo-cycle) linear infinite; }
+
+/* Knob glides + fill grows over the SAME 45–49% window (ease-out via a front-
+   loaded mid-key); the readout hard-swaps at the glide midpoint (no fade → no
+   garble). Track units are cqw (1% of the track), so it stays aligned at any size. */
+@keyframes syn-knob {
+  0%{transform:translate(2cqw,-50%)} 45%{transform:translate(2cqw,-50%)}
+  47%{transform:translate(59cqw,-50%)} 49%{transform:translate(82cqw,-50%)}
+  91%{transform:translate(82cqw,-50%)} 93%{transform:translate(25cqw,-50%)}
+  95%{transform:translate(2cqw,-50%)} 100%{transform:translate(2cqw,-50%)} }
+@keyframes syn-fill {
+  0%{transform:scaleX(0.06)} 45%{transform:scaleX(0.06)}
+  47%{transform:scaleX(0.64)} 49%{transform:scaleX(0.87)}
+  91%{transform:scaleX(0.87)} 93%{transform:scaleX(0.29)}
+  95%{transform:scaleX(0.06)} 100%{transform:scaleX(0.06)} }
+@keyframes syn-val-a { 0%{opacity:1} 46.5%{opacity:1} 47%{opacity:0} 93%{opacity:0} 93.5%{opacity:1} 100%{opacity:1} }
+@keyframes syn-val-b { 0%{opacity:0} 46.5%{opacity:0} 47%{opacity:1} 93%{opacity:1} 93.5%{opacity:0} 100%{opacity:0} }
+
+@media (max-width: 860px) {
+  .demoband__grid { grid-template-columns: 1fr; max-width: 440px; margin-inline: auto; }
+}
+
+/* prefers-reduced-motion: drop ALL demo motion, leave the representative still
+   (data-key) + the text label. Makes the resting frame explicit (the global
+   guard at the file's end also curtails animation). */
+@media (prefers-reduced-motion: reduce) {
+  .fdemo .fdemo-slide, .fdemo .fdemo-still, .fdemo .fdemo-ov,
+  .fdemo .fdemo-ov__ring { animation: none !important; }
+  .fdemo .fdemo-slide { opacity: 0 !important; }
+  .fdemo .fdemo-slide[data-key="true"] { opacity: 1 !important; }
+  .fdemo .fdemo-still { transform: none !important; }
+  .fdemo .fdemo-ov { display: none !important; }
+  /* Tile 2 (slider): leave the END state — recoloured map + synthetic slider at
+     2026 (its resting base is already 2026, so just stop the motion). */
+  .fdemo .sld-a, .fdemo .sld-b,
+  .fdemo .synslider__knob, .fdemo .synslider__fill,
+  .fdemo .synslider__val-a, .fdemo .synslider__val-b { animation: none !important; }
+  .fdemo .sld-a { opacity: 0 !important; }
+  .fdemo .sld-b { opacity: 1 !important; }
+}
+
+/* ---- Read pages: About / Research Competition (Dir 05-06) ---------------- */
 /* Shared page-hero (a smaller pearl band, variant hero) + a document body that
    carries either a doc (sticky TOC + prose) or the feedback form. */
 .pagehero          { padding:0; }
@@ -886,31 +1036,8 @@ p  { margin: 0 0 0.75rem; }
 .btn--outline      { background:#fff; color:var(--teal); border:1px solid var(--teal); }
 .btn--outline:hover { background:var(--teal-tint); }
 
-/* Feedback form + aside. */
-.fb        { display:grid; grid-template-columns:1.5fr 1fr; align-items:start; gap:40px; max-width:900px; }
-.fb__form  { display:flex; flex-direction:column; gap:18px; }
-.fb__field { display:flex; flex-direction:column; gap:6px; }
-.fb__field label { color:var(--text-strong); font-size:13.5px; font-weight:500; }
-.fb__field input, .fb__field select, .fb__field textarea {
-  padding:11px 13px; border:1px solid var(--border-strong); border-radius:9px; background:#fff;
-  color:var(--text-body); font-family:inherit; font-size:15px; resize:vertical;
-  transition:border-color 0.14s, box-shadow 0.14s; }
-.fb__field input:focus, .fb__field select:focus, .fb__field textarea:focus {
-  border-color:var(--teal); outline:none; box-shadow:0 0 0 3px #0f6e561f; }
-.fb__submit { align-self:flex-start; margin-top:4px; }
-.fb__aside   { padding:22px 24px; background:var(--surface-soft); border:1px solid var(--border); border-radius:12px; }
-.fb__aside-h { margin:0 0 10px; color:var(--uofa-green); font-size:15px; font-weight:700; }
-.fb__aside-p { margin:0; color:var(--text-muted); font-size:14px; line-height:1.6; }
-.fb__thanks  { display:flex; align-items:center; gap:16px; padding:24px 26px; background:var(--teal-tint);
-  border:1px solid #9fe1cb; border-radius:12px; }
-.fb__check   { display:flex; align-items:center; justify-content:center; flex-shrink:0; width:40px; height:40px;
-  border-radius:50%; background:var(--teal); color:#fff; }
-.fb__thanks h3 { margin:0 0 4px; color:var(--teal-strong); font-size:16px; }
-.fb__thanks p  { margin:0; color:var(--text-body); font-size:14px; }
-
 /* Read-page responsive. */
 @media (max-width: 800px) { .doc { grid-template-columns:1fr; gap:0; } .toc { display:none; } }
-@media (max-width: 780px) { .fb  { grid-template-columns:1fr; gap:28px; } }
 
 /* ---- Map pages ----------------------------------------------------------- */
 

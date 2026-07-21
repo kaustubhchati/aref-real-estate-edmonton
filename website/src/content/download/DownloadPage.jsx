@@ -123,8 +123,8 @@ export default function DownloadPage() {
           maxWidth: 560,
         }}>
           Cleaned, analysis-ready CSV files derived from Edmonton
-          open data. All files are neighbourhood-level aggregates
-          — no individual property records are included.
+          open data. All files are neighbourhood-level aggregates;
+          no individual property records are included.
         </p>
 
         {/* Dataset cards */}

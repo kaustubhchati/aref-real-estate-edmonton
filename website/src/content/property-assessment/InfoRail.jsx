@@ -22,7 +22,7 @@ import { fmtNumber, fmtCurrencyShort, fmtLogPtsBare } from "../../utils/format.j
 // Plain-language reason for a non-aggregated polygon, keyed by polygon_state.
 const STATE_NOTE = {
   suppressed_low_n:
-    "Fewer than 100 properties — aggregate values suppressed to protect privacy.",
+    "Fewer than 100 properties: aggregate values suppressed to protect privacy.",
   non_residential:
     "No residential properties in this area. May include river valley, industrial zones, parks, or commercial-only land.",
   manufactured_home_community:
@@ -125,7 +125,7 @@ export default function InfoRail({
           legend's teal outline row. */}
       {feature.is_annexation_area && (
         <p className="pa-detail-note">
-          Annexation area — annexed, not yet subdivided into neighbourhoods; shown with its own outline.
+          Annexation area: annexed, not yet subdivided into neighbourhoods; shown with its own outline.
         </p>
       )}
 

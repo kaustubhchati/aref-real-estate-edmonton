@@ -140,8 +140,7 @@ export default function ReportCard() {
       <header>
         <h1>Neighbourhood Report Card</h1>
         <p>
-          <strong>Edmonton — {year ?? "…"}.</strong> Layer-2 aggregates over the
-          Layer-1a-cleaned property assessments. <em>Calgary will appear
+          <strong>Edmonton, {year ?? "…"}.</strong> <em>Calgary will appear
           here when its pipeline lands.</em>
         </p>
         <p className="content-map-sub">

@@ -527,7 +527,7 @@ export default function BuildingPermitsMap() {
       <div className="pa-tips-honesty">
         <span className="pa-tips-honesty-h">Density</span>
         <p>
-          Relative permit density — the heat shows where permits concentrate at the overview;
+          Relative permit density: the heat shows where permits concentrate at the overview;
           zoom in for individual permits.
         </p>
       </div>

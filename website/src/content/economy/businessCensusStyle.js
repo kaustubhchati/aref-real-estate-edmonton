@@ -430,8 +430,7 @@ export function buildBusinessCensusPopupHtml(p, detail) {
   // annexation-area AND carry data). Agrees with the legend's teal outline row.
   if (p.is_annexation_area) {
     parts.push(
-      `<div class="pop-reason">Annexation area — annexed but not yet subdivided ` +
-        `into neighbourhoods; shown with its own outline. Any business counts it ` +
+      `<div class="pop-reason">Annexation area: shown with its own outline. Any business counts it ` +
         `carries are real and included.</div>`
     );
   }

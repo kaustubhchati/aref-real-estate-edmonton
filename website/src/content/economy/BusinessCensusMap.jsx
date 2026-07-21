@@ -79,7 +79,7 @@ const BC_SOURCE_NOTE = (
     <span className="pa-tips-honesty-h">Source note</span>
     <ul>
       <li>Edmonton Business Census, survey year 2025 (wh44-4bkz)</li>
-      <li>Geography changed from the prior dashboard (StatCan, Census Tract) — figures are <b>not comparable</b></li>
+      <li>Geography changed from the prior dashboard (StatCan, Census Tract), figures are <b>not comparable</b></li>
     </ul>
   </div>
 );
@@ -549,7 +549,7 @@ export default function BusinessCensusMap() {
           const hasData = p.census_state === "data";
           const notes = [];
           if (p.is_annexation_area) {
-            notes.push("Annexation area — annexed, not yet subdivided into neighbourhoods; shown with its own outline. Any business counts it carries are real and included.");
+            notes.push("Annexation area: annexed, not yet subdivided into neighbourhoods; shown with its own outline. Any business counts it carries are real and included.");
           }
           if (!hasData) notes.push("No business census data recorded for this neighbourhood.");
           const rows = hasData

@@ -1,12 +1,10 @@
 // =============================================================================
 // ResearchCompetition.jsx  (Directive 06)
 //
-// The annual student/researcher competition page: a page hero, how-it-works, and
-// a call-to-action linking to Feedback. Prose transcribed from the approved
-// prototype; identity from siteConfig.
+// The annual student/researcher competition page: a page hero and a how-it-works
+// section. Prose transcribed from the approved prototype; identity from siteConfig.
 // =============================================================================
 
-import { Link } from "react-router-dom";
 import { siteConfig } from "../../config/siteConfig.js";
 import PearlBand from "../../components/PearlBand.jsx";
 
@@ -45,14 +43,6 @@ export default function ResearchCompetition() {
               <li>Submit your analysis, plus the data and code behind it.</li>
             </ul>
             <p>Full details, deadlines, and submission instructions are posted each cycle.</p>
-
-            <div className="cta-card" style={{ marginTop: "24px" }}>
-              <div className="cta-card__body">
-                <h3>Have a Question?</h3>
-                <p>Reach the Centre through the Feedback page and we will get back to you.</p>
-              </div>
-              <Link className="btn btn--solid" to="/feedback">Get in Touch</Link>
-            </div>
           </div>
         </div>
       </section>

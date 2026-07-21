@@ -72,22 +72,19 @@ export const siteConfig = {
   // The named dashboard suite + its framing copy (prototype-approved).
   suite:        "Urban Alberta Dashboards",
   suiteArticle: "the Urban Alberta Dashboards",
-  suiteTagline: "Interactive dashboards from the Open Data Centre, each pairing a live view with the data behind it.",
+  suiteTagline: "Interactive geo-dashboards enabling city-wide exploration of metrics across all neighbourhoods and years.",
   coverageNote: "Edmonton available now. Calgary in development.",
   domain:       "realestatedata.srv.ualberta.ca",
 
-  // Feedback contact inbox. PLACEHOLDER (example.com) — set the real address
-  // before launch. The Feedback form opens a pre-filled email here via mailto
-  // (no server/API, per §1); alternatively swap to a form service (Decision 5).
-  contact:      "feedback@example.com",
+  // Hero lede: the site-name H1 renders from centreFull; this is its supporting line.
+  heroSub: "The single source for Alberta's urban real estate data, integrating property, construction, and economic records across every neighbourhood to enable data-driven research for Albertans.",
 
   // Home-page headline stats (prototype-approved marketing figures, not live-
   // computed). Update here if the collection grows.
   stats: [
     { value: "407",   label: "neighbourhoods" },
     { value: "3.5M+", label: "records integrated" },
-    { value: "15+",   label: "years of history" },
-    { value: "Free",  label: "no login, no licence" },
+    { value: "15+",   label: "years of data" },
   ],
 
   // ---- Data source + licence (see EDMONTON_OPEN_DATA above) ---------------
@@ -164,7 +161,7 @@ export const siteConfig = {
     {
       id: "pa-neighbourhood",
       source: "assessment",
-      label: "Property Assessment — {year} Neighbourhood Aggregates",
+      label: "Property Assessment: {year} Neighbourhood Aggregates",
       description:
         "Layer 1a-cleaned residential assessment aggregated to " +
         "407 Edmonton neighbourhoods. Includes median/mean assessed " +
@@ -178,7 +175,7 @@ export const siteConfig = {
     {
       id: "permits-category-counts",
       source: "permits",
-      label: "Building Permits — Counts by Year and Category",
+      label: "Building Permits: Counts by Year and Category",
       description:
         "Per-year, per-job-category permit counts for Edmonton, " +
         "{span}. 12 job categories. Useful for trend analysis " +
@@ -191,7 +188,7 @@ export const siteConfig = {
     {
       id: "permits-coverage",
       source: "permits",
-      label: "Building Permits — Mapping Coverage by Year",
+      label: "Building Permits: Mapping Coverage by Year",
       description:
         "Per-year counts of total permits, mapped permits, and " +
         "permits missing coordinates. Documents geocoding lag " +
@@ -252,6 +249,5 @@ export const siteConfig = {
     { label: "Download",             kind: "page", to: "/download" },
     { label: "Research Competition", kind: "page", to: "/research-competition" },
     { label: "About Us",             kind: "page", to: "/about" },
-    { label: "Feedback",             kind: "page", to: "/feedback" },
   ],
 };

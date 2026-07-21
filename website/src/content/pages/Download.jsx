@@ -11,7 +11,7 @@ export default function Download() {
       <p>
         Bulk CSV / GeoJSON downloads for each map will be linked here. Files
         are produced by the R pipeline on the laptop and copied into the site
-        at refresh time — see <code>REFRESH_NOTES.md</code> for the cadence.
+        at refresh time; see <code>REFRESH_NOTES.md</code> for the cadence.
       </p>
     </article>
   );

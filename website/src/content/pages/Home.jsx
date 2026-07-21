@@ -16,6 +16,7 @@ import { Link } from "react-router-dom";
 import { siteConfig } from "../../config/siteConfig.js";
 import PearlBand from "../../components/PearlBand.jsx";
 import Icon from "../../components/Icon.jsx";
+import FeatureHighlights from "./FeatureHighlights.jsx";
 
 // One category card: icon + name + availability badge, then its sub-pages as
 // rows. Live rows link and reveal an "Open" cue on hover; soon rows are tagged.
@@ -54,7 +55,7 @@ function Catcard({ category }) {
 }
 
 export default function Home() {
-  const { org, dept, suite, suiteTagline, coverageNote, funder, stats } = siteConfig;
+  const { org, dept, centre, centreFull, heroSub, suite, suiteTagline, coverageNote, funder, stats } = siteConfig;
   const categories = siteConfig.nav.filter((item) => item.kind === "group");
 
   return (
@@ -66,14 +67,13 @@ export default function Home() {
             <div className="hero__inner">
               <div className="hero__rule" />
               <p className="hero__eyebrow">{org} · {dept}</p>
+              {/* The site name IS the hero H1, split two lines after "Centre"
+                  (from siteConfig.centreFull, the single identity source). */}
               <h1 className="hero__title" id="hero-title">
-                Data-Driven Research<br />
-                For <span className="foil">Albertans</span>
+                {centre}<br />
+                {centreFull.slice(centre.length).trim()}
               </h1>
-              <p className="hero__sub">
-                The single source for neighbourhood-level Property, Development, and
-                Economic data across the province&rsquo;s cities.
-              </p>
+              <p className="hero__sub">{heroSub}</p>
               <div className="hero__cta">
                 <a className="btn btn--pearl" href="#collection-title">
                   <span>Explore the Dashboards <Icon name="arrow-right" size={16} /></span>
@@ -97,7 +97,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* The Urban Alberta Dashboards — one card per data category */}
+      {/* The Urban Alberta Dashboards: the demo tiles lead in, category cards below */}
       <section className="section" aria-labelledby="collection-title">
         <div className="wrap">
           <div className="section__row">
@@ -107,6 +107,7 @@ export default function Home() {
             </div>
             <span className="section__note">{coverageNote}</span>
           </div>
+          <FeatureHighlights />
           <div className="catgrid">
             {categories.map((cat) => <Catcard key={cat.label} category={cat} />)}
           </div>

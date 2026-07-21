@@ -596,15 +596,15 @@ export default function PermitChoroplethMap() {
     if (format === "csv-current") {
       const name = `${base}_${year}.csv`;
       downloadCsvWithSidecar(name, buildSnapshotCsv(scoped, year),
-        buildProvenanceText({ ...meta, file: name, shape: "snapshot — one row per neighbourhood", coverage: String(year) }));
+        buildProvenanceText({ ...meta, file: name, shape: "snapshot: one row per neighbourhood", coverage: String(year) }));
     } else if (format === "csv-timeseries") {
       const name = `${base}_${span}.csv`;
       downloadCsvWithSidecar(name, buildTimeseriesCsv(scoped, yearsAsc),
-        buildProvenanceText({ ...meta, file: name, shape: "timeseries panel — one row per neighbourhood × year", coverage: span }));
+        buildProvenanceText({ ...meta, file: name, shape: "timeseries panel: one row per neighbourhood × year", coverage: span }));
     } else if (format === "csv-aggregate") {
       const name = `${base}_summary_${year}.csv`;
       downloadCsvWithSidecar(name, buildAggregateCsv(selectionAggregate, cityBaseline),
-        buildProvenanceText({ ...meta, file: name, shape: "aggregate — one row per measure", coverage: String(year) }));
+        buildProvenanceText({ ...meta, file: name, shape: "aggregate: one row per measure", coverage: String(year) }));
     } else if (format === "geojson") {
       downloadText(`${base}.geojson`, buildGeoJson(scoped), "application/geo+json");
     } else if (format === "png") {
@@ -631,8 +631,8 @@ export default function PermitChoroplethMap() {
     const p = selectedFeature;
     const agg = p.polygon_state === "aggregated";
     const notes = [];
-    if (p.is_annexation_area) notes.push("Annexation area — annexed, not yet subdivided into neighbourhoods; shown with its own outline.");
-    if (!agg) notes.push(p.polygon_state === "suppressed_low_n" ? "Fewer than 10 permits — aggregate values suppressed." : "No permit data for this neighbourhood.");
+    if (p.is_annexation_area) notes.push("Annexation area: annexed, not yet subdivided into neighbourhoods; shown with its own outline.");
+    if (!agg) notes.push(p.polygon_state === "suppressed_low_n" ? "Fewer than 10 permits: aggregate values suppressed." : "No permit data for this neighbourhood.");
     const rows = agg ? [
       { k: metricDef.legendLabel, v: metricDef.fmt(p[metricDef.field]) },
       ...(metricDef.field !== "n_permits" ? [{ k: "Residential Permits", v: fmtNumber(p.n_permits) }] : []),
