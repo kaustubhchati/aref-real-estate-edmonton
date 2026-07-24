@@ -55,6 +55,10 @@ export const BASEMAP_SOURCES = [
 // The two City links, composed once (shared by the strip + the full record below).
 const CITY_LINK  = `<a href="${EDMONTON_OPEN_DATA.url}" target="_blank" rel="noopener noreferrer">City of Edmonton Open Data</a>`;
 const TERMS_LINK = `<a href="${EDMONTON_OPEN_DATA.termsUrl}" target="_blank" rel="noopener noreferrer">Open Government Licence (Terms of Use v2.1)</a>`;
+// The specific SOURCE DATASET's about-page (Business Census, 8c4b-u4a4). PA links the portal
+// generically (no per-dataset link), so this is a proposed BC slot: alongside the portal +
+// licence in the strip (see the CC report + DESIGN_SYSTEM §6 attribution standard).
+const BC_DATASET_LINK = `<a href="https://data.edmonton.ca/Urban-Planning-Economy/Edmonton-Business-Census/8c4b-u4a4/about_data" target="_blank" rel="noopener noreferrer">Edmonton Business Census</a>`;
 
 export const siteConfig = {
   // ---- Identity ----------------------------------------------------------
@@ -103,8 +107,13 @@ export const siteConfig = {
   //                          both overflowed into the console AND is redundant — PA moves
   //                          the disclaimer into its attribution PANEL (the database-glyph
   //                          control), which is the §6 home for it. See DESIGN_SYSTEM §6.
+  //  • bcMapAttribution    — Business Census: links only (KC 2026-07-24 — the prose is
+  //                          removed site-wide) PLUS the specific source-dataset link. The
+  //                          disclaimer is NOT dropped from the codebase (EDMONTON_OPEN_DATA
+  //                          still carries it for the panel); it is simply off the rail.
   mapAttribution:      [CITY_LINK, TERMS_LINK, EDMONTON_OPEN_DATA.disclaimer],
   mapAttributionStrip: [CITY_LINK, TERMS_LINK],
+  bcMapAttribution:    [CITY_LINK, BC_DATASET_LINK, TERMS_LINK],
 
   // ---- Footer copy (placeholders) ----------------------------------------
   // Each line corresponds to one block in the footer (Footer.jsx).
@@ -240,8 +249,9 @@ export const siteConfig = {
     ]},
 
     { label: "Economy", kind: "group", icon: "briefcase", children: [
-      { label: "Business Counts",   kind: "map", status: "live", to: "/economy/business-counts" },
-      { label: "Business Licences", kind: "map", status: "soon", to: "/economy/business-licences" },
+      { label: "Business Counts",    kind: "map", status: "live", to: "/economy/business-counts" },
+      { label: "Business Census",    kind: "map", status: "live", to: "/economy/business-census" },
+      { label: "Business Licences",  kind: "map", status: "soon", to: "/economy/business-licences" },
       { label: "Labour Market",     kind: "map", status: "soon", to: "/economy/labour-market" },
     ]},
 

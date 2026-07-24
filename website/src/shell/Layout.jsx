@@ -25,6 +25,7 @@ const IMMERSIVE_ROUTES = new Set([
   "/properties/property-assessment",
   "/activity/dwelling-units",
   "/economy/business-counts",
+  "/economy/business-census",
   "/activity/construction-improvement",
 ]);
 

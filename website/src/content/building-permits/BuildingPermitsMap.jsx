@@ -21,6 +21,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import MapView from "../../components/MapView.jsx";
+import { siteConfig } from "../../config/siteConfig.js";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
 import IdentityCard from "../../components/IdentityCard.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
@@ -562,6 +563,9 @@ export default function BuildingPermitsMap() {
               // Every other handler (drag-pan, double-click-zoom, rotate, pitch, keyboard) is
               // MapLibre-default on the shared MapView, so it already matches PA.
               cooperativeGestures={false}
+              // Attribution = LINKS ONLY, no disclaimer prose (KC 2026-07-24, site-wide
+              // standard). Was MapView's default (which carries the §6 disclaimer inline).
+              mapAttribution={siteConfig.mapAttributionStrip}
               onLoad={(m) => {
                 // MapView is section-agnostic, so the BP-specific wiring lives here:
                 // hover/click → the right inforail (NO floating popups — map centre sacred).

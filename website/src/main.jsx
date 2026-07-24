@@ -67,6 +67,7 @@ const PropertyAssessmentMap = lazyWithReload(() => import("./content/property-as
 const BuildingPermitsMap    = lazyWithReload(() => import("./content/building-permits/BuildingPermitsMap.jsx"));
 const PermitChoroplethMap   = lazyWithReload(() => import("./content/building-permits/PermitChoroplethMap.jsx"));
 const BusinessCensusMap     = lazyWithReload(() => import("./content/economy/BusinessCensusMap.jsx"));
+const BusinessCensusSection = lazyWithReload(() => import("./content/economy/BusinessCensusSection.jsx"));
 const ReportCard            = lazyWithReload(() => import("./content/report-card/ReportCard.jsx"));
 
 // basename mounts the app under Vite's base path. import.meta.env.BASE_URL is set
@@ -102,6 +103,7 @@ createRoot(document.getElementById("root")).render(
           <Route path="/amenities/public-school"           element={<Placeholder title="Public School"          kind="map" />} />
           <Route path="/amenities/public-transportation"   element={<Placeholder title="Public Transportation"  kind="map" />} />
           <Route path="/economy/business-counts"           element={<BusinessCensusMap />} />
+          <Route path="/economy/business-census"           element={<BusinessCensusSection />} />
           <Route path="/economy/business-licences"         element={<Placeholder title="Business Licences"      kind="map" />} />
           <Route path="/economy/labour-market"             element={<Placeholder title="Labour Market"          kind="map" />} />
 

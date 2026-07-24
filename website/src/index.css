@@ -1375,6 +1375,15 @@ p  { margin: 0 0 0.75rem; }
 .bp-cat-commercial  { background: rgba(123,47,160,0.22); border: 1px solid rgba(123,47,160,0.60); color: #d9a6ef; }
 .bp-cat-unknown     { background: var(--pa-card); border: 1px solid var(--pa-hair); color: var(--pa-mut); }
 .pa-detail-note { margin: 7px 0 0; font-size: var(--t-xs); color: var(--pa-mut); line-height: 1.5; }
+
+/* Business Census inforail — the shared .pa-detail frame, a touch wider so long NAICS
+   industry-group titles read in fewer lines. The title is CLAMPED (Principle 0: a long
+   name never grows the frame; the title= holds the full text). Nudge = the hover hint. */
+.pa-detail.bc-inforail { width: 264px; }
+.bc-inforail .pa-detail-name {
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.bc-inforail .pa-kv-v { text-align: right; margin-left: var(--s3); }
 @keyframes rail-fade-in { from { opacity: 0; } to { opacity: 1; } }
 .rail-inner { width: 100%; }
 /* Tightness: no trailing gap after the last detail row/note. */
@@ -2060,7 +2069,10 @@ p  { margin: 0 0 0.75rem; }
 }
 
 /* METRIC module — vertical chip list, active green-bordered. */
-.pa-col-metric .seg { display: flex; flex-direction: column; gap: var(--s2); margin: 0; }   /* label→buttons gap to §1.6 scale (was ad-hoc 5px) */
+/* The BC VIEW SWITCHER shares PA's metric-selector material exactly (KC: "styled as PA-style
+   metric-selector buttons"). SegmentedControl emits the SAME .seg-* classes, so .bc-view-switch
+   is GROUPED into each PA metric rule below — one definition, no silent divergence (§6). */
+.pa-col-metric .seg, .bc-view-switch .seg { display: flex; flex-direction: column; gap: var(--s2); margin: 0; }   /* label→buttons gap to §1.6 scale (was ad-hoc 5px) */
 .pa-col-metric .seg-label {
   /* D-F1 — the METRIC module banner: lifted off the sub-floor 10px onto --t-2xs (11px),
      matching the shared .pa-col-lab used by the ⚙ Tuning + Legend banners. */
@@ -2069,14 +2081,14 @@ p  { margin: 0 0 0.75rem; }
 /* Metric buttons grow PHYSICALLY (kill-the-void redistribution): full-width uniform
    blocks in a stacked list (long labels wrap consistently in the narrow column, no
    uneven auto-width chips) + more vertical rhythm (--s2) for presence; §1.6 steps only. */
-.pa-col-metric .seg-options { display: flex; flex-direction: column; align-items: stretch; gap: var(--s2); background: transparent; border: 0; padding: 0; }
+.pa-col-metric .seg-options, .bc-view-switch .seg-options { display: flex; flex-direction: column; align-items: stretch; gap: var(--s2); background: transparent; border: 0; padding: 0; }
 /* P5 — surface the per-metric glyph in the LEFT RAIL only (the console-header re-home
    stays text-only via .dt-metric .seg-icon). The SegmentedControl SVG uses
    stroke="currentColor", so the glyph greens with the label on the active chip — the
    green border stays the ONLY selected signal, no per-metric colour. CSS width/height wins
    over the SVG's intrinsic 16px, sizing it to sit with the chip text. */
-.pa-col-metric .seg-icon { display: inline-flex; width: 18px; height: 18px; flex: 0 0 auto; }   /* Fix B move #3 — larger glyph (was 15px) so the eye RECOGNISES the metric (the $ one / the % one) before reading the label; recognition-before-reading = flow (§3: clearer, not noisier) */
-.pa-col-metric .seg-btn {
+.pa-col-metric .seg-icon, .bc-view-switch .seg-icon { display: inline-flex; width: 18px; height: 18px; flex: 0 0 auto; }   /* Fix B move #3 — larger glyph (was 15px) so the eye RECOGNISES the metric (the $ one / the % one) before reading the label; recognition-before-reading = flow (§3: clearer, not noisier) */
+.pa-col-metric .seg-btn, .bc-view-switch .seg-btn {
   width: 100%; display: flex; align-items: center; justify-content: flex-start; gap: var(--s1);
   font-family: inherit; text-align: left; white-space: nowrap;   /* one line — the column is widened to fit the longest label at 14px */
   /* Physical box grows (taller, more internal padding = more presence); the TEXT is
@@ -2087,10 +2099,11 @@ p  { margin: 0 0 0.75rem; }
   box-shadow: var(--btn-body-hi);   /* glass key: top-lit gradient + specular light-rim + crown highlight (not flat grey) */
   padding: var(--s2) var(--s3);
 }
-.pa-column .pa-col-metric .seg-btn:hover:not(.active) { background: var(--btn-body-hover); color: var(--pa-ink); }
+.pa-column .pa-col-metric .seg-btn:hover:not(.active),
+.pa-column .bc-view-switch .seg-btn:hover:not(.active) { background: var(--btn-body-hover); color: var(--pa-ink); }
 /* Liquid-Glass active: illumination (brighter glass fill) + specular + light border/ink,
    + font-weight as the non-colour cue (a11y — active must read without colour). */
-.pa-col-metric .seg-btn.active {
+.pa-col-metric .seg-btn.active, .bc-view-switch .seg-btn.active {
   background: var(--accent-int-fill); border-color: var(--accent-int-border); color: var(--accent-int-text);
   box-shadow: var(--accent-int-specular), var(--accent-int-glow); text-shadow: var(--accent-int-text-glow); font-weight: 600;
 }
@@ -2100,10 +2113,12 @@ p  { margin: 0 0 0.75rem; }
    border (Layer 1) shows through unchanged. Pearl ON → the desaturated non-uniform teal↔cyan↔
    periwinkle band. Static, GPU-cheap (only the 1–2 active elements), text/fill untouched. */
 .pa-col-metric .seg-btn.active,
+.bc-view-switch .seg-btn.active,
 .pa-column .opt-toggle-btn.active,
 .pa-column .bp-tier-btn.active,
 .dt-panel .dt-metric .seg-btn.active { position: relative; }
 .pa-col-metric .seg-btn.active::after,
+.bc-view-switch .seg-btn.active::after,
 .pa-column .opt-toggle-btn.active::after,
 .pa-column .bp-tier-btn.active::after,
 .dt-panel .dt-metric .seg-btn.active::after {
@@ -2184,7 +2199,7 @@ p  { margin: 0 0 0.75rem; }
 .dt-trend-label,
 .pa-trip-l,
 .pa-column .pa-col-lab,
-.pa-col-metric .seg-label, .dt-metric .seg-label,
+.pa-col-metric .seg-label, .bc-view-switch .seg-label, .dt-metric .seg-label,
 .pa-column .pa-rack-label,
 .pa-col-legend .legend-title {
   text-transform: none;
@@ -2201,7 +2216,7 @@ p  { margin: 0 0 0.75rem; }
    (Fewer/More, KPI card labels, honesty tags, field labels, and the trend/triplet/console labels
    grouped above) STAY --tx-mut — they are deliberately NOT in this selector. */
 .pa-column .pa-col-lab,
-.pa-col-metric .seg-label {
+.pa-col-metric .seg-label, .bc-view-switch .seg-label {
   font-size: var(--t-xs); font-weight: 600; color: var(--tx-head);
 }
 
@@ -2218,6 +2233,129 @@ p  { margin: 0 0 0.75rem; }
    --s2 step the other section gaps (metric/foot) use, so the ramp sits directly under the
    metrics. Scoped: PA (no .pa-column-lean) keeps its --s6. */
 .pa-column-lean .pa-card-instrument .pa-col-legend { margin-top: var(--s2); }
+
+/* ===== Business Census — three-view section (spec Part 0) ===================
+   View switcher + View-2 finding list. Chrome only (tokens, no invented hex);
+   the per-view DATA palettes live in the style modules. ===== */
+.bc-view-switch { margin-top: 0; }   /* own card now (was margin-top --s3 when it followed the title in one card) */
+/* The .bc-banner "This view is …" chip was REMOVED entirely (KC 2026-07-24). */
+
+/* View-2 finding list — trades ranked by share significant. Read-only this pass
+   (selection lighting is next). Share % leads, trade name, strength multiplier. */
+.bc-trade-list { list-style: none; margin: var(--s2) 0 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.bc-trade-row {
+  display: grid; grid-template-columns: 2.4rem 1fr auto; align-items: baseline; gap: var(--s2);
+  padding: var(--s1) 0; border-bottom: 1px solid var(--hair);
+}
+.bc-trade-share { color: var(--tx-read); font-weight: 700; font-variant-numeric: tabular-nums; font-size: var(--t-xs); }
+.bc-trade-name { color: var(--tx); font-size: var(--t-xs); line-height: 1.2; }
+.bc-trade-strength { color: var(--tx-mut); font-size: var(--t-2xs); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ── View-1 sidebar legend — the WHEEL ALONE (the sector list moved to the console, KC
+   2026-07-24). Compact, PA sidebar scale; it is the map's colour key + the sector selector. ── */
+.bc-legend { display: flex; flex-direction: column; align-items: center; gap: var(--s2); width: 100%; }
+.bc-legend .pa-col-lab { align-self: flex-start; }
+
+/* DONUT wheel (Fluent contract) — a raised dial in a fixed bay. Fixed size (the bay is
+   fixed-width); overflow:visible so a lifted band + the contact shadow are not clipped. */
+.bc-wheel-wrap { position: relative; width: 216px; height: 216px; }
+.bc-wheel { width: 216px; height: 216px; display: block; overflow: visible;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45)); }   /* raised off the panel (§6 shadow logic) */
+
+/* HIT LAYER (Fix 1 — the scratchiness cure). Transparent but PAINTED (fill rgba 0 in the JSX,
+   not `none`), so it receives events; WIDER than the drawn bands and BUTTED with no dividers,
+   so a continuous sweep of the ring never lands on a gap → hover never drops. */
+.bc-wheel-hit { pointer-events: all; cursor: pointer; stroke: none; }   /* invisible hit target — never stroked */
+/* VISUAL bands NEVER intercept events (a divider that took events is exactly the bug) — so the
+   lift/press/dim rides THESE while the hit target stays put. Each band scales RADIALLY from the
+   dial centre (100,100 in the "0 0 200" viewBox). At REST the DIVIDERS are LIGHT pearl (Fix 2):
+   the same duochrome as the rims (#bc-pearl) but thin + low-opacity, so each segment reads as
+   individually pressable WITHOUT competing with the two full-pearl rims. */
+.bc-wheel-vis { pointer-events: none; transform-box: view-box; transform-origin: 100px 100px;
+  stroke: url(#bc-pearl); stroke-width: 1; stroke-opacity: 0.4; }
+.bc-wheel-seg { outline: none; }                                  /* focus cue rides the bands, below */
+/* Motion IS the affordance → reduced-motion-gated (§6). The static cues (opacity, teal stroke)
+   still apply under reduced motion, so no state is conveyed by animation alone. */
+@media (prefers-reduced-motion: no-preference) {
+  .bc-wheel-vis { transition: transform var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease),
+                              stroke var(--dur-fast) var(--ease), stroke-width var(--dur-fast) var(--ease); }
+}
+/* STATE = SHAPE, not colour alone (a11y): hover LIFTS outward, selected DEPRESSES inward,
+   unselected recede to 45% (readable, not extinguished). The state strokes ride the visual bands
+   only (hit path stays strokeless) and OVERRIDE the resting pearl divider (states are louder). */
+.bc-wheel-seg.is-dim .bc-wheel-vis { opacity: 0.45; }
+.bc-wheel-seg.is-hover .bc-wheel-vis { transform: scale(1.06); opacity: 1; stroke: var(--tx); stroke-width: 1.6; stroke-opacity: 1; }
+.bc-wheel-seg.is-active .bc-wheel-vis { transform: scale(0.94); stroke: var(--accent-teal); stroke-width: 2.4; stroke-opacity: 1; }
+/* KEYBOARD FOCUS (§6 ladder + WCAG 2.4.7) — distinct from BOTH hover (lift) and selection
+   (depress + solid teal): a DASHED teal ring, no scale. Rides the bands (an SVG <g> bbox
+   outline is a loose rectangle). Restores opacity so a focused segment is always legible. */
+.bc-wheel-seg:focus-visible .bc-wheel-vis { opacity: 1; stroke: var(--accent-teal); stroke-width: 2.4; stroke-dasharray: 4 2.5; stroke-opacity: 1; }
+
+/* PEARL RIMS (Fix 2) — FULL pearl (the §6 duochrome) on the dial's outer + inner (hole) edges, so
+   the ring reads as ONE physical object. Heavier than the dividers (weighting: rims dominate, ten
+   dividers stay quiet). Static + pointer-events:none — visual only, they never touch the hit halo. */
+.bc-wheel-rims { pointer-events: none; }
+.bc-wheel-rims circle { fill: none; stroke: url(#bc-pearl); stroke-width: 1.6; stroke-opacity: 0.92; }
+
+/* CENTRE READOUT (in the hole) — replaces the external frame. pointer-events:none so the hole is
+   never a dead zone. Width sits inside the hole's inscribed square; the longest sector name wraps
+   at the --t-2xs floor (verified to fit — see the CC report). */
+.bc-wheel-centre {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 88px; pointer-events: none; text-align: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+}
+.bc-centre-total { font-size: var(--t-lg); font-weight: 700; color: var(--tx); font-variant-numeric: tabular-nums; line-height: 1.05; }
+.bc-centre-name { font-size: var(--t-2xs); font-weight: 600; color: var(--tx); line-height: 1.22; }
+.bc-centre-meta { font-size: var(--t-2xs); color: var(--tx-mut); font-variant-numeric: tabular-nums; line-height: 1.2; }
+
+/* ── BOTTOM data console — composition drill-down with BARS (KC 2026-07-24). Reuses PA's
+   .dt / .dt-handle / .dt-panel-wrap / .dt-panel chrome; CONTENT flows LEFT→RIGHT + wraps.
+   Names are FULL (long NAICS names WRAP, never ellipsis). NO padding on .bc-cn-panel (=the
+   collapsing .dt-panel — grid-rows 0fr does not clip an element's own padding, which left a
+   ~25px sliver); padding lives on the inner head/grid, clipped by the panel's overflow. ── */
+.bc-cn-head { display: flex; align-items: baseline; gap: var(--s2); flex: 0 0 auto; flex-wrap: wrap; padding: var(--s3) var(--s4) var(--s2); }
+.bc-cn-crumb {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-size: var(--t-xs); color: var(--accent-teal); font-weight: 600; flex: 0 0 auto;
+}
+.bc-cn-headsw { width: 13px; height: 13px; border-radius: 3px; align-self: center; }
+.bc-cn-sub { font-size: var(--t-2xs); color: var(--tx-mut); }
+.bc-cn-grid {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; align-content: start;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--s1) var(--s3); padding: 0 var(--s4) var(--s3);
+}
+/* a cell stacks: name (wraps) → bar-row (bar + count·share). */
+.bc-cn-cell {
+  display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; min-width: 0;
+  padding: var(--s2); background: none; border: 1px solid transparent;
+  border-radius: var(--radius-sm); cursor: pointer;
+}
+.bc-cn-cell.is-static { cursor: default; }
+/* .is-hover = the CROSS-highlight from the wheel (Fix 4, bidirectional); :hover = the pointer on
+   the cell itself. Same treatment so the link reads either direction. */
+.bc-cn-cell:not(.is-static):hover, .bc-cn-cell.is-hover, .bc-cn-cell.is-active { background: var(--card); border-color: var(--hair); }
+.bc-cn-cell.is-active { border-color: var(--sel); }   /* selected group = coral (§6) */
+.bc-cn-cellhead { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+.bc-cn-sw { width: 11px; height: 11px; border-radius: 3px; flex: 0 0 auto; }
+.bc-cn-name { font-size: var(--t-xs); color: var(--tx); line-height: 1.3; overflow-wrap: break-word; min-width: 0; }
+.bc-cn-barrow { display: flex; align-items: center; gap: var(--s2); }
+.bc-cn-bar { flex: 1 1 auto; height: 6px; min-width: 0; background: var(--hair); border-radius: 3px; overflow: hidden; }
+.bc-cn-bar-fill { display: block; height: 100%; border-radius: 3px; }
+.bc-cn-meta { flex: 0 0 auto; font-size: var(--t-2xs); color: var(--tx-mut); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bc-cn-remainder .bc-cn-name { color: var(--tx-mut); font-style: italic; }
+
+/* Reference / pending notes. The counterfactual sentence (spec §2.4) is the one
+   that makes every number interpretable — kept legible, not dimmed away. */
+.bc-ref-note { color: var(--tx-mut); font-size: var(--t-xs); line-height: 1.35; margin: var(--s2) 0 0; }
+.bc-ref-counterfactual { color: var(--tx-head); font-style: italic; margin-top: var(--s3); }
+.bc-ref-pending { font-style: italic; opacity: 0.85; }
+
+/* Popup NAICS code sub-line (View 1 detail). */
+.pop-sub { margin: 2px 0 4px; }
+.pop-code { color: var(--text-muted); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
+
 /* color: the horizontal ramp's min/max bound labels use `color: inherit` (Legend.jsx);
    without this they inherited a light-theme near-black (#1a1f2e) and vanished on the
    dark/glass panel. Set the governed muted tier so the bounds clear §4 on the panel
