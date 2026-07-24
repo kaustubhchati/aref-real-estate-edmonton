@@ -577,7 +577,9 @@ p  { margin: 0 0 0.75rem; }
   gap:12px; padding:11px 12px; border-radius:8px; color:var(--ua-ink); font-size:15px; font-weight:500;
   text-decoration:none; transition:background 0.13s, color 0.13s; }
 .drawer__link:hover      { background:var(--ua-green-soft); color:var(--ua-green); text-decoration:none; }
-.drawer__link--sub       { padding-left:20px; color:var(--ua-muted); font-size:14px; font-weight:400; }
+/* Section (page) names read BOLD + dark ink at rest, not the old dull muted (KC) — the indent
+   + smaller size still mark them as sub-items under their category header. Hover stays green. */
+.drawer__link--sub       { padding-left:20px; color:var(--ua-ink); font-size:14px; font-weight:600; }
 .drawer__link--sub:hover { color:var(--ua-green); }
 .drawer__link.is-active  { color:var(--ua-green); font-weight:700; background:var(--ua-green-soft); }
 /* GOLD ACCENT (sparing) — the jewel, as marks only, never text (gold fails
