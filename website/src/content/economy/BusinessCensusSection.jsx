@@ -270,6 +270,44 @@ function districtLabelLayer() {
   };
 }
 
+// ── City label — a custom "Edmonton" overview label (KC) ──────────────────────────────────
+// The basemap's own Edmonton label is COLLISION-SUPPRESSED at the home zoom (the district /
+// neighbourhood overlay labels win the central space) and, when it does show, it is BURIED by
+// the dense point cloud. So we draw our OWN: one always-on point on the RIVER VALLEY (where the
+// points are sparse, so the name reads), rendered ABOVE the points, only at the overview zoom
+// band (fades out as the neighbourhood names take over). allow-overlap + ignore-placement so it
+// is never dropped by the collision index.
+const CITY_LABEL_SRC = "bc-city-label-src";
+const CITY_LABEL     = "bc-city-label";
+const CITY_LABEL_GEOJSON = {
+  type: "FeatureCollection",
+  features: [{
+    type: "Feature", properties: { name: "Edmonton" },
+    geometry: { type: "Point", coordinates: [-113.4990, 53.5300] },   // river valley, central on the home view
+  }],
+};
+function cityLabelLayer() {
+  return {
+    id: CITY_LABEL, type: "symbol", source: CITY_LABEL_SRC, minzoom: 9, maxzoom: 12.2,
+    layout: {
+      "text-field": ["get", "name"],
+      "text-font": NBHD_FONT,
+      "text-size": ["interpolate", ["linear"], ["zoom"], 9, 15, 11, 21],   // city tier — bigger than districts
+      "text-transform": "uppercase",
+      "text-letter-spacing": 0.2,
+      "text-allow-overlap": true,        // ALWAYS render — never collision-dropped
+      "text-ignore-placement": true,
+    },
+    paint: {
+      "text-color": "#2a2621",           // --label-ink
+      "text-halo-color": "#f7f1df",      // --map-cream
+      "text-halo-width": 2.4,
+      // present at the overview, fade out before the neighbourhood names get prominent (~z12)
+      "text-opacity": ["interpolate", ["linear"], ["zoom"], 9, 0, 9.6, 1, 11.4, 1, 12.2, 0],
+    },
+  };
+}
+
 export default function BusinessCensusSection() {
   const [view, setView] = useState("census");
   const [map, setMap] = useState(null);
@@ -483,6 +521,12 @@ export default function BusinessCensusSection() {
       if (!map.getLayer(NBHD_LABEL)) map.addLayer(neighbourhoodLabelLayer());
       if (!map.getLayer(DISTRICT_LABEL)) map.addLayer(districtLabelLayer());
       for (const id of [SELECT_LAYER_ID, HALO_LAYER_ID, LAYER_ID]) if (map.getLayer(id)) map.moveLayer(id);
+      // The city label ("Edmonton") sits ABOVE the points (KC — it must not be buried). Added
+      // last, then moved to the very top so it stays above the just-re-lifted points even when
+      // this effect re-runs.
+      if (!map.getSource(CITY_LABEL_SRC)) map.addSource(CITY_LABEL_SRC, { type: "geojson", data: CITY_LABEL_GEOJSON });
+      if (!map.getLayer(CITY_LABEL)) map.addLayer(cityLabelLayer());
+      map.moveLayer(CITY_LABEL);
     } catch { /* map tearing down */ }
   }, [map, nbhdGj, districtLines, districtLabels]);
 
