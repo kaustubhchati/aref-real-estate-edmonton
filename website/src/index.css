@@ -2260,7 +2260,8 @@ p  { margin: 0 0 0.75rem; }
    fixed-width); overflow:visible so a lifted band + the contact shadow are not clipped. */
 .bc-wheel-wrap { position: relative; width: 216px; height: 216px; }
 .bc-wheel { width: 216px; height: 216px; display: block; overflow: visible;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45)); }   /* raised off the panel (§6 shadow logic) */
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45));     /* raised off the panel (§6 shadow logic) */
+  forced-color-adjust: none; }   /* the segment hues ARE the colour key (data) — keep them in high-contrast */
 
 /* HIT LAYER (Fix 1 — the scratchiness cure). Transparent but PAINTED (fill rgba 0 in the JSX,
    not `none`), so it receives events; WIDER than the drawn bands and BUTTED with no dividers,
@@ -2344,6 +2345,14 @@ p  { margin: 0 0 0.75rem; }
 .bc-cn-bar { flex: 1 1 auto; height: 6px; min-width: 0; background: var(--hair); border-radius: 3px; overflow: hidden; }
 .bc-cn-bar-fill { display: block; height: 100%; border-radius: 3px; }
 .bc-cn-meta { flex: 0 0 auto; font-size: var(--t-2xs); color: var(--tx-mut); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* FORCED-COLORS / HIGH-CONTRAST (KC 2026-07-24 — the "%bars not showing" report): in forced-
+   colors mode (macOS Increase Contrast / Windows high contrast / some colour-rewriting
+   extensions) the browser remaps every background to a system colour, which BLANKS the bar
+   fills + swatches (their inline hue → white) so the coloured %bars vanish. Here the colour IS
+   the data (sector hue = category), so opt these marks out of the remap — the MDN-sanctioned
+   use of forced-color-adjust:none (elements where colour is meaningful, e.g. charts). Normal
+   (non-forced) rendering is unchanged. Same fix applied to the wheel (SVG) below. */
+.bc-cn-bar, .bc-cn-bar-fill, .bc-cn-sw, .bc-cn-headsw { forced-color-adjust: none; }
 .bc-cn-remainder .bc-cn-name { color: var(--tx-mut); font-style: italic; }
 
 /* Reference / pending notes. The counterfactual sentence (spec §2.4) is the one
