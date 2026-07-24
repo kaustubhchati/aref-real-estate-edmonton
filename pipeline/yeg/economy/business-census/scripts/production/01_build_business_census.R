@@ -11,8 +11,13 @@
 #   shared_path() (cross-section base geo, stays in pipeline/yeg/shared/).
 #
 # Source dataset: Edmonton Business Census - Neighbourhood Aggregation
-#   Socrata wh44-4bkz — fetched to data/raw/Edmonton_Business_Census_<YYYYMMDD>.csv
-#   via fetch_socrata_snapshot() (export endpoint, atomic, floors); newest-by-glob.
+#   Socrata wh44-4bkz — fetched to
+#   data/raw/Edmonton_Business_Census_Aggregation_<YYYYMMDD>.csv via
+#   fetch_socrata_snapshot() (export endpoint, atomic, floors). The stem is
+#   DISTINCT from the raw business-level file (8c4b-u4a4,
+#   Edmonton_Business_Census_<YYYYMMDD>.csv) that the points builder (02) reads,
+#   so the two never collide on newest-by-glob (a shared stem used to strand 02
+#   in the runner). This script reads the fetch's RETURN path directly, not a glob.
 #   Columns (export endpoint, Title Case): Neighbourhood Name, Neighbourhood Number,
 #             Geometry (Polygon WKT), Survey Year, Number of Businesses, Number of Employees
 #
@@ -87,6 +92,10 @@ dir.create(file.path("data", "raw"), recursive = TRUE, showWarnings = FALSE)
 # rename to a dated raw file, size/row/column floors verified before promotion.
 # Floors ~half of observed (545 rows / 2.47 MB). Refresh-by-design — zero date
 # literals; the dated snapshot is accepted provenance (gitignored).
+# filename_stem = "..._Aggregation" keeps this aggregate's snapshots on a stem
+# DISTINCT from the raw business-level file (8c4b-u4a4) that 02 reads, so the two
+# never collide on newest-by-glob (the stems were shared before, which stranded
+# 02 in the runner). fetch returns the exact path it wrote — read directly below.
 CENSUS_CSV <- fetch_socrata_snapshot(
   dataset_id    = "wh44-4bkz",
   dest_dir      = file.path("data", "raw"),
@@ -94,7 +103,7 @@ CENSUS_CSV <- fetch_socrata_snapshot(
   min_size_mb   = 1,
   required_cols = c("Survey Year", "Neighbourhood Number", "Neighbourhood Name",
                     "Number of Businesses", "Number of Employees"),
-  filename_stem = "Edmonton_Business_Census"
+  filename_stem = "Edmonton_Business_Census_Aggregation"
 )
 
 # ── 1. Load boundary (shared guarded loader) ────────────────

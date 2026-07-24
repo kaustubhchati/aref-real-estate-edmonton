@@ -164,20 +164,40 @@ sections:
   business-census:
     cwd: pipeline/yeg/economy/business-census
 
-    # Single-script section (one all-years source, no current/historical split):
-    # 01 fetches the Business Census snapshot (wh44-4bkz) + boundary (newest-by-
-    # glob), joins, and writes the choropleth GeoJSON (+ flat CSV + build log) to
-    # output/. Wired into the runner so a refresh is one command (was a manual
-    # download + hand-copied handoff).
+    # TWO maps, TWO source datasets, one section:
+    # 01 (choropleth) fetches the pre-aggregated Business Census (wh44-4bkz) +
+    #    boundary (newest-by-glob), joins, writes the neighbourhood choropleth
+    #    GeoJSON (+ flat CSV + build log) to output/.
+    # 02 (points) reads the RAW business-level file (8c4b-u4a4) and writes a
+    #    per-business points GeoJSON coloured by top-10 sector. 02 is READ-ONLY —
+    #    it NEVER fetches (see the MANUAL PREREQUISITE below).
+    # The two datasets now sit on DISTINCT filename stems in data/raw/: 01's fetch
+    # writes Edmonton_Business_Census_Aggregation_<date>.csv, the raw stays
+    # Edmonton_Business_Census_<date>.csv — so 02's newest-by-glob never grabs the
+    # aggregate (a shared stem used to strand 02). Order is free (independent I/O);
+    # listed choropleth-then-points.
+    #
+    # MANUAL PREREQUISITE (02): a CURRENT raw business-level snapshot
+    #   data/raw/Edmonton_Business_Census_<YYYYMMDD>.csv (Socrata 8c4b-u4a4 — the
+    #   ~52k-row / ~26 MB business-level export, NOT the aggregate) must be on disk
+    #   before a refresh. It is KC-curated, not fetched. If the newest matching raw
+    #   file is stale, 02 builds from it; if the newest is not business-level, 02's
+    #   raw-marker guard STOPS loudly (never a silent mis-build).
     scripts:
       - scripts/production/01_build_business_census.R
+      - scripts/production/02_build_business_census_points.R
 
-    # --- Handoff: publish the choropleth GeoJSON the frontend serves ------------
-    # The runner is the SOLE publisher (replaced the script's old hand-copy step).
-    # The frontend (BusinessCensusMap.jsx) fetches
-    # /data/economy/business_census_2025.geojson. The flat CSV + build log stay in
-    # output/ (not served). The GeoJSON name carries the production-year (2025) —
-    # frontend-coupled, kept verbatim (not a CSV, so out of the yeg_ CSV standard).
+    # --- Handoff: publish both GeoJSONs the frontend serves ---------------------
+    # The runner is the SOLE publisher (§2). Choropleth -> a fixed-name files: copy
+    # (BusinessCensusMap.jsx fetches /data/economy/business_census_2025.geojson;
+    # year baked in, frontend-coupled, kept verbatim). Points -> a year-only glob
+    # (business_census_points_????.geojson), literal-free + frontend-stable across a
+    # vintage rollover, mirroring BP's per-year points glob. Flat CSV + build log
+    # stay in output/ (not served).
     handoff:
+      glob:
+        - src_dir:  output
+          dest_dir: website/public/data/economy
+          pattern:  "business_census_points_????.geojson"
       files:
         - { from: output/business_census_2025.geojson, to: website/public/data/economy/business_census_2025.geojson }
