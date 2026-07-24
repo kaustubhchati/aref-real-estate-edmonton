@@ -58,7 +58,28 @@ import {
 import {
   rankTradesByShareSignificant,
   lclqMultiplierPhrase,
+  clusterStrengthPhrase,
+  buildSignificanceIndex,
+  buildClusterFeatures,
+  tradeDetail,
 } from "./industryClustersData.js";
+import {
+  CLUSTER_SRC,
+  CLUSTER_GLOW_ID,
+  CLUSTER_FAINT_ID,
+  CLUSTER_PROM_ID,
+  CLUSTER_MAX_SELECT,
+  GLOW_ENABLED,
+  clusterGlowLayer,
+  clusterFaintLayer,
+  clusterProminentLayer,
+  clusterFilter,
+  sigColour,
+  faintColour,
+  faintOpacityForVolume,
+  paletteSig,
+} from "./industryClustersStyle.js";
+import { THEME, applyDeepenedGround } from "./businessCensusGround.js";
 import { deriveDistrictBoundaries, deriveDistrictLabels } from "./businessCensusDistricts.js";
 import BusinessCensusInfoRail from "./BusinessCensusInfoRail.jsx";
 import BusinessCensusLegend from "./BusinessCensusLegend.jsx";
@@ -103,7 +124,9 @@ const SURFACE_SRC = "bc-surface", SURFACE_LYR = "bc-surface-fill";
 // High opacity is fine now that figure-ground comes from LIGHTNESS (light surface,
 // dark points), not from a muddy low opacity (KC). A touch of translucency keeps it
 // a light ground rather than a hard cover.
-const SURFACE_OPACITY = 0.9;
+// Variant-aware: on the DARK ground the KDE wash drops so the dark ground shows through the
+// character tint (a near-opaque light wash tuned for cream would just re-lighten the dark ground).
+const SURFACE_OPACITY = THEME.surfaceOpacity;
 // Dominance = the single↔two-way hue split (lead over runner-up); LOWERED from 0.65
 // (too demanding — KC). Grey no longer comes from this (it now comes from low
 // dominance STRENGTH = a muddy three-way), so this only controls single-vs-blend hue.
@@ -199,7 +222,7 @@ function neighbourhoodLineLayer() {
     id: NBHD_LINE, type: "line", source: NBHD_SRC,
     layout: { "line-join": "round" },
     paint: {
-      "line-color": "#6b6049",   // warm ink (the basemap's label colour) — reads as an administrative line
+      "line-color": THEME.nbhdLine,   // administrative line — variant-aware (warm ink / light on dark)
       "line-width":   ["interpolate", ["linear"], ["zoom"], 10, 0.4, 13, 0.8, 16, 1.3],
       "line-opacity": ["interpolate", ["linear"], ["zoom"], 10, 0.1, 11.5, 0.3, 14, 0.42],
     },
@@ -217,8 +240,8 @@ function neighbourhoodLabelLayer() {
       "text-padding": 3,
     },
     paint: {
-      "text-color": "#4a4234",            // darker warm ink than the boundary
-      "text-halo-color": "#f7f1df",       // --map-cream, so a name reads over the surface or a dark dot
+      "text-color": THEME.nbhdInk,        // neighbourhood name ink — variant-aware
+      "text-halo-color": THEME.overlayHalo,   // cream on warm / dark on the dark ground
       "text-halo-width": 1.4,
       "text-opacity": ["interpolate", ["linear"], ["zoom"], 11, 0, 11.7, 1],  // fade in just above minzoom
     },
@@ -241,7 +264,7 @@ function districtLineLayer() {
     id: DISTRICT_LINE, type: "line", source: DISTRICT_LINE_SRC,
     layout: { "line-join": "round", "line-cap": "round" },
     paint: {
-      "line-color": "#463f31",   // darker + heavier than the neighbourhood line (#6b6049) → the coarse tier
+      "line-color": THEME.districtLine,   // coarse-tier boundary — variant-aware
       "line-width":   ["interpolate", ["linear"], ["zoom"], 8, 0.8, 12, 1.7, 16, 2.6],
       "line-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0.3, 11, 0.5, 14, 0.55],
     },
@@ -261,8 +284,8 @@ function districtLabelLayer() {
       "text-max-width": 8,
     },
     paint: {
-      "text-color": "#3f382c",
-      "text-halo-color": "#f7f1df",
+      "text-color": THEME.districtInk,
+      "text-halo-color": THEME.overlayHalo,
       "text-halo-width": 1.8,
       // visible at overview, fade OUT before the neighbourhood names (z11) get prominent
       "text-opacity": ["interpolate", ["linear"], ["zoom"], 8.5, 0, 9, 0.92, 10.5, 0.92, 11.8, 0],
@@ -299,8 +322,8 @@ function cityLabelLayer() {
       "text-ignore-placement": true,
     },
     paint: {
-      "text-color": "#2a2621",           // --label-ink
-      "text-halo-color": "#f7f1df",      // --map-cream
+      "text-color": THEME.cityInk,       // city label ink — variant-aware
+      "text-halo-color": THEME.overlayHalo,
       "text-halo-width": 2.4,
       // present at the overview, fade out before the neighbourhood names get prominent (~z12)
       "text-opacity": ["interpolate", ["linear"], ["zoom"], 9, 0, 9.6, 1, 11.4, 1, 12.2, 0],
@@ -325,8 +348,25 @@ export default function BusinessCensusSection() {
   const [selectedSector, setSelectedSector] = useState(null);              // the selected sector (single)
   const [hoveredSector, setHoveredSector] = useState(null);                // wheel hover highlight (local)
   const [selectedGroup, setSelectedGroup] = useState(null);                // industry-group mute (deeper)
+  const [selectedTrades, setSelectedTrades] = useState([]);                // VIEW 2: chosen trades (cap CLUSTER_MAX_SELECT)
 
   const activeView = VIEWS.find((v) => v.key === view) ?? VIEWS[0];
+
+  // VIEW 2 · toggle a trade in/out of the lit selection (spec §2.1/§2.3). Multi-select is
+  // capped at CLUSTER_MAX_SELECT (G3 colour budget) — a pick beyond the cap is ignored.
+  function toggleTrade(group) {
+    setSelectedTrades((cur) => {
+      if (cur.includes(group)) return cur.filter((g) => g !== group);
+      if (cur.length >= CLUSTER_MAX_SELECT) return cur;
+      return [...cur, group];
+    });
+  }
+  // Switch view; leaving View 2 clears the lit selection so a return starts at the rest state
+  // (blank map). Done in the handler, not an effect (setState-in-effect is disallowed).
+  function changeView(next) {
+    if (next !== "clusters") setSelectedTrades([]);
+    setView(next);
+  }
 
   // ── Data: points (all views' source) + LCLQ (view 2's finding) ─────────────
   // Points once — View 1's sector colour domain + the map source. (Spec Part 6:
@@ -400,6 +440,12 @@ export default function BusinessCensusSection() {
 
   // View 2 finding: trades ranked by SHARE SIGNIFICANT (spec §2.1) — NOT count.
   const trades = useMemo(() => (lclqRows ? rankTradesByShareSignificant(lclqRows) : null), [lclqRows]);
+  // View 2 MAP source — the points joined to the LCLQ result by objectid, client-side
+  // (recon §4). `clusterFC` carries ONLY tested businesses, each tagged sig/nonsig +
+  // multiplier; an untested business is absent by construction (never drawn).
+  const sigIndex = useMemo(() => (lclqRows ? buildSignificanceIndex(lclqRows) : null), [lclqRows]);
+  const clusterFC = useMemo(
+    () => (gj && sigIndex ? buildClusterFeatures(gj.features, sigIndex) : null), [gj, sigIndex]);
 
   // District geometry — derived once from the neighbourhood partition (edge-cancellation).
   const districtLines  = useMemo(() => (nbhdGj ? deriveDistrictBoundaries(nbhdGj) : null), [nbhdGj]);
@@ -493,8 +539,8 @@ export default function BusinessCensusSection() {
     } catch { /* map tearing down */ }
   }, [map, view, surfaceImg]);
 
-  // Hide the ZONE/area fills on the census view so the KDE surface reads on a clean
-  // ground (building footprints stay — see HIDDEN_ZONE_FILLS); restore all on other views.
+  // Hide the ZONE/area fills on the census view so the KDE surface reads on a clean ground
+  // (building footprints stay — see HIDDEN_ZONE_FILLS); restore all on other views.
   useEffect(() => {
     if (!map) return;
     const vis = view === "census" ? "none" : "visible";
@@ -559,6 +605,10 @@ export default function BusinessCensusSection() {
     // halo sits just under the dots and nothing in the basemap occludes a business.
     for (const id of [SELECT_LAYER_ID, HALO_LAYER_ID, LAYER_ID]) if (m.getLayer(id)) m.moveLayer(id);
     emphasizeStructures(m);   // buildings earlier + linear infrastructure (no area shading)
+    // COSMETIC ~10% warm ground-deepening for the point views (this instance only; the choropleth and
+    // other sections keep their light ground). Grounding/richness — NOT the contrast mechanism, which
+    // is the dark point casing (businessCensusGround; DESIGN_SYSTEM §4).
+    applyDeepenedGround(m);
     applyCameraPreset(m, HOME_VIEW.Edmonton, { ease: !firstHomeRef.current });
     firstHomeRef.current = false;
     // RECENTRE control (top-right rail, matching PA) — returns to BC's home view. BC has a
@@ -588,12 +638,24 @@ export default function BusinessCensusSection() {
     if (!map) return;
     try {
       if (view !== "census") {
-        // Other views: show ALL points as a dim wash (clear any census filter, then dim).
-        for (const id of [LAYER_ID, HALO_LAYER_ID]) if (map.getLayer(id)) map.setFilter(id, null);
-        if (map.getLayer(LAYER_ID)) map.setPaintProperty(LAYER_ID, "circle-opacity", 0.1);
-        if (map.getLayer(HALO_LAYER_ID)) map.setPaintProperty(HALO_LAYER_ID, "circle-opacity", 0);
+        // VIEW 2 (clusters): HIDE the View-1 points entirely (visibility none) so the rest
+        // state is a blank map — nothing lit until a trade is chosen (spec §2.1); the
+        // dedicated cluster layers carry the finding. VIEW 3 (groupings): the old dim wash
+        // of ALL points, unchanged.
+        const hideForClusters = view === "clusters";
+        for (const id of [LAYER_ID, HALO_LAYER_ID]) {
+          if (!map.getLayer(id)) continue;
+          map.setFilter(id, null);
+          map.setLayoutProperty(id, "visibility", hideForClusters ? "none" : "visible");
+        }
+        if (!hideForClusters) {
+          if (map.getLayer(LAYER_ID)) map.setPaintProperty(LAYER_ID, "circle-opacity", 0.1);
+          if (map.getLayer(HALO_LAYER_ID)) map.setPaintProperty(HALO_LAYER_ID, "circle-opacity", 0);
+        }
         return;
       }
+      // census: restore the View-1 points to visible (a prior clusters view hid them).
+      for (const id of [LAYER_ID, HALO_LAYER_ID]) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", "visible");
       // A ["=="] excludes a null field by construction (null never equals the value), so a
       // null-sector business is correctly dropped from a sector selection with no extra guard
       // (["has"] would LIE about a null-then-stripped key — never use it; see the colour match).
@@ -689,6 +751,91 @@ export default function BusinessCensusSection() {
     } catch { /* map tearing down */ }
   }, [map, selectedFeature, layers]);
 
+  // ── VIEW 2 · cluster source + layers lifecycle ─────────────────────────────
+  // On the clusters view (once the joined source is ready) add the cluster source + its two
+  // layers (faint UNDER prominent), appended last so they sit above the basemap + overlays
+  // (§1.3). Removed on leaving. RECREATE, never setData (BP mode-B): add/remove the source.
+  useEffect(() => {
+    if (!map) return;
+    try {
+      const present = !!map.getSource(CLUSTER_SRC);
+      if (view === "clusters" && clusterFC) {
+        if (!present) {
+          map.addSource(CLUSTER_SRC, { type: "geojson", data: clusterFC });
+          if (GLOW_ENABLED) map.addLayer(clusterGlowLayer());   // §3 experimental accent (below faint + prominent)
+          map.addLayer(clusterFaintLayer());
+          map.addLayer(clusterProminentLayer());
+        }
+      } else if (present) {
+        if (map.getLayer(CLUSTER_PROM_ID)) map.removeLayer(CLUSTER_PROM_ID);
+        if (map.getLayer(CLUSTER_FAINT_ID)) map.removeLayer(CLUSTER_FAINT_ID);
+        if (map.getLayer(CLUSTER_GLOW_ID)) map.removeLayer(CLUSTER_GLOW_ID);
+        map.removeSource(CLUSTER_SRC);
+      }
+    } catch { /* map tearing down */ }
+  }, [map, view, clusterFC]);
+
+  // ── VIEW 2 · light the selected trades (spec §2.2/§2.3) ────────────────────
+  // Prominent = SIGNIFICANT members of the selection; faint = NON-significant of the SAME
+  // trade (single-select only — dropped on multi-select, G2). Empty selection → both filters
+  // match nothing → blank map (spec §2.1).
+  useEffect(() => {
+    if (!map || view !== "clusters") return;
+    try {
+      if (!map.getLayer(CLUSTER_PROM_ID)) return;
+      const multi = selectedTrades.length > 1;
+      // Each selected trade gets its own GTA-bright hue (§1) — single-select = blue, multi-select a
+      // distinct vivid hue per trade (the comparison read). Colour + filter both per selection.
+      map.setFilter(CLUSTER_PROM_ID, clusterFilter(selectedTrades, "sig"));
+      map.setPaintProperty(CLUSTER_PROM_ID, "circle-color", sigColour(selectedTrades));
+      map.setFilter(CLUSTER_FAINT_ID, multi ? clusterFilter([], "nonsig") : clusterFilter(selectedTrades, "nonsig"));
+      map.setPaintProperty(CLUSTER_FAINT_ID, "circle-color", faintColour(selectedTrades));
+      // §2 faint fix — opacity scales INVERSELY with the selected trade's non-significant VOLUME
+      // (single-select only; faint is dropped on multi), so a big trade (Lessors) never drowns its
+      // significant cluster in a wall of colour.
+      if (!multi && selectedTrades.length === 1 && lclqRows) {
+        const d = tradeDetail(lclqRows, selectedTrades[0]);
+        map.setPaintProperty(CLUSTER_FAINT_ID, "circle-opacity", faintOpacityForVolume(d ? d.n - d.sig : 0));
+      }
+      // §3 experimental glow accent — same significant filter + trade hue as the dots it enhances.
+      if (GLOW_ENABLED && map.getLayer(CLUSTER_GLOW_ID)) {
+        map.setFilter(CLUSTER_GLOW_ID, clusterFilter(selectedTrades, "sig"));
+        map.setPaintProperty(CLUSTER_GLOW_ID, "circle-color", sigColour(selectedTrades));
+      }
+    } catch { /* map tearing down */ }
+  }, [map, view, selectedTrades, clusterFC, lclqRows]);
+
+  // ── VIEW 2 · hover a lit cluster point → InfoRail preview (its trade + strength). No pin,
+  // no ring here — stats live in the panel (spec §2.4); the InfoRail is a light hover readout.
+  useEffect(() => {
+    if (!map || view !== "clusters") return undefined;
+    let lastId = null;
+    function onMove(e) {
+      if (!e.features?.length) return;
+      map.getCanvas().style.cursor = "pointer";
+      const props = e.features[0].properties;
+      if (props.objectid === lastId) return;
+      lastId = props.objectid;
+      setHoveredFeature(props);
+    }
+    function onLeave() {
+      map.getCanvas().style.cursor = "";
+      lastId = null;
+      setHoveredFeature(null);
+    }
+    for (const id of [CLUSTER_PROM_ID, CLUSTER_FAINT_ID]) {
+      map.on("mousemove", id, onMove);
+      map.on("mouseleave", id, onLeave);
+    }
+    return () => {
+      for (const id of [CLUSTER_PROM_ID, CLUSTER_FAINT_ID]) {
+        map.off("mousemove", id, onMove);
+        map.off("mouseleave", id, onLeave);
+      }
+      setHoveredFeature(null);
+    };
+  }, [map, view, clusterFC]);
+
   return (
     <article className="content-map pa-map">
       <div className="pa-canvas">
@@ -722,10 +869,10 @@ export default function BusinessCensusSection() {
             here (hover wins); on exit it reverts to the pinned one; click pins the full labelled
             hierarchy and rings the dot on the map. The ✕ shows only for a real pin (a preview is
             not dismissible — moving to the panel ends the hover and reverts it). */}
-        {view === "census" && layers && (
+        {((view === "census") || (view === "clusters" && hoveredFeature)) && layers && (
           <BusinessCensusInfoRail
             selected={hoveredFeature ?? selectedFeature}
-            pinned={hoveredFeature == null && selectedFeature != null}
+            pinned={view === "census" && hoveredFeature == null && selectedFeature != null}
             onClear={() => setSelectedFeature(null)}
           />
         )}
@@ -744,7 +891,7 @@ export default function BusinessCensusSection() {
               metric selector in a separate card from the title). */}
           <section className="pa-card">
             <div className="bc-view-switch">
-              <SegmentedControl label="View" options={VIEWS} value={view} onChange={setView} />
+              <SegmentedControl label="View" options={VIEWS} value={view} onChange={changeView} />
             </div>
           </section>
 
@@ -788,28 +935,75 @@ export default function BusinessCensusSection() {
                 <span className="pa-col-lab">Trades That Cluster</span>
                 <p className="bc-ref-note">
                   Ranked by the share of each trade that sits in a statistically real
-                  cluster — “which trades cluster,” not which are biggest.
+                  cluster — “which trades cluster,” not which are biggest. Pick up to{" "}
+                  {CLUSTER_MAX_SELECT} to light their clusters on the map.
                 </p>
                 {!trades ? (
                   <p className="bc-ref-note">Loading the finding…</p>
                 ) : (
                   <ol className="bc-trade-list">
-                    {trades.slice(0, 15).map((t) => (
-                      <li key={t.group} className="bc-trade-row">
-                        <span className="bc-trade-share">{Math.round(t.share * 100)}%</span>
-                        <span className="bc-trade-name">{titleCase(t.group)}</span>
-                        <span className="bc-trade-strength">{lclqMultiplierPhrase(t.maxLclq)}</span>
-                      </li>
-                    ))}
+                    {trades.slice(0, 15).map((t) => {
+                      const sel = selectedTrades.indexOf(t.group);
+                      const isSel = sel >= 0;
+                      const atCap = !isSel && selectedTrades.length >= CLUSTER_MAX_SELECT;
+                      return (
+                        <li key={t.group}>
+                          <button
+                            type="button"
+                            className={`bc-trade-btn${isSel ? " is-selected" : ""}`}
+                            aria-pressed={isSel}
+                            disabled={atCap}
+                            onClick={() => toggleTrade(t.group)}
+                          >
+                            <span className="bc-trade-share">{Math.round(t.share * 100)}%</span>
+                            <span className="bc-trade-name">
+                              {isSel && (
+                                <span className="bc-trade-swatch"
+                                  style={{ background: paletteSig(sel) }} aria-hidden="true" />
+                              )}
+                              {titleCase(t.group)}
+                            </span>
+                            <span className="bc-trade-strength">{lclqMultiplierPhrase(t.maxLclq)}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ol>
                 )}
                 <p className="bc-ref-note bc-ref-counterfactual">
                   Compared to a city where trades were shuffled at random.
                 </p>
-                <p className="bc-ref-note bc-ref-pending">
-                  Selecting a trade to light its cluster on the map — and the
-                  statistics panel — are being wired next.
-                </p>
+
+                {/* STATISTICS PANEL (spec §2.4) — per selected trade: count + share in a
+                    cluster, strength as prose (no p-value, never "LCLQ"), and where it
+                    concentrates. All derived from the committed estimator output. */}
+                {selectedTrades.length > 0 && lclqRows && (
+                  <div className="bc-cluster-stats">
+                    {selectedTrades.map((g, i) => {
+                      const d = tradeDetail(lclqRows, g);
+                      if (!d) return null;
+                      return (
+                        <div key={g} className="bc-cluster-stat">
+                          <div className="bc-cluster-stat-head">
+                            <span className="bc-trade-swatch"
+                              style={{ background: paletteSig(i) }} aria-hidden="true" />
+                            <span className="bc-cluster-stat-name">{titleCase(g)}</span>
+                          </div>
+                          <p className="bc-cluster-stat-line">
+                            <strong>{d.sig}</strong> of {d.n} sit in a cluster
+                            {" "}({Math.round(d.share * 100)}%) — {clusterStrengthPhrase(d.maxLclq)}.
+                          </p>
+                          {d.topNeighbourhoods.length > 0 && (
+                            <p className="bc-cluster-stat-nbhd">
+                              Concentrated in{" "}
+                              {d.topNeighbourhoods.map((nb) => titleCase(nb.name)).join(", ")}.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </section>
           )}

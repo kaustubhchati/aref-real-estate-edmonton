@@ -58,3 +58,76 @@ export function lclqMultiplierPhrase(lclq) {
   const n = v < 10 ? v.toFixed(1) : String(Math.round(v));
   return `up to ${n}×`;
 }
+
+// The multiplier as a full clause that carries its own counterfactual (spec §2.4):
+// "up to 25× more of their own trade nearby than the city average". Used in the panel.
+export function clusterStrengthPhrase(lclq) {
+  const p = lclqMultiplierPhrase(lclq);
+  if (p === "—") return "clustered";
+  return `${p} more of their own trade nearby than the city average`;
+}
+
+// ── View-2 map join (spec §5 artifact 2 → the point map) ─────────────────────
+// The two artifacts stay SEPARATE (points GeoJSON + this CSV); we join them in the
+// browser by `objectid`, never in the backend (recon §4). Three steps:
+
+// 1. objectid → { state, lclq } for the 28,381 TESTED businesses. A business ABSENT
+//    here is UNTESTED (its group is < min_group_n = 30 citywide), a distinct state
+//    that must never render or read as "not significant".
+export function buildSignificanceIndex(rows) {
+  const idx = new Map();
+  for (const r of rows) {
+    const id = Number(r.objectid);
+    if (!Number.isFinite(id)) continue;
+    idx.set(id, { state: r.significant === "TRUE" ? "sig" : "nonsig", lclq: Number(r.lclq) });
+  }
+  return idx;
+}
+
+// 2. The View-2 POINT SOURCE: ONLY tested businesses, each tagged with `lclq_state`
+//    ("sig" | "nonsig") + its multiplier. Untested businesses are OMITTED, so the map
+//    can never draw one — the untested ≠ non-significant rule, enforced by construction.
+export function buildClusterFeatures(features, sigIndex) {
+  const out = [];
+  for (const f of features) {
+    const id = Number(f.properties?.objectid);
+    const s = sigIndex.get(id);
+    if (!s) continue;   // untested → not in the cluster source
+    out.push({
+      type: "Feature",
+      geometry: f.geometry,
+      properties: {
+        objectid: id,
+        industry_group: f.properties.industry_group,
+        industry_group_code: f.properties.industry_group_code,
+        sectors: f.properties.sectors,
+        neighbourhood_name: f.properties.neighbourhood_name,
+        lclq_state: s.state,
+        lclq: Number.isFinite(s.lclq) ? s.lclq : null,
+      },
+    });
+  }
+  return { type: "FeatureCollection", features: out };
+}
+
+// 3. Per-trade detail for the statistics panel (spec §2.4) — count significant, share,
+//    the strongest multiplier, and the neighbourhood breakdown. All from the committed CSV.
+export function tradeDetail(rows, group) {
+  const r = rows.filter((x) => x.industry_group === group);
+  if (!r.length) return null;
+  const sigRows = r.filter((x) => x.significant === "TRUE");
+  const byNbhd = new Map();
+  for (const x of sigRows) {
+    const nb = x.neighbourhood_name || "—";
+    byNbhd.set(nb, (byNbhd.get(nb) || 0) + 1);
+  }
+  const topNeighbourhoods = [...byNbhd.entries()]
+    .map(([name, n]) => ({ name, n }))
+    .sort((a, b) => b.n - a.n)
+    .slice(0, 4);
+  const maxLclq = sigRows.reduce((m, x) => Math.max(m, Number(x.lclq) || 0), 0);
+  return {
+    group, sector: r[0].sectors, n: r.length, sig: sigRows.length,
+    share: sigRows.length / r.length, maxLclq, topNeighbourhoods,
+  };
+}

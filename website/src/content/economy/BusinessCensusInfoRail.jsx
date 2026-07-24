@@ -20,6 +20,7 @@
 // =============================================================================
 
 import { titleCase } from "./titleCase.js";
+import { lclqMultiplierPhrase } from "./industryClustersData.js";
 
 export default function BusinessCensusInfoRail({ selected, pinned = false, onClear }) {
   // IDLE — the frame is present but empty (Principle 0): a quiet prompt of what it does.
@@ -35,6 +36,11 @@ export default function BusinessCensusInfoRail({ selected, pinned = false, onCle
   const sector = selected.sectors ? titleCase(selected.sectors) : "—";
   const code = selected.industry_group_code ?? null;
   const nbhd = selected.neighbourhood_name ?? "—";
+  // Cluster STRENGTH (View 2 only): the LCLQ multiplier, phrased with its own reference
+  // point — never a p-value, never the term "LCLQ" (spec §2.4). Present only on cluster
+  // points (their features carry `lclq`); View-1 points have no such field, so no row.
+  const lclqVal = Number(selected.lclq);
+  const showStrength = selected.lclq_state === "sig" && Number.isFinite(lclqVal) && lclqVal > 0;
 
   return (
     <div className="pa-detail bc-inforail" aria-label="Business detail" aria-live="polite">
@@ -59,6 +65,12 @@ export default function BusinessCensusInfoRail({ selected, pinned = false, onCle
           <span className="pa-kv-k">Neighbourhood</span>
           <span className="pa-kv-v" title={nbhd}>{nbhd}</span>
         </div>
+        {showStrength && (
+          <div className="pa-kv">
+            <span className="pa-kv-k">Cluster strength</span>
+            <span className="pa-kv-v">{lclqMultiplierPhrase(lclqVal)} vs city average</span>
+          </div>
+        )}
       </div>
     </div>
   );

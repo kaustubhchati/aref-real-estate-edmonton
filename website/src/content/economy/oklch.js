@@ -60,6 +60,25 @@ export const oklchObjHex = ({ L, C, H }) => oklchHex(L, C, H);
 // imported by both. A reused literal (matches permitStyle's fallback grey).
 export const NEUTRAL_GREY = "#9aa0a6";
 
+// #hex → {L,C,H} — the INVERSE of oklchToRgb, so a fixed hex palette (the vivid sector
+// palette) can feed the KDE surface, which modulates/blends in OKLCH (spec §1.1). sRGB →
+// linear → OKLab → OKLCH (Ottosson's matrices).
+export function rgbToOklch(hex) {
+  const [r, g, b] = [1, 3, 5]
+    .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  const l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
+  const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
+  const s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
+  const l_ = Math.cbrt(l), m_ = Math.cbrt(m), s_ = Math.cbrt(s);
+  const L = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_;
+  const a = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_;
+  const bb = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_;
+  let H = (Math.atan2(bb, a) * 180) / Math.PI;
+  if (H < 0) H += 360;
+  return { L, C: Math.hypot(a, bb), H };
+}
+
 // {L,C,hue} → [r,g,b] 0–255 (gamma-encoded, clamped). For the KDE RASTER: C must
 // already be in gamut (use maxChromaAt) so there is no per-pixel gamut search.
 export function oklchRgb255(L, C, hDeg) {

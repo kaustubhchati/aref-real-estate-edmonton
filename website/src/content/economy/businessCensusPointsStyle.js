@@ -76,7 +76,7 @@ export const UNKNOWN_COLOUR = "#3d4450";      // dark slate — Unclassified / n
 // ---- OKLCH sector hues — vibrant house style + co-occurrence arrangement ----
 // Colour math lives in oklch.js (shared with the KDE surface so both read the SAME
 // hues per sector — an amber wash resolves into amber dots, spec §1.2).
-import { gamutMapLCH, NEUTRAL_GREY } from "./oklch.js";
+import { rgbToOklch, NEUTRAL_GREY } from "./oklch.js";
 
 // VIBRANT BAND (KC — match Building Permits' register): BP's dots read vivid from
 // CHROMA AT GAMUT-MAX, not from being light (BP orange L0.71/violet L0.47, both C~0.18).
@@ -94,11 +94,7 @@ import { gamutMapLCH, NEUTRAL_GREY } from "./oklch.js";
 // (measured — the L0.60 build). Keeping the DARK band preserves both the WCAG floor and
 // the lightness gap; the gamut-max chroma + the co-occurrence arrangement (below) already
 // deliver BP-level vividness. So: vibrancy via chroma, separation via lightness.
-const POINT_L = 0.52;   // dark figure band — the highest L that still clears 4.5:1 vs cream for every hue
-const POINT_C = 0.40;   // request GAMUT-MAX chroma (gamutMapLCH caps to each hue's sRGB ceiling at POINT_L)
-const HUE_STEP = 36;    // 360 / 10 sectors
-
-// CO-OCCURRENCE ARRANGEMENT (spec §1.1 — APPLIED, KC-ratified). The wheel ORDER (not
+// SECTOR → PALETTE-SLOT ARRANGEMENT (spec §1.1 — APPLIED, KC-ratified). The wheel ORDER (not
 // count rank) so within-family pairs sit adjacent (legible two-way blends) and cross-
 // family pairs sit distant. ROTATED (via ARRANGE_H0) so the highest-co-occurrence pairs
 // land in HIGH-chroma-headroom hues and the low-headroom yellow trough falls on a pair
@@ -125,11 +121,23 @@ export const SECTOR_ARRANGEMENT = [
   "Wholesale trade",                                  // idx 8 → 205° cyan (spacer)
   "Educational services",                             // idx 9 → 241° blue (spacer)
 ];
-const ARRANGE_H0 = 277;   // rotation: places idx 0 at violet so the consumer arc lands in high headroom
+// VIVID 10 (2026-07-24, KC "don't hold back") — a bold, high-chroma, maximally-DISTINCT
+// categorical palette (min pairwise ΔE 30), REPLACING the generated OKLCH wheel. Bright saturated
+// hues read on the warm basemap by CHROMA (they are vivid vs the neutral ground) — the cream halo
+// separates dots. NOTE (physics): a vivid hue is mid-luminance and CANNOT clear WCAG 4.5:1 vs the
+// mid-tone grey/pink grounds (max ~2.9:1) — that floor is only met by darkening the fill (retreat
+// to muted, NOT ALLOWED) or a dark basemap flatten (a bigger, non-paint change flagged for KC).
+// Mirrored token in DESIGN_SYSTEM.md §1.3, FLAGGED for ratification. Assigned by SECTOR_ARRANGEMENT
+// index; the KDE surface reads the SAME hues (rgbToOklch → {L,C,H}) so wash + dots stay in step.
+export const VIVID_10 = [
+  "#ff3d6e", "#ffa300", "#e6d800", "#8bd642", "#2fe38b",
+  "#00c9a7", "#22c1ff", "#5b7cff", "#b061ff", "#ff45cf",
+];
 
-// One sector's OKLCH hue at its wheel index (gamut-max chroma at POINT_L). Returns {hex,L,C,H}.
+// One sector's hue at its wheel index — a fixed VIVID_10 entry + its OKLCH for the KDE. {hex,L,C,H}.
 export function sectorHueAt(wheelIdx) {
-  return gamutMapLCH(POINT_L, POINT_C, (ARRANGE_H0 + wheelIdx * HUE_STEP + 360) % 360);
+  const hex = VIVID_10[((wheelIdx % VIVID_10.length) + VIVID_10.length) % VIVID_10.length];
+  return { hex, ...rgbToOklch(hex) };
 }
 
 // ---- Derive the colour domain from the loaded features ---------------------
