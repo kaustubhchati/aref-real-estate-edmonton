@@ -184,3 +184,18 @@ section_scaffolding_engine.md
 # Frontend design prototype — the throwaway visual-target build (Directive 00).
 # A binding design SPEC to translate, not repo code (CLAUDE.md / Directive 00 §0).
 /bundle.html
+
+# -----------------------------------------------------------------------------
+# Amenities + Zoning (2026-07-25) — Socrata raw snapshots + regenerable outputs.
+# Raw dated CSVs are provenance snapshots (never committed); output/ GeoJSON +
+# manifest + build log are regenerable via the section scripts and republished
+# to website/public/ by the runner (sole publisher). .gitkeep preserves the dirs.
+# -----------------------------------------------------------------------------
+pipeline/yeg/amenities/data/raw/*.csv
+pipeline/yeg/zoning/data/raw/*.csv
+pipeline/yeg/amenities/output/*.geojson
+pipeline/yeg/amenities/output/*.json
+pipeline/yeg/amenities/output/*.csv
+pipeline/yeg/zoning/output/*.geojson
+pipeline/yeg/zoning/output/*.json
+pipeline/yeg/zoning/output/*.csv
