@@ -31,7 +31,7 @@ function titleField(props) {
   return firstStr ?? null;
 }
 
-export default function AmenityInfoRail({ selected, pinned = false, onClear, categoryField, categoryLabel }) {
+export default function AmenityInfoRail({ selected, pinned = false, onClear, categoryField, categoryLabel, categoryLabels }) {
   // IDLE — present but empty (Principle 0): a quiet prompt of what it does.
   if (!selected) {
     return (
@@ -43,7 +43,8 @@ export default function AmenityInfoRail({ selected, pinned = false, onClear, cat
 
   const tField = titleField(selected);
   const title = tField ? String(selected[tField]) : "—";
-  const catValue = categoryField && selected[categoryField] != null ? String(selected[categoryField]) : null;
+  const catRaw = categoryField && selected[categoryField] != null ? String(selected[categoryField]) : null;
+  const catValue = catRaw ? (categoryLabels?.[catRaw] || catRaw) : null;   // D9 display label
 
   // Every remaining property becomes a labelled row (skip the title, the category — shown as
   // the sub-line — the internal ids, and empty values).

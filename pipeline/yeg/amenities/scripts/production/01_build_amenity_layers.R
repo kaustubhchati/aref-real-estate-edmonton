@@ -54,6 +54,22 @@ norm_names <- function(x) {
   gsub("^_+|_+$", "", x)            # strip leading/trailing _
 }
 
+# B3/D9 — a presentation label for a raw category VALUE, so no database string reaches the
+# legend. An UNDERSCORE value is a database token -> title-case each part (SHELL_RECHARGE ->
+# "Shell Recharge"); a single token is left as-is (brands read correctly: FLO, LOOP, SWTCH).
+tidy_label <- function(x) vapply(x, function(v) {
+  if (!grepl("_", v)) return(v)
+  parts <- strsplit(v, "_", fixed = TRUE)[[1]]
+  paste(paste0(toupper(substr(parts, 1, 1)), tolower(substr(parts, 2, nchar(parts)))), collapse = " ")
+}, character(1), USE.NAMES = FALSE)
+
+# B3/D5 — the residual token set (null / unknown / catch-all classes). A category matching
+# any of these renders GREY and sorts last on EVERY layer (encoded here, backend, so the rule
+# cannot drift between layers). Case-insensitive, trimmed.
+RESIDUAL_TOKENS <- c("unknown", "other", "non-networked", "non networked", "none", "n/a",
+                     "na", "unclassified", "unspecified", "not applicable", "not specified")
+is_residual <- function(x) tolower(trimws(x)) %in% RESIDUAL_TOKENS
+
 
 # ============================================================
 # 1 — Registry (newest dated file; a versioned contract, CLAUDE.md §4.4)
@@ -151,6 +167,8 @@ for (i in seq_len(nrow(registry))) {
     cats    <- sort(unique(vals[present]))
     cnts    <- as.integer(table(factor(vals[present], levels = cats)))
   }
+  labs  <- if (length(cats)) tidy_label(cats)  else character(0)   # display labels (D9)
+  resid <- if (length(cats)) is_residual(cats) else logical(0)     # grey + last (D5)
 
   cat(sprintf("   in=%d  emitted=%d  no_geometry=%d  %.1f KB  categories=%d\n",
               n_in, n_emit, n_without, emit_kb, length(cats)))
@@ -166,9 +184,11 @@ for (i in seq_len(nrow(registry))) {
     features_emit    = n_emit,
     without_geometry = n_without,
     emit_kb          = emit_kb,
-    categories       = paste(cats, collapse = "|"),
-    category_counts  = paste(cnts, collapse = "|"),   # parallel to categories (alphabetical)
-    fetched_at       = fetched_at
+    categories        = paste(cats, collapse = "|"),
+    category_counts   = paste(cnts, collapse = "|"),   # parallel to categories (alphabetical)
+    category_labels   = paste(labs, collapse = "|"),   # parallel display labels (D9)
+    category_residual = paste(as.integer(resid), collapse = "|"),   # 1 = grey + last (D5)
+    fetched_at        = fetched_at
   )
 }
 

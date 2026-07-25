@@ -67,6 +67,14 @@ for (i in seq_len(nrow(bl))) {
   cnts <- if (is.na(cnts) || !nzchar(cnts)) integer(0) else as.integer(strsplit(cnts, "\\|")[[1]])
   categoryCounts <- if (length(cats) && length(cnts) == length(cats))
     setNames(as.list(cnts), cats) else setNames(list(), character(0))
+  # Display labels (D9) -> {raw: label}; residual flags (D5) -> the raw values that grey + sort last.
+  labs <- row$category_labels
+  labs <- if (is.na(labs) || !nzchar(labs)) character(0) else strsplit(labs, "\\|")[[1]]
+  categoryLabels <- if (length(cats) && length(labs) == length(cats))
+    setNames(as.list(labs), cats) else setNames(list(), character(0))
+  resid <- row$category_residual
+  resid <- if (is.na(resid) || !nzchar(resid)) integer(0) else as.integer(strsplit(resid, "\\|")[[1]])
+  residualCategories <- if (length(cats) && length(resid) == length(cats)) cats[resid == 1L] else character(0)
 
   layers[[length(layers) + 1L]] <- list(
     id              = row$layer_id,
@@ -80,6 +88,8 @@ for (i in seq_len(nrow(bl))) {
     categoryField   = row$category_field,   # "" for a single-symbol layer
     categories      = I(cats),              # I() -> always a JSON array
     categoryCounts  = categoryCounts,       # {category: count} — for a top-N + Other collapse
+    categoryLabels  = categoryLabels,       # {raw: display label} (D9)
+    residualCategories = I(residualCategories),   # raw values that render grey + sort last (D5)
     coverage        = list(
       withGeometry    = as.integer(row$features_emit),
       withoutGeometry = as.integer(row$without_geometry)

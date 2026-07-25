@@ -58,7 +58,7 @@ export default function AmenityPointMap({ layerId }) {
         setEntry(rec);
         // All display items shown initially. Set here (a fetch callback, once per mount —
         // each layer is its own route), not in an effect (set-state-in-effect is disallowed).
-        const dom = resolveDisplayDomain(rec.categories || [], rec.categoryCounts);
+        const dom = resolveDisplayDomain(rec.categories || [], rec.categoryCounts, rec.categoryLabels, rec.residualCategories);
         setActive(new Set(dom.items.map((it) => it.key)));
       })
       .catch((err) => { if (!cancelled) setFetchError(err.message); });
@@ -69,7 +69,7 @@ export default function AmenityPointMap({ layerId }) {
   const categories = useMemo(() => entry?.categories || [], [entry]);
   // Resolve to display items: ≤10 → one per category; >10 → top-10 by count + Other (§7.1).
   const domain = useMemo(
-    () => resolveDisplayDomain(categories, entry?.categoryCounts),
+    () => resolveDisplayDomain(categories, entry?.categoryCounts, entry?.categoryLabels, entry?.residualCategories),
     [entry],  // eslint-disable-line react-hooks/exhaustive-deps
   );
 
@@ -229,6 +229,7 @@ export default function AmenityPointMap({ layerId }) {
             onClear={() => setSelected(null)}
             categoryField={categoryField}
             categoryLabel={categoryField ? amenityLabel(categoryField) : null}
+            categoryLabels={entry?.categoryLabels}
           />
         )}
 
@@ -242,7 +243,7 @@ export default function AmenityPointMap({ layerId }) {
               <section className="pa-card pa-card-instrument">
                 <AmenityLegend
                   title={amenityLabel(categoryField)}
-                  note={domain.hasOther ? `Top 10 of ${categories.length} by count` : null}
+                  note={domain.note}
                   items={domain.items}
                   active={active}
                   onToggle={toggleCategory}

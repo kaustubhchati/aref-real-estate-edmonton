@@ -67,38 +67,60 @@ export const SINGLE_SYMBOL_COLOUR = "#4d7cff";        // no category axis → on
 export const UNCATEGORIZED_COLOUR = "#8b98a7";        // match fallback (a category value not in the domain)
 const SELECT_COLOUR = "#8b5cf6";                      // --pa-selection-outline (§1.3); MapLibre can't read CSS vars
 
-// The palette for N categories (directive §5): GTA-bright-5 for ≤5, Vivid-10 otherwise.
-export function paletteFor(n) {
-  return n <= GTA_BRIGHT_5.length ? GTA_BRIGHT_5 : VIVID_10;
+export const OTHER_KEY = "__other__";  // the synthetic top-N + Other collapse bucket key
+export const RESIDUAL_COLOUR = UNCATEGORIZED_COLOUR;   // grey (D5) — null/unknown/residual + Other
+const DISPLAY_CAP = 12;   // the most distinct hues one image should carry (D7 ~12-hue ceiling)
+
+// PROVISIONAL palette generator for 11–12 real categories — an even hue rotation so the
+// classes are maximally separated for that count (better than extending Vivid-10 into a 4th
+// adjacent green, D7). FLAGGED: this is the interim past 10; the ratified categorical palette
+// law lands in DESIGN_SYSTEM §1.4 at B4 and replaces this.
+function generateHues(n) {
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(`hsl(${Math.round((360 * i) / n)}, 72%, 56%)`);
+  return out;
+}
+// The palette for N REAL (non-residual) categories: GTA-bright-5 (≤5), Vivid-10 (≤10, the
+// ratified BC/IS hexes, unchanged), an even-rotation generation (11–12, provisional, B4).
+export function paletteForN(n) {
+  if (n <= GTA_BRIGHT_5.length) return GTA_BRIGHT_5;
+  if (n <= VIVID_10.length) return VIVID_10;
+  return generateHues(n);
 }
 
-const PALETTE_MAX = VIVID_10.length;   // 10 — the most nominal classes a palette can hold
-export const OTHER_KEY = "__other__";  // the synthetic top-N + Other collapse bucket key
+// Resolve the manifest's category domain into DISPLAY ITEMS the map + legend both read (so
+// they can never drift). Each item = { key, label, colour, members[], residual? }.
+//   • RESIDUAL classes (manifest residualCategories — Unknown / Non-Networked / …) render GREY
+//     and sort LAST (D5).
+//   • DISPLAY LABELS come from the manifest categoryLabels (D9 — no raw DB value in the legend).
+//   • REAL classes take palette hues. The TOP-N + Other collapse fires ONLY when the tail is
+//     worth collapsing — more than DISPLAY_CAP real classes AND a tail of ≥ 3 (D6). A tail of
+//     1–2 (e.g. recreation's 11) shows in FULL.
+export function resolveDisplayDomain(categories, categoryCounts, categoryLabels = {}, residualCategories = []) {
+  if (!categories?.length) return { items: [], hasOther: false, otherCount: 0, note: null };
+  const residualSet = new Set(residualCategories);
+  const label = (c) => categoryLabels?.[c] || c;
+  const real     = categories.filter((c) => !residualSet.has(c));
+  const residual = categories.filter((c) => residualSet.has(c));
 
-// Resolve the manifest's category domain into DISPLAY ITEMS the map + legend both read
-// (so they can never drift). Each item = { key, label, colour, members[] }:
-//   • ≤ 10 categories → one item per category (alphabetical, the manifest order).
-//   • > 10 categories → the TOP 10 BY COUNT get their own item; the rest COLLAPSE into a
-//     grey "Other" item (§7.1 — do NOT invent an 11th colour). `categoryCounts` is the
-//     manifest's per-category count; ties break on the alphabetical manifest order.
-export function resolveDisplayDomain(categories, categoryCounts) {
-  if (!categories?.length) return { items: [], hasOther: false, otherCount: 0 };
-  if (categories.length <= PALETTE_MAX) {
-    const pal = paletteFor(categories.length);
-    return {
-      items: categories.map((c, i) => ({ key: c, label: c, colour: pal[i % pal.length], members: [c] })),
-      hasOther: false, otherCount: 0,
-    };
+  let hueItems, hasOther = false, otherCount = 0, note = null;
+  if (real.length <= DISPLAY_CAP || real.length - DISPLAY_CAP < 3) {
+    const pal = paletteForN(real.length);
+    hueItems = real.map((c, i) => ({ key: c, label: label(c), colour: pal[i % pal.length], members: [c] }));
+  } else {
+    const counts = categoryCounts || {};
+    const topSet = new Set([...real].sort((a, b) => (counts[b] || 0) - (counts[a] || 0)).slice(0, DISPLAY_CAP));
+    const top  = real.filter((c) => topSet.has(c));   // keep alphabetical for a stable legend/palette
+    const rest = real.filter((c) => !topSet.has(c));
+    const pal  = paletteForN(DISPLAY_CAP);
+    hueItems = top.map((c, i) => ({ key: c, label: label(c), colour: pal[i], members: [c] }));
+    hueItems.push({ key: OTHER_KEY, label: "Other", colour: RESIDUAL_COLOUR, members: rest });
+    hasOther = true; otherCount = rest.length;
+    note = `Top ${DISPLAY_CAP} of ${real.length} by count`;
   }
-  const counts = categoryCounts || {};
-  const topSet = new Set(
-    [...categories].sort((a, b) => (counts[b] || 0) - (counts[a] || 0)).slice(0, PALETTE_MAX),
-  );
-  const top  = categories.filter((c) => topSet.has(c));   // keep alphabetical for a stable legend/palette
-  const rest = categories.filter((c) => !topSet.has(c));
-  const items = top.map((c, i) => ({ key: c, label: c, colour: VIVID_10[i], members: [c] }));
-  items.push({ key: OTHER_KEY, label: "Other", colour: UNCATEGORIZED_COLOUR, members: rest });
-  return { items, hasOther: true, otherCount: rest.length };
+  // Residuals: grey, appended LAST (D5).
+  const residItems = residual.map((c) => ({ key: c, label: label(c), colour: RESIDUAL_COLOUR, members: [c], residual: true }));
+  return { items: [...hueItems, ...residItems], hasOther, otherCount, note };
 }
 
 // Category → colour, from the resolved domain (the map paint). A single-symbol layer (no
