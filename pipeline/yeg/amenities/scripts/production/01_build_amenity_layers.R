@@ -139,13 +139,17 @@ for (i in seq_len(nrow(registry))) {
   n_emit  <- nrow(layer_sf)
   emit_kb <- round(file.info(out_path)$size / 1024, 1)
 
-  # Observed category domain — drives the legend downstream (empty if the layer
-  # has no category_field: a legal single-symbol layer).
-  cats <- character(0)
+  # Observed category domain + counts — drives the legend downstream (empty if the
+  # layer has no category_field: a legal single-symbol layer). categories stays
+  # ALPHABETICAL (stable legend order); the parallel counts let the frontend pick a
+  # top-N + Other collapse for a domain that overflows the palette (rec_facilities).
+  cats <- character(0); cnts <- integer(0)
   cf   <- r$category_field
   if (!is.na(cf) && nzchar(cf) && cf %in% names(layer_sf)) {
-    cats <- sort(unique(as.character(layer_sf[[cf]])))
-    cats <- cats[!is.na(cats) & nzchar(cats)]
+    vals    <- as.character(layer_sf[[cf]])
+    present <- !is.na(vals) & nzchar(vals)
+    cats    <- sort(unique(vals[present]))
+    cnts    <- as.integer(table(factor(vals[present], levels = cats)))
   }
 
   cat(sprintf("   in=%d  emitted=%d  no_geometry=%d  %.1f KB  categories=%d\n",
@@ -163,6 +167,7 @@ for (i in seq_len(nrow(registry))) {
     without_geometry = n_without,
     emit_kb          = emit_kb,
     categories       = paste(cats, collapse = "|"),
+    category_counts  = paste(cnts, collapse = "|"),   # parallel to categories (alphabetical)
     fetched_at       = fetched_at
   )
 }

@@ -62,6 +62,11 @@ for (i in seq_len(nrow(bl))) {
   }
   cats <- row$categories
   cats <- if (is.na(cats) || !nzchar(cats)) character(0) else strsplit(cats, "\\|")[[1]]
+  # Parallel counts (alphabetical, same order as cats) -> a {category: count} object.
+  cnts <- row$category_counts
+  cnts <- if (is.na(cnts) || !nzchar(cnts)) integer(0) else as.integer(strsplit(cnts, "\\|")[[1]])
+  categoryCounts <- if (length(cats) && length(cnts) == length(cats))
+    setNames(as.list(cnts), cats) else setNames(list(), character(0))
 
   layers[[length(layers) + 1L]] <- list(
     id              = row$layer_id,
@@ -74,6 +79,7 @@ for (i in seq_len(nrow(bl))) {
     featureCount    = as.integer(row$features_emit),
     categoryField   = row$category_field,   # "" for a single-symbol layer
     categories      = I(cats),              # I() -> always a JSON array
+    categoryCounts  = categoryCounts,       # {category: count} — for a top-N + Other collapse
     coverage        = list(
       withGeometry    = as.integer(row$features_emit),
       withoutGeometry = as.integer(row$without_geometry)

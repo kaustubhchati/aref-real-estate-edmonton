@@ -13,6 +13,7 @@
       "featureCount": 6882,
       "categoryField": "",
       "categories": [],
+      "categoryCounts": {},
       "coverage": {
         "withGeometry": 6882,
         "withoutGeometry": 0
@@ -29,6 +30,7 @@
       "featureCount": 54,
       "categoryField": "",
       "categories": [],
+      "categoryCounts": {},
       "coverage": {
         "withGeometry": 54,
         "withoutGeometry": 0
@@ -45,6 +47,7 @@
       "featureCount": 10,
       "categoryField": "",
       "categories": [],
+      "categoryCounts": {},
       "coverage": {
         "withGeometry": 10,
         "withoutGeometry": 0
@@ -61,6 +64,14 @@
       "featureCount": 659,
       "categoryField": "user_category",
       "categories": ["All Ages", "Inclusive", "Junior (18 months to 5 years)", "Junior/Senior (18 months to 12 years)", "Senior (6 to 12 years)", "Unknown"],
+      "categoryCounts": {
+        "All Ages": 3,
+        "Inclusive": 1,
+        "Junior (18 months to 5 years)": 61,
+        "Junior/Senior (18 months to 12 years)": 475,
+        "Senior (6 to 12 years)": 98,
+        "Unknown": 21
+      },
       "coverage": {
         "withGeometry": 659,
         "withoutGeometry": 0
@@ -77,6 +88,18 @@
       "featureCount": 173,
       "categoryField": "ev_network",
       "categories": ["ChargePoint Network", "Electrify Canada", "EV Connect", "FLO", "LOOP", "Non-Networked", "SHELL_RECHARGE", "SWTCH", "Tesla", "Tesla Destination"],
+      "categoryCounts": {
+        "ChargePoint Network": 47,
+        "Electrify Canada": 1,
+        "EV Connect": 1,
+        "FLO": 45,
+        "LOOP": 2,
+        "Non-Networked": 39,
+        "SHELL_RECHARGE": 2,
+        "SWTCH": 25,
+        "Tesla": 3,
+        "Tesla Destination": 8
+      },
       "coverage": {
         "withGeometry": 173,
         "withoutGeometry": 0
@@ -93,6 +116,19 @@
       "featureCount": 109,
       "categoryField": "facility_type",
       "categories": ["Arena", "Arts Booking Facility", "Arts Program Facility", "City Park", "Golf Course", "Outdoor Pool", "Recreation Centre", "River Valley Park", "Snowshoeing", "Staffed Sports Field", "Tennis Court"],
+      "categoryCounts": {
+        "Arena": 22,
+        "Arts Booking Facility": 1,
+        "Arts Program Facility": 1,
+        "City Park": 7,
+        "Golf Course": 3,
+        "Outdoor Pool": 5,
+        "Recreation Centre": 21,
+        "River Valley Park": 20,
+        "Snowshoeing": 4,
+        "Staffed Sports Field": 8,
+        "Tennis Court": 17
+      },
       "coverage": {
         "withGeometry": 109,
         "withoutGeometry": 0
@@ -109,6 +145,10 @@
       "featureCount": 77,
       "categoryField": "type",
       "categories": ["Spray Deck", "Spray Park"],
+      "categoryCounts": {
+        "Spray Deck": 67,
+        "Spray Park": 10
+      },
       "coverage": {
         "withGeometry": 77,
         "withoutGeometry": 0
@@ -125,6 +165,7 @@
       "featureCount": 14,
       "categoryField": "",
       "categories": [],
+      "categoryCounts": {},
       "coverage": {
         "withGeometry": 14,
         "withoutGeometry": 0
@@ -141,6 +182,18 @@
       "featureCount": 1195,
       "categoryField": "class",
       "categories": ["City Park", "District Activity Park", "Greenway", "Natural Area Park", "Other Land Type", "Pocket Park", "PUL", "School and Community Park", "Unknown", "Urban Village Park"],
+      "categoryCounts": {
+        "City Park": 50,
+        "District Activity Park": 26,
+        "Greenway": 66,
+        "Natural Area Park": 168,
+        "Other Land Type": 20,
+        "Pocket Park": 451,
+        "PUL": 6,
+        "School and Community Park": 297,
+        "Unknown": 3,
+        "Urban Village Park": 108
+      },
       "coverage": {
         "withGeometry": 1195,
         "withoutGeometry": 0
@@ -157,6 +210,15 @@
       "featureCount": 3145,
       "categoryField": "vegetation_type",
       "categories": ["Bioswale", "Grass with Trees or Shrubs", "Riparian", "Tree Stand", "Unknown", "Unmowed Grass", "Wildflower Meadow"],
+      "categoryCounts": {
+        "Bioswale": 61,
+        "Grass with Trees or Shrubs": 1331,
+        "Riparian": 343,
+        "Tree Stand": 630,
+        "Unknown": 64,
+        "Unmowed Grass": 713,
+        "Wildflower Meadow": 3
+      },
       "coverage": {
         "withGeometry": 3145,
         "withoutGeometry": 0
@@ -173,6 +235,13 @@
       "featureCount": 222,
       "categoryField": "sch_type",
       "categories": ["EJ", "EJS", "EL", "JR", "SR"],
+      "categoryCounts": {
+        "EJ": 59,
+        "EJS": 1,
+        "EL": 115,
+        "JR": 28,
+        "SR": 12
+      },
       "coverage": {
         "withGeometry": 222,
         "withoutGeometry": 37
@@ -189,6 +258,20 @@
       "featureCount": 10417,
       "categoryField": "classification",
       "categories": ["Bus / Bike / Taxi Lane", "Contra-Flow Bike Lane", "Local Street Bikeway", "Maintenance Access", "Painted Bike Lane", "Protected Bike Lane", "Shared Pathway", "Shared Roadway - Higher Traffic", "Shared Roadway - Lower Traffic", "Shared Trail", "Unclassified", "Walkway / Breezeway"],
+      "categoryCounts": {
+        "Bus / Bike / Taxi Lane": 65,
+        "Contra-Flow Bike Lane": 56,
+        "Local Street Bikeway": 79,
+        "Maintenance Access": 64,
+        "Painted Bike Lane": 194,
+        "Protected Bike Lane": 491,
+        "Shared Pathway": 3815,
+        "Shared Roadway - Higher Traffic": 555,
+        "Shared Roadway - Lower Traffic": 1478,
+        "Shared Trail": 293,
+        "Unclassified": 286,
+        "Walkway / Breezeway": 3041
+      },
       "coverage": {
         "withGeometry": 10417,
         "withoutGeometry": 0
