@@ -123,7 +123,7 @@
       "sourceUpdatedAt": "2025-03-28",
       "fetchedAt": "2026-07-25",
       "featureCount": 14,
-      "categoryField": "surface",
+      "categoryField": "",
       "categories": [],
       "coverage": {
         "withGeometry": 14,

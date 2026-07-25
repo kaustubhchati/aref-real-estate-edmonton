@@ -3,19 +3,19 @@
 "name": "track_sports_fields",
 "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
 "features": [
-{ "type": "Feature", "properties": { "name": "St. Gregory's/MacDonald Schools", "surface": null }, "geometry": { "type": "Point", "coordinates": [ -113.567865, 53.553277 ] } },
-{ "type": "Feature", "properties": { "name": "Avalon", "surface": null }, "geometry": { "type": "Point", "coordinates": [ -113.523342, 53.492368 ] } },
-{ "type": "Feature", "properties": { "name": "Jasper Place", "surface": null }, "geometry": { "type": "Point", "coordinates": [ -113.605621, 53.526712 ] } },
-{ "type": "Feature", "properties": { "name": "Foote Field", "surface": null }, "geometry": { "type": "Point", "coordinates": [ -113.531878, 53.503138 ] } },
-{ "type": "Feature", "properties": { "name": "Londonderry", "surface": null }, "geometry": { "type": "Point", "coordinates": [ -113.445053, 53.608586 ] } },
-{ "type": "Feature", "properties": { "name": "Coronation Park", "surface": null }, "geometry": { "type": "Point", "coordinates": [ -113.558208, 53.562325 ] } },
-{ "type": "Feature", "properties": { "name": "Glengarry Park", "surface": null }, "geometry": { "type": "Point", "coordinates": [ -113.47363, 53.592879 ] } },
-{ "type": "Feature", "properties": { "name": "Victoria Composite High School", "surface": null }, "geometry": { "type": "Point", "coordinates": [ -113.498874, 53.556062 ] } },
-{ "type": "Feature", "properties": { "name": "Rollie Miles", "surface": null }, "geometry": { "type": "Point", "coordinates": [ -113.499134, 53.510805 ] } },
-{ "type": "Feature", "properties": { "name": "WP Wagner", "surface": null }, "geometry": { "type": "Point", "coordinates": [ -113.452304, 53.498307 ] } },
-{ "type": "Feature", "properties": { "name": "Killarney", "surface": null }, "geometry": { "type": "Point", "coordinates": [ -113.484376, 53.590905 ] } },
-{ "type": "Feature", "properties": { "name": "McNally School / Forest Heights Park", "surface": null }, "geometry": { "type": "Point", "coordinates": [ -113.459547, 53.547005 ] } },
-{ "type": "Feature", "properties": { "name": "Austin O'Brien", "surface": null }, "geometry": { "type": "Point", "coordinates": [ -113.425146, 53.535334 ] } },
-{ "type": "Feature", "properties": { "name": "Mill Woods Park", "surface": null }, "geometry": { "type": "Point", "coordinates": [ -113.44653, 53.454741 ] } }
+{ "type": "Feature", "properties": { "name": "St. Gregory's/MacDonald Schools" }, "geometry": { "type": "Point", "coordinates": [ -113.567865, 53.553277 ] } },
+{ "type": "Feature", "properties": { "name": "Avalon" }, "geometry": { "type": "Point", "coordinates": [ -113.523342, 53.492368 ] } },
+{ "type": "Feature", "properties": { "name": "Jasper Place" }, "geometry": { "type": "Point", "coordinates": [ -113.605621, 53.526712 ] } },
+{ "type": "Feature", "properties": { "name": "Foote Field" }, "geometry": { "type": "Point", "coordinates": [ -113.531878, 53.503138 ] } },
+{ "type": "Feature", "properties": { "name": "Londonderry" }, "geometry": { "type": "Point", "coordinates": [ -113.445053, 53.608586 ] } },
+{ "type": "Feature", "properties": { "name": "Coronation Park" }, "geometry": { "type": "Point", "coordinates": [ -113.558208, 53.562325 ] } },
+{ "type": "Feature", "properties": { "name": "Glengarry Park" }, "geometry": { "type": "Point", "coordinates": [ -113.47363, 53.592879 ] } },
+{ "type": "Feature", "properties": { "name": "Victoria Composite High School" }, "geometry": { "type": "Point", "coordinates": [ -113.498874, 53.556062 ] } },
+{ "type": "Feature", "properties": { "name": "Rollie Miles" }, "geometry": { "type": "Point", "coordinates": [ -113.499134, 53.510805 ] } },
+{ "type": "Feature", "properties": { "name": "WP Wagner" }, "geometry": { "type": "Point", "coordinates": [ -113.452304, 53.498307 ] } },
+{ "type": "Feature", "properties": { "name": "Killarney" }, "geometry": { "type": "Point", "coordinates": [ -113.484376, 53.590905 ] } },
+{ "type": "Feature", "properties": { "name": "McNally School / Forest Heights Park" }, "geometry": { "type": "Point", "coordinates": [ -113.459547, 53.547005 ] } },
+{ "type": "Feature", "properties": { "name": "Austin O'Brien" }, "geometry": { "type": "Point", "coordinates": [ -113.425146, 53.535334 ] } },
+{ "type": "Feature", "properties": { "name": "Mill Woods Park" }, "geometry": { "type": "Point", "coordinates": [ -113.44653, 53.454741 ] } }
 ]
 }

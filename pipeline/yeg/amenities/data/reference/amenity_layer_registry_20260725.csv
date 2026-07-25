@@ -6,7 +6,7 @@ playgrounds,Playgrounds,g57c-ph4j,9nqb-w48x,point,geometry_point,user_category,i
 ev_charging,EV Charging Stations,rg5m-e4tk,xzhy-xe8z,point,geometry,ev_network,station_name|street_address|ev_network|ev_connector_types|total_number_of_ports|status|ev_pricing,80,20
 recreation_facilities,Recreation Facilities,kab2-3f3p,nz3t-vyg3,point,geometry_point,facility_type,category|facility_type|facility_name|address|website,50,10
 spray_parks,Spray Parks,jyra-si4k,jyra-si4k,point,geometry_point,type,id|name|address|type|surface_type|accessibility|neighbourhood_id|neighbourhood_name,30,5
-track_sports_fields,Track Sports Fields,ykrg-bwt7,ykrg-bwt7,point,geometry_point,surface,name|surface,7,1
+track_sports_fields,Track Sports Fields,ykrg-bwt7,ykrg-bwt7,point,geometry_point,,name,7,1
 parks,Parks,ex66-ku6s,gdd9-eqv9,multipolygon,multipolygon,class,id|official_name|common_name|status|type|class|address,600,400
 vegetation,Vegetation Areas,pmka-uf4n,ct88-r8tk,multipolygon,multipolygon,vegetation_type,id|vegetation_type|type|owner|maintainer,1500,1500
 schools,School Catchment Areas,kicz-beax,gc4g-ct3z,multipolygon,catchment_polygon,sch_type,school_nam|sch_type|grades|sch_addres|sector|epsb_ward|attend|year,100,200
