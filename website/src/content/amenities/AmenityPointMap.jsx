@@ -33,7 +33,7 @@ import AmenityLegend from "./AmenityLegend.jsx";
 import {
   BASEMAP_STYLE, MAP_VIEW, SOURCE_ID, DOT_LAYER_ID, SELECT_LAYER_ID,
   buildColourExpression, resolveDisplayDomain, categoryFilter, dotLayer, selectLayer, amenityLabel,
-  RING, ringRadiusAt,
+  RING, ringRadiusAt, labelLayer, LABEL_LAYER_ID,
 } from "./amenityPointStyle.js";
 
 const MANIFEST_URL = assetUrl("/data/amenities/manifest.json");
@@ -77,10 +77,12 @@ export default function AmenityPointMap({ layerId }) {
   const geojsonUrl = entry ? assetUrl(`/data/amenities/${entry.file}`) : null;
   // The dot + ring, coloured from the resolved domain. Built once the entry exists, so
   // MapView adds them already-coloured (no post-hoc setPaintProperty).
-  const layers = useMemo(
-    () => (entry ? [selectLayer(), dotLayer(buildColourExpression(categoryField, domain))] : null),
-    [entry],  // eslint-disable-line react-hooks/exhaustive-deps
-  );
+  const layers = useMemo(() => {
+    if (!entry) return null;
+    const base = [selectLayer(), dotLayer(buildColourExpression(categoryField, domain))];
+    if (entry.family === "S") base.push(labelLayer("name"));   // A6: sparse layers get name labels
+    return base;
+  }, [entry]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     document.title = entry ? `${entry.label} · Edmonton` : "Open Data Centre";
@@ -94,7 +96,7 @@ export default function AmenityPointMap({ layerId }) {
     setMap(m);
     if (import.meta.env.DEV) window.__amenityMap = m;
     // Points sit ABOVE all basemap layers (MapView inserts data layers below labels).
-    for (const id of [SELECT_LAYER_ID, DOT_LAYER_ID]) if (m.getLayer(id)) m.moveLayer(id);
+    for (const id of [SELECT_LAYER_ID, DOT_LAYER_ID, LABEL_LAYER_ID]) if (m.getLayer(id)) m.moveLayer(id);
     applyCameraPreset(m, HOME_VIEW.Edmonton, { ease: !firstHomeRef.current });
     firstHomeRef.current = false;
     if (!recentreAddedRef.current) {

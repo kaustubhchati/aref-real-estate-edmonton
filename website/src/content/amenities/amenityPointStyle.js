@@ -171,6 +171,25 @@ export function glyphLayer(iconImageExpression) {
   };
 }
 
+// A6 — Family S (sparse: police, spray parks, track fields) name LABELS, appearing at mid zoom.
+// A ten-point layer can afford labels; a reader should not have to hover to identify a police
+// station. Map-label standard (DESIGN_SYSTEM §5): dark ink + cream halo; text-optional so labels
+// drop rather than overprint. Glyphs were deferred (KC), so labels do the S identification.
+export const LABEL_LAYER_ID = "amenity-labels";
+export const LABEL_MINZOOM  = 12;
+export function labelLayer(nameField) {
+  return {
+    id: LABEL_LAYER_ID, type: "symbol", source: SOURCE_ID, minzoom: LABEL_MINZOOM,
+    layout: {
+      "text-field": ["coalesce", ["get", nameField], ""],
+      "text-font": ["Open Sans Bold", "Noto Sans Regular"],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 12, 10, 16, 13],
+      "text-offset": [0, 1.1], "text-anchor": "top", "text-optional": true,
+    },
+    paint: { "text-color": "#2a2621", "text-halo-color": "#f7f1df", "text-halo-width": 1.4 },
+  };
+}
+
 // The dot: vivid fill + DARK casing stroke + HOVER grow. Returned WITHOUT `source` (MapView fills
 // it in); the page lifts it to the top of the stack in onLoad.
 export function dotLayer(colourExpression) {

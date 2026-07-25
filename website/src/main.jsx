@@ -70,6 +70,7 @@ const BusinessCensusMap     = lazyWithReload(() => import("./content/economy/Bus
 const BusinessCensusSection = lazyWithReload(() => import("./content/economy/BusinessCensusSection.jsx"));
 const AmenityPointMap       = lazyWithReload(() => import("./content/amenities/AmenityPointMap.jsx"));
 const AmenityDensityMap     = lazyWithReload(() => import("./content/amenities/AmenityDensityMap.jsx"));
+const AmenityNetworkMap     = lazyWithReload(() => import("./content/amenities/AmenityNetworkMap.jsx"));
 const ReportCard            = lazyWithReload(() => import("./content/report-card/ReportCard.jsx"));
 
 // basename mounts the app under Vite's base path. import.meta.env.BASE_URL is set
@@ -109,7 +110,7 @@ createRoot(document.getElementById("root")).render(
               (Public Transportation / Parks & Recreation / … multi-layer pages) is a later
               session that folds these in. */}
           <Route path="/amenities/bus-stops"               element={<AmenityDensityMap layerId="bus_stops" />} />
-          <Route path="/amenities/lrt-stations"            element={<AmenityPointMap layerId="lrt_stops" />} />
+          <Route path="/amenities/lrt-stations"            element={<AmenityNetworkMap layerId="lrt_stops" />} />
           <Route path="/amenities/playgrounds"             element={<AmenityPointMap layerId="playgrounds" />} />
           <Route path="/amenities/spray-parks"             element={<AmenityPointMap layerId="spray_parks" />} />
           <Route path="/amenities/recreation-facilities"   element={<AmenityPointMap layerId="recreation_facilities" />} />
