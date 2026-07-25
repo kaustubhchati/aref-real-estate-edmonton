@@ -68,6 +68,7 @@ const BuildingPermitsMap    = lazyWithReload(() => import("./content/building-pe
 const PermitChoroplethMap   = lazyWithReload(() => import("./content/building-permits/PermitChoroplethMap.jsx"));
 const BusinessCensusMap     = lazyWithReload(() => import("./content/economy/BusinessCensusMap.jsx"));
 const BusinessCensusSection = lazyWithReload(() => import("./content/economy/BusinessCensusSection.jsx"));
+const AmenityPointMap       = lazyWithReload(() => import("./content/amenities/AmenityPointMap.jsx"));
 const ReportCard            = lazyWithReload(() => import("./content/report-card/ReportCard.jsx"));
 
 // basename mounts the app under Vite's base path. import.meta.env.BASE_URL is set
@@ -102,6 +103,10 @@ createRoot(document.getElementById("root")).render(
           <Route path="/amenities/crime"                   element={<Placeholder title="Crime"                  kind="map" />} />
           <Route path="/amenities/public-school"           element={<Placeholder title="Public School"          kind="map" />} />
           <Route path="/amenities/public-transportation"   element={<Placeholder title="Public Transportation"  kind="map" />} />
+          {/* Family-1 amenity POINT layers — interim per-layer routes (the thematic
+              consolidation that folds them into the leaves above is a later session). Not
+              yet in siteConfig.nav; reachable by URL until consolidation wires the nav. */}
+          <Route path="/amenities/playgrounds"             element={<AmenityPointMap layerId="playgrounds" />} />
           <Route path="/economy/business-counts"           element={<BusinessCensusMap />} />
           <Route path="/economy/business-census"           element={<BusinessCensusSection />} />
           <Route path="/economy/business-licences"         element={<Placeholder title="Business Licences"      kind="map" />} />

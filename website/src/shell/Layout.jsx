@@ -27,6 +27,7 @@ const IMMERSIVE_ROUTES = new Set([
   "/economy/business-counts",
   "/economy/business-census",
   "/activity/construction-improvement",
+  "/amenities/playgrounds",
 ]);
 
 // Shown in the content area while a code-split section chunk downloads (the maps +

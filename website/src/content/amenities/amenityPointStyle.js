@@ -1,0 +1,136 @@
+// =============================================================================
+// amenityPointStyle.js
+//
+// The visual contract for the Amenity POINT layers (Family 1). ONE style module
+// for every amenity point layer — the layer's file, category field and category
+// domain all come from the amenities manifest at runtime, so this file holds NO
+// per-layer data (refresh-by-design).
+//
+// FORKED from the Business Census / Industry Specializations point maps (the site's
+// one visual language). Inherited EXACTLY, not re-derived (directive §5):
+//   • FILL + DARK CASING. The dot is a vivid fill with a DARK casing (#141018) — the
+//     casing carries point-symbol accessibility (WCAG 1.4.11 non-text contrast at 3:1,
+//     measured against the casing, DESIGN_SYSTEM §4), because a saturated hue cannot
+//     clear the 4.5:1 text floor on the warm ground. Applied as a circle-STROKE (the
+//     IS significant-dot method, §5.1), so one circle layer per amenity layer.
+//   • Radius / stroke = the IS significant-dot spec (PROM_RADIUS / PROM_STROKE_W) — amenity
+//     layers are SPARSE (10–659 pts) like significant clusters (KC 2026-07-25). bus_stops
+//     (dense) is the §7.2 exception, handled separately.
+//   • FLAT symbols — no gradient, no glow (glow failed on IS at city zoom).
+//   • Instant paint transitions (duration:0) — no fade on filter/hover.
+//   • Hiding = layer FILTER (never opacity:0); a filtered-out category leaves the render
+//     AND the hit-test set.
+//   • Violet selection ring (--pa-selection-outline) OUTSIDE the dot.
+//   • PALETTES: Vivid 10 for ≥6 categories, GTA-bright 5 for ≤5 (directive §5). These are
+//     the design-law palettes (DESIGN_SYSTEM §1.4) — the SAME hexes the BC/IS point maps
+//     use; mirrored here (not a new palette) so amenities carry no cross-section import to
+//     economy's churning internals. Keep in sync with DESIGN_SYSTEM §1.4.
+// =============================================================================
+
+import { CITY_BOUNDS } from "../../config/cityBounds.js";
+export { BASEMAP_STYLE } from "../../components/basemapStyle.js";
+
+// Shared pitched home camera — one camera, every map (mapCamera.js). Re-export the frame
+// so the page imports the map framing from one place, like the BC point map.
+export const MAP_VIEW = {
+  center: [-113.4927, 53.4862],   // matches HOME_VIEW.Edmonton centre (mapCamera.js)
+  zoom: 10.3,
+  minZoom: 7,
+  maxZoom: 18,
+  maxBounds: CITY_BOUNDS.Edmonton,
+};
+
+export const SOURCE_ID       = "amenity-points";
+export const DOT_LAYER_ID    = "amenity-dots";
+export const SELECT_LAYER_ID = "amenity-select";
+
+// ---- Design-law palettes (DESIGN_SYSTEM §1.4; mirror of the BC/IS point maps) ----
+export const POINT_CASING = "#141018";               // shared dark point-symbol casing (§4)
+export const VIVID_10 = [                             // ≥6 categories
+  "#ff3d6e", "#ffa300", "#e6d800", "#8bd642", "#2fe38b",
+  "#00c9a7", "#22c1ff", "#5b7cff", "#b061ff", "#ff45cf",
+];
+export const GTA_BRIGHT_5 = [                          // ≤5 categories
+  "#4d7cff", "#00c9b5", "#ff3d9e", "#00d95a", "#ff7a1a",
+];
+export const SINGLE_SYMBOL_COLOUR = "#4d7cff";        // no category axis → one hue (GTA blue)
+export const UNCATEGORIZED_COLOUR = "#8b98a7";        // match fallback (a category value not in the domain)
+const SELECT_COLOUR = "#8b5cf6";                      // --pa-selection-outline (§1.3); MapLibre can't read CSS vars
+
+// The palette for N categories (directive §5). >10 is collapsed to top-10 + Other
+// UPSTREAM (§7.1) before it reaches here, so a domain is always ≤ palette length.
+export function paletteFor(n) {
+  return n <= GTA_BRIGHT_5.length ? GTA_BRIGHT_5 : VIVID_10;
+}
+
+// Category → colour, assigned by the manifest's category order (both the map paint AND the
+// legend read the same ordered list, so they can never drift). A single-symbol layer
+// (no categoryField / empty domain) is ONE colour, no match.
+export function buildColourExpression(categoryField, categories) {
+  if (!categoryField || !categories?.length) return SINGLE_SYMBOL_COLOUR;
+  const pal = paletteFor(categories.length);
+  const arms = [];
+  categories.forEach((c, i) => arms.push(c, pal[i % pal.length]));
+  return ["match", ["get", categoryField], ...arms, UNCATEGORIZED_COLOUR];
+}
+
+// The colour a category is drawn in (for the legend swatch) — same assignment as the paint.
+export function categoryColours(categories) {
+  const pal = paletteFor(categories.length);
+  return categories.map((c, i) => ({ category: c, colour: pal[i % pal.length] }));
+}
+
+// Show/hide filter driven by the legend. null = show everything (all categories active, or
+// a single-symbol layer). Otherwise keep only the active categories — removed points leave
+// the render AND the hit-test set (directive §6, never opacity:0).
+export function categoryFilter(categoryField, activeCategories, totalCount) {
+  if (!categoryField) return null;
+  if (!activeCategories || activeCategories.length === totalCount) return null;
+  return ["in", ["get", categoryField], ["literal", activeCategories]];
+}
+
+// ---- Radius / stroke (the IS significant-dot spec, inherited exactly) -------
+const RADIUS   = ["interpolate", ["linear"], ["zoom"], 10, 6, 13, 9, 17, 14];
+const STROKE_W = ["interpolate", ["linear"], ["zoom"], 10, 1.4, 13, 2.0, 16, 2.8];
+const RING     = ["interpolate", ["linear"], ["zoom"], 10, 9, 13, 12, 17, 17];   // RADIUS + ~3
+const OPACITY  = 0.92;   // near-solid vivid fill; the dark casing + size carry the read
+
+// The dot: vivid fill + DARK casing stroke. Returned WITHOUT `source` (MapView fills it in);
+// the page lifts it to the top of the stack in onLoad.
+export function dotLayer(colourExpression) {
+  return {
+    id: DOT_LAYER_ID,
+    type: "circle",
+    paint: {
+      "circle-color": colourExpression,
+      "circle-radius": RADIUS,
+      "circle-opacity": OPACITY,
+      "circle-stroke-color": POINT_CASING,   // the accessibility casing (§4)
+      "circle-stroke-width": STROKE_W,
+      "circle-opacity-transition":      { duration: 0 },   // instant — no fade on filter/hover (§5)
+      "circle-radius-transition":       { duration: 0 },
+      "circle-stroke-width-transition": { duration: 0 },
+    },
+  };
+}
+
+// The selection ring — a violet ring OUTSIDE the dot marking the pinned point. Keyed on the
+// MapLibre feature id (the source is added with generateId, since amenity layers carry no
+// uniform id property); base filter matches nothing until the page sets the pinned id.
+export function selectLayer() {
+  return {
+    id: SELECT_LAYER_ID,
+    type: "circle",
+    source: SOURCE_ID,
+    filter: ["==", ["id"], -1],
+    paint: {
+      "circle-radius": RING,
+      "circle-color": SELECT_COLOUR,
+      "circle-opacity": 0,                    // ring only, no fill
+      "circle-stroke-color": SELECT_COLOUR,
+      "circle-stroke-width": 3,
+      "circle-opacity-transition":        { duration: 0 },
+      "circle-stroke-opacity-transition": { duration: 0 },
+    },
+  };
+}
