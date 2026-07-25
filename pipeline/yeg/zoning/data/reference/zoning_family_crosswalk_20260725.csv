@@ -1,0 +1,157 @@
+zoning,description,family,status,date_curated,curated_by
+A,River Valley,Parks and Open Space,PROPOSED,2026-07-25,CC
+A1,Fort Edmonton Park Special Area,Parks and Open Space,PROPOSED,2026-07-25,CC
+A2,Muttart Conservatory Special Area,Parks and Open Space,PROPOSED,2026-07-25,CC
+A3,Louise McKinney Riverfront Special Area,Parks and Open Space,PROPOSED,2026-07-25,CC
+A4,Edmonton Valley Zoo Special Area,Parks and Open Space,PROPOSED,2026-07-25,CC
+A5,Buena Vista Park Special Area,Parks and Open Space,PROPOSED,2026-07-25,CC
+A6,River Crossing Special Area,Parks and Open Space,PROPOSED,2026-07-25,CC
+A7,William Hawrelak Park Zone,Parks and Open Space,PROPOSED,2026-07-25,CC
+AED,Arena and Entertainment District Zone,Civic and Public Service,PROPOSED,2026-07-25,CC
+AES,Agricultural Edmonton South,Agricultural and Rural,PROPOSED,2026-07-25,CC
+AG,Agriculture Zone,Agricultural and Rural,PROPOSED,2026-07-25,CC
+AJ,Alternative Jurisdiction,Future and Reserve,PROPOSED,2026-07-25,CC
+ALA,Ambleside Low Rise Apartment,Residential,PROPOSED,2026-07-25,CC
+ASC,Ambleside Shopping Centre,Commercial,PROPOSED,2026-07-25,CC
+AUVC,Ambleside Urban Village Commercial,Mixed Use,PROPOSED,2026-07-25,CC
+BE,Business Employment,Industrial,PROPOSED,2026-07-25,CC
+BLMR,Blatchford Low to Medium Rise Residential,Residential,PROPOSED,2026-07-25,CC
+BMR,Blatchford Medium Rise Residential Zone,Residential,PROPOSED,2026-07-25,CC
+BP,Blatchford Parks,Parks and Open Space,PROPOSED,2026-07-25,CC
+BRH,Blatchford Row Housing,Residential,PROPOSED,2026-07-25,CC
+CB,Business Commercial,Commercial,PROPOSED,2026-07-25,CC
+CCA,Core Commercial Arts Zone,Commercial,PROPOSED,2026-07-25,CC
+CCHD,Clareview Campus High Density Residential,Residential,PROPOSED,2026-07-25,CC
+CCLD,Clareview Campus Low Density Residential,Residential,PROPOSED,2026-07-25,CC
+CCMD,Clareview Campus Medium Density Residential,Residential,PROPOSED,2026-07-25,CC
+CCNC,Clareview Campus Neighbourhood Commercial,Commercial,PROPOSED,2026-07-25,CC
+CCSD,Clareview Campus Single Detached Residential,Residential,PROPOSED,2026-07-25,CC
+CG,General Commercial,Commercial,PROPOSED,2026-07-25,CC
+CMU,Commercial Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+CMUV,Central McDougall Urban Village Special Area,Mixed Use,PROPOSED,2026-07-25,CC
+CN,Neighbourhood Commercial,Commercial,PROPOSED,2026-07-25,CC
+CPMU,Century Park Mixed Use Zone,Mixed Use,PROPOSED,2026-07-25,CC
+CPT,Century Park Transition Zone,Mixed Use,PROPOSED,2026-07-25,CC
+DC,Direct Control,Direct Control,PROPOSED,2026-07-25,CC
+DC1,Direct Development Control Provision,Direct Control,PROPOSED,2026-07-25,CC
+DC2,Site Specific Development Control Provision,Direct Control,PROPOSED,2026-07-25,CC
+DC/INDES,Direct Control / Industrial District Edmonton South,Direct Control,PROPOSED,2026-07-25,CC
+ECB,Ellerslie Commercial Business Zone,Commercial,PROPOSED,2026-07-25,CC
+EETC,Edmonton Energy & Technology ParkChemical Cluster Zone,Industrial,PROPOSED,2026-07-25,CC
+EETIM,Edmonton Energy and Technology Medium Industrial,Industrial,PROPOSED,2026-07-25,CC
+EETL,Edmonton Energy & Technology Park Logistics zone,Industrial,PROPOSED,2026-07-25,CC
+EETM,Edmonton Energy & Technology Park Manufacturing Zone,Industrial,PROPOSED,2026-07-25,CC
+EETR,Edmonton Energy & Technology Park Industrial Reserve Zone,Industrial,PROPOSED,2026-07-25,CC
+EIB,Ellerslie Industrial Business Zone,Industrial,PROPOSED,2026-07-25,CC
+EIM,Ellerslie Medium Industrial Zone,Industrial,PROPOSED,2026-07-25,CC
+FD,Future Urban Development,Future and Reserve,PROPOSED,2026-07-25,CC
+GLD,Griesbach Low Density Residential Zone,Residential,PROPOSED,2026-07-25,CC
+GLDF,Griesbach Low Density Residential Flex,Residential,PROPOSED,2026-07-25,CC
+GLRA,Griesbach Low Rise Apartment,Residential,PROPOSED,2026-07-25,CC
+GMRA,Griesbach Medium Rise Apartment,Residential,PROPOSED,2026-07-25,CC
+GRH,Griesbach Row Housing,Residential,PROPOSED,2026-07-25,CC
+GVC,Griesbach Village Centre Zone,Mixed Use,PROPOSED,2026-07-25,CC
+HA,Heritage Area Zone,Heritage,PROPOSED,2026-07-25,CC
+HDR,High Density Residential Zone,Residential,PROPOSED,2026-07-25,CC
+IBES,Industrial Business Edmonton South,Industrial,PROPOSED,2026-07-25,CC
+IH,Heavy Industrial,Industrial,PROPOSED,2026-07-25,CC
+ILES,Light Industrial Edmonton South,Industrial,PROPOSED,2026-07-25,CC
+IM,Medium Industrial,Industrial,PROPOSED,2026-07-25,CC
+JAMSC,Jasper Avenue Main Street Commercial Zone,Commercial,PROPOSED,2026-07-25,CC
+MED,Marquis Entertainment District,Civic and Public Service,PROPOSED,2026-07-25,CC
+MMS,Marquis Main Street Zone,Commercial,PROPOSED,2026-07-25,CC
+MMUT,Marquis Mixed Use Transition Zone,Mixed Use,PROPOSED,2026-07-25,CC
+MRC,Marquis Retail Centre Zone,Commercial,PROPOSED,2026-07-25,CC
+MU,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h12 f2.2 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h12 f3,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h12 f3.5 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h14 f1.8,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h14 f2.5 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h16 f0.5,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h16 f2,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h16 f2.3,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h16 f2.3 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h16 f3,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h16 f3.5,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h16 f3.5 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h18 f3.5 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h20 f3.5 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h21 f3.8 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h21 f4.5,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h23 f3,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h23 f3.5 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h23 f3.7,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h23 f3.8,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h23 f3 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h23 f4.5,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h23 f4.5 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h23 f5,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h23 f5.1 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h25 f3.5,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h28 f4,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h28 f4.5,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h28 f4 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h28 f5,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h28 f5 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h30 f5.5,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h40 f6.5,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h40 f7,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h40 f7 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h45 f7,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h45 f7 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h50 f4.5 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h50 f6,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h50 f6 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h50 f7,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h50 f7 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h60 f9.5 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h65 f5.5 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h70 f8,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h75 f7.5,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h75 f7.5 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h75 f7 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h77 f8,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h77 f8 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h85 f11,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h85 f11 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h85 f8,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h85 f8 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MU h88 f11 cf,Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+MUN,Neighbourhood Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+NA,Natural Areas,Parks and Open Space,PROPOSED,2026-07-25,CC
+NSRVES,North Saskatchewan River Valley Edmonton South,Parks and Open Space,PROPOSED,2026-07-25,CC
+PLD,Paisley Low Density,Residential,PROPOSED,2026-07-25,CC
+PRH,Paisley Row Housing,Residential,PROPOSED,2026-07-25,CC
+PS,Parks and Services,Parks and Open Space,PROPOSED,2026-07-25,CC
+PSN,Neighbourhood Parks and Services,Parks and Open Space,PROPOSED,2026-07-25,CC
+PU,Public Utility,Civic and Public Service,PROPOSED,2026-07-25,CC
+RAES,Acreage Residential Edmonton South,Agricultural and Rural,PROPOSED,2026-07-25,CC
+RCES,Country Residential Edmonton South,Agricultural and Rural,PROPOSED,2026-07-25,CC
+RCRL,River Crossing Large Scale Zone,Residential,PROPOSED,2026-07-25,CC
+RCRM,River Crossing Medium Scale Zone,Residential,PROPOSED,2026-07-25,CC
+RL h50,Large Scale Residential,Residential,PROPOSED,2026-07-25,CC
+RL h65,Large Scale Residential,Residential,PROPOSED,2026-07-25,CC
+RM,Medium Scale Residential,Residential,PROPOSED,2026-07-25,CC
+RM h16,Medium Scale Residential,Residential,PROPOSED,2026-07-25,CC
+RM h23,Medium Scale Residential,Residential,PROPOSED,2026-07-25,CC
+RM h28,Medium Scale Residential,Residential,PROPOSED,2026-07-25,CC
+RMU,Residential Mixed Use Zone,Mixed Use,PROPOSED,2026-07-25,CC
+RR,Rural Residential,Agricultural and Rural,PROPOSED,2026-07-25,CC
+RS,Small Scale Residential,Residential,PROPOSED,2026-07-25,CC
+RSF,Small Scale Flex Residential,Residential,PROPOSED,2026-07-25,CC
+RSM,Small-Medium Scale Transition Residential,Residential,PROPOSED,2026-07-25,CC
+RSM h12,Small-Medium Scale Transition Residential,Residential,PROPOSED,2026-07-25,CC
+RSM h14,Small-Medium Scale Transition Residential,Residential,PROPOSED,2026-07-25,CC
+RTCMR,Riverview Town Centre Medium Rise Residential,Residential,PROPOSED,2026-07-25,CC
+RTCR,Riverview Town Centre Residential Zone,Residential,PROPOSED,2026-07-25,CC
+RVRH,Riverview Row Housing Zone,Residential,PROPOSED,2026-07-25,CC
+SLD,Stillwater Low Density Residential Zone,Residential,PROPOSED,2026-07-25,CC
+SRA,Stillwater Rear Attached Housing Zone,Residential,PROPOSED,2026-07-25,CC
+SRH,Stillwater Row Housing Zone,Residential,PROPOSED,2026-07-25,CC
+TC-C,Town Center Commercial,Commercial,PROPOSED,2026-07-25,CC
+TC-MU,Town Center Mixed Use,Mixed Use,PROPOSED,2026-07-25,CC
+UC3ES,Urban Commercial 3 Edmonton South,Commercial,PROPOSED,2026-07-25,CC
+UF,Urban Facilities,Civic and Public Service,PROPOSED,2026-07-25,CC
+UI,Urban Institution,Civic and Public Service,PROPOSED,2026-07-25,CC
+UW,Urban Warehouse Zone,Industrial,PROPOSED,2026-07-25,CC
