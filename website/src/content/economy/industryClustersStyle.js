@@ -16,15 +16,16 @@
 // COLOUR — VIBRANT (2026-07-24, KC "don't hold back"). GTA-bright blip palette: 5 full-
 // saturation hues, maximally distinct (min pairwise ΔE 57). PHYSICS the report states in full:
 // a vivid hue is mid-luminance and CANNOT clear WCAG 4.5:1 vs the mid-tone grey/pink grounds
-// (max ~2.9:1). The floor is met the way KC's halo lever intends — a DARK local casing per dot
-// (the cream casing works for DARK dots; BRIGHT dots need a DARK boundary): the casing clears
+// (max ~2.9:1). The floor is met the way KC's casing lever intends — the shared DARK local casing
+// per dot (POINT_CASING #141018; §5, 2026-07-24: ONE casing across both point views — a LIGHT/cream
+// casing merges a vivid dot into the pale ground, a DARK casing separates it): the casing clears
 // every ground (6.4–16.7) and each bright fill clears the casing (5.1–9.9), so every dot READS
 // on both grounds without darkening (muting) the palette. Literal fill-vs-ground 4.5:1 would
 // require a dark basemap flatten (bigger, non-paint change — flagged for KC, not taken here).
-// Tokens mirrored in DESIGN_SYSTEM.md §1.3, FLAGGED for ratification.
+// Tokens mirrored in DESIGN_SYSTEM.md §1.4, FLAGGED for ratification.
 // =============================================================================
 
-import { CLUSTER_CASING } from "./businessCensusGround.js";
+import { POINT_CASING } from "./businessCensusGround.js";
 
 export const CLUSTER_SRC      = "bc-clusters";
 export const CLUSTER_GLOW_ID  = "bc-clusters-glow";     // experimental accent (reversible)
@@ -42,11 +43,13 @@ export const CLUSTER_PALETTE = [
   { sig: "#00d95a", faint: "#74e89f" },   // green
   { sig: "#ff7a1a", faint: "#ffbb80" },   // orange
 ];
-// The dot CASING — a DARK near-black boundary (businessCensusGround CLUSTER_CASING) that carries the
-// point-symbol accessibility: it lets the bright vivid fills read on any warm ground (WCAG 1.4.11
-// Non-text Contrast measured against the casing, DESIGN_SYSTEM §4), since a saturated hue cannot
-// clear the 4.5:1 text floor against a mid-tone warm ground.
-const SIG_CASING = CLUSTER_CASING;
+// The dot CASING — a DARK near-black boundary (the shared businessCensusGround POINT_CASING, one
+// token across both point views) that carries the point-symbol accessibility: it lets the bright
+// vivid fills read on any warm ground (WCAG 1.4.11 Non-text Contrast measured against the casing,
+// DESIGN_SYSTEM §4), since a saturated hue cannot clear the 4.5:1 text floor against a mid-tone
+// warm ground. Applied to BOTH the significant dots (stroke) AND the faint baseline (a thinner,
+// opacity-tracked stroke — §5 casing directive, so both point views share one dark casing).
+const SIG_CASING = POINT_CASING;
 
 const wrap = (i) => ((i % CLUSTER_PALETTE.length) + CLUSTER_PALETTE.length) % CLUSTER_PALETTE.length;
 export const paletteSig   = (i) => CLUSTER_PALETTE[wrap(i)].sig;    // list/panel swatch
@@ -86,6 +89,10 @@ export function faintOpacityForVolume(nonSigCount) {
 const PROM_RADIUS   = ["interpolate", ["linear"], ["zoom"], 10, 6, 13, 9, 17, 14];
 // FAINT smaller (§2) — clearly subordinate to significant by size as well as opacity.
 const FAINT_RADIUS  = ["interpolate", ["linear"], ["zoom"], 10, 3, 13, 4, 17, 5.5];
+// FAINT casing — the SAME dark POINT_CASING as significant, but THINNER (the faint dots are small)
+// and OPACITY-TRACKED to the fill (the page sets circle-stroke-opacity = the volume-scaled fill
+// opacity), so the casing stays as subordinate as the baseline it edges (§5 casing directive).
+const FAINT_STROKE_W = 0.8;
 const PROM_STROKE_W = ["interpolate", ["linear"], ["zoom"], 10, 1.4, 13, 2.0, 16, 2.8];
 const PROM_OPACITY  = 0.92;   // near-solid vivid fill; the dark casing + size carry the density read
 
@@ -106,6 +113,8 @@ export function clusterGlowLayer() {
 }
 
 // FAINT layer — non-significant same-trade baseline. Colour + opacity set per selection (page).
+// Casing: the shared DARK POINT_CASING (SIG_CASING), thin (FAINT_STROKE_W) and opacity-tracked to
+// the fill by the page — so both point views share one dark casing while faint stays subordinate.
 export function clusterFaintLayer() {
   return {
     id: CLUSTER_FAINT_ID, type: "circle", source: CLUSTER_SRC, filter: MATCH_NONE,
@@ -113,7 +122,11 @@ export function clusterFaintLayer() {
       "circle-color": CLUSTER_PALETTE[0].faint,
       "circle-radius": FAINT_RADIUS,
       "circle-opacity": 0.3,
+      "circle-stroke-color": SIG_CASING,
+      "circle-stroke-width": FAINT_STROKE_W,
+      "circle-stroke-opacity": 0.3,   // default; the page tracks it to the fill's volume opacity (subordinate)
       "circle-opacity-transition": { duration: 0 }, "circle-radius-transition": { duration: 0 },
+      "circle-stroke-opacity-transition": { duration: 0 }, "circle-stroke-color-transition": { duration: 0 },
     },
   };
 }

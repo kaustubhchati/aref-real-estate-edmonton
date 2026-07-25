@@ -2242,16 +2242,109 @@ p  { margin: 0 0 0.75rem; }
 .bc-view-switch { margin-top: 0; }   /* own card now (was margin-top --s3 when it followed the title in one card) */
 /* The .bc-banner "This view is …" chip was REMOVED entirely (KC 2026-07-24). */
 
-/* View-2 finding list — trades ranked by share significant. Read-only this pass
-   (selection lighting is next). Share % leads, trade name, strength multiplier. */
-.bc-trade-list { list-style: none; margin: var(--s2) 0 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
-.bc-trade-row {
-  display: grid; grid-template-columns: 2.4rem 1fr auto; align-items: baseline; gap: var(--s2);
-  padding: var(--s1) 0; border-bottom: 1px solid var(--hair);
+/* ── View-2 LEFT column — the STATIC LCLQ METHOD BOX (2026-07-24 restructure). KaTeX
+   formula + interpretation + parameters + citations, no controls. Dark instrument card
+   (--pa-shell), so it uses the sidebar light inks; KaTeX inherits `color`, so the container
+   colour makes the formula legible. The trade selection + readout moved to the console. ── */
+/* CLUSTERS view — cap the instrument column so its bottom lands ABOVE the ~254px full-width
+   console band (the console is z96, over the z15 column; without the cap the console hides the
+   column's lower method-box content). The method box scrolls internally (overflow-y on .pa-float)
+   if it exceeds the cap — reachable, never hidden behind the console. Scoped: census/groupings
+   columns are untouched. */
+.bc-col-clusters { max-height: calc(100% - 262px); }
+
+.bc-method { display: flex; flex-direction: column; gap: var(--s1); color: var(--tx); }
+.bc-method-lead { color: var(--tx-read); font-size: var(--t-xs); line-height: 1.35; margin: 0; }
+/* The two rendered maths blocks: constrain size to the column, scroll horizontally as a last
+   resort (a sum-over-fraction is wide), and kill KaTeX's default display margins. */
+.bc-method-formula {
+  margin: var(--s1) 0 0; padding: 6px 0;
+  border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair);
+  overflow-x: auto; overflow-y: hidden; color: var(--tx);
 }
-.bc-trade-share { color: var(--tx-read); font-weight: 700; font-variant-numeric: tabular-nums; font-size: var(--t-xs); }
-.bc-trade-name { color: var(--tx); font-size: var(--t-xs); line-height: 1.2; }
-.bc-trade-strength { color: var(--tx-mut); font-size: var(--t-2xs); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bc-method-formula .katex { font-size: 0.98em; }
+.bc-method-formula .katex-display { margin: 0; }
+.bc-method-cases { margin: 5px 0 0; overflow-x: auto; overflow-y: hidden; color: var(--tx); }
+.bc-method-cases .katex { font-size: 0.9em; }
+.bc-method-cases .katex-display { margin: 0; text-align: left; }
+.bc-method-params { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 6px 0 0; }
+.bc-method-param { display: contents; }
+.bc-method-params dt { color: var(--tx-mut); font-size: var(--t-2xs); white-space: nowrap; }
+.bc-method-params dd { color: var(--tx); font-size: var(--t-2xs); margin: 0; line-height: 1.25; }
+.bc-method-sig {
+  color: var(--tx-read); font-size: var(--t-2xs); line-height: 1.35;
+  margin: 6px 0 0; padding-top: 6px; border-top: 1px solid var(--hair);
+}
+.bc-method-sig strong { color: var(--tx); }
+.bc-method-cite { color: var(--tx-mut); font-size: 10px; line-height: 1.3; margin: 5px 0 0; font-style: italic; }
+
+/* ── View-2 BOTTOM console — trade CHIPS (always-visible header) + per-trade READOUT
+   (collapsible body). Reuses the .dt dark console shell; the header row is one full-width
+   bar (rounded top, up-shadow), the readout body continues it seamlessly (2026-07-24). ── */
+.bc-icn-headrow {
+  pointer-events: auto;
+  display: flex; align-items: center; gap: 10px;
+  width: calc(100vw - 16px); box-sizing: border-box;
+  padding: 6px 14px;
+  background: var(--pa-shell); color: var(--pa-ink);
+  border: 1px solid var(--pa-hair); border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.45);
+}
+.bc-icn-handle {   /* strip the pill chrome — here it's an inline title+caret toggle */
+  align-self: center; flex: 0 0 auto;
+  background: none; border: 0; box-shadow: none; border-radius: var(--r-sm);
+  padding: 4px 8px; gap: 8px; white-space: nowrap;
+}
+.bc-icn-handle:hover { background: var(--pa-card); }
+.bc-chip-strip {
+  flex: 1 1 auto; min-width: 0;
+  display: flex; gap: 8px; overflow-x: auto; padding: 2px;
+  scrollbar-width: thin;
+}
+.bc-chip {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: baseline; gap: 7px;
+  padding: 5px 12px;
+  background: var(--pa-card); color: var(--pa-ink);
+  border: 1px solid var(--pa-hair); border-radius: 999px;
+  cursor: pointer; white-space: nowrap; font-size: var(--t-xs); font-family: inherit;
+}
+.bc-chip:hover:not(:disabled) { border-color: var(--pa-mut); }
+.bc-chip:disabled { opacity: 0.4; cursor: default; }
+.bc-chip.is-selected { background: var(--pa-shell); font-weight: 600; }
+.bc-chip-share { font-weight: 700; font-variant-numeric: tabular-nums; }
+.bc-chip-name { color: var(--pa-ink); }
+.bc-chip-mult { color: var(--pa-mut); font-size: var(--t-2xs); font-variant-numeric: tabular-nums; }
+.bc-icn-clear {
+  flex: 0 0 auto; background: none; border: 0; color: var(--pa-mut);
+  font-size: var(--t-xs); font-family: inherit; cursor: pointer; padding: 4px 6px;
+}
+.bc-icn-clear:hover { color: var(--pa-ink); text-decoration: underline; }
+/* the readout body continues the header surface (no top rounding / top border / own shadow) */
+.bc-icn-panel {
+  width: calc(100vw - 16px); box-sizing: border-box;
+  border-radius: 0; border-top: 0; box-shadow: none;
+  max-height: calc(37svh - 60px);
+}
+.bc-icn-hint { color: var(--pa-mut); font-size: var(--t-xs); line-height: 1.4; margin: 0; padding: 12px 16px 14px; max-width: 64ch; }
+.bc-icn-readout { display: flex; gap: 14px; overflow-x: auto; padding: 12px 16px 14px; }
+.bc-icn-card {
+  flex: 0 0 auto; min-width: 206px; max-width: 260px; box-sizing: border-box;
+  background: var(--pa-card); border: 1px solid var(--pa-hair); border-radius: var(--r-sm);
+  padding: 10px 12px;
+}
+.bc-icn-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.bc-icn-sw { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; flex: 0 0 auto; }
+.bc-icn-card-name { color: var(--pa-ink); font-weight: 600; font-size: var(--t-xs); line-height: 1.2; }
+.bc-icn-scores { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0; }
+.bc-icn-scores > div { display: contents; }
+.bc-icn-scores dt { color: var(--pa-mut); font-size: var(--t-2xs); white-space: nowrap; }
+.bc-icn-scores dd { color: var(--pa-ink); font-size: var(--t-xs); margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.bc-icn-scores dd strong { font-weight: 700; }
+.bc-icn-scale { color: var(--pa-mut); font-size: var(--t-2xs); font-style: italic; line-height: 1.3; margin: 6px 0 0; }
+.bc-icn-nbhd { color: var(--pa-ink); font-size: var(--t-2xs); line-height: 1.35; margin: 8px 0 0; }
+.bc-icn-nbhd-lab { color: var(--pa-mut); text-transform: uppercase; letter-spacing: 0.04em; font-size: 9.5px; margin-right: 3px; }
 
 /* ── View-1 sidebar legend — the WHEEL ALONE (the sector list moved to the console, KC
    2026-07-24). Compact, PA sidebar scale; it is the map's colour key + the sector selector. ── */

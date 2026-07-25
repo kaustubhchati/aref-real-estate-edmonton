@@ -42,6 +42,7 @@
 // =============================================================================
 
 import { CITY_BOUNDS } from "../../config/cityBounds.js";
+import { POINT_CASING } from "./businessCensusGround.js";   // shared dark point casing (View 1 + View 2)
 
 // Basemap style is shared + base-resolved; re-exported so the page imports one place.
 export { BASEMAP_STYLE } from "../../components/basemapStyle.js";
@@ -72,6 +73,10 @@ export const UNCLASSIFIED_KEY = "Unclassified";
 //     NEVER folds into the "Other" colour (the directive's null-honesty rule).
 export const OTHER_COLOUR   = NEUTRAL_GREY;   // shared with the surface's "mixed" class (one source)
 export const UNKNOWN_COLOUR = "#3d4450";      // dark slate — Unclassified / null / unexpected
+// FLAG (§5, pre-existing, 0 live features): this dark slate is the ONE fill that does NOT clear the
+// §5 dark casing (#141018) at the 3:1 non-text floor — dark-on-dark, ~1.9:1. It predates §5 and
+// renders 0 features today (nullCount is 0). If an Unclassified dot ever appears it would separate
+// poorly from its own casing; revisit the slate (lighten it) if that data materialises. KC's call.
 
 // ---- OKLCH sector hues — vibrant house style + co-occurrence arrangement ----
 // Colour math lives in oklch.js (shared with the KDE surface so both read the SAME
@@ -123,11 +128,11 @@ export const SECTOR_ARRANGEMENT = [
 ];
 // VIVID 10 (2026-07-24, KC "don't hold back") — a bold, high-chroma, maximally-DISTINCT
 // categorical palette (min pairwise ΔE 30), REPLACING the generated OKLCH wheel. Bright saturated
-// hues read on the warm basemap by CHROMA (they are vivid vs the neutral ground) — the cream halo
-// separates dots. NOTE (physics): a vivid hue is mid-luminance and CANNOT clear WCAG 4.5:1 vs the
+// hues read on the warm basemap by CHROMA (they are vivid vs the neutral ground) — the DARK casing
+// (§5) separates dots. NOTE (physics): a vivid hue is mid-luminance and CANNOT clear WCAG 4.5:1 vs the
 // mid-tone grey/pink grounds (max ~2.9:1) — that floor is only met by darkening the fill (retreat
 // to muted, NOT ALLOWED) or a dark basemap flatten (a bigger, non-paint change flagged for KC).
-// Mirrored token in DESIGN_SYSTEM.md §1.3, FLAGGED for ratification. Assigned by SECTOR_ARRANGEMENT
+// Mirrored token in DESIGN_SYSTEM.md §1.4, FLAGGED for ratification. Assigned by SECTOR_ARRANGEMENT
 // index; the KDE surface reads the SAME hues (rgbToOklch → {L,C,H}) so wash + dots stay in step.
 export const VIVID_10 = [
   "#ff3d6e", "#ffa300", "#e6d800", "#8bd642", "#2fe38b",
@@ -214,22 +219,24 @@ export function buildColourExpression(domain) {
   return ["match", ["get", "colour_key"], ...arms, UNKNOWN_COLOUR];
 }
 
-// ---- The point layers: a light HALO under the dark, saturated DOTS -----------
-// TWO circle layers on the same source (spec §1.1 casing / KC): a wider CREAM halo
-// drawn UNDER each dot (a cream immediate-surround — on the census view the basemap
-// ground is hidden, so the ring overlays the pale surface — separating the dot from
-// the surface, a dark fill, or another dot), then the DOT itself — dark + saturated
-// (the figure). This replaces the old white stroke, which did double duty as a
-// border and merged into a white MESH where dots overlap; the cream halo instead
-// reveals ground between dots, so a dense cluster reads as dots-on-ground. The dot
-// carries NO stroke (the halo IS the casing; a two-ring dark-hue inner stroke was
-// tried and is too heavy at this radius — KC's fallback). Both returned WITHOUT
-// `source`; the page lifts BOTH above every basemap layer (§1.3), halo just under
-// the dots.
+// ---- The point layers: a DARK casing HALO under the VIVID DOTS ---------------
+// TWO circle layers on the same source (spec §1.1 casing / KC): a wider DARK halo
+// drawn UNDER each dot — the shared POINT_CASING (#141018), the SAME dark casing View 2's
+// dots use — then the DOT itself (the vivid VIVID_10 sector figure). §5 casing directive
+// (2026-07-24): the casing went CREAM → DARK. On the light basemap a light/cream casing
+// MERGES the dot boundary into the pale ground (vivid dots read soft-edged + washed); a
+// DARK casing is the local luminance boundary that makes the vivid fill read CRISPLY —
+// exactly the logic already shipped for View 2's significant dots. The dot carries NO
+// stroke (the halo IS the casing). Both returned WITHOUT `source`; the page lifts BOTH
+// above every basemap layer (§1.3), halo just under the dots.
+// FLAG (deferred, not solved by §5): a dark casing crisps an INDIVIDUAL dot but does not
+// resolve View 1's overall DENSITY — all ~29,894 points at once, where dark rims can merge
+// in the densest cores. Point-thinning / aggregation for dense View 1 is a separate future
+// item (§5 scope note), NOT this change.
 // Dot radius — a GENTLE high-zoom ramp (KC: slightly larger spots when zoomed in). Held at
 // the tuned base size through the overview + mid zooms (the dense city constellation must
 // NOT bloat), lifting modestly from ~z13 in. Data-driven stops → ONE interpolate the dot
-// and its halo both consume, so the cream ring stays exactly HALO_WIDTH wide at every zoom.
+// and its halo both consume, so the dark casing ring stays exactly HALO_WIDTH wide at every zoom.
 const RADIUS_BASE  = 3.4;            // the tuned uniform size — overview through mid-zoom
 const RADIUS_STOPS = [
   [13, RADIUS_BASE],                 // ≤ z13: unchanged (MapLibre clamps flat below the first stop)
@@ -241,15 +248,23 @@ const RADIUS_STOPS = [
 function radiusExpression(add = 0) {
   return ["interpolate", ["linear"], ["zoom"], ...RADIUS_STOPS.flatMap(([z, r]) => [z, r + add])];
 }
-export const POINT_OPACITY = 0.92;   // dot: near-solid dark figure
+export const POINT_OPACITY = 0.92;   // dot: near-solid VIVID figure (0.92, not 1.0)
+// FLAG (§5 eyeball item, benign — KC's call whether to touch): the dark casing halo is a full disc
+// UNDER this 0.92-opaque dot, so ~(1−0.92)×HALO_OPACITY ≈ 6.8% of the near-black casing bleeds
+// through the ENTIRE dot face, uniformly. When the dot was DARK (pre-VIVID_10) this was invisible;
+// on the VIVID_10 fills it slightly deepens each hue. Measured benign-to-BETTER: the dark bleed
+// lands CLOSER to the true hue than the old CREAM halo's bleed, which washed dots pastel (#ff3d6e
+// centre → ≈(238,60,105) dark-bleed vs ≈(254,75,119) cream-bleed vs (255,61,110) pure). To remove
+// it entirely, raise POINT_OPACITY to 1.0 (no bleed) — not done here (unrequested; 0.92 reads well).
 export const HALO_LAYER_ID = "bcensus-points-halo";
-const HALO_WIDTH   = 1.9;            // cream ring radius added around each dot — a neutral casing that reveals
-                                    // ground between dots. Tuned for the DARK point band (which already clears
-                                    // the surface by lightness); it reinforces, it doesn't carry, separation.
-const HALO_COLOUR  = "#f7f1df";      // --map-cream (basemap ground; MapLibre can't read the CSS var)
-export const HALO_OPACITY = 0.85;
+const HALO_WIDTH   = 1.9;            // dark casing-ring radius added around each dot — the local luminance
+                                    // boundary that separates a vivid dot from the pale ground (§5). Width
+                                    // unchanged from the cream era; flagged for KC to eyeball vs View 2's
+                                    // thinner proportional stroke.
+const HALO_COLOUR  = POINT_CASING;   // §5: was cream #f7f1df; now the shared DARK point casing (#141018)
+export const HALO_OPACITY = 0.85;    // dark casing opacity (unchanged; flagged as a crispness tuning lever)
 
-// The dark saturated DOT (figure). Colour = the dark-band sector expression.
+// The VIVID saturated DOT (figure). Colour = the VIVID_10 sector expression, drawn OVER the dark casing.
 export function pointCircleLayer(colourExpression) {
   return {
     id: LAYER_ID,
@@ -266,7 +281,7 @@ export function pointCircleLayer(colourExpression) {
   };
 }
 
-// The cream HALO (casing), a wider circle UNDER the dots on the same source.
+// The DARK casing HALO (§5), a wider circle UNDER the dots on the same source.
 export function pointHaloLayer() {
   return {
     id: HALO_LAYER_ID,
@@ -281,9 +296,9 @@ export function pointHaloLayer() {
 }
 
 // The SELECTION ring — marks the PINNED point so the reader keeps track of which dot the
-// InfoRail describes. A violet ring just OUTSIDE the cream halo: violet is the §1.3 MAP
+// InfoRail describes. A violet ring just OUTSIDE the dark casing halo: violet is the §1.3 MAP
 // selection colour (--pa-selection-outline), reserved as "not data", and sitting outside the
-// halo it reads as "selected" over ANY sector hue (the cream halo separates it from even a
+// halo it reads as "selected" over ANY sector hue (the dark casing separates it from even a
 // violet Health dot). Base filter matches nothing; the page sets it to the pinned objectid.
 // Sits just under the halo (lifted with the point layers), so dot + halo draw on top.
 export const SELECT_LAYER_ID = "bcensus-points-select";

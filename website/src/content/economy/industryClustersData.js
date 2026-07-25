@@ -110,8 +110,10 @@ export function buildClusterFeatures(features, sigIndex) {
   return { type: "FeatureCollection", features: out };
 }
 
-// 3. Per-trade detail for the statistics panel (spec §2.4) — count significant, share,
-//    the strongest multiplier, and the neighbourhood breakdown. All from the committed CSV.
+// 3. Per-trade detail for the console readout (spec §2.4) — count significant, share, the
+//    PEAK and MEDIAN multiplier (peak = the strongest single cluster; median = the typical
+//    significant business, so one 242× outlier can't misread the whole trade), and the
+//    significant-area neighbourhood breakdown. All from the committed CSV.
 export function tradeDetail(rows, group) {
   const r = rows.filter((x) => x.industry_group === group);
   if (!r.length) return null;
@@ -125,9 +127,11 @@ export function tradeDetail(rows, group) {
     .map(([name, n]) => ({ name, n }))
     .sort((a, b) => b.n - a.n)
     .slice(0, 4);
-  const maxLclq = sigRows.reduce((m, x) => Math.max(m, Number(x.lclq) || 0), 0);
+  const lclqs = sigRows.map((x) => Number(x.lclq)).filter((v) => Number.isFinite(v) && v > 0).sort((a, b) => a - b);
+  const maxLclq = lclqs.length ? lclqs[lclqs.length - 1] : 0;
+  const medianLclq = lclqs.length ? lclqs[Math.floor((lclqs.length - 1) / 2)] : 0;
   return {
     group, sector: r[0].sectors, n: r.length, sig: sigRows.length,
-    share: sigRows.length / r.length, maxLclq, topNeighbourhoods,
+    share: sigRows.length / r.length, maxLclq, medianLclq, topNeighbourhoods,
   };
 }

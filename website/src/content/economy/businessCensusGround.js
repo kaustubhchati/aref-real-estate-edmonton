@@ -4,12 +4,16 @@
 // The WARM ground treatment for the Business Census POINT views (View 1 + View 2).
 // KC's closing ruling: ship the vibrant palettes on the WARM site with the dark-casing
 // accessibility solution; DARK MODE is EXPLORED + DEFERRED (a possible future program,
-// not this work) — DESIGN_SYSTEM.md §1.3. This module holds what ships:
+// not this work) — DESIGN_SYSTEM.md §1.4. This module holds what ships:
 //
-//   • CLUSTER_CASING — the DARK local casing (#141018) that carries POINT-SYMBOL
+//   • POINT_CASING — the DARK local casing (#141018) that carries POINT-SYMBOL
 //     accessibility (WCAG 1.4.11 Non-text Contrast, measured against the casing;
-//     DESIGN_SYSTEM.md §4). It is independent of ground depth — the casing, not the
-//     ground, is the contrast mechanism.
+//     DESIGN_SYSTEM.md §4), shared by BOTH point views: View 1's sector dots (the halo
+//     colour) AND View 2's cluster dots (the stroke). ONE casing colour across both views
+//     — a LIGHT casing merges a vivid dot into the pale ground; a DARK casing is the local
+//     luminance boundary that separates it. Independent of ground depth — the casing, not
+//     the ground, is the contrast mechanism. (Was CLUSTER_CASING, renamed when View 1
+//     adopted it: the token is a point-symbol casing, not a cluster-only one.)
 //   • applyDeepenedGround — a COSMETIC ~10% warm-deepening of the point-views' basemap
 //     (parcels, buildings, zoning, roads), applied PER INSTANCE so it is contained to
 //     THIS section's map; the choropleth and every other section keep their light ground.
@@ -19,7 +23,8 @@
 // =============================================================================
 
 // DARK point-symbol casing — the accessibility boundary (WCAG 1.4.11; see DESIGN_SYSTEM §4).
-export const CLUSTER_CASING = "#141018";
+// Shared by View 1 (sector-dot halo) + View 2 (cluster-dot stroke) — one casing colour, both views.
+export const POINT_CASING = "#141018";
 
 // Warm overlay + KDE tokens (the point views stay warm/academic).
 export const THEME = {

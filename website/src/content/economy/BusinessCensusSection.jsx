@@ -57,8 +57,6 @@ import {
 } from "./businessCensusPointsStyle.js";
 import {
   rankTradesByShareSignificant,
-  lclqMultiplierPhrase,
-  clusterStrengthPhrase,
   buildSignificanceIndex,
   buildClusterFeatures,
   tradeDetail,
@@ -77,15 +75,15 @@ import {
   sigColour,
   faintColour,
   faintOpacityForVolume,
-  paletteSig,
 } from "./industryClustersStyle.js";
 import { THEME, applyDeepenedGround } from "./businessCensusGround.js";
 import { deriveDistrictBoundaries, deriveDistrictLabels } from "./businessCensusDistricts.js";
 import BusinessCensusInfoRail from "./BusinessCensusInfoRail.jsx";
 import BusinessCensusLegend from "./BusinessCensusLegend.jsx";
 import BusinessCensusConsole from "./BusinessCensusConsole.jsx";
+import IndustryClustersConsole from "./IndustryClustersConsole.jsx";
+import LclqMethodBox from "./LclqMethodBox.jsx";
 import { deriveAggregates } from "./businessCensusAggregates.js";
-import { titleCase } from "./titleCase.js";
 
 // Selecting a sector FILTERS the point layers to the selection — the non-selected points are
 // REMOVED from the layer (a `setFilter`), not just painted transparent (KC 2026-07-24). Two
@@ -144,12 +142,13 @@ const KDE_DEFAULTS = { cellSize: 250, bandwidth: 200, domThreshold: 0.6 };
 // CONTRAST (KC §1.3), two fills, two verdicts:
 //   • landuse_industrial #8b98a7 — the 1.7–2.1:1 FAILURE. Stays HIDDEN here, so it is
 //     UNREACHABLE on the census view; the failure cannot occur. Note kept, made explicit.
-//   • building #ece3ca (the Apple-Classic restyle colour, basemapTheme.js — NOT the raw
-//     JSON #e4dcd0) — now ENABLED. Measured over it: the 4 vivid consumer hues clear 4.5:1
-//     (4.82–5.01); the 6 cooler hues fall JUST below (4.06–4.45), all still ≥ the 3:1
-//     WCAG non-text-marker floor (SC 1.4.11). z15+ only; the cream halo can't lift it (halo
-//     ≈ building colour). Surfaced to KC — see the CC report. Re-measure if the restyle's
 //     building colour changes, or if any zone fill is ever moved out of this list.
+//   • building #ece3ca (the Apple-Classic restyle colour, basemapTheme.js — NOT the raw
+//     JSON #e4dcd0) — now ENABLED. This fill-vs-dot reading is now MOOT for separation: since
+//     §5 the dot's HALO is the DARK casing (#141018), which clears the building fill (and every
+//     ground) at the 3:1 non-text floor, so a dot reads over a building regardless of the fill's
+//     own contrast with the hue (the old cream halo ≈ building colour couldn't, which motivated
+//     this note). Kept for the record. Re-measure only if the casing colour itself changes.
 const HIDDEN_ZONE_FILLS = [
   "landcover", "park_national_park", "park_nature_reserve",
   "landuse_residential", "landuse", "landuse_commercial", "landuse_industrial",
@@ -362,9 +361,13 @@ export default function BusinessCensusSection() {
     });
   }
   // Switch view; leaving View 2 clears the lit selection so a return starts at the rest state
-  // (blank map). Done in the handler, not an effect (setState-in-effect is disallowed).
+  // (blank map). Entering View 2 OPENS the console readout body by default — the console is the
+  // whole interaction surface here (chips + readout), so it should not start collapsed (the chips
+  // live in the always-visible header regardless; this just opens the readout). Done in the
+  // handler, not an effect (setState-in-effect is disallowed).
   function changeView(next) {
     if (next !== "clusters") setSelectedTrades([]);
+    if (next === "clusters") setConsoleOpen(true);
     setView(next);
   }
 
@@ -405,7 +408,7 @@ export default function BusinessCensusSection() {
 
   // View 1 colour domain (sectors ranked → OKLCH hues; "Other"; nulls).
   const domain = useMemo(() => (gj ? deriveSectorDomain(gj.features) : null), [gj]);
-  // Point stack (bottom→top): the selection RING (pinned point) · the cream HALO casing ·
+  // Point stack (bottom→top): the selection RING (pinned point) · the dark HALO casing (§5) ·
   // the dark DOT figure — all on the one points source. The page lifts all three above the
   // basemap + overlays (§1.3), and sets the ring's filter to the pinned objectid.
   const layers = useMemo(
@@ -600,7 +603,7 @@ export default function BusinessCensusSection() {
     // LAYER-ORDER FIX (spec §1.3, HARD RULE): points sit ABOVE all basemap layers
     // at every zoom. MapView inserts data layers at findFirstSymbolLayerId (below
     // labels), which leaves them UNDER any basemap building/landuse fill. Lift the
-    // point layers to the TOP of the stack EXPLICITLY — the cream HALO first, then
+    // point layers to the TOP of the stack EXPLICITLY — the dark HALO casing first, then
     // the DOTS on top of it (moveLayer with no beforeId appends to the end), so the
     // halo sits just under the dots and nothing in the basemap occludes a business.
     for (const id of [SELECT_LAYER_ID, HALO_LAYER_ID, LAYER_ID]) if (m.getLayer(id)) m.moveLayer(id);
@@ -795,7 +798,11 @@ export default function BusinessCensusSection() {
       // significant cluster in a wall of colour.
       if (!multi && selectedTrades.length === 1 && lclqRows) {
         const d = tradeDetail(lclqRows, selectedTrades[0]);
-        map.setPaintProperty(CLUSTER_FAINT_ID, "circle-opacity", faintOpacityForVolume(d ? d.n - d.sig : 0));
+        const fo = faintOpacityForVolume(d ? d.n - d.sig : 0);
+        map.setPaintProperty(CLUSTER_FAINT_ID, "circle-opacity", fo);
+        // §5: the faint dark casing tracks the fill's volume opacity, so the casing stays as
+        // subordinate as the baseline it edges (never a wall of dark rings on a high-volume trade).
+        map.setPaintProperty(CLUSTER_FAINT_ID, "circle-stroke-opacity", fo);
       }
       // §3 experimental glow accent — same significant filter + trade hue as the dots it enhances.
       if (GLOW_ENABLED && map.getLayer(CLUSTER_GLOW_ID)) {
@@ -805,24 +812,13 @@ export default function BusinessCensusSection() {
     } catch { /* map tearing down */ }
   }, [map, view, selectedTrades, clusterFC, lclqRows]);
 
-  // ── VIEW 2 · hover a lit cluster point → InfoRail preview (its trade + strength). No pin,
-  // no ring here — stats live in the panel (spec §2.4); the InfoRail is a light hover readout.
+  // ── VIEW 2 · hover a lit cluster point → CURSOR affordance only. The readout lives in the
+  // Data Console (trade-level scores, driven by the chip selection), not a per-dot hover panel
+  // (2026-07-24 restructure) — so hover just signals the dots are the finding, no state change.
   useEffect(() => {
     if (!map || view !== "clusters") return undefined;
-    let lastId = null;
-    function onMove(e) {
-      if (!e.features?.length) return;
-      map.getCanvas().style.cursor = "pointer";
-      const props = e.features[0].properties;
-      if (props.objectid === lastId) return;
-      lastId = props.objectid;
-      setHoveredFeature(props);
-    }
-    function onLeave() {
-      map.getCanvas().style.cursor = "";
-      lastId = null;
-      setHoveredFeature(null);
-    }
+    function onMove() { map.getCanvas().style.cursor = "pointer"; }
+    function onLeave() { map.getCanvas().style.cursor = ""; }
     for (const id of [CLUSTER_PROM_ID, CLUSTER_FAINT_ID]) {
       map.on("mousemove", id, onMove);
       map.on("mouseleave", id, onLeave);
@@ -832,7 +828,6 @@ export default function BusinessCensusSection() {
         map.off("mousemove", id, onMove);
         map.off("mouseleave", id, onLeave);
       }
-      setHoveredFeature(null);
     };
   }, [map, view, clusterFC]);
 
@@ -865,21 +860,26 @@ export default function BusinessCensusSection() {
           )}
         </div>
 
-        {/* INFORAIL — the fixed right detail panel (census view). Hover PREVIEWS a business
+        {/* INFORAIL — the fixed right detail panel, CENSUS VIEW ONLY. Hover PREVIEWS a business
             here (hover wins); on exit it reverts to the pinned one; click pins the full labelled
             hierarchy and rings the dot on the map. The ✕ shows only for a real pin (a preview is
-            not dismissible — moving to the panel ends the hover and reverts it). */}
-        {((view === "census") || (view === "clusters" && hoveredFeature)) && layers && (
+            not dismissible — moving to the panel ends the hover and reverts it).
+            VIEW 2 has NO InfoRail: its readout (cluster scores + neighbourhood breakdown) lives in
+            the Data Console, matching PA — the console is the data surface (2026-07-24 restructure). */}
+        {view === "census" && layers && (
           <BusinessCensusInfoRail
             selected={hoveredFeature ?? selectedFeature}
-            pinned={view === "census" && hoveredFeature == null && selectedFeature != null}
+            pinned={hoveredFeature == null && selectedFeature != null}
             onClear={() => setSelectedFeature(null)}
           />
         )}
 
         {/* INSTRUMENT COLUMN — view switcher (persistent) → identity + banner →
-            per-view content. The switcher is user-selected; zoom never changes it. */}
-        <div className="pa-float pa-column pa-column-lean">
+            per-view content. The switcher is user-selected; zoom never changes it.
+            On CLUSTERS the column is height-capped (bc-col-clusters) so it STOPS ABOVE the
+            full-width bottom console — the method box never hides behind it (PA geometry:
+            column top-left, console full-width bottom, no overlap). */}
+        <div className={`pa-float pa-column pa-column-lean${view === "clusters" ? " bc-col-clusters" : ""}`}>
           {/* TITLE CARD — "Business Census" only (PA pattern: the title/city card is SEPARATE
               from the selector below). Structurally ready for a city switcher (PA has an
               Edmonton/Calgary toggle here); BC is Edmonton-only for now, so none is built/shown. */}
@@ -924,87 +924,15 @@ export default function BusinessCensusSection() {
             </section>
           )}
 
-          {/* ── VIEW 2 · Industry Clusters — the choosable list IS the finding
-               (spec §2.1), ranked by SHARE SIGNIFICANT. This turn the list is the
-               finding, shown read-only; selection-lighting + the statistics panel
-               are the next step (they hinge on two decisions in the CC report:
-               the evidence-strength basis and whether to curate Lessors). ── */}
+          {/* ── VIEW 2 · Industry Clusters — the left column is the STATIC LCLQ METHOD BOX
+               (the estimator formula, interpretation, parameters, citations). It carries NO
+               controls: the method IS the point of the view, a fixed reference frame
+               (PA_MODE_CONTRACT Principle 0). The trade CHIPS (selection) and the cluster
+               READOUT (scores + neighbourhoods) moved to the Data Console below — the console
+               is the data surface, matching PA (2026-07-24 restructure). ── */}
           {view === "clusters" && (
             <section className="pa-card pa-card-instrument">
-              <div className="pa-col-mod">
-                <span className="pa-col-lab">Trades That Cluster</span>
-                <p className="bc-ref-note">
-                  Ranked by the share of each trade that sits in a statistically real
-                  cluster — “which trades cluster,” not which are biggest. Pick up to{" "}
-                  {CLUSTER_MAX_SELECT} to light their clusters on the map.
-                </p>
-                {!trades ? (
-                  <p className="bc-ref-note">Loading the finding…</p>
-                ) : (
-                  <ol className="bc-trade-list">
-                    {trades.slice(0, 15).map((t) => {
-                      const sel = selectedTrades.indexOf(t.group);
-                      const isSel = sel >= 0;
-                      const atCap = !isSel && selectedTrades.length >= CLUSTER_MAX_SELECT;
-                      return (
-                        <li key={t.group}>
-                          <button
-                            type="button"
-                            className={`bc-trade-btn${isSel ? " is-selected" : ""}`}
-                            aria-pressed={isSel}
-                            disabled={atCap}
-                            onClick={() => toggleTrade(t.group)}
-                          >
-                            <span className="bc-trade-share">{Math.round(t.share * 100)}%</span>
-                            <span className="bc-trade-name">
-                              {isSel && (
-                                <span className="bc-trade-swatch"
-                                  style={{ background: paletteSig(sel) }} aria-hidden="true" />
-                              )}
-                              {titleCase(t.group)}
-                            </span>
-                            <span className="bc-trade-strength">{lclqMultiplierPhrase(t.maxLclq)}</span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ol>
-                )}
-                <p className="bc-ref-note bc-ref-counterfactual">
-                  Compared to a city where trades were shuffled at random.
-                </p>
-
-                {/* STATISTICS PANEL (spec §2.4) — per selected trade: count + share in a
-                    cluster, strength as prose (no p-value, never "LCLQ"), and where it
-                    concentrates. All derived from the committed estimator output. */}
-                {selectedTrades.length > 0 && lclqRows && (
-                  <div className="bc-cluster-stats">
-                    {selectedTrades.map((g, i) => {
-                      const d = tradeDetail(lclqRows, g);
-                      if (!d) return null;
-                      return (
-                        <div key={g} className="bc-cluster-stat">
-                          <div className="bc-cluster-stat-head">
-                            <span className="bc-trade-swatch"
-                              style={{ background: paletteSig(i) }} aria-hidden="true" />
-                            <span className="bc-cluster-stat-name">{titleCase(g)}</span>
-                          </div>
-                          <p className="bc-cluster-stat-line">
-                            <strong>{d.sig}</strong> of {d.n} sit in a cluster
-                            {" "}({Math.round(d.share * 100)}%) — {clusterStrengthPhrase(d.maxLclq)}.
-                          </p>
-                          {d.topNeighbourhoods.length > 0 && (
-                            <p className="bc-cluster-stat-nbhd">
-                              Concentrated in{" "}
-                              {d.topNeighbourhoods.map((nb) => titleCase(nb.name)).join(", ")}.
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              <LclqMethodBox />
             </section>
           )}
 
@@ -1028,8 +956,11 @@ export default function BusinessCensusSection() {
           )}
         </div>
 
-        {/* BOTTOM DATA CONSOLE — the composition drill-down, moved out of the sidebar into a
-            PA-style pull-up dock (.pa-foot). Census view only; coexists with the InfoRail. */}
+        {/* BOTTOM DATA CONSOLE — the PA-style pull-up dock (.pa-foot), one per data view.
+            CENSUS: the composition drill-down (coexists with the InfoRail).
+            CLUSTERS: the LCLQ control + readout surface — trade chips (header) + per-trade
+            scores/neighbourhoods (body). This is where View 2's interaction + numbers live
+            (the left column is the static method box). */}
         {view === "census" && aggregates && (
           <div className="pa-foot">
             <BusinessCensusConsole
@@ -1043,6 +974,19 @@ export default function BusinessCensusSection() {
               onBack={clearSelection}
               onSelectGroup={selectGroup}
               onHoverSector={setHoveredSector}
+            />
+          </div>
+        )}
+        {view === "clusters" && (
+          <div className="pa-foot">
+            <IndustryClustersConsole
+              trades={trades}
+              selectedTrades={selectedTrades}
+              onToggleTrade={toggleTrade}
+              onClear={() => setSelectedTrades([])}
+              lclqRows={lclqRows}
+              open={consoleOpen}
+              onToggle={() => setConsoleOpen((o) => !o)}
             />
           </div>
         )}
