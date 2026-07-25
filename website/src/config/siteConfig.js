@@ -265,10 +265,11 @@ export const siteConfig = {
       { label: "Track Sports Fields",    kind: "map", status: "live", to: "/amenities/track-sports-fields" },
       { label: "Police Stations",        kind: "map", status: "live", to: "/amenities/police-stations" },
       { label: "EV Charging Stations",   kind: "map", status: "live", to: "/amenities/ev-charging" },
-      // Future (no built data yet). Public School = catchment polygons (Family 3, later).
+      // Future (no built data yet). "School Catchments" (renamed from Public School, KC
+      // 2026-07-25) — the page renders catchment POLYGONS, not school locations (Family 3, later).
+      // Crime dropped (KC 2026-07-25): no source in the ratified list; "soon" must mean planned.
       { label: "Air Quality",            kind: "map", status: "soon", to: "/amenities/air-quality" },
-      { label: "Crime",                  kind: "map", status: "soon", to: "/amenities/crime" },
-      { label: "Public School",          kind: "map", status: "soon", to: "/amenities/public-school" },
+      { label: "School Catchments",      kind: "map", status: "soon", to: "/amenities/public-school" },
     ]},
 
     { label: "Neighbourhood Report Card", kind: "tables", status: "live", to: "/report-card" },
