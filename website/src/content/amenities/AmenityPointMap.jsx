@@ -33,6 +33,7 @@ import AmenityLegend from "./AmenityLegend.jsx";
 import {
   BASEMAP_STYLE, MAP_VIEW, SOURCE_ID, DOT_LAYER_ID, SELECT_LAYER_ID,
   buildColourExpression, resolveDisplayDomain, categoryFilter, dotLayer, selectLayer, amenityLabel,
+  RING, ringRadiusAt,
 } from "./amenityPointStyle.js";
 
 const MANIFEST_URL = assetUrl("/data/amenities/manifest.json");
@@ -110,17 +111,26 @@ export default function AmenityPointMap({ layerId }) {
   useEffect(() => {
     if (!map) return undefined;
     let lastHoverId = null;
+    // A2 HOVER state: grow the pointed-at dot via feature-state (the source has generateId ids).
+    const setHoverFs = (id) => {
+      if (id === lastHoverId) return;
+      try {
+        if (lastHoverId != null) map.setFeatureState({ source: SOURCE_ID, id: lastHoverId }, { hover: false });
+        if (id != null) map.setFeatureState({ source: SOURCE_ID, id }, { hover: true });
+      } catch { /* map tearing down */ }
+      lastHoverId = id;
+    };
     function onMove(e) {
       if (!e.features?.length) return;
       map.getCanvas().style.cursor = "pointer";
       const f = e.features[0];
       if (f.id === lastHoverId) return;   // same dot → no state change (smooth scanning)
-      lastHoverId = f.id;
+      setHoverFs(f.id);
       setHovered({ id: f.id, props: f.properties });
     }
     function onLeave() {
       map.getCanvas().style.cursor = "";
-      lastHoverId = null;
+      setHoverFs(null);
       setHovered(null);
     }
     function onSelect(e) {
@@ -151,6 +161,28 @@ export default function AmenityPointMap({ layerId }) {
       const id = selected?.id;
       map.setFilter(SELECT_LAYER_ID, ["==", ["id"], id != null ? id : -1]);
     } catch { /* map tearing down */ }
+  }, [map, selected, layers]);
+
+  // A2 SELECT state: on a new pin, animate the ring OUTWARD ONCE, then hold (restore the
+  // zoom-interpolate radius). One-shot, NOT a loop; reduced-motion jumps straight to the held
+  // ring (WCAG 2.2.2). rAF is cancelled on unmount / re-pin, and a hidden tab pauses rAF.
+  useEffect(() => {
+    if (!map || !map.getLayer(SELECT_LAYER_ID) || selected?.id == null) return undefined;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    if (reduce) { try { map.setPaintProperty(SELECT_LAYER_ID, "circle-radius", RING); } catch { /* */ } return undefined; }
+    const end = ringRadiusAt(map.getZoom());
+    const start = end * 0.4;
+    let raf, t0 = null;
+    const step = (ts) => {
+      if (t0 == null) t0 = ts;
+      const p = Math.min(1, (ts - t0) / 380);
+      const e = 1 - (1 - p) ** 3;   // ease-out cubic
+      try { map.setPaintProperty(SELECT_LAYER_ID, "circle-radius", start + (end - start) * e); } catch { /* */ }
+      if (p < 1) raf = requestAnimationFrame(step);
+      else { try { map.setPaintProperty(SELECT_LAYER_ID, "circle-radius", RING); } catch { /* */ } }
+    };
+    raf = requestAnimationFrame(step);
+    return () => { if (raf) cancelAnimationFrame(raf); };
   }, [map, selected, layers]);
 
   // Category show/hide: the legend selection filters the dot layer (removes hidden points

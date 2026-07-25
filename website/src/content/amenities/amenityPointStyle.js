@@ -149,26 +149,63 @@ export function categoryFilter(categoryField, activeKeys, domain) {
   return ["in", ["get", categoryField], ["literal", members]];
 }
 
-// ---- Radius / stroke (the IS significant-dot spec, inherited exactly) -------
-const RADIUS   = ["interpolate", ["linear"], ["zoom"], 10, 6, 13, 9, 17, 14];
+// ---- The shared symbol construction (A2) — parameterised ONCE, every layer -----------------
+// Four states, one construction: REST (disc + casing) · HOVER (radius up via feature-state) ·
+// SELECT (the ring below, animated outward once by the page) · GLYPH (above the icon threshold,
+// images registered at A3). Radius is ALWAYS zoom-interpolated (no constant radius anywhere).
 const STROKE_W = ["interpolate", ["linear"], ["zoom"], 10, 1.4, 13, 2.0, 16, 2.8];
-const RING     = ["interpolate", ["linear"], ["zoom"], 10, 9, 13, 12, 17, 17];   // RADIUS + ~3
 const OPACITY  = 0.92;   // near-solid vivid fill; the dark casing + size carry the read
+const HOVER_BUMP = 3;    // A2 HOVER state: the pointed-at dot grows (feature-state)
+// A zoom `interpolate` is ILLEGAL nested inside another expression (CLAUDE.md v1.15), so the
+// hover bump is FOLDED into each interpolate OUTPUT STOP (ramp-preserving), not added around it.
+const hb = (r) => ["+", r, ["case", ["boolean", ["feature-state", "hover"], false], HOVER_BUMP, 0]];
+const RADIUS_HOVER = ["interpolate", ["linear"], ["zoom"], 10, hb(6), 13, hb(9), 17, hb(14)];
 
-// The dot: vivid fill + DARK casing stroke. Returned WITHOUT `source` (MapView fills it in);
-// the page lifts it to the top of the stack in onLoad.
+// The selection RING (A2 SELECT state) — a violet ring BENEATH the symbol. Its radius is the
+// zoom-interpolate below; on selection the page animates it outward ONCE (ring-radius helper),
+// then restores this expression so it tracks zoom.
+const RING_STOPS = [10, 9, 13, 12, 17, 17];   // RADIUS + ~3
+export const RING = ["interpolate", ["linear"], ["zoom"], ...RING_STOPS];
+export function ringRadiusAt(zoom) {
+  const s = RING_STOPS;
+  if (zoom <= s[0]) return s[1];
+  for (let i = 2; i < s.length; i += 2) {
+    if (zoom <= s[i]) return s[i - 1] + ((zoom - s[i - 2]) / (s[i] - s[i - 2])) * (s[i + 1] - s[i - 1]);
+  }
+  return s[s.length - 1];
+}
+
+// The GLYPH slot (A2), parameterised for A3 — glyphs appear ABOVE this zoom (a glyph is mud at
+// overview; the disc alone reads). The layer is created by the page ONLY once A3 registers icon
+// images via map.addImage; the factory + threshold live here so the construction is defined once.
+export const GLYPH_LAYER_ID = "amenity-glyphs";
+export const GLYPH_MINZOOM  = 13;
+export function glyphLayer(iconImageExpression) {
+  return {
+    id: GLYPH_LAYER_ID, type: "symbol", source: SOURCE_ID, minzoom: GLYPH_MINZOOM,
+    layout: {
+      "icon-image": iconImageExpression,
+      "icon-allow-overlap": true, "icon-ignore-placement": true,
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 13, 0.5, 17, 0.85],
+    },
+    paint: { "icon-color": "#f7f1df" },   // cream SDF glyph (A2); the casing carries figure-ground
+  };
+}
+
+// The dot: vivid fill + DARK casing stroke + HOVER grow. Returned WITHOUT `source` (MapView fills
+// it in); the page lifts it to the top of the stack in onLoad.
 export function dotLayer(colourExpression) {
   return {
     id: DOT_LAYER_ID,
     type: "circle",
     paint: {
       "circle-color": colourExpression,
-      "circle-radius": RADIUS,
+      "circle-radius": RADIUS_HOVER,          // A2: zoom-interpolate + hover bump
       "circle-opacity": OPACITY,
       "circle-stroke-color": POINT_CASING,   // the accessibility casing (§4)
       "circle-stroke-width": STROKE_W,
-      "circle-opacity-transition":      { duration: 0 },   // instant — no fade on filter/hover (§5)
-      "circle-radius-transition":       { duration: 0 },
+      "circle-opacity-transition":      { duration: 0 },   // instant — no fade on filter (§5)
+      "circle-radius-transition":       { duration: 120 }, // A2: a short grow on hover, not instant
       "circle-stroke-width-transition": { duration: 0 },
     },
   };
