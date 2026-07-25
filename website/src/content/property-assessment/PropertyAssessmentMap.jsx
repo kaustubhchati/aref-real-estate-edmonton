@@ -915,9 +915,17 @@ export default function PropertyAssessmentMap() {
       if (map.getLayer("building")) {
         map.setPaintProperty("building", "fill-color", "#d9d6cf");   // neutral warm grey (desaturated)
         map.setPaintProperty("building", "fill-opacity", 0.6);        // ramp reads through
+        map.setPaintProperty("building", "fill-outline-color", "#d9d6cf"); // drop the bold footprint edge under the ramp
       }
       if (map.getLayer("building-top")) {
         map.setPaintProperty("building-top", "fill-color", "#e7e3db"); // lighter neutral top face (keeps its zoom opacity ramp)
+      }
+      // Rail is BOLD on the context maps (dark base + cream ties); mute it under the ramp so the data stays the figure.
+      for (const id of ["rail", "rail_dash", "tunnel_rail", "tunnel_rail_dash"]) {
+        if (map.getLayer(id)) {
+          map.setPaintProperty(id, "line-color", "#cdc6b5");
+          map.setPaintProperty(id, "line-opacity", 0.4);
+        }
       }
     } catch {
       /* map mid-teardown */

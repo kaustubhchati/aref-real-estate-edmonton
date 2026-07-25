@@ -53,8 +53,9 @@ const C = {
   priCase:     "#ead27a",  // primary/secondary casing
   minorCase:   "#e8dcb8",  // minor/residential casing
   service:     "#f0e9d4",  // service / path
-  rail:        "#c9bfa0",  // rail / transit
-  building:    "#ece3ca",  // buildings
+  rail:        "#6f6957",  // rail BASE — bold dark taupe (a built structure reads as a firm line)
+  railTie:     "#f6efdd",  // rail CROSS-TIES (the white dash over the base → the railway "ladder")
+  building:    "#ddd1b8",  // buildings — bolder defined tan (a built structure, not a faint wash)
   boundary:    "#d8cfb4",  // admin boundary lines
   label:       "#6b6049",  // place / road label text
   waterLabel:  "#5a86a0",  // water label text
@@ -74,6 +75,7 @@ function roadColour(id) {
   if (/_pri|_sec/.test(id))            return isCase ? C.priCase   : C.priFill;
   if (/minor/.test(id))                return isCase ? C.minorCase : ROAD_MINOR_COLOR;
   if (/service|path/.test(id))         return C.service;
+  if (/rail_dash/.test(id))            return C.railTie; // cross-ties (before the rail base below)
   if (/rail|tram|transit|subway/.test(id)) return C.rail;
   if (/aero|runway|taxiway/.test(id))  return ROAD_MINOR_COLOR; // FLAG: aeroway → minor bucket
   return null;

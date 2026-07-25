@@ -21,9 +21,18 @@ export function applyChoroplethBasemapHarmony(map) {
     if (map.getLayer("building")) {
       map.setPaintProperty("building", "fill-color", "#d9d6cf");   // neutral warm grey
       map.setPaintProperty("building", "fill-opacity", 0.6);       // ramp reads through
+      map.setPaintProperty("building", "fill-outline-color", "#d9d6cf"); // drop the bold footprint edge under data
     }
     if (map.getLayer("building-top")) {
       map.setPaintProperty("building-top", "fill-color", "#e7e3db"); // lighter neutral top
+    }
+    // Rail is BOLD on the context maps (dark base + cream ties); under a choropleth it would
+    // cut across the data, so mute it back to a quiet low-opacity line so the ramp stays the figure.
+    for (const id of ["rail", "rail_dash", "tunnel_rail", "tunnel_rail_dash"]) {
+      if (map.getLayer(id)) {
+        map.setPaintProperty(id, "line-color", "#cdc6b5");
+        map.setPaintProperty(id, "line-opacity", 0.4);
+      }
     }
     for (const id of ["place_hamlet", "place_suburbs"]) {
       if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", "none");
