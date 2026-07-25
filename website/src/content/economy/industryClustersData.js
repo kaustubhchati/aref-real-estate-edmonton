@@ -13,12 +13,16 @@
 //   • `significant` = exactly `p_across ≤ 0.05` (the BH-FDR q-value); 4,226 (14.9%
 //     of tested) are significant.
 //   • The LCLQ multiplier (`lclq`) spans 3.7×–242× among significant businesses and
-//     is the honest STRENGTH axis (the p-value cannot grade strength on this data —
-//     see the CC report: FDR q has nothing < 0.05, raw p is all ≤ 0.01).
+//     is the honest STRENGTH axis. The p-value cannot grade strength on this data:
+//     the significant q values pile into a narrow floor band (measured on the shipped
+//     CSV: all 4,226 in [0.0104, 0.047], 2,721 tied at the minimum; the smallest
+//     non-significant q is 0.0519) — a binary gate, not a gradient.
 //
-// Language rules the interface must obey (spec §2.4) live where the strings are
-// built: never a p-value, never "LCLQ", the multiplier carries its own reference
-// point, and one counterfactual sentence sits near the legend.
+// Language rules (spec §2.4 AS AMENDED 2026-07-24 — the estimator IS named): "LCLQ"
+// appears in stat labels (the title header teaches the full form); significance is
+// the categorical FDR gate, never a displayed p; every multiplier carries or sits
+// under its reference point (the expected citywide share), and the multiplier is
+// never shown without its absolute count companion.
 // =============================================================================
 
 // Rank trades (industry groups) by SHARE SIGNIFICANT (spec §2.1) — "which trades
@@ -48,9 +52,9 @@ export function rankTradesByShareSignificant(rows) {
     .sort((a, b) => b.share - a.share);
 }
 
-// The LCLQ value as a plain-English multiplier that CONTAINS its own reference
-// point (spec §2.4) — never the term "LCLQ", never a p-value. Rounds sensibly:
-// small values keep one decimal, larger ones read as whole multiples.
+// The MAXIMUM LCLQ as a hedged multiplier — the "up to" is load-bearing (the value is one
+// business's local quotient, not the group's). Used by the chips. Rounds uniformly with the
+// readout's times(): one decimal below 10, whole multiples above.
 //   1.8  → "up to 1.8×"      25.06 → "up to 25×"      242.4 → "up to 242×"
 export function lclqMultiplierPhrase(lclq) {
   const v = Number(lclq);
@@ -59,13 +63,9 @@ export function lclqMultiplierPhrase(lclq) {
   return `up to ${n}×`;
 }
 
-// The multiplier as a full clause that carries its own counterfactual (spec §2.4):
-// "up to 25× more of their own trade nearby than the city average". Used in the panel.
-export function clusterStrengthPhrase(lclq) {
-  const p = lclqMultiplierPhrase(lclq);
-  if (p === "—") return "clustered";
-  return `${p} more of their own trade nearby than the city average`;
-}
+// (clusterStrengthPhrase — the old "…than the city average" clause — was REMOVED 2026-07-24:
+// its only consumer was the InfoRail's unreachable View-2 branch, and its baseline framing was
+// retired by the convention rewrite: the baseline is "expected", stated in the console.)
 
 // ── View-2 map join (spec §5 artifact 2 → the point map) ─────────────────────
 // The two artifacts stay SEPARATE (points GeoJSON + this CSV); we join them in the
@@ -111,9 +111,11 @@ export function buildClusterFeatures(features, sigIndex) {
 }
 
 // 3. Per-trade detail for the console readout (spec §2.4) — count significant, share, the
-//    PEAK and MEDIAN multiplier (peak = the strongest single cluster; median = the typical
-//    significant business, so one 242× outlier can't misread the whole trade), and the
-//    significant-area neighbourhood breakdown. All from the committed CSV.
+//    MAXIMUM and MEDIAN multiplier over the SIGNIFICANT businesses (maximum = the strongest
+//    single significant business; median = the typical one, so one 242× outlier can't misread
+//    the whole group; NB the median is the LOWER median on even counts — immaterial at this
+//    data's spreads, e.g. 68.27 vs 68.31, both render "68×"), and the significant-area
+//    neighbourhood breakdown. All from the committed CSV.
 export function tradeDetail(rows, group) {
   const r = rows.filter((x) => x.industry_group === group);
   if (!r.length) return null;

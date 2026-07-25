@@ -610,7 +610,7 @@ export default function BusinessCensusSection() {
   }, [domain]);
 
   useEffect(() => {
-    document.title = `Business Census · ${activeView.label} · Edmonton 2025`;
+    document.title = `Businesses and Industry Specialisations · ${activeView.label} · Edmonton 2025`;
     return () => { document.title = "Open Data Centre"; };
   }, [activeView]);
 
@@ -911,7 +911,7 @@ export default function BusinessCensusSection() {
             {/* TITLE CARD — "Business Census" (PA pattern: the title/city card is SEPARATE from
                 the selector below; structurally ready for a future city switcher). */}
             <section className="pa-card pa-card-identity">
-              <IdentityCard title="Business Census" />
+              <IdentityCard title="Businesses and Industry Specialisations" />
             </section>
 
             {/* VIEW SELECTOR CARD — the two views, its OWN card below the title. */}

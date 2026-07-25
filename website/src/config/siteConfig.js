@@ -249,8 +249,12 @@ export const siteConfig = {
     ]},
 
     { label: "Economy", kind: "group", icon: "briefcase", children: [
+      // "Businesses and Industry Specialisations" (renamed from "Business Census", KC 2026-07-24 —
+      // the section is now two views: the census points + the LCLQ specialisations finding; placed
+      // ABOVE Business Counts per KC. British -s- per the standing spelling ruling. The ROUTE keeps
+      // its slug (not user-facing; renaming it would break links).
+      { label: "Businesses and Industry Specialisations", kind: "map", status: "live", to: "/economy/business-census" },
       { label: "Business Counts",    kind: "map", status: "live", to: "/economy/business-counts" },
-      { label: "Business Census",    kind: "map", status: "live", to: "/economy/business-census" },
       { label: "Business Licences",  kind: "map", status: "soon", to: "/economy/business-licences" },
       { label: "Labour Market",     kind: "map", status: "soon", to: "/economy/labour-market" },
     ]},

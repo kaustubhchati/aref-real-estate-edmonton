@@ -1877,6 +1877,8 @@ p  { margin: 0 0 0.75rem; }
   height: 100%; overflow-y: auto; align-content: start;
 }
 .dt-tile {
+  /* NB: ALSO consumed by the BC Industry Specialisations stat row (.bc-icn-stats) — one console
+     language across sections by design; an edit here restyles both. */
   background: var(--card); border: 1px solid var(--hair); border-radius: var(--r-md);
   padding: var(--s2); display: flex; flex-direction: column; gap: 1px; min-width: 0;
 }
@@ -2353,19 +2355,34 @@ p  { margin: 0 0 0.75rem; }
 .bc-icn-clear:hover { color: var(--pa-ink); text-decoration: underline; }
 .bc-icn-hint { color: var(--pa-mut); font-size: var(--t-xs); padding: 2px 4px; }
 
-/* READOUT — empty state OR the prose-first 3-column finding */
+/* READOUT — empty state OR the finding (prose + areas PAIRED, evidence tiles below) */
 .bc-icn-empty {
   border-top: 1px solid var(--pa-hair); padding: 18px 20px;
   /* --pa-mut, NOT --pa-dim: this is the ONLY readout content shown before a selection (reader-facing
      guidance), so it must clear §4's AA 4.5:1 (--pa-mut 6.95:1; --pa-dim 4.02:1 would fail). */
   font-size: var(--t-xs); color: var(--pa-mut); text-align: center; line-height: 1.6;
 }
+/* LAYOUT (2026-07-24 convention rewrite): THE FINDING (prose) + WHERE IT CLUSTERS are the PAIRED
+   reading, side by side; CLUSTER STRENGTH (the statistical evidence) follows below, full width.
+   `has-back` (a focused card in multi-select) adds the breadcrumb row on top. */
 .bc-icn-readout {
-  flex: 1 1 auto; min-height: 0;   /* fills + scrolls WITHIN the bounded .bc-icn (rare long headline) */
+  flex: 1 1 auto; min-height: 0;   /* fills the bounded .bc-icn; the AREAS list is the scroll zone */
   border-top: 1px solid var(--pa-hair); overflow-y: auto;
-  display: grid; grid-template-columns: 1.4fr 1fr 1.1fr; gap: 22px; align-items: start;
-  padding: 15px 20px 18px;
+  display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px 26px; align-items: start;
+  grid-template-areas: "finding areas" "support support";
+  padding: 12px 20px 14px;
 }
+.bc-icn-readout.has-back { grid-template-areas: "back back" "finding areas" "support support"; }
+.bc-icn-finding { grid-area: finding; }
+/* the AREAS list is the INTERNAL scroll zone (PA idiom: the LIST scrolls, the KPI rail never does) —
+   capped so the evidence row below always stays above the fold. Scrollbar via ::-webkit-scrollbar
+   (the codebase rule: defining it forces a CLASSIC always-drawn bar; scrollbar-color would disable
+   that and leave the affordance invisible-at-rest on overlay-scrollbar platforms). */
+.bc-icn-areas   { grid-area: areas; max-height: 128px; overflow-y: auto; }
+.bc-icn-areas::-webkit-scrollbar { width: 6px; }
+.bc-icn-areas::-webkit-scrollbar-thumb { background: var(--pa-hair); border-radius: 3px; }
+.bc-icn-areas::-webkit-scrollbar-track { background: transparent; }
+.bc-icn-support { grid-area: support; border-top: 1px solid var(--pa-hair); padding-top: 10px; }
 /* THE FINDING */
 .bc-icn-eyebrow { display: flex; align-items: center; gap: 8px; font-size: var(--t-2xs); color: var(--pa-mut); margin-bottom: 8px; }
 .bc-icn-eyeswatch { width: 10px; height: 10px; border-radius: 50%; background: var(--hue); flex: 0 0 auto; }
@@ -2377,10 +2394,21 @@ p  { margin: 0 0 0.75rem; }
 /* §3 — the "Where It Clusters" count unit: makes clear the values/bars are COUNTS of significant
    businesses (never multipliers), so a short bar reads as "fewer businesses", not "less significant". */
 .bc-icn-unit { font-size: var(--t-2xs); color: var(--pa-mut); margin: -5px 0 9px; }
-.bc-icn-mrow { display: flex; justify-content: space-between; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--pa-hair); }
-.bc-icn-mrow:first-of-type { border-top: none; }
-.bc-icn-ml { font-size: var(--t-xs); color: var(--pa-ink); }   /* §1 PROMOTED metric label */
-.bc-icn-mv { font-size: var(--t-sm); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--pa-ink); }
+/* STAT TILES (convention rewrite) — PA's own .dt-tile classes carry the tiles (label 13px/600 muted
+   Title Case per Fix 1 + D1 · value 19px/500 white tabular · muted --t-2xs foot); this row only sizes
+   and arranges them. PA-RAIL idiom: NO group label above the tiles (they self-label). The GATE pill +
+   the once-stated BASELINE stack in one inline block beside the tiles, so the whole evidence row is
+   a single line of the vertical budget. */
+.bc-icn-stats { display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px; }
+.bc-icn-stats .dt-tile { flex: 0 1 200px; min-width: 168px; }
+/* PA's foot colour lives on the nested .dt-tile-foot span (PA always wraps its feet in it) — BC does
+   the same so the foot reads at PA's muted tier, but WRAPS instead of PA's nowrap+ellipsis (a tile
+   foot like "among significant businesses" must stay fully readable at the 168px min-width). */
+.bc-icn-stats .dt-tile-foot { white-space: normal; }
+.bc-icn-gateblock { flex: 1 1 260px; min-width: 240px; display: flex; flex-direction: column; justify-content: center; gap: 5px; }
+.bc-icn-gateblock .bc-icn-gate { margin-top: 0; align-self: flex-start; }
+/* the BASELINE, stated ONCE (LQ convention) — an annotation, so muted (--pa-mut clears AA). */
+.bc-icn-baseline { font-size: var(--t-2xs); color: var(--pa-mut); line-height: 1.4; margin: 0; max-width: 52ch; }
 .bc-icn-gate { display: flex; align-items: center; gap: 8px; background: var(--pa-card); border: 1px solid var(--pa-hair); border-radius: var(--r-sm); padding: 8px 11px; margin-top: 10px; }
 .bc-icn-gate-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green-500); flex: 0 0 8px; }   /* "significant" status (chrome, clears the 3:1 graphical floor) */
 .bc-icn-gate-t { font-size: var(--t-2xs); color: var(--pa-ink); }
@@ -2393,9 +2421,10 @@ p  { margin: 0 0 0.75rem; }
 .bc-icn-afill { display: block; height: 100%; background: var(--hue); border-radius: 3px; }
 .bc-icn-av { font-size: var(--t-xs); color: var(--pa-ink); font-variant-numeric: tabular-nums; flex: 0 0 auto; }   /* §1 PROMOTED value */
 
-/* §2 — the "‹ Compare all" back breadcrumb (focused card → full readout → back to cards). Spans the grid. */
+/* §2 — the "‹ Compare all" back breadcrumb (focused card → full readout → back to cards). Its own
+   grid row (the `has-back` template), so it never collides with the finding/areas pairing. */
 .bc-icn-back {
-  grid-column: 1 / -1; justify-self: start;
+  grid-area: back; justify-self: start;
   background: none; border: 0; color: var(--pa-mut); font-family: inherit; font-size: var(--t-xs);
   cursor: pointer; padding: 0 2px 2px 0;
 }
@@ -2421,6 +2450,7 @@ p  { margin: 0 0 0.75rem; }
 .bc-cmp-card:hover { border-color: var(--pa-mut); background: var(--pa-shell); }
 .bc-cmp-name { font-size: var(--t-xs); font-weight: 600; color: var(--pa-ink); line-height: 1.25; }
 .bc-cmp-hero { font-size: var(--t-xl); font-weight: 700; color: var(--hue); font-variant-numeric: tabular-nums; line-height: 1.1; margin: 3px 0; }
+.bc-cmp-upto { font-size: var(--t-2xs); font-weight: 500; color: var(--pa-mut); letter-spacing: 0.01em; }   /* the hedge — the hero is the MAXIMUM, one business's quotient */
 .bc-cmp-metric { font-size: var(--t-2xs); color: var(--pa-mut); line-height: 1.35; }
 .bc-cmp-metric strong { color: var(--pa-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
 
