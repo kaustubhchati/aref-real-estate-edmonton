@@ -91,14 +91,19 @@ sections, agent pipeline, and infrastructure.
       property-assessment `.Rhistory` cleanup item).
 
 ### Frontend — sections not yet built
-- [ ] **Point layers batch** (Amenities):
-      ETS Bus Stops (4vt2-8zrq), LRT Stations (j77g-ki3x),
-      Police Stations (e7aq-scxv), Attractions (7yt8-7467),
-      Public Libraries (jn25-zspi).
-      Pattern A output: one `<layer>.pmtiles` on R2 +
-      one `<layer>_coverage.csv`.
-      Air Quality + Business Licences held pending
-      volatility/density resolution.
+- [~] **Point layers batch** (Amenities) — **BACKEND BUILT + published; frontend in progress.**
+      The stale "Pattern A = one `<layer>.pmtiles` on R2 + `<layer>_coverage.csv`" is retired:
+      PMTiles/R2/tiler are gone (CLAUDE.md §12 v1.10, METHODOLOGY D1). The pattern is now
+      **whole per-layer GeoJSON + one no-year currency manifest**, from ONE registry-driven
+      emitter (`pipeline/yeg/amenities/`, `amenity_layer_registry_20260725.csv`). 12 layers
+      published to `website/public/data/amenities/`: bus_stops (4vt2-8zrq), lrt_stops
+      (**fhxi-cnhe** — the old `j77g-ki3x` is dead/403), police_stations (e7aq-scxv), playgrounds,
+      ev_charging, recreation_facilities, spray_parks, track_sports_fields (Family 1 points);
+      parks, vegetation, schools (Family 3 polygon); bike_routes (Family 2 line). Attractions
+      (7yt8-7467) + Public Libraries (jn25-zspi) were **dropped** (not in the ratified source list;
+      see `docs/AMENITIES_ZONING_BUILD_STRATEGY_20260725.md`). NOTE: the listed portal ids are
+      Socrata visualization lenses — the pipeline fetches their `modifyingViewUid` parents.
+      Frontend: Family 1 point layers building now (playgrounds pilot first).
 - [ ] **Permit Neighbourhoods choropleth** — BUILT with full
       Property Assessment parity: custom basemap, fill/outline/
       highlight/label layer stack (pnbhd-* ids), 3 polygon states,

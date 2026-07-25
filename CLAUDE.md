@@ -133,6 +133,10 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
 │   │   ├─ building-permits/     #     BUILT — point GeoJSON (per-year) + neighbourhood aggregates
 │   │   ├─ economy/              #     ECONOMY section — neighbourhood-level economic data
 │   │   │   └─ business-census/  #       BUILT — Business Census choropleth; scripts/ data/ output/
+│   │   ├─ amenities/            #     BUILT (backend) — 12 point/line/polygon layers from ONE
+│   │   │                        #       registry-driven emitter (amenity_layer_registry) + a no-year
+│   │   │                        #       currency manifest; published to public/data/amenities/.
+│   │   │                        #       Frontend: point layers in progress (§6). (zoning is separate)
 │   │   ├─ crime/                #     (added when built)
 │   │   └─ …
 │   └─ yyc/                      #   CALGARY placeholder (.gitkeep only). Wired in the
@@ -176,9 +180,10 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
 - Restricted/confidential inputs live **only** in a section's `data/` (`raw/` or `validation/`)
   and are **gitignored** — never committed, never deployed.
 - **Fit note:** only create folders for sections that exist. Built today, all under
-  `pipeline/yeg/`: `property-assessment`, `building-permits`, `economy/business-census`, plus
-  the `pipeline/yeg/shared/` base-geo section (boundary + Mature Neighbourhoods only;
-  road/vegetation layers pending). `pipeline/yyc/` exists as an empty Calgary placeholder
+  `pipeline/yeg/`: `property-assessment`, `building-permits`, `economy/business-census`,
+  `amenities` (registry-driven backend, 12 layers published), plus the `pipeline/yeg/shared/`
+  base-geo section (boundary + Mature Neighbourhoods only; road/vegetation layers pending).
+  `pipeline/yyc/` exists as an empty Calgary placeholder
   (`.gitkeep` only) — no section folders until Calgary is wired (§10). Copy the pattern per new
   section — no empty stubs.
 
