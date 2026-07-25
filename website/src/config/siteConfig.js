@@ -240,6 +240,18 @@ export const siteConfig = {
       { label: "Building Permits", kind: "map", status: "live", to: "/activity/construction-improvement" },
     ]},
 
+    { label: "Economy", kind: "group", icon: "briefcase", children: [
+      // "Businesses and Industry Specializations" (renamed from "Business Census", KC 2026-07-24 —
+      // the section is now two views: the census points + the LCLQ specializations finding; placed
+      // ABOVE Business Counts per KC. "-z-" spelling per KC's ruling (2026-07-24, supersedes the
+      // earlier British -s- for this word). The ROUTE keeps
+      // its slug (not user-facing; renaming it would break links).
+      { label: "Businesses and Industry Specializations", kind: "map", status: "live", to: "/economy/business-census" },
+      { label: "Business Counts",    kind: "map", status: "live", to: "/economy/business-counts" },
+      { label: "Business Licences",  kind: "map", status: "soon", to: "/economy/business-licences" },
+      { label: "Labour Market",     kind: "map", status: "soon", to: "/economy/labour-market" },
+    ]},
+
     { label: "Amenities", kind: "group", icon: "map-pin", children: [
       // Family-1 point layers (LIVE). Interim per-layer leaves — the thematic consolidation
       // (Public Transportation / Parks & Recreation multi-layer pages) folds these together
@@ -257,18 +269,6 @@ export const siteConfig = {
       { label: "Air Quality",            kind: "map", status: "soon", to: "/amenities/air-quality" },
       { label: "Crime",                  kind: "map", status: "soon", to: "/amenities/crime" },
       { label: "Public School",          kind: "map", status: "soon", to: "/amenities/public-school" },
-    ]},
-
-    { label: "Economy", kind: "group", icon: "briefcase", children: [
-      // "Businesses and Industry Specializations" (renamed from "Business Census", KC 2026-07-24 —
-      // the section is now two views: the census points + the LCLQ specializations finding; placed
-      // ABOVE Business Counts per KC. "-z-" spelling per KC's ruling (2026-07-24, supersedes the
-      // earlier British -s- for this word). The ROUTE keeps
-      // its slug (not user-facing; renaming it would break links).
-      { label: "Businesses and Industry Specializations", kind: "map", status: "live", to: "/economy/business-census" },
-      { label: "Business Counts",    kind: "map", status: "live", to: "/economy/business-counts" },
-      { label: "Business Licences",  kind: "map", status: "soon", to: "/economy/business-licences" },
-      { label: "Labour Market",     kind: "map", status: "soon", to: "/economy/labour-market" },
     ]},
 
     { label: "Neighbourhood Report Card", kind: "tables", status: "live", to: "/report-card" },
