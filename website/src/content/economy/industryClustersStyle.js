@@ -1,7 +1,7 @@
 // =============================================================================
 // industryClustersStyle.js
 //
-// View 2 (Industry Specialisations) STYLE seam — the section's own point layers + colours
+// View 2 (Industry Specializations) STYLE seam — the section's own point layers + colours
 // for the LCLQ significant-cluster map (spec Part 0: each view its own palette).
 //
 //   • Each SELECTED trade gets a distinct GTA-BRIGHT hue (§1 fix — two selections must

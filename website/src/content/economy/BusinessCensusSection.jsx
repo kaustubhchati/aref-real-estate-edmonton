@@ -6,10 +6,10 @@
 // (BC_frontend_spec_LOCKED_20260723.md Part 0):
 //
 //   1. Business Census          — "the data"    (shows) — COMPLETE (this file)
-//   2. Industry Specialisations — "a finding"   (tests) — LCLQ specialisation finding
+//   2. Industry Specializations — "a finding"   (tests) — LCLQ specialization finding
 //
 // (Business Groupings — the retired editorial View 3 — was REMOVED, KC 2026-07-24.
-//  View 2 was renamed Industry Clusters → Industry Specialisations: "specialisation" is
+//  View 2 was renamed Industry Clusters → Industry Specializations: "specialization" is
 //  the economic-geography term for a locality over-representing an industry vs baseline,
 //  which is exactly what the LCLQ measures. The internal `key`/layer/module names keep
 //  "cluster" — the statistical object the estimator finds — since they are not user-facing.)
@@ -113,11 +113,11 @@ const VIEWS = [
   { key: "census",    label: "Business Census",   status: "the data",
     icon: "M3 21h18 M5 21V7l8-4v18 M19 21V11l-6-4 M9 9v.01 M9 12v.01 M9 15v.01 M9 18v.01" },
   // key kept "clusters" (internal, not user-facing); the LABEL is the user-facing name.
-  { key: "clusters",  label: "Industry Specialisations", status: "a finding",
+  { key: "clusters",  label: "Industry Specializations", status: "a finding",
     icon: "M9 3v18 M15 3v18 M3 9h18 M3 15h18" },
 ];
 
-// The View-2 (Industry Specialisations) TITLE-HEADER descriptor — the LOCKED sentence (KC-approved
+// The View-2 (Industry Specializations) TITLE-HEADER descriptor — the LOCKED sentence (KC-approved
 // Option A, British English; directive 2026-07-24). Derived against the citation sources (Wang et al.
 // 2017; Leslie & Kronenfeld 2011) + our estimator and finalised in the economic-geography register:
 // faithful (same-industry, nearest-neighbour concentration, relative to citywide share), free of the
@@ -610,7 +610,7 @@ export default function BusinessCensusSection() {
   }, [domain]);
 
   useEffect(() => {
-    document.title = `Businesses and Industry Specialisations · ${activeView.label} · Edmonton 2025`;
+    document.title = `Businesses and Industry Specializations · ${activeView.label} · Edmonton 2025`;
     return () => { document.title = "Open Data Centre"; };
   }, [activeView]);
 
@@ -661,7 +661,7 @@ export default function BusinessCensusSection() {
     if (!map) return;
     try {
       if (view !== "census") {
-        // VIEW 2 (Industry Specialisations): HIDE the View-1 points entirely so the rest state is a
+        // VIEW 2 (Industry Specializations): HIDE the View-1 points entirely so the rest state is a
         // blank map — nothing lit until a trade is chosen (spec §2.1); the dedicated cluster layers
         // carry the finding. Census is the only other view now (Business Groupings, which used a dim
         // all-points wash here, was removed — KC 2026-07-24).
@@ -911,7 +911,7 @@ export default function BusinessCensusSection() {
             {/* TITLE CARD — "Business Census" (PA pattern: the title/city card is SEPARATE from
                 the selector below; structurally ready for a future city switcher). */}
             <section className="pa-card pa-card-identity">
-              <IdentityCard title="Businesses and Industry Specialisations" />
+              <IdentityCard title="Businesses and Industry Specializations" />
             </section>
 
             {/* VIEW SELECTOR CARD — the two views, its OWN card below the title. */}

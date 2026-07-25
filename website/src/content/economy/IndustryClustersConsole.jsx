@@ -221,7 +221,7 @@ export default function IndustryClustersConsole({
     : `ranked by share significant · pick up to ${CLUSTER_MAX_SELECT}`;
 
   return (
-    <section className="bc-icn" aria-label="Industry specialisations console">
+    <section className="bc-icn" aria-label="Industry specializations console">
       {/* HEAD — section label (left) · caption + Clear (right). §4: Clear lives HERE, a stable spot
           away from the scrolling strip's clipped right edge (a mis-scroll can't hit it). NO ⚙ gear
           (the app's icon family is Lucide, not emoji). */}
