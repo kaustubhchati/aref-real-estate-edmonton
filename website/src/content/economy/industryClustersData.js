@@ -1,7 +1,7 @@
 // =============================================================================
 // industryClustersData.js
 //
-// View 2 (Industry Clusters) DATA seam — the LCLQ finding, derived from the
+// View 2 (Industry Specialisations) DATA seam — the LCLQ finding, derived from the
 // committed estimator output `bc_lclq_industry_group.csv` (Part 5 artifact 2).
 // This file does NOT compute the estimator (that lives in the R eda/ line, spec
 // Part 5); it only READS and shapes the committed result for the interface.

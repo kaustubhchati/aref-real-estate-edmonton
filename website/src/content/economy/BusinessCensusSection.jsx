@@ -2,21 +2,24 @@
 // BusinessCensusSection.jsx
 //
 // The Business Census section ("/economy/business-census") — ONE dataset, ONE
-// point layer, THREE user-selected views, each labelled for what it is
+// point layer, TWO user-selected views, each labelled for what it is
 // (BC_frontend_spec_LOCKED_20260723.md Part 0):
 //
-//   1. Business Census   — "the data"            (shows)      — COMPLETE (this file)
-//   2. Industry Clusters — "a finding"           (tests)      — data list wired; map
-//                                                               lighting + metrics next
-//   3. Business Groupings — "an editorial lens"  (interprets) — placeholder
+//   1. Business Census          — "the data"    (shows) — COMPLETE (this file)
+//   2. Industry Specialisations — "a finding"   (tests) — LCLQ specialisation finding
+//
+// (Business Groupings — the retired editorial View 3 — was REMOVED, KC 2026-07-24.
+//  View 2 was renamed Industry Clusters → Industry Specialisations: "specialisation" is
+//  the economic-geography term for a locality over-representing an industry vs baseline,
+//  which is exactly what the LCLQ measures. The internal `key`/layer/module names keep
+//  "cluster" — the statistical object the estimator finds — since they are not user-facing.)
 //
 // View switching is user-selected and INDEPENDENT of zoom (spec Part 0 / Part 4:
 // zoom carries density, never mode). Each view carries a BANNER stating its
 // epistemic status, and EACH VIEW HAS ITS OWN PALETTE — shared colours across
 // views would imply shared meaning (spec Part 0).
 //
-// This scaffolds all three views up front so the structure is visible even where
-// content is absent. View 1 is complete except the wide-zoom KDE dominance surface
+// View 1 is complete except the wide-zoom KDE dominance surface
 // (spec §1.1), which is a client-side computation whose VIABILITY must be measured
 // before it is built (spec §2.2 / the CC report) — flagged, not stubbed silently.
 //
@@ -34,8 +37,10 @@ import EmptyState from "../../components/EmptyState.jsx";
 import IdentityCard from "../../components/IdentityCard.jsx";
 import SegmentedControl from "../../components/SegmentedControl.jsx";
 import { HOME_VIEW, applyCameraPreset } from "../../components/mapCamera.js";
+import { Link } from "react-router-dom";
 import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
-import { ICON_RECENTRE } from "../../components/mapIcons.js";
+import { Glyph } from "../../components/MapTipsPopover.jsx";
+import { ICON_RECENTRE, ICON_INFO } from "../../components/mapIcons.js";
 import { siteConfig } from "../../config/siteConfig.js";
 import { assetUrl } from "../../utils/assetUrl.js";
 import { parseCsvAsObjects } from "../report-card/parseCsv.js";
@@ -82,7 +87,6 @@ import BusinessCensusInfoRail from "./BusinessCensusInfoRail.jsx";
 import BusinessCensusLegend from "./BusinessCensusLegend.jsx";
 import BusinessCensusConsole from "./BusinessCensusConsole.jsx";
 import IndustryClustersConsole from "./IndustryClustersConsole.jsx";
-import LclqMethodBox from "./LclqMethodBox.jsx";
 import { deriveAggregates } from "./businessCensusAggregates.js";
 
 // Selecting a sector FILTERS the point layers to the selection — the non-selected points are
@@ -108,11 +112,25 @@ const LCLQ_URL = assetUrl("/data/economy/bc_lclq_industry_group.csv");
 const VIEWS = [
   { key: "census",    label: "Business Census",   status: "the data",
     icon: "M3 21h18 M5 21V7l8-4v18 M19 21V11l-6-4 M9 9v.01 M9 12v.01 M9 15v.01 M9 18v.01" },
-  { key: "clusters",  label: "Industry Clusters", status: "a finding",
+  // key kept "clusters" (internal, not user-facing); the LABEL is the user-facing name.
+  { key: "clusters",  label: "Industry Specialisations", status: "a finding",
     icon: "M9 3v18 M15 3v18 M3 9h18 M3 15h18" },
-  { key: "groupings", label: "Business Groupings", status: "an editorial lens",
-    icon: "M3 7h7v7H3z M14 7h7v4h-7z M14 14h7v3h-7z" },
 ];
+
+// The View-2 (Industry Specialisations) TITLE-HEADER descriptor — the LOCKED sentence (KC-approved
+// Option A, British English; directive 2026-07-24). Derived against the citation sources (Wang et al.
+// 2017; Leslie & Kronenfeld 2011) + our estimator and finalised in the economic-geography register:
+// faithful (same-industry, nearest-neighbour concentration, relative to citywide share), free of the
+// prior AI tells (no name-repeat, no over-/under- symmetric hedge, no stacked qualifiers). SET VERBATIM
+// — do not re-derive or "improve". "industry" (correct for NAICS + the literature). The whole view is
+// UNIFIED on "industry" now (the earlier header="industry"/console="trades" split was RETIRED — the
+// console reads "Industries That Cluster" / "Select an industry."; directive 2026-07-24 §2). NO inline
+// notation (i / A / A→A / LCLQ_i belong in the Methodology formula, not here). Rendered with a break
+// after the first clause (per the directive). Apostrophes are the site's typographic ’ (wording unchanged).
+const LCLQ_DESCRIPTOR_L1 =
+  "How strongly each business’s own industry concentrates among its nearest businesses,";
+const LCLQ_DESCRIPTOR_L2 =
+  "relative to that industry’s share across the city.";
 
 // View 1 wide-zoom character surface (spec §1.1). The three EXPOSED parameters
 // (spec Part 7 items 2–3) + their ranges; defaults from the measurement (250 m /
@@ -348,12 +366,14 @@ export default function BusinessCensusSection() {
   const [hoveredSector, setHoveredSector] = useState(null);                // wheel hover highlight (local)
   const [selectedGroup, setSelectedGroup] = useState(null);                // industry-group mute (deeper)
   const [selectedTrades, setSelectedTrades] = useState([]);                // VIEW 2: chosen trades (cap CLUSTER_MAX_SELECT)
+  const [focusedTrade, setFocusedTrade] = useState(null);                  // VIEW 2: the card drilled into (multi-select → full readout for one)
 
   const activeView = VIEWS.find((v) => v.key === view) ?? VIEWS[0];
 
   // VIEW 2 · toggle a trade in/out of the lit selection (spec §2.1/§2.3). Multi-select is
   // capped at CLUSTER_MAX_SELECT (G3 colour budget) — a pick beyond the cap is ignored.
   function toggleTrade(group) {
+    setFocusedTrade(null);   // a selection change returns the console to comparison (leaves any focus)
     setSelectedTrades((cur) => {
       if (cur.includes(group)) return cur.filter((g) => g !== group);
       if (cur.length >= CLUSTER_MAX_SELECT) return cur;
@@ -361,13 +381,13 @@ export default function BusinessCensusSection() {
     });
   }
   // Switch view; leaving View 2 clears the lit selection so a return starts at the rest state
-  // (blank map). Entering View 2 OPENS the console readout body by default — the console is the
-  // whole interaction surface here (chips + readout), so it should not start collapsed (the chips
-  // live in the always-visible header regardless; this just opens the readout). Done in the
-  // handler, not an effect (setState-in-effect is disallowed).
+  // (blank map). The View-2 console is ALWAYS-ON (the mockup has no collapse — head + selector +
+  // readout, disclosed browse↔finding on selection), so nothing to open here; consoleOpen still
+  // drives the CENSUS console (View 1). Done in the handler, not an effect (setState-in-effect
+  // is disallowed).
   function changeView(next) {
     if (next !== "clusters") setSelectedTrades([]);
-    if (next === "clusters") setConsoleOpen(true);
+    setFocusedTrade(null);
     setView(next);
   }
 
@@ -641,19 +661,14 @@ export default function BusinessCensusSection() {
     if (!map) return;
     try {
       if (view !== "census") {
-        // VIEW 2 (clusters): HIDE the View-1 points entirely (visibility none) so the rest
-        // state is a blank map — nothing lit until a trade is chosen (spec §2.1); the
-        // dedicated cluster layers carry the finding. VIEW 3 (groupings): the old dim wash
-        // of ALL points, unchanged.
-        const hideForClusters = view === "clusters";
+        // VIEW 2 (Industry Specialisations): HIDE the View-1 points entirely so the rest state is a
+        // blank map — nothing lit until a trade is chosen (spec §2.1); the dedicated cluster layers
+        // carry the finding. Census is the only other view now (Business Groupings, which used a dim
+        // all-points wash here, was removed — KC 2026-07-24).
         for (const id of [LAYER_ID, HALO_LAYER_ID]) {
           if (!map.getLayer(id)) continue;
           map.setFilter(id, null);
-          map.setLayoutProperty(id, "visibility", hideForClusters ? "none" : "visible");
-        }
-        if (!hideForClusters) {
-          if (map.getLayer(LAYER_ID)) map.setPaintProperty(LAYER_ID, "circle-opacity", 0.1);
-          if (map.getLayer(HALO_LAYER_ID)) map.setPaintProperty(HALO_LAYER_ID, "circle-opacity", 0);
+          map.setLayoutProperty(id, "visibility", "none");
         }
         return;
       }
@@ -682,17 +697,29 @@ export default function BusinessCensusSection() {
 
 
   // Bottom Data Console pull-up: T toggles it (PA affordance), except while typing in a field.
+  // CENSUS ONLY: the pull-up lives on the census view; the clusters console is always-on, so toggling
+  // consoleOpen there is an invisible no-op that would resurface unexpectedly back on census (and now
+  // also flips the wheel's visibility). Gate the listener on the census view — T is inert elsewhere.
   useEffect(() => {
+    if (view !== "census") return undefined;
     function onKey(e) {
       if (e.key !== "t" && e.key !== "T") return;
       const el = e.target;
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
+      // Focus safety: OPENING the console UNMOUNTS the wheel; if T fired while a wheel segment held
+      // keyboard focus, the browser drops focus to <body>. Detect that here and, after the re-render,
+      // land focus on the console handle so the keyboard user keeps their place.
+      const wheelHadFocus = document.activeElement?.closest?.(".bc-wheel") != null;
       e.preventDefault();
       setConsoleOpen((o) => !o);
+      setHoveredSector(null);   // clear any stale wheel-hover on toggle (see the console onToggle note)
+      if (wheelHadFocus) {
+        requestAnimationFrame(() => { document.querySelector(".pa-foot .dt-handle")?.focus(); });
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [view]);
 
   // Interaction (census view only) — HOVER previews the business in the InfoRail; CLICK PINS it
   // there and rings the dot on the map. The on-map POPUP is REMOVED (KC 2026-07-24): it was a
@@ -874,87 +901,72 @@ export default function BusinessCensusSection() {
           />
         )}
 
-        {/* INSTRUMENT COLUMN — view switcher (persistent) → identity + banner →
-            per-view content. The switcher is user-selected; zoom never changes it.
-            On CLUSTERS the column is height-capped (bc-col-clusters) so it STOPS ABOVE the
-            full-width bottom console — the method box never hides behind it (PA geometry:
-            column top-left, console full-width bottom, no overlap). */}
-        <div className={`pa-float pa-column pa-column-lean${view === "clusters" ? " bc-col-clusters" : ""}`}>
-          {/* TITLE CARD — "Business Census" only (PA pattern: the title/city card is SEPARATE
-              from the selector below). Structurally ready for a city switcher (PA has an
-              Edmonton/Calgary toggle here); BC is Edmonton-only for now, so none is built/shown. */}
-          <section className="pa-card pa-card-identity">
-            <IdentityCard title="Business Census" />
-          </section>
+        {/* INSTRUMENT COLUMN — CENSUS keeps the left sidebar (identity + view-switch + sector
+            legend). SPECIALISATIONS has NO sidebar: the LCLQ method box was REMOVED (§1 — deleted,
+            not capped; its explanation belongs in the Methodology section), so the map + console
+            reclaim the full width and the view-switch floats top-left. (Business Groupings, the
+            retired View 3, was removed — KC 2026-07-24.) The switcher is user-selected. */}
+        {view === "census" && (
+          <div className="pa-float pa-column pa-column-lean">
+            {/* TITLE CARD — "Business Census" (PA pattern: the title/city card is SEPARATE from
+                the selector below; structurally ready for a future city switcher). */}
+            <section className="pa-card pa-card-identity">
+              <IdentityCard title="Business Census" />
+            </section>
 
-          {/* VIEW SELECTOR CARD — the three views, its OWN card below the title (PA keeps the
-              metric selector in a separate card from the title). */}
-          <section className="pa-card">
-            <div className="bc-view-switch">
-              <SegmentedControl label="View" options={VIEWS} value={view} onChange={changeView} />
+            {/* VIEW SELECTOR CARD — the two views, its OWN card below the title. */}
+            <section className="pa-card">
+              <div className="bc-view-switch">
+                <SegmentedControl label="View" options={VIEWS} value={view} onChange={changeView} />
+              </div>
+            </section>
+
+            {/* ── VIEW 1 · Business Census — the sector legend (donut wheel + frame). HIDDEN while the
+                 bottom console is OPEN: the console rises from the bottom and the wheel's lower arc
+                 would occlude with it, so the wheel is removed on console-open (KC 2026-07-24).
+                 Selection + hover keep working through the console's own sector rows (same
+                 selectSector / setHoveredSector handlers); the wheel returns when the console
+                 collapses. The character-surface sliders + district/neighbourhood toggles are
+                 settled + hidden (KC); the composition console is the bottom dock. ── */}
+            {domain && !consoleOpen && (
+              <section className="pa-card pa-card-instrument">
+                <div className="pa-col-mod pa-col-legend">
+                  {aggregates && (
+                    <BusinessCensusLegend
+                      aggregates={aggregates}
+                      selectedSector={selectedSector}
+                      hoveredSector={hoveredSector}
+                      onSelectSector={selectSector}
+                      onHoverSector={setHoveredSector}
+                    />
+                  )}
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+
+        {/* CLUSTERS · top-left stacked group — the floating view-switch (survives the sidebar's
+            removal) + BELOW it the LCLQ TITLE HEADER (the map's title + the user's only in-view
+            intro to the method; Methodology carries the full treatment). Persistent — it does not
+            dim on trade selection (the finding happens in the console below). This view only. */}
+        {view === "clusters" && (
+          <div className="pa-float bc-clusters-topleft">
+            <div className="bc-viewswitch-pill">
+              <div className="bc-view-switch">
+                <SegmentedControl label="View" options={VIEWS} value={view} onChange={changeView} />
+              </div>
             </div>
-          </section>
-
-          {/* The "This view is …" epistemic-status chip was REMOVED entirely (KC 2026-07-24).
-              Each view's `status` metadata (spec Part 0) is retained on VIEWS but no longer
-              rendered here. */}
-
-          {/* ── VIEW 1 · Business Census — sector legend + the tunable character
-               surface + count ── */}
-          {view === "census" && domain && (
-            <section className="pa-card pa-card-instrument">
-              <div className="pa-col-mod pa-col-legend">
-                {aggregates && (
-                  <BusinessCensusLegend
-                    aggregates={aggregates}
-                    selectedSector={selectedSector}
-                    hoveredSector={hoveredSector}
-                    onSelectSector={selectSector}
-                    onHoverSector={setHoveredSector}
-                  />
-                )}
-              </div>
-
-              {/* Character Surface sliders + District/Neighbourhood toggles REMOVED (KC):
-                  settled values are hardcoded (KDE 250 m / 200 m / 60 %; districts +
-                  neighbourhoods permanently ON). The composition console moved to the bottom
-                  dock (.pa-foot). The total-count line was REMOVED too (KC 2026-07-24): the
-                  legend's label frame now shows the total at rest, so a second count line was
-                  redundant (DESIGN_SYSTEM §3). The sidebar is now the wheel + its frame alone. */}
-            </section>
-          )}
-
-          {/* ── VIEW 2 · Industry Clusters — the left column is the STATIC LCLQ METHOD BOX
-               (the estimator formula, interpretation, parameters, citations). It carries NO
-               controls: the method IS the point of the view, a fixed reference frame
-               (PA_MODE_CONTRACT Principle 0). The trade CHIPS (selection) and the cluster
-               READOUT (scores + neighbourhoods) moved to the Data Console below — the console
-               is the data surface, matching PA (2026-07-24 restructure). ── */}
-          {view === "clusters" && (
-            <section className="pa-card pa-card-instrument">
-              <LclqMethodBox />
-            </section>
-          )}
-
-          {/* ── VIEW 3 · Business Groupings — placeholder (spec Part 3). Do NOT
-               invent groupings: the semantic crossmap is KC's unauthored editorial
-               work. Banner + a short statement only. ── */}
-          {view === "groupings" && (
-            <section className="pa-card pa-card-instrument">
-              <div className="pa-col-mod">
-                <span className="pa-col-lab">Editorial Groupings</span>
-                <p className="bc-ref-note">
-                  A researcher-defined lens that regroups NAICS industry groups into
-                  plain-English families, so clustering is simply <em>visible</em>.
-                </p>
-                <p className="bc-ref-note bc-ref-pending">
-                  The groupings are pending — the semantic crossmap is authored and
-                  ratified separately, then joined. Nothing is shown until it exists.
-                </p>
-              </div>
-            </section>
-          )}
-        </div>
+            <header className="bc-lclq-header">
+              <span className="bc-lclq-kicker">LCLQ · Edmonton</span>
+              <h2 className="bc-lclq-title">Local Colocation Quotient</h2>
+              <p className="bc-lclq-desc">{LCLQ_DESCRIPTOR_L1}<br />{LCLQ_DESCRIPTOR_L2}</p>
+              <Link to="/about" className="bc-lclq-chip">
+                <Glyph body={ICON_INFO} inline /> Methodology
+              </Link>
+            </header>
+          </div>
+        )}
 
         {/* BOTTOM DATA CONSOLE — the PA-style pull-up dock (.pa-foot), one per data view.
             CENSUS: the composition drill-down (coexists with the InfoRail).
@@ -969,7 +981,10 @@ export default function BusinessCensusSection() {
               selectedGroup={selectedGroup}
               hoveredSector={hoveredSector}
               open={consoleOpen}
-              onToggle={() => setConsoleOpen((o) => !o)}
+              // toggling the console mounts/unmounts the wheel; clear the transient wheel-hover so
+              // opening doesn't strand a stale segment highlight (the wheel's mouseleave can't fire
+              // once it unmounts). Selection (selectedSector) persists — only the hover is cleared.
+              onToggle={() => { setConsoleOpen((o) => !o); setHoveredSector(null); }}
               onSelectSector={selectSector}
               onBack={clearSelection}
               onSelectGroup={selectGroup}
@@ -983,10 +998,11 @@ export default function BusinessCensusSection() {
               trades={trades}
               selectedTrades={selectedTrades}
               onToggleTrade={toggleTrade}
-              onClear={() => setSelectedTrades([])}
+              onClear={() => { setSelectedTrades([]); setFocusedTrade(null); }}
               lclqRows={lclqRows}
-              open={consoleOpen}
-              onToggle={() => setConsoleOpen((o) => !o)}
+              focusedTrade={focusedTrade}
+              onFocusTrade={setFocusedTrade}
+              onClearFocus={() => setFocusedTrade(null)}
             />
           </div>
         )}

@@ -2242,66 +2242,93 @@ p  { margin: 0 0 0.75rem; }
 .bc-view-switch { margin-top: 0; }   /* own card now (was margin-top --s3 when it followed the title in one card) */
 /* The .bc-banner "This view is …" chip was REMOVED entirely (KC 2026-07-24). */
 
-/* ── View-2 LEFT column — the STATIC LCLQ METHOD BOX (2026-07-24 restructure). KaTeX
-   formula + interpretation + parameters + citations, no controls. Dark instrument card
-   (--pa-shell), so it uses the sidebar light inks; KaTeX inherits `color`, so the container
-   colour makes the formula legible. The trade selection + readout moved to the console. ── */
-/* CLUSTERS view — cap the instrument column so its bottom lands ABOVE the ~254px full-width
-   console band (the console is z96, over the z15 column; without the cap the console hides the
-   column's lower method-box content). The method box scrolls internally (overflow-y on .pa-float)
-   if it exceeds the cap — reachable, never hidden behind the console. Scoped: census/groupings
-   columns are untouched. */
-.bc-col-clusters { max-height: calc(100% - 262px); }
-
-.bc-method { display: flex; flex-direction: column; gap: var(--s1); color: var(--tx); }
-.bc-method-lead { color: var(--tx-read); font-size: var(--t-xs); line-height: 1.35; margin: 0; }
-/* The two rendered maths blocks: constrain size to the column, scroll horizontally as a last
-   resort (a sum-over-fraction is wide), and kill KaTeX's default display margins. */
-.bc-method-formula {
-  margin: var(--s1) 0 0; padding: 6px 0;
-  border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair);
-  overflow-x: auto; overflow-y: hidden; color: var(--tx);
-}
-.bc-method-formula .katex { font-size: 0.98em; }
-.bc-method-formula .katex-display { margin: 0; }
-.bc-method-cases { margin: 5px 0 0; overflow-x: auto; overflow-y: hidden; color: var(--tx); }
-.bc-method-cases .katex { font-size: 0.9em; }
-.bc-method-cases .katex-display { margin: 0; text-align: left; }
-.bc-method-params { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 6px 0 0; }
-.bc-method-param { display: contents; }
-.bc-method-params dt { color: var(--tx-mut); font-size: var(--t-2xs); white-space: nowrap; }
-.bc-method-params dd { color: var(--tx); font-size: var(--t-2xs); margin: 0; line-height: 1.25; }
-.bc-method-sig {
-  color: var(--tx-read); font-size: var(--t-2xs); line-height: 1.35;
-  margin: 6px 0 0; padding-top: 6px; border-top: 1px solid var(--hair);
-}
-.bc-method-sig strong { color: var(--tx); }
-.bc-method-cite { color: var(--tx-mut); font-size: 10px; line-height: 1.3; margin: 5px 0 0; font-style: italic; }
-
-/* ── View-2 BOTTOM console — trade CHIPS (always-visible header) + per-trade READOUT
-   (collapsible body). Reuses the .dt dark console shell; the header row is one full-width
-   bar (rounded top, up-shadow), the readout body continues it seamlessly (2026-07-24). ── */
-.bc-icn-headrow {
+/* ── View-2 CLUSTERS · top-left STACKED group (§1 + LCLQ title-header directive, 2026-07-24). The
+   method box + its left sidebar were removed; this floats the view-switch PILL over the full-width map
+   and stacks the LCLQ TITLE HEADER card below it. Persistent (never dims on selection), this-view-only. ── */
+.bc-clusters-topleft {
+  position: absolute; top: 10px; left: 10px; z-index: 15;
+  width: auto; max-width: 360px; max-height: none; overflow: visible;   /* override .pa-float's fixed column frame */
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
   pointer-events: auto;
-  display: flex; align-items: center; gap: 10px;
+}
+/* the view-switch as a compact HORIZONTAL pill (not the sidebar's vertical stack) */
+.bc-viewswitch-pill {
+  background: var(--pa-shell); border: 1px solid var(--pa-hair);
+  border-radius: 10px; box-shadow: 0 4px 14px rgba(0,0,0,0.4); padding: 6px;
+}
+.bc-clusters-topleft .seg-label { display: none; }   /* buttons-only float — the sidebar keeps the "View" label */
+.bc-clusters-topleft .bc-view-switch .seg-options { flex-direction: row; align-items: center; gap: 4px; }
+
+/* the LCLQ TITLE HEADER — a compact card: kicker · full form · ONE descriptor sentence · Methodology chip.
+   Its own shell backing so every line clears §4's 4.5:1 even where it overlays the map (title/desc on
+   --pa-shell: --pa-ink 16:1, --pa-mut 6.95:1 — never --pa-dim, which fails AA). New chrome, ratification-flagged. */
+.bc-lclq-header {
+  background: var(--pa-shell); border: 1px solid var(--pa-hair);
+  border-radius: 10px; box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+  padding: 11px 14px; box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.bc-lclq-kicker { font-size: var(--t-2xs); text-transform: uppercase; letter-spacing: 0.09em; color: var(--pa-mut); }
+.bc-lclq-title { font-size: var(--t-md); font-weight: 600; color: var(--pa-ink); line-height: 1.2; letter-spacing: -0.01em; margin: 0; }
+.bc-lclq-desc { font-size: var(--t-xs); line-height: 1.5; color: var(--pa-ink); margin: 2px 0 0; }   /* §1 — content, promoted to white (§1.5a) */
+.bc-lclq-chip {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 3px; padding: 4px 11px 4px 8px;
+  background: var(--pa-card); border: 1px solid var(--pa-hair); border-radius: 999px;
+  color: var(--pa-ink); font-size: var(--t-2xs); text-decoration: none; cursor: pointer;
+}
+.bc-lclq-chip:hover { border-color: var(--accent-teal); color: var(--accent-teal); }   /* teal-on-interaction (§1.3) */
+.bc-lclq-chip:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }
+.bc-lclq-chip svg { width: 14px; height: 14px; }
+
+/* ── View-2 BOTTOM console — rebuilt to the approved mockup (bc_console_redesign_mockup.html):
+   a pure SELECTOR (chips) → a PROSE-FIRST readout disclosed on selection. One full-width surface,
+   always-on (no collapse). TEXT HIERARCHY per §1 / DESIGN_SYSTEM §1.5a: console CONTENT text is
+   --pa-ink (headline, sub-line, metric labels AND values, area names AND values, gate primary);
+   only section labels/eyebrows/captions/gate-secondary stay --pa-mut/--pa-dim. (2026-07-24) ── */
+.bc-icn {
+  pointer-events: auto;
   width: calc(100vw - 16px); box-sizing: border-box;
-  padding: 6px 14px;
+  display: flex; flex-direction: column;
+  max-height: 340px; overflow: hidden;   /* BOUNDED height; the readout/cards scroll internally past it */
   background: var(--pa-shell); color: var(--pa-ink);
   border: 1px solid var(--pa-hair); border-bottom: 0;
   border-radius: 12px 12px 0 0;
   box-shadow: 0 -8px 24px rgba(0,0,0,0.45);
 }
-.bc-icn-handle {   /* strip the pill chrome — here it's an inline title+caret toggle */
-  align-self: center; flex: 0 0 auto;
-  background: none; border: 0; box-shadow: none; border-radius: var(--r-sm);
-  padding: 4px 8px; gap: 8px; white-space: nowrap;
+/* HEAD — section label + caption, both stay DIM (§1 keep-muted) */
+.bc-icn-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 20px 0; }
+/* §3 sweep — descriptive chrome labels read Title Case (D1: NOT ALL-CAPS; only the terse "LCLQ ·
+   EDMONTON" kicker keeps uppercase) and --pa-mut (--pa-dim is "never for text that must be read" +
+   fails §4's 4.5:1; --pa-mut clears it at 6.95:1). */
+.bc-icn-ttl { font-size: var(--t-2xs); letter-spacing: 0.01em; color: var(--pa-mut); }
+.bc-icn-cap { font-size: var(--t-2xs); color: var(--pa-mut); font-variant-numeric: tabular-nums; }
+/* §4 — caption + Clear live in the HEAD (a stable spot away from the scrolling strip's clipped edge). */
+.bc-icn-head-right { display: flex; align-items: baseline; gap: 14px; flex: 0 0 auto; }
+
+/* SELECTOR — chip strip + the §2 overflow affordance (Clear moved to the head, §4) */
+.bc-icn-selector { display: flex; align-items: center; gap: 10px; padding: 10px 18px 12px; }
+.bc-strip-wrap { position: relative; flex: 1 1 auto; min-width: 0; }
+/* §2a EDGE FADE — a --pa-shell→transparent gradient at whichever edge has more chips. Directionally
+   honest (toggled by is-fade-l / is-fade-r from the component's scroll math) and only when overflowing
+   (both classes stay off when all chips fit). Sits ABOVE the scrollbar so the teal thumb still reads. */
+.bc-strip-wrap::before, .bc-strip-wrap::after {
+  content: ""; position: absolute; top: 0; bottom: 9px; width: 34px; z-index: 2;
+  pointer-events: none; opacity: 0; transition: opacity var(--dur-fast) var(--ease);
 }
-.bc-icn-handle:hover { background: var(--pa-card); }
+.bc-strip-wrap::before { left: 0;  background: linear-gradient(to right, var(--pa-shell), transparent); }
+.bc-strip-wrap::after  { right: 0; background: linear-gradient(to left,  var(--pa-shell), transparent); }
+.bc-strip-wrap.is-fade-l::before { opacity: 1; }
+.bc-strip-wrap.is-fade-r::after  { opacity: 1; }
 .bc-chip-strip {
-  flex: 1 1 auto; min-width: 0;
-  display: flex; gap: 8px; overflow-x: auto; padding: 2px;
-  scrollbar-width: thin;
+  display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; padding: 2px 2px 7px;
 }
+/* §2b PERSISTENT TINTED SCROLLBAR — defining ::-webkit-scrollbar (and NOT scrollbar-color, per the
+   codebase rule) forces a CLASSIC always-drawn bar on Blink/WebKit; the teal (--accent-teal) thumb is
+   a standing "there is a scroll range" cue. Only shows when the strip overflows (no overflow → no bar). */
+.bc-chip-strip::-webkit-scrollbar { height: 8px; }
+.bc-chip-strip::-webkit-scrollbar-track { background: transparent; }
+.bc-chip-strip::-webkit-scrollbar-thumb { background: var(--accent-teal); border-radius: 4px; }
 .bc-chip {
   flex: 0 0 auto;
   display: inline-flex; align-items: baseline; gap: 7px;
@@ -2312,39 +2339,90 @@ p  { margin: 0 0 0.75rem; }
 }
 .bc-chip:hover:not(:disabled) { border-color: var(--pa-mut); }
 .bc-chip:disabled { opacity: 0.4; cursor: default; }
+/* the app's ONE button language — teal :focus-visible ring on every View-2 console control (DESIGN_SYSTEM §1.3). */
+.bc-chip:focus-visible, .bc-cmp-card:focus-visible, .bc-icn-back:focus-visible,
+.bc-icn-clear:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }
 .bc-chip.is-selected { background: var(--pa-shell); font-weight: 600; }
-.bc-chip-share { font-weight: 700; font-variant-numeric: tabular-nums; }
-.bc-chip-name { color: var(--pa-ink); }
-.bc-chip-mult { color: var(--pa-mut); font-size: var(--t-2xs); font-variant-numeric: tabular-nums; }
+.bc-chip-share { color: var(--pa-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+.bc-chip-name { color: var(--pa-mut); }   /* chip label — subordinate to the share% lead (mockup) */
+.bc-chip-mult { color: var(--pa-mut); font-size: var(--t-2xs); font-variant-numeric: tabular-nums; }   /* §3: --pa-mut (was --pa-dim; readable value must clear AA) */
 .bc-icn-clear {
   flex: 0 0 auto; background: none; border: 0; color: var(--pa-mut);
   font-size: var(--t-xs); font-family: inherit; cursor: pointer; padding: 4px 6px;
 }
 .bc-icn-clear:hover { color: var(--pa-ink); text-decoration: underline; }
-/* the readout body continues the header surface (no top rounding / top border / own shadow) */
-.bc-icn-panel {
-  width: calc(100vw - 16px); box-sizing: border-box;
-  border-radius: 0; border-top: 0; box-shadow: none;
-  max-height: calc(37svh - 60px);
+.bc-icn-hint { color: var(--pa-mut); font-size: var(--t-xs); padding: 2px 4px; }
+
+/* READOUT — empty state OR the prose-first 3-column finding */
+.bc-icn-empty {
+  border-top: 1px solid var(--pa-hair); padding: 18px 20px;
+  /* --pa-mut, NOT --pa-dim: this is the ONLY readout content shown before a selection (reader-facing
+     guidance), so it must clear §4's AA 4.5:1 (--pa-mut 6.95:1; --pa-dim 4.02:1 would fail). */
+  font-size: var(--t-xs); color: var(--pa-mut); text-align: center; line-height: 1.6;
 }
-.bc-icn-hint { color: var(--pa-mut); font-size: var(--t-xs); line-height: 1.4; margin: 0; padding: 12px 16px 14px; max-width: 64ch; }
-.bc-icn-readout { display: flex; gap: 14px; overflow-x: auto; padding: 12px 16px 14px; }
-.bc-icn-card {
-  flex: 0 0 auto; min-width: 206px; max-width: 260px; box-sizing: border-box;
-  background: var(--pa-card); border: 1px solid var(--pa-hair); border-radius: var(--r-sm);
-  padding: 10px 12px;
+.bc-icn-readout {
+  flex: 1 1 auto; min-height: 0;   /* fills + scrolls WITHIN the bounded .bc-icn (rare long headline) */
+  border-top: 1px solid var(--pa-hair); overflow-y: auto;
+  display: grid; grid-template-columns: 1.4fr 1fr 1.1fr; gap: 22px; align-items: start;
+  padding: 15px 20px 18px;
 }
-.bc-icn-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.bc-icn-sw { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; flex: 0 0 auto; }
-.bc-icn-card-name { color: var(--pa-ink); font-weight: 600; font-size: var(--t-xs); line-height: 1.2; }
-.bc-icn-scores { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0; }
-.bc-icn-scores > div { display: contents; }
-.bc-icn-scores dt { color: var(--pa-mut); font-size: var(--t-2xs); white-space: nowrap; }
-.bc-icn-scores dd { color: var(--pa-ink); font-size: var(--t-xs); margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
-.bc-icn-scores dd strong { font-weight: 700; }
-.bc-icn-scale { color: var(--pa-mut); font-size: var(--t-2xs); font-style: italic; line-height: 1.3; margin: 6px 0 0; }
-.bc-icn-nbhd { color: var(--pa-ink); font-size: var(--t-2xs); line-height: 1.35; margin: 8px 0 0; }
-.bc-icn-nbhd-lab { color: var(--pa-mut); text-transform: uppercase; letter-spacing: 0.04em; font-size: 9.5px; margin-right: 3px; }
+/* THE FINDING */
+.bc-icn-eyebrow { display: flex; align-items: center; gap: 8px; font-size: var(--t-2xs); color: var(--pa-mut); margin-bottom: 8px; }
+.bc-icn-eyeswatch { width: 10px; height: 10px; border-radius: 50%; background: var(--hue); flex: 0 0 auto; }
+.bc-icn-headline { font-size: var(--t-xl); line-height: 1.28; font-weight: 600; letter-spacing: -0.01em; color: var(--pa-ink); margin: 0; }
+.bc-icn-big { color: var(--hue); }
+.bc-icn-sub { font-size: var(--t-sm); line-height: 1.55; color: var(--pa-ink); margin: 10px 0 0; }   /* §1 PROMOTED */
+/* CLUSTER STRENGTH */
+.bc-icn-grplab { font-size: var(--t-2xs); letter-spacing: 0.01em; color: var(--pa-mut); margin-bottom: 9px; }   /* §3: Title Case + --pa-mut (D1 / AA) */
+/* §3 — the "Where It Clusters" count unit: makes clear the values/bars are COUNTS of significant
+   businesses (never multipliers), so a short bar reads as "fewer businesses", not "less significant". */
+.bc-icn-unit { font-size: var(--t-2xs); color: var(--pa-mut); margin: -5px 0 9px; }
+.bc-icn-mrow { display: flex; justify-content: space-between; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--pa-hair); }
+.bc-icn-mrow:first-of-type { border-top: none; }
+.bc-icn-ml { font-size: var(--t-xs); color: var(--pa-ink); }   /* §1 PROMOTED metric label */
+.bc-icn-mv { font-size: var(--t-sm); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--pa-ink); }
+.bc-icn-gate { display: flex; align-items: center; gap: 8px; background: var(--pa-card); border: 1px solid var(--pa-hair); border-radius: var(--r-sm); padding: 8px 11px; margin-top: 10px; }
+.bc-icn-gate-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green-500); flex: 0 0 8px; }   /* "significant" status (chrome, clears the 3:1 graphical floor) */
+.bc-icn-gate-t { font-size: var(--t-2xs); color: var(--pa-ink); }
+.bc-icn-gate-m { color: var(--pa-mut); }   /* gate secondary — stays muted (§1 keep) */
+/* WHERE IT CLUSTERS */
+.bc-icn-arow { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--pa-hair); }
+.bc-icn-arow:first-of-type { border-top: none; }
+.bc-icn-an { font-size: var(--t-xs); color: var(--pa-ink); flex: 1; }
+.bc-icn-abar { flex: 0 0 68px; height: 5px; background: var(--pa-card); border-radius: 3px; overflow: hidden; }
+.bc-icn-afill { display: block; height: 100%; background: var(--hue); border-radius: 3px; }
+.bc-icn-av { font-size: var(--t-xs); color: var(--pa-ink); font-variant-numeric: tabular-nums; flex: 0 0 auto; }   /* §1 PROMOTED value */
+
+/* §2 — the "‹ Compare all" back breadcrumb (focused card → full readout → back to cards). Spans the grid. */
+.bc-icn-back {
+  grid-column: 1 / -1; justify-self: start;
+  background: none; border: 0; color: var(--pa-mut); font-family: inherit; font-size: var(--t-xs);
+  cursor: pointer; padding: 0 2px 2px 0;
+}
+.bc-icn-back:hover { color: var(--pa-ink); text-decoration: underline; }
+
+/* §2 — MULTI-SELECT COMPARISON CARDS (2–5 trades): one per trade in its MAP HUE. Clicking a card
+   focuses it (→ the full readout). Cards COMPARE, chips SELECT — distinct systems (the card is a dark
+   tile with the hue as a left-accent + the hero multiplier; card TEXT is --pa-ink, hue clears its floor). */
+.bc-cmp-cards {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  border-top: 1px solid var(--pa-hair);
+  display: flex; flex-wrap: wrap; gap: 12px; align-content: flex-start;
+  padding: 15px 20px 18px;
+}
+.bc-cmp-card {
+  flex: 0 0 210px; box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 3px; text-align: left;
+  background: var(--pa-card); color: var(--pa-ink);
+  border: 1px solid var(--pa-hair); border-left: 3px solid var(--hue); border-radius: var(--r-sm);
+  padding: 11px 13px; cursor: pointer; font-family: inherit;
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.bc-cmp-card:hover { border-color: var(--pa-mut); background: var(--pa-shell); }
+.bc-cmp-name { font-size: var(--t-xs); font-weight: 600; color: var(--pa-ink); line-height: 1.25; }
+.bc-cmp-hero { font-size: var(--t-xl); font-weight: 700; color: var(--hue); font-variant-numeric: tabular-nums; line-height: 1.1; margin: 3px 0; }
+.bc-cmp-metric { font-size: var(--t-2xs); color: var(--pa-mut); line-height: 1.35; }
+.bc-cmp-metric strong { color: var(--pa-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* ── View-1 sidebar legend — the WHEEL ALONE (the sector list moved to the console, KC
    2026-07-24). Compact, PA sidebar scale; it is the map's colour key + the sector selector. ── */
@@ -2449,12 +2527,6 @@ p  { margin: 0 0 0.75rem; }
    (non-forced) rendering is unchanged. Same fix applied to the wheel (SVG) below. */
 .bc-cn-bar, .bc-cn-bar-fill, .bc-cn-sw, .bc-cn-headsw { forced-color-adjust: none; }
 .bc-cn-remainder .bc-cn-name { color: var(--tx-mut); font-style: italic; }
-
-/* Reference / pending notes. The counterfactual sentence (spec §2.4) is the one
-   that makes every number interpretable — kept legible, not dimmed away. */
-.bc-ref-note { color: var(--tx-mut); font-size: var(--t-xs); line-height: 1.35; margin: var(--s2) 0 0; }
-.bc-ref-counterfactual { color: var(--tx-head); font-style: italic; margin-top: var(--s3); }
-.bc-ref-pending { font-style: italic; opacity: 0.85; }
 
 /* Popup NAICS code sub-line (View 1 detail). */
 .pop-sub { margin: 2px 0 4px; }
