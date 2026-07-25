@@ -201,3 +201,35 @@ sections:
           pattern:  "business_census_points_????.geojson"
       files:
         - { from: output/business_census_2025.geojson, to: website/public/data/economy/business_census_2025.geojson }
+
+  amenities:
+    cwd: pipeline/yeg/amenities
+
+    # ONE registry-driven emitter (01) builds every amenity map layer from the
+    # dated amenity_layer_registry_<date>.csv (point/line/polygon, geometry-
+    # agnostic); 03 emits the no-year currency manifest. (02 intentionally unused:
+    # no aggregate step; 03 mirrors the building-permits "03 = manifest" convention.)
+    scripts:
+      - scripts/production/01_build_amenity_layers.R
+      - scripts/production/03_emit_manifest.R
+
+    # Representative non-empty guards: a dense point layer + the line layer for 01,
+    # the manifest for 03. The handoff zero-byte check backstops every file.
+    expected_outputs:
+      scripts/production/01_build_amenity_layers.R:
+        - output/playgrounds.geojson
+        - output/bike_routes.geojson
+      scripts/production/03_emit_manifest.R:
+        - output/manifest.json
+
+    # --- Handoff (Way A: glob + fixed-file copy) --------------------------------
+    # Every emitted layer GeoJSON publishes via the year-free "*.geojson" glob;
+    # the manifest is a fixed-file copy. The build log (_amenity_build_log.csv) is
+    # NOT *.geojson, so it stays internal to output/ (not published).
+    handoff:
+      glob:
+        - src_dir:  output
+          dest_dir: website/public/data/amenities
+          pattern:  "*.geojson"
+      files:
+        - { from: output/manifest.json, to: website/public/data/amenities/manifest.json }
