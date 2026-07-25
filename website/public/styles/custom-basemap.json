@@ -51,6 +51,22 @@
       }
     },
     {
+      "id": "landcover_farmland",
+      "type": "fill",
+      "source": "carto",
+      "source-layer": "landcover",
+      "filter": ["==", "class", "farmland"],
+      "paint": { "fill-color": "#e8e0c8", "fill-opacity": { "stops": [[8, 0.4], [11, 0.6], [13, 0.72]] } }
+    },
+    {
+      "id": "landcover_wetland",
+      "type": "fill",
+      "source": "carto",
+      "source-layer": "landcover",
+      "filter": ["==", "class", "wetland"],
+      "paint": { "fill-color": "#cfe0c8", "fill-opacity": 0.6 }
+    },
+    {
       "id": "park_national_park",
       "type": "fill",
       "source": "carto",
@@ -95,6 +111,14 @@
         "fill-antialias": true,
         "fill-opacity": 0.9
       }
+    },
+    {
+      "id": "park_protected_area",
+      "type": "fill",
+      "source": "carto",
+      "source-layer": "park",
+      "filter": ["==", "class", "protected_area"],
+      "paint": { "fill-color": "#7dc47d", "fill-opacity": 0.45 }
     },
     {
       "id": "landuse_residential",
@@ -171,6 +195,30 @@
       "source-layer": "landuse",
       "filter": ["any", ["==", "class", "school"], ["==", "class", "university"], ["==", "class", "college"], ["==", "class", "hospital"], ["==", "class", "library"], ["==", "class", "kindergarten"]],
       "paint": { "fill-color": "#efe9d6", "fill-opacity": 0.85 }
+    },
+    {
+      "id": "landuse_recreation",
+      "type": "fill",
+      "source": "carto",
+      "source-layer": "landuse",
+      "filter": ["any", ["==", "class", "pitch"], ["==", "class", "playground"], ["==", "class", "track"], ["==", "class", "recreation_ground"], ["==", "class", "dog_park"], ["==", "class", "grass"]],
+      "paint": { "fill-color": "#cfe3bf", "fill-opacity": 0.8 }
+    },
+    {
+      "id": "landuse_quarry",
+      "type": "fill",
+      "source": "carto",
+      "source-layer": "landuse",
+      "filter": ["any", ["==", "class", "quarry"], ["==", "class", "military"], ["==", "class", "garages"]],
+      "paint": { "fill-color": "#d8d2c4", "fill-opacity": 0.7 }
+    },
+    {
+      "id": "aeroway_aerodrome",
+      "type": "fill",
+      "source": "carto",
+      "source-layer": "aeroway",
+      "filter": ["all", ["==", "class", "aerodrome"], ["==", "$type", "Polygon"]],
+      "paint": { "fill-color": "#e2ddd2", "fill-opacity": 0.5 }
     },
     {
       "id": "waterway",

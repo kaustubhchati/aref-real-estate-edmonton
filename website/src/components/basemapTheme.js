@@ -46,6 +46,8 @@ const C = {
   landuseInst: "#a2bbd7",  // institutional → mid BLUE   (schools / hospitals / civic; convention blue)
   sand:        "#f5ecd0",  // sand / beach
   wetland:     "#cfe0c8",  // wetland / marsh
+  farmland:    "#e3ddc2",  // farmland / agriculture — muted khaki (the urban-fringe ground)
+  aeroFill:    "#ddd8cc",  // aerodrome land — neutral grey (airport polygons)
   motCase:     "#efd151",  // motorway/trunk casing
   priFill:     "#ffe888",  // primary/secondary fill
   priCase:     "#ead27a",  // primary/secondary casing
@@ -86,6 +88,7 @@ function colourFor(id) {
   if (/waterway/.test(id))                 return [C.water, "water-river"];
   if (/^park|wood|forest|grass|cemeter|golf|pitch/.test(id)) return [C.green, "green"];
   if (id === "landcover")                  return [C.green, "green(landcover?)"];      // FLAG
+  if (/farmland/.test(id))                 return [C.farmland, "farmland"];             // urban-fringe khaki
   // Land-use classes — each its own CONVENTION hue (see the C palette above). Specific ids
   // first; the generic `landuse` layer (cemetery / stadium) falls to green (open space).
   if (/landuse_residential/.test(id))      return [C.landuseRes,  "landuse-residential"];  // gold
@@ -94,9 +97,11 @@ function colourFor(id) {
   if (/landuse_institutional/.test(id))    return [C.landuseInst, "landuse-institutional"];// blue
   if (/sand|beach/.test(id))               return [C.sand, "sand"];
   if (/wetland|marsh|swamp/.test(id))      return [C.wetland, "wetland"];
-  if (/landuse/.test(id))                  return [C.green, "landuse-open(cemetery/stadium)"];
+  if (/quarry|military|garages|extraction/.test(id)) return [C.landuseInd, "landuse-hard"]; // grey
+  if (/landuse/.test(id))                  return [C.green, "landuse-open(cemetery/stadium/rec)"];
   if (/building/.test(id))                 return [C.building, "building"];
   if (/boundary|admin/.test(id))           return [C.boundary, "boundary"];
+  if (/aerodrome/.test(id))                return [C.aeroFill, "aerodrome"]; // fill (before roadColour's /aero/)
   const r = roadColour(id);
   if (r) return [r, "road"];
   return null;
