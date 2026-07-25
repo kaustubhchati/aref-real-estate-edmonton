@@ -138,6 +138,20 @@ for (i in seq_len(nrow(registry))) {
   n_without <- sum(!has_geom)
   raw       <- raw[has_geom, , drop = FALSE]
 
+  # B5/D8 — EV charging LEVEL, derived from the level-count columns (only fires where they exist,
+  # i.e. EV). The map should encode the CIVIC axis (can I charge here, how fast) not the
+  # commercial network. A station's best level: DC Fast > Level 2 > Level 1. `charging_level`
+  # must be in the layer's renderable_cols to survive the keep below; `ev_network` stays a
+  # renderable field (the detail rail / a future filter), no longer the colour axis.
+  lvl_cols <- c("ev_dc_fast_num", "ev_level2_evse_num", "ev_level1_evse_num")
+  if (all(lvl_cols %in% names(raw))) {
+    n0 <- function(x) { v <- suppressWarnings(as.numeric(x)); v[is.na(v)] <- 0; v }
+    dc <- n0(raw$ev_dc_fast_num); l2 <- n0(raw$ev_level2_evse_num); l1 <- n0(raw$ev_level1_evse_num)
+    raw$charging_level <- ifelse(dc > 0, "DC Fast",
+                          ifelse(l2 > 0, "Level 2",
+                          ifelse(l1 > 0, "Level 1", "Unknown")))
+  }
+
   # 2c. keep only the registry's renderable columns (that exist) + geometry.
   keep <- str_trim(str_split(r$renderable_cols, "\\|")[[1]])
   keep <- intersect(keep, names(raw))
@@ -188,6 +202,7 @@ for (i in seq_len(nrow(registry))) {
     category_counts   = paste(cnts, collapse = "|"),   # parallel to categories (alphabetical)
     category_labels   = paste(labs, collapse = "|"),   # parallel display labels (D9)
     category_residual = paste(as.integer(resid), collapse = "|"),   # 1 = grey + last (D5)
+    family            = if ("family" %in% names(r)) r$family else "",   # A1: N/D/C/S/polygon/line
     fetched_at        = fetched_at
   )
 }

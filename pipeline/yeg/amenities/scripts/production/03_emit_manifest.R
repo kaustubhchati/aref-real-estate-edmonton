@@ -81,6 +81,7 @@ for (i in seq_len(nrow(bl))) {
     file            = row$file,
     label           = row$label,
     geometry        = row$geometry_type,
+    family          = if ("family" %in% names(row)) row$family else "",   # A1 family (N/D/C/S)
     sourceDatasetId = row$source_dataset,
     sourceUpdatedAt = source_updated_at(row$source_dataset),   # KC ruling B
     fetchedAt       = row$fetched_at,
