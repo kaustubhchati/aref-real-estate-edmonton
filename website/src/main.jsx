@@ -103,10 +103,18 @@ createRoot(document.getElementById("root")).render(
           <Route path="/amenities/crime"                   element={<Placeholder title="Crime"                  kind="map" />} />
           <Route path="/amenities/public-school"           element={<Placeholder title="Public School"          kind="map" />} />
           <Route path="/amenities/public-transportation"   element={<Placeholder title="Public Transportation"  kind="map" />} />
-          {/* Family-1 amenity POINT layers — interim per-layer routes (the thematic
-              consolidation that folds them into the leaves above is a later session). Not
-              yet in siteConfig.nav; reachable by URL until consolidation wires the nav. */}
+          {/* Family-1 amenity POINT layers — one generic component per layer (layerId ->
+              its manifest record). Interim per-layer leaves; the thematic consolidation
+              (Public Transportation / Parks & Recreation / … multi-layer pages) is a later
+              session that folds these in. */}
+          <Route path="/amenities/bus-stops"               element={<AmenityPointMap layerId="bus_stops" />} />
+          <Route path="/amenities/lrt-stations"            element={<AmenityPointMap layerId="lrt_stops" />} />
           <Route path="/amenities/playgrounds"             element={<AmenityPointMap layerId="playgrounds" />} />
+          <Route path="/amenities/spray-parks"             element={<AmenityPointMap layerId="spray_parks" />} />
+          <Route path="/amenities/recreation-facilities"   element={<AmenityPointMap layerId="recreation_facilities" />} />
+          <Route path="/amenities/track-sports-fields"     element={<AmenityPointMap layerId="track_sports_fields" />} />
+          <Route path="/amenities/police-stations"         element={<AmenityPointMap layerId="police_stations" />} />
+          <Route path="/amenities/ev-charging"             element={<AmenityPointMap layerId="ev_charging" />} />
           <Route path="/economy/business-counts"           element={<BusinessCensusMap />} />
           <Route path="/economy/business-census"           element={<BusinessCensusSection />} />
           <Route path="/economy/business-licences"         element={<Placeholder title="Business Licences"      kind="map" />} />

@@ -40,6 +40,16 @@ export const MAP_VIEW = {
   maxBounds: CITY_BOUNDS.Edmonton,
 };
 
+// Turn a snake_case field/property key into a readable label, preserving known acronyms
+// ("ev_network" -> "EV Network", "lrt_stop_number" -> "LRT Stop Number"; DESIGN_SYSTEM §2
+// keeps acronyms upper). Shared by the legend title and the detail rail rows.
+const ACRONYMS = new Set(["ev", "lrt", "id", "epsb", "naics"]);
+export function amenityLabel(key) {
+  return String(key).split("_")
+    .map((w) => (ACRONYMS.has(w.toLowerCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(" ");
+}
+
 export const SOURCE_ID       = "amenity-points";
 export const DOT_LAYER_ID    = "amenity-dots";
 export const SELECT_LAYER_ID = "amenity-select";
@@ -57,36 +67,64 @@ export const SINGLE_SYMBOL_COLOUR = "#4d7cff";        // no category axis → on
 export const UNCATEGORIZED_COLOUR = "#8b98a7";        // match fallback (a category value not in the domain)
 const SELECT_COLOUR = "#8b5cf6";                      // --pa-selection-outline (§1.3); MapLibre can't read CSS vars
 
-// The palette for N categories (directive §5). >10 is collapsed to top-10 + Other
-// UPSTREAM (§7.1) before it reaches here, so a domain is always ≤ palette length.
+// The palette for N categories (directive §5): GTA-bright-5 for ≤5, Vivid-10 otherwise.
 export function paletteFor(n) {
   return n <= GTA_BRIGHT_5.length ? GTA_BRIGHT_5 : VIVID_10;
 }
 
-// Category → colour, assigned by the manifest's category order (both the map paint AND the
-// legend read the same ordered list, so they can never drift). A single-symbol layer
-// (no categoryField / empty domain) is ONE colour, no match.
-export function buildColourExpression(categoryField, categories) {
-  if (!categoryField || !categories?.length) return SINGLE_SYMBOL_COLOUR;
-  const pal = paletteFor(categories.length);
+const PALETTE_MAX = VIVID_10.length;   // 10 — the most nominal classes a palette can hold
+export const OTHER_KEY = "__other__";  // the synthetic top-N + Other collapse bucket key
+
+// Resolve the manifest's category domain into DISPLAY ITEMS the map + legend both read
+// (so they can never drift). Each item = { key, label, colour, members[] }:
+//   • ≤ 10 categories → one item per category (alphabetical, the manifest order).
+//   • > 10 categories → the TOP 10 BY COUNT get their own item; the rest COLLAPSE into a
+//     grey "Other" item (§7.1 — do NOT invent an 11th colour). `categoryCounts` is the
+//     manifest's per-category count; ties break on the alphabetical manifest order.
+export function resolveDisplayDomain(categories, categoryCounts) {
+  if (!categories?.length) return { items: [], hasOther: false, otherCount: 0 };
+  if (categories.length <= PALETTE_MAX) {
+    const pal = paletteFor(categories.length);
+    return {
+      items: categories.map((c, i) => ({ key: c, label: c, colour: pal[i % pal.length], members: [c] })),
+      hasOther: false, otherCount: 0,
+    };
+  }
+  const counts = categoryCounts || {};
+  const topSet = new Set(
+    [...categories].sort((a, b) => (counts[b] || 0) - (counts[a] || 0)).slice(0, PALETTE_MAX),
+  );
+  const top  = categories.filter((c) => topSet.has(c));   // keep alphabetical for a stable legend/palette
+  const rest = categories.filter((c) => !topSet.has(c));
+  const items = top.map((c, i) => ({ key: c, label: c, colour: VIVID_10[i], members: [c] }));
+  items.push({ key: OTHER_KEY, label: "Other", colour: UNCATEGORIZED_COLOUR, members: rest });
+  return { items, hasOther: true, otherCount: rest.length };
+}
+
+// Category → colour, from the resolved domain (the map paint). A single-symbol layer (no
+// category field / empty domain) is ONE colour, no match. The "Other" collapse rides the
+// match FALLBACK: only the top items are armed, so a collapsed category falls through to
+// UNCATEGORIZED_COLOUR (= Other grey).
+export function buildColourExpression(categoryField, domain) {
+  if (!categoryField || !domain.items.length) return SINGLE_SYMBOL_COLOUR;
   const arms = [];
-  categories.forEach((c, i) => arms.push(c, pal[i % pal.length]));
+  for (const it of domain.items) {
+    if (it.key === OTHER_KEY) continue;   // Other = the fallback, below
+    arms.push(it.members[0], it.colour);  // a top item has exactly one member (the category)
+  }
   return ["match", ["get", categoryField], ...arms, UNCATEGORIZED_COLOUR];
 }
 
-// The colour a category is drawn in (for the legend swatch) — same assignment as the paint.
-export function categoryColours(categories) {
-  const pal = paletteFor(categories.length);
-  return categories.map((c, i) => ({ category: c, colour: pal[i % pal.length] }));
-}
-
-// Show/hide filter driven by the legend. null = show everything (all categories active, or
-// a single-symbol layer). Otherwise keep only the active categories — removed points leave
-// the render AND the hit-test set (directive §6, never opacity:0).
-export function categoryFilter(categoryField, activeCategories, totalCount) {
+// Show/hide filter driven by the legend. null = show everything (all items active, or a
+// single-symbol layer). Otherwise keep only the active items' MEMBERS (Other's members are
+// the collapsed categories) — removed points leave the render AND the hit-test set
+// (directive §6, never opacity:0).
+export function categoryFilter(categoryField, activeKeys, domain) {
   if (!categoryField) return null;
-  if (!activeCategories || activeCategories.length === totalCount) return null;
-  return ["in", ["get", categoryField], ["literal", activeCategories]];
+  if (activeKeys.size === domain.items.length) return null;
+  const members = [];
+  for (const it of domain.items) if (activeKeys.has(it.key)) members.push(...it.members);
+  return ["in", ["get", categoryField], ["literal", members]];
 }
 
 // ---- Radius / stroke (the IS significant-dot spec, inherited exactly) -------

@@ -13,7 +13,7 @@
 //              (id / *_id / objectid) are NOT shown (debris, DESIGN_SYSTEM §3/§5).
 // =============================================================================
 
-import { titleCase } from "../economy/titleCase.js";
+import { amenityLabel } from "./amenityPointStyle.js";
 
 // The property used as the rail title, in preference order; else the first string value.
 const TITLE_KEYS = [
@@ -29,11 +29,6 @@ function titleField(props) {
   if (byName) return byName;
   const firstStr = Object.keys(props).find((k) => typeof props[k] === "string" && props[k].length);
   return firstStr ?? null;
-}
-
-// Turn a snake_case property key into a readable label ("surface_type" → "Surface Type").
-function labelFor(key) {
-  return titleCase(key.replace(/_/g, " "));
 }
 
 export default function AmenityInfoRail({ selected, pinned = false, onClear, categoryField, categoryLabel }) {
@@ -67,14 +62,14 @@ export default function AmenityInfoRail({ selected, pinned = false, onClear, cat
         )}
       </div>
       {catValue && (
-        <p className="pa-detail-sub">{(categoryLabel || labelFor(categoryField)) + " · " + catValue}</p>
+        <p className="pa-detail-sub">{(categoryLabel || amenityLabel(categoryField)) + " · " + catValue}</p>
       )}
 
       {rows.length > 0 && (
         <div className="pa-detail-condo">
           {rows.map(([k, v]) => (
             <div className="pa-kv" key={k}>
-              <span className="pa-kv-k">{labelFor(k)}</span>
+              <span className="pa-kv-k">{amenityLabel(k)}</span>
               <span className="pa-kv-v" title={String(v)}>{String(v)}</span>
             </div>
           ))}

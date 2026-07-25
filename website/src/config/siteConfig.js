@@ -241,11 +241,22 @@ export const siteConfig = {
     ]},
 
     { label: "Amenities", kind: "group", icon: "map-pin", children: [
-      { label: "Air Quality",           kind: "map", status: "soon", to: "/amenities/air-quality" },
-      { label: "Community Services",    kind: "map", status: "soon", to: "/amenities/community-services" },
-      { label: "Crime",                 kind: "map", status: "soon", to: "/amenities/crime" },
-      { label: "Public School",         kind: "map", status: "soon", to: "/amenities/public-school" },
-      { label: "Public Transportation", kind: "map", status: "soon", to: "/amenities/public-transportation" },
+      // Family-1 point layers (LIVE). Interim per-layer leaves — the thematic consolidation
+      // (Public Transportation / Parks & Recreation multi-layer pages) folds these together
+      // in a later session, and Community Services / Public Transportation return then as the
+      // consolidated theme pages. Order: transport · recreation · civic.
+      { label: "Bus Stops",              kind: "map", status: "live", to: "/amenities/bus-stops" },
+      { label: "LRT Stations and Stops", kind: "map", status: "live", to: "/amenities/lrt-stations" },
+      { label: "Playgrounds",            kind: "map", status: "live", to: "/amenities/playgrounds" },
+      { label: "Spray Parks",            kind: "map", status: "live", to: "/amenities/spray-parks" },
+      { label: "Recreation Facilities",  kind: "map", status: "live", to: "/amenities/recreation-facilities" },
+      { label: "Track Sports Fields",    kind: "map", status: "live", to: "/amenities/track-sports-fields" },
+      { label: "Police Stations",        kind: "map", status: "live", to: "/amenities/police-stations" },
+      { label: "EV Charging Stations",   kind: "map", status: "live", to: "/amenities/ev-charging" },
+      // Future (no built data yet). Public School = catchment polygons (Family 3, later).
+      { label: "Air Quality",            kind: "map", status: "soon", to: "/amenities/air-quality" },
+      { label: "Crime",                  kind: "map", status: "soon", to: "/amenities/crime" },
+      { label: "Public School",          kind: "map", status: "soon", to: "/amenities/public-school" },
     ]},
 
     { label: "Economy", kind: "group", icon: "briefcase", children: [

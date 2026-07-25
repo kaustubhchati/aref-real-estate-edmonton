@@ -32,11 +32,10 @@ import AmenityInfoRail from "./AmenityInfoRail.jsx";
 import AmenityLegend from "./AmenityLegend.jsx";
 import {
   BASEMAP_STYLE, MAP_VIEW, SOURCE_ID, DOT_LAYER_ID, SELECT_LAYER_ID,
-  buildColourExpression, categoryColours, categoryFilter, dotLayer, selectLayer,
+  buildColourExpression, resolveDisplayDomain, categoryFilter, dotLayer, selectLayer, amenityLabel,
 } from "./amenityPointStyle.js";
 
 const MANIFEST_URL = assetUrl("/data/amenities/manifest.json");
-const labelFor = (k) => k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default function AmenityPointMap({ layerId }) {
   const [entry, setEntry] = useState(null);       // this layer's manifest record
@@ -57,21 +56,28 @@ export default function AmenityPointMap({ layerId }) {
         const rec = m.layers?.find((L) => L.id === layerId);
         if (!rec) throw new Error(`Layer "${layerId}" not in the amenities manifest.`);
         setEntry(rec);
-        setActive(new Set(rec.categories || []));   // all categories shown initially
+        // All display items shown initially. Set here (a fetch callback, once per mount —
+        // each layer is its own route), not in an effect (set-state-in-effect is disallowed).
+        const dom = resolveDisplayDomain(rec.categories || [], rec.categoryCounts);
+        setActive(new Set(dom.items.map((it) => it.key)));
       })
       .catch((err) => { if (!cancelled) setFetchError(err.message); });
     return () => { cancelled = true; };
   }, [layerId]);
 
   const categoryField = entry?.categoryField || "";
-  const categories = entry?.categories || [];
-  const legendItems = useMemo(() => categoryColours(categories), [entry]); // eslint-disable-line react-hooks/exhaustive-deps
+  const categories = useMemo(() => entry?.categories || [], [entry]);
+  // Resolve to display items: ≤10 → one per category; >10 → top-10 by count + Other (§7.1).
+  const domain = useMemo(
+    () => resolveDisplayDomain(categories, entry?.categoryCounts),
+    [entry],  // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   const geojsonUrl = entry ? assetUrl(`/data/amenities/${entry.file}`) : null;
-  // The dot + ring, coloured from the manifest's category domain. Built once the entry
-  // exists, so MapView adds them already-coloured (no post-hoc setPaintProperty).
+  // The dot + ring, coloured from the resolved domain. Built once the entry exists, so
+  // MapView adds them already-coloured (no post-hoc setPaintProperty).
   const layers = useMemo(
-    () => (entry ? [selectLayer(), dotLayer(buildColourExpression(categoryField, categories))] : null),
+    () => (entry ? [selectLayer(), dotLayer(buildColourExpression(categoryField, domain))] : null),
     [entry],  // eslint-disable-line react-hooks/exhaustive-deps
   );
 
@@ -152,18 +158,21 @@ export default function AmenityPointMap({ layerId }) {
   useEffect(() => {
     if (!map || !active || !map.getLayer(DOT_LAYER_ID)) return;
     try {
-      map.setFilter(DOT_LAYER_ID, categoryFilter(categoryField, [...active], categories.length));
+      map.setFilter(DOT_LAYER_ID, categoryFilter(categoryField, active, domain));
     } catch { /* map tearing down */ }
-  }, [map, active, categoryField, categories.length, layers]);
+  }, [map, active, categoryField, domain, layers]);
 
-  function toggleCategory(cat) {
+  function toggleCategory(key) {
     setActive((cur) => {
       const next = new Set(cur);
-      if (next.has(cat)) next.delete(cat); else next.add(cat);
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
-    // A pin whose category is being hidden points at nothing — clear it (BC's rule).
-    if (active?.has(cat) && selected?.props?.[categoryField] === cat) setSelected(null);
+    // A pin whose category falls in the item being hidden points at nothing — clear it.
+    if (active?.has(key) && selected) {
+      const item = domain.items.find((it) => it.key === key);
+      if (item && item.members.includes(selected.props?.[categoryField])) setSelected(null);
+    }
   }
 
   // ── Currency + coverage (from the manifest — no date literal, §8) ────────────
@@ -213,7 +222,7 @@ export default function AmenityPointMap({ layerId }) {
             pinned={hovered == null && selected != null}
             onClear={() => setSelected(null)}
             categoryField={categoryField}
-            categoryLabel={categoryField ? labelFor(categoryField) : null}
+            categoryLabel={categoryField ? amenityLabel(categoryField) : null}
           />
         )}
 
@@ -223,11 +232,12 @@ export default function AmenityPointMap({ layerId }) {
               <IdentityCard title={entry.label} />
             </section>
 
-            {categoryField && active && (
+            {categoryField && active && domain.items.length > 0 && (
               <section className="pa-card pa-card-instrument">
                 <AmenityLegend
-                  title={labelFor(categoryField)}
-                  items={legendItems}
+                  title={amenityLabel(categoryField)}
+                  note={domain.hasOther ? `Top 10 of ${categories.length} by count` : null}
+                  items={domain.items}
                   active={active}
                   onToggle={toggleCategory}
                 />

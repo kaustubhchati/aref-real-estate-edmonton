@@ -14,20 +14,21 @@
 // the legend can never drift from the map.
 // =============================================================================
 
-export default function AmenityLegend({ title, items, active, onToggle }) {
+export default function AmenityLegend({ title, note, items, active, onToggle }) {
   return (
     <div className="pa-col-mod pa-col-legend">
       <div className="pa-col-lab">{title}</div>
+      {note && <div className="pa-detail-hint" style={{ margin: "0 0 4px" }}>{note}</div>}
       <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-        {items.map(({ category, colour }) => {
-          const on = active.has(category);
+        {items.map(({ key, label, colour }) => {
+          const on = active.has(key);
           return (
-            <li key={category}>
+            <li key={key}>
               <button
                 type="button"
-                onClick={() => onToggle(category)}
+                onClick={() => onToggle(key)}
                 aria-pressed={on}
-                title={on ? `Hide ${category}` : `Show ${category}`}
+                title={on ? `Hide ${label}` : `Show ${label}`}
                 style={{
                   display: "flex", alignItems: "center", gap: 8, width: "100%",
                   background: "none", border: "none", padding: "3px 2px",
@@ -45,7 +46,7 @@ export default function AmenityLegend({ title, items, active, onToggle }) {
                     boxShadow: "0 0 0 1px #141018",
                   }}
                 />
-                <span style={{ fontSize: "var(--t-xs)", lineHeight: 1.25 }}>{category}</span>
+                <span style={{ fontSize: "var(--t-xs)", lineHeight: 1.25 }}>{label}</span>
               </button>
             </li>
           );
