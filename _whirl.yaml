@@ -211,14 +211,17 @@ sections:
     # no aggregate step; 03 mirrors the building-permits "03 = manifest" convention.)
     scripts:
       - scripts/production/01_build_amenity_layers.R
+      - scripts/production/02_build_lrt_lines.R
       - scripts/production/03_emit_manifest.R
 
-    # Representative non-empty guards: a dense point layer + the line layer for 01,
-    # the manifest for 03. The handoff zero-byte check backstops every file.
+    # Representative non-empty guards: a dense point layer + the line layer for 01, the LRT
+    # route lines for 02, the manifest for 03. The handoff zero-byte check backstops every file.
     expected_outputs:
       scripts/production/01_build_amenity_layers.R:
         - output/playgrounds.geojson
         - output/bike_routes.geojson
+      scripts/production/02_build_lrt_lines.R:
+        - output/lrt_lines.geojson
       scripts/production/03_emit_manifest.R:
         - output/manifest.json
 

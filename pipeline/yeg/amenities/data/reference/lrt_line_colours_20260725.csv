@@ -1,0 +1,4 @@
+route_id,line,colour,date_curated,curated_by,source
+021R,Capital Line,#005eb8,2026-07-25,CC,ETS system map (APPROXIMATE hex — verify against the official map)
+022R,Metro Line,#ffc425,2026-07-25,CC,ETS system map (APPROXIMATE hex — verify against the official map)
+023R,Valley Line,#6cc24a,2026-07-25,CC,ETS system map (APPROXIMATE hex — verify against the official map)
