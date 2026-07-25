@@ -176,8 +176,14 @@ export default function AmenityPointMap({ layerId }) {
   }
 
   // ── Currency + coverage (from the manifest — no date literal, §8) ────────────
+  // Currency: distinguish WHOSE date it is (B2/D10e honesty). sourceUpdatedAt is the City's
+  // own rowsUpdatedAt -> "Updated"; if that read ever fails (null), fall back to OUR snapshot
+  // date but label it "Fetched" so the line never claims the City updated on our fetch date.
+  const count = entry ? entry.featureCount.toLocaleString() : "";
   const currency = entry
-    ? `Updated ${entry.sourceUpdatedAt || entry.fetchedAt} · ${entry.featureCount.toLocaleString()} locations`
+    ? (entry.sourceUpdatedAt
+        ? `Updated ${entry.sourceUpdatedAt} · ${count} locations`
+        : `Fetched ${entry.fetchedAt} · ${count} locations`)
     : "";
   const gap = entry?.coverage?.withoutGeometry || 0;
   const coverage = gap > 0
