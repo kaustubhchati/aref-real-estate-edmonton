@@ -1,0 +1,198 @@
+{
+  "section": "amenities",
+  "generatedAt": "2026-07-25",
+  "layers": [
+    {
+      "id": "bus_stops",
+      "file": "bus_stops.geojson",
+      "label": "Bus Stops",
+      "geometry": "point",
+      "sourceDatasetId": "4vt2-8zrq",
+      "sourceUpdatedAt": "2026-04-20",
+      "fetchedAt": "2026-07-25",
+      "featureCount": 6882,
+      "categoryField": "",
+      "categories": [],
+      "coverage": {
+        "withGeometry": 6882,
+        "withoutGeometry": 0
+      }
+    },
+    {
+      "id": "lrt_stops",
+      "file": "lrt_stops.geojson",
+      "label": "LRT Stations and Stops",
+      "geometry": "point",
+      "sourceDatasetId": "fhxi-cnhe",
+      "sourceUpdatedAt": "2026-06-28",
+      "fetchedAt": "2026-07-25",
+      "featureCount": 54,
+      "categoryField": "",
+      "categories": [],
+      "coverage": {
+        "withGeometry": 54,
+        "withoutGeometry": 0
+      }
+    },
+    {
+      "id": "police_stations",
+      "file": "police_stations.geojson",
+      "label": "Police Stations",
+      "geometry": "point",
+      "sourceDatasetId": "e7aq-scxv",
+      "sourceUpdatedAt": "2024-06-28",
+      "fetchedAt": "2026-07-25",
+      "featureCount": 10,
+      "categoryField": "",
+      "categories": [],
+      "coverage": {
+        "withGeometry": 10,
+        "withoutGeometry": 0
+      }
+    },
+    {
+      "id": "playgrounds",
+      "file": "playgrounds.geojson",
+      "label": "Playgrounds",
+      "geometry": "point",
+      "sourceDatasetId": "9nqb-w48x",
+      "sourceUpdatedAt": "2026-07-20",
+      "fetchedAt": "2026-07-25",
+      "featureCount": 659,
+      "categoryField": "user_category",
+      "categories": ["All Ages", "Inclusive", "Junior (18 months to 5 years)", "Junior/Senior (18 months to 12 years)", "Senior (6 to 12 years)", "Unknown"],
+      "coverage": {
+        "withGeometry": 659,
+        "withoutGeometry": 0
+      }
+    },
+    {
+      "id": "ev_charging",
+      "file": "ev_charging.geojson",
+      "label": "EV Charging Stations",
+      "geometry": "point",
+      "sourceDatasetId": "xzhy-xe8z",
+      "sourceUpdatedAt": "2026-03-04",
+      "fetchedAt": "2026-07-25",
+      "featureCount": 173,
+      "categoryField": "ev_network",
+      "categories": ["ChargePoint Network", "Electrify Canada", "EV Connect", "FLO", "LOOP", "Non-Networked", "SHELL_RECHARGE", "SWTCH", "Tesla", "Tesla Destination"],
+      "coverage": {
+        "withGeometry": 173,
+        "withoutGeometry": 0
+      }
+    },
+    {
+      "id": "recreation_facilities",
+      "file": "recreation_facilities.geojson",
+      "label": "Recreation Facilities",
+      "geometry": "point",
+      "sourceDatasetId": "nz3t-vyg3",
+      "sourceUpdatedAt": "2026-07-25",
+      "fetchedAt": "2026-07-25",
+      "featureCount": 109,
+      "categoryField": "facility_type",
+      "categories": ["Arena", "Arts Booking Facility", "Arts Program Facility", "City Park", "Golf Course", "Outdoor Pool", "Recreation Centre", "River Valley Park", "Snowshoeing", "Staffed Sports Field", "Tennis Court"],
+      "coverage": {
+        "withGeometry": 109,
+        "withoutGeometry": 0
+      }
+    },
+    {
+      "id": "spray_parks",
+      "file": "spray_parks.geojson",
+      "label": "Spray Parks",
+      "geometry": "point",
+      "sourceDatasetId": "jyra-si4k",
+      "sourceUpdatedAt": "2026-07-20",
+      "fetchedAt": "2026-07-25",
+      "featureCount": 77,
+      "categoryField": "type",
+      "categories": ["Spray Deck", "Spray Park"],
+      "coverage": {
+        "withGeometry": 77,
+        "withoutGeometry": 0
+      }
+    },
+    {
+      "id": "track_sports_fields",
+      "file": "track_sports_fields.geojson",
+      "label": "Track Sports Fields",
+      "geometry": "point",
+      "sourceDatasetId": "ykrg-bwt7",
+      "sourceUpdatedAt": "2025-03-28",
+      "fetchedAt": "2026-07-25",
+      "featureCount": 14,
+      "categoryField": "surface",
+      "categories": [],
+      "coverage": {
+        "withGeometry": 14,
+        "withoutGeometry": 0
+      }
+    },
+    {
+      "id": "parks",
+      "file": "parks.geojson",
+      "label": "Parks",
+      "geometry": "multipolygon",
+      "sourceDatasetId": "gdd9-eqv9",
+      "sourceUpdatedAt": "2026-07-20",
+      "fetchedAt": "2026-07-25",
+      "featureCount": 1195,
+      "categoryField": "class",
+      "categories": ["City Park", "District Activity Park", "Greenway", "Natural Area Park", "Other Land Type", "Pocket Park", "PUL", "School and Community Park", "Unknown", "Urban Village Park"],
+      "coverage": {
+        "withGeometry": 1195,
+        "withoutGeometry": 0
+      }
+    },
+    {
+      "id": "vegetation",
+      "file": "vegetation.geojson",
+      "label": "Vegetation Areas",
+      "geometry": "multipolygon",
+      "sourceDatasetId": "ct88-r8tk",
+      "sourceUpdatedAt": "2026-07-20",
+      "fetchedAt": "2026-07-25",
+      "featureCount": 3145,
+      "categoryField": "vegetation_type",
+      "categories": ["Bioswale", "Grass with Trees or Shrubs", "Riparian", "Tree Stand", "Unknown", "Unmowed Grass", "Wildflower Meadow"],
+      "coverage": {
+        "withGeometry": 3145,
+        "withoutGeometry": 0
+      }
+    },
+    {
+      "id": "schools",
+      "file": "schools.geojson",
+      "label": "School Catchment Areas",
+      "geometry": "multipolygon",
+      "sourceDatasetId": "gc4g-ct3z",
+      "sourceUpdatedAt": "2025-02-13",
+      "fetchedAt": "2026-07-25",
+      "featureCount": 222,
+      "categoryField": "sch_type",
+      "categories": ["EJ", "EJS", "EL", "JR", "SR"],
+      "coverage": {
+        "withGeometry": 222,
+        "withoutGeometry": 37
+      }
+    },
+    {
+      "id": "bike_routes",
+      "file": "bike_routes.geojson",
+      "label": "Bike Routes",
+      "geometry": "multiline",
+      "sourceDatasetId": "vd4b-a4iv",
+      "sourceUpdatedAt": "2026-07-20",
+      "fetchedAt": "2026-07-25",
+      "featureCount": 10417,
+      "categoryField": "classification",
+      "categories": ["Bus / Bike / Taxi Lane", "Contra-Flow Bike Lane", "Local Street Bikeway", "Maintenance Access", "Painted Bike Lane", "Protected Bike Lane", "Shared Pathway", "Shared Roadway - Higher Traffic", "Shared Roadway - Lower Traffic", "Shared Trail", "Unclassified", "Walkway / Breezeway"],
+      "coverage": {
+        "withGeometry": 10417,
+        "withoutGeometry": 0
+      }
+    }
+  ]
+}

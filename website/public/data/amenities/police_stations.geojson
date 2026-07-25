@@ -1,0 +1,17 @@
+{
+"type": "FeatureCollection",
+"name": "police_stations",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "name": "POLICE SERVICES - NORTHEAST DIVISION", "address": "14203 - 50 STREET NW" }, "geometry": { "type": "Point", "coordinates": [ -113.417301, 53.60504 ] } },
+{ "type": "Feature", "properties": { "name": "ROYAL CANADIAN MOUNTED POLICE", "address": "11136 - 109 STREET NW" }, "geometry": { "type": "Point", "coordinates": [ -113.509119, 53.559845 ] } },
+{ "type": "Feature", "properties": { "name": "POLICE SERVICES - WEST DIVISION", "address": "16505 - 100 AVENUE NW" }, "geometry": { "type": "Point", "coordinates": [ -113.606742, 53.538808 ] } },
+{ "type": "Feature", "properties": { "name": "RCMP K DIVISION", "address": "11136 - 109 STREET NW" }, "geometry": { "type": "Point", "coordinates": [ -113.509119, 53.559845 ] } },
+{ "type": "Feature", "properties": { "name": "POLICE SERVICES - SOUTHEAST DIVISION", "address": "104 - YOUVILLE DRIVE EAST NW" }, "geometry": { "type": "Point", "coordinates": [ -113.426714, 53.460001 ] } },
+{ "type": "Feature", "properties": { "name": "POLICE SERVICES - CALDER COMMUNITY STATION", "address": "12520 - 132 AVENUE NW" }, "geometry": { "type": "Point", "coordinates": [ -113.538658, 53.593139 ] } },
+{ "type": "Feature", "properties": { "name": "POLICE SERVICES - SOUTHWEST DIVISION", "address": "1351 - WINDERMERE WAY SW" }, "geometry": { "type": "Point", "coordinates": [ -113.616228, 53.434012 ] } },
+{ "type": "Feature", "properties": { "name": "ROYAL CANADIAN MOUNTED POLICE", "address": "11140 - 109 STREET NW" }, "geometry": { "type": "Point", "coordinates": [ -113.510101, 53.560798 ] } },
+{ "type": "Feature", "properties": { "name": "POLICE SERVICES - DOWNTOWN DIVISION", "address": "9620 - 103A AVENUE NW" }, "geometry": { "type": "Point", "coordinates": [ -113.484817, 53.547706 ] } },
+{ "type": "Feature", "properties": { "name": "RCMP K DIVISION", "address": "11140 - 109 STREET NW" }, "geometry": { "type": "Point", "coordinates": [ -113.510101, 53.560798 ] } }
+]
+}
