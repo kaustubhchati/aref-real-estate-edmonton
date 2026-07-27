@@ -139,14 +139,22 @@ const HOVER_BUMP = 3;    // A2 HOVER state: the pointed-at dot grows (feature-st
 // hover bump is FOLDED into each interpolate OUTPUT STOP (ramp-preserving), not added around it.
 const hb = (r) => ["+", r, ["case", ["boolean", ["feature-state", "hover"], false], HOVER_BUMP, 0]];
 const RADIUS_HOVER = ["interpolate", ["linear"], ["zoom"], 10, hb(6), 13, hb(9), 17, hb(14)];
+// PROMINENT disc (KC 2026-07-27) — a SPARSE layer (Recreation Facilities, 109 pts) shows its glyph
+// from the HOME overview (z10.3), where the standard 6px disc is far too small to hold an icon. So
+// its disc is roughly doubled at every zoom (still hover-bumped) to carry the glyph there. Opt in
+// with `prominent: true` in the glyph config; every other layer keeps RADIUS_HOVER.
+export const RADIUS_HOVER_PROMINENT = ["interpolate", ["linear"], ["zoom"], 10, hb(11), 13, hb(13), 17, hb(16)];
 
 // The selection RING (A2 SELECT state) — a violet ring BENEATH the symbol. Its radius is the
 // zoom-interpolate below; on selection the page animates it outward ONCE (ring-radius helper),
 // then restores this expression so it tracks zoom.
-const RING_STOPS = [10, 9, 13, 12, 17, 17];   // RADIUS + ~3
+export const RING_STOPS = [10, 9, 13, 12, 17, 17];   // RADIUS + ~3
 export const RING = ["interpolate", ["linear"], ["zoom"], ...RING_STOPS];
-export function ringRadiusAt(zoom) {
-  const s = RING_STOPS;
+// A prominent disc needs a prominent ring, or the pin ring would sit INSIDE the bigger disc.
+export const RING_STOPS_PROMINENT = [10, 14, 13, 16, 17, 19];   // PROMINENT RADIUS + ~3
+export const RING_PROMINENT = ["interpolate", ["linear"], ["zoom"], ...RING_STOPS_PROMINENT];
+export function ringRadiusAt(zoom, stops = RING_STOPS) {
+  const s = stops;
   if (zoom <= s[0]) return s[1];
   for (let i = 2; i < s.length; i += 2) {
     if (zoom <= s[i]) return s[i - 1] + ((zoom - s[i - 2]) / (s[i] - s[i - 2])) * (s[i + 1] - s[i - 1]);
@@ -162,14 +170,19 @@ export function ringRadiusAt(zoom) {
 // discs (§3, the single most likely defect). The layer is added by the page AFTER the icons load.
 export const GLYPH_LAYER_ID = "amenity-glyphs";
 export const GLYPH_MINZOOM  = 11;   // mid — with the disc; below this the disc alone reads (§4)
-export function glyphLayer(iconImageExpression) {
+// cream PNG scaled to sit inside the disc (pixelRatio 4 → 16px natural, see amenityGlyphs.js)
+const GLYPH_SIZE = ["interpolate", ["linear"], ["zoom"], 11, 0.45, 13, 0.62, 17, 0.9];
+// PROMINENT glyph — appears from the HOME overview (below z10.3) and larger, so a prominent-disc
+// layer (Recreation Facilities) carries its glyph there (KC 2026-07-27).
+export const GLYPH_MINZOOM_PROMINENT = 9.5;
+export const GLYPH_SIZE_PROMINENT = ["interpolate", ["linear"], ["zoom"], 9.5, 0.8, 13, 0.85, 17, 0.95];
+export function glyphLayer(iconImageExpression, minzoom = GLYPH_MINZOOM, iconSize = GLYPH_SIZE) {
   return {
-    id: GLYPH_LAYER_ID, type: "symbol", source: SOURCE_ID, minzoom: GLYPH_MINZOOM,
+    id: GLYPH_LAYER_ID, type: "symbol", source: SOURCE_ID, minzoom,
     layout: {
       "icon-image": iconImageExpression,
       "icon-allow-overlap": true, "icon-ignore-placement": true,
-      // cream PNG scaled to sit inside the disc (pixelRatio 4 → 16px natural, see amenityGlyphs.js)
-      "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.45, 13, 0.62, 17, 0.9],
+      "icon-size": iconSize,
     },
   };
 }
@@ -195,13 +208,13 @@ export function labelLayer(nameField) {
 
 // The dot: vivid fill + DARK casing stroke + HOVER grow. Returned WITHOUT `source` (MapView fills
 // it in); the page lifts it to the top of the stack in onLoad.
-export function dotLayer(colourExpression) {
+export function dotLayer(colourExpression, radius = RADIUS_HOVER) {
   return {
     id: DOT_LAYER_ID,
     type: "circle",
     paint: {
       "circle-color": colourExpression,
-      "circle-radius": RADIUS_HOVER,          // A2: zoom-interpolate + hover bump
+      "circle-radius": radius,                // A2: zoom-interpolate + hover bump (prominent for RecFac)
       "circle-opacity": OPACITY,
       "circle-stroke-color": POINT_CASING,   // the accessibility casing (§4)
       "circle-stroke-width": STROKE_W,
@@ -215,14 +228,14 @@ export function dotLayer(colourExpression) {
 // The selection ring — a violet ring OUTSIDE the dot marking the pinned point. Keyed on the
 // MapLibre feature id (the source is added with generateId, since amenity layers carry no
 // uniform id property); base filter matches nothing until the page sets the pinned id.
-export function selectLayer() {
+export function selectLayer(ring = RING) {
   return {
     id: SELECT_LAYER_ID,
     type: "circle",
     source: SOURCE_ID,
     filter: ["==", ["id"], -1],
     paint: {
-      "circle-radius": RING,
+      "circle-radius": ring,
       "circle-color": SELECT_COLOUR,
       "circle-opacity": 0,                    // ring only, no fill
       "circle-stroke-color": SELECT_COLOUR,

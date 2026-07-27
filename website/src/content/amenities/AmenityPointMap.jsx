@@ -38,7 +38,8 @@ import AmenityLegend from "./AmenityLegend.jsx";
 import {
   BASEMAP_STYLE, MAP_VIEW, SOURCE_ID, DOT_LAYER_ID, SELECT_LAYER_ID,
   buildColourExpression, resolveDisplayDomain, categoryFilter, dotLayer, selectLayer, amenityLabel,
-  RING, ringRadiusAt, labelLayer, LABEL_LAYER_ID, glyphLayer, GLYPH_LAYER_ID,
+  RING, RING_STOPS, ringRadiusAt, labelLayer, LABEL_LAYER_ID, glyphLayer, GLYPH_LAYER_ID,
+  RADIUS_HOVER_PROMINENT, RING_PROMINENT, RING_STOPS_PROMINENT, GLYPH_MINZOOM_PROMINENT, GLYPH_SIZE_PROMINENT,
 } from "./amenityPointStyle.js";
 import { GLYPH_CONFIG, loadAmenityIcons, iconImageExpression } from "./amenityGlyphs.js";
 
@@ -74,9 +75,14 @@ export default function AmenityPointMap({ layerId, title, selectorNode }) {
   }, [layerId]);
 
   const categoryField = entry?.categoryField || "";
-  // This layer's glyph + identity config (§8), or null. channel "glyph" ⇒ disc is ONE identity hue
-  // and the GLYPH carries the category (Recreation Facilities); else the disc carries it (unchanged).
+  // This layer's glyph + identity config (§1), or null. channel "both" ⇒ colour AND glyph carry the
+  // category (Recreation Facilities); "colour" ⇒ colour carries it + a layer glyph; "none" ⇒ one
+  // identity-hue disc + a layer glyph. `prominent` ⇒ a bigger disc that shows its glyph from the
+  // home overview (a sparse layer); it scales the ring to match so the pin ring stays outside.
   const glyphCfg = GLYPH_CONFIG[layerId] || null;
+  const prominent = !!glyphCfg?.prominent;
+  const ringExpr  = prominent ? RING_PROMINENT : RING;
+  const ringStops = prominent ? RING_STOPS_PROMINENT : RING_STOPS;
   const categories = useMemo(() => entry?.categories || [], [entry]);
   // Resolve to display items: ≤10 → one per category; >10 → top-10 by count + Other (§7.1).
   const domain = useMemo(
@@ -103,7 +109,7 @@ export default function AmenityPointMap({ layerId, title, selectorNode }) {
     const discColour = glyphCfg?.channel === "none"
       ? glyphCfg.identityHue
       : buildColourExpression(categoryField, domainColoured);
-    const base = [selectLayer(), dotLayer(discColour)];
+    const base = [selectLayer(ringExpr), dotLayer(discColour, prominent ? RADIUS_HOVER_PROMINENT : undefined)];
     if (entry.family === "S") base.push(labelLayer("name"));   // A6: sparse layers get name labels
     return base;
   }, [entry]);  // eslint-disable-line react-hooks/exhaustive-deps
@@ -126,7 +132,9 @@ export default function AmenityPointMap({ layerId, title, selectorNode }) {
     if (glyphCfg) {
       loadAmenityIcons(m).then(() => {
         if (m.getSource(SOURCE_ID) && !m.getLayer(GLYPH_LAYER_ID)) {
-          m.addLayer(glyphLayer(iconImageExpression(glyphCfg)));
+          m.addLayer(prominent
+            ? glyphLayer(iconImageExpression(glyphCfg), GLYPH_MINZOOM_PROMINENT, GLYPH_SIZE_PROMINENT)
+            : glyphLayer(iconImageExpression(glyphCfg)));
           setGlyphReady(true);   // let the category-filter effect apply to the now-present glyph layer
         }
       }).catch(() => { /* icons failed to load → disc alone, never throw */ });
@@ -205,8 +213,8 @@ export default function AmenityPointMap({ layerId, title, selectorNode }) {
   useEffect(() => {
     if (!map || !map.getLayer(SELECT_LAYER_ID) || selected?.id == null) return undefined;
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-    if (reduce) { try { map.setPaintProperty(SELECT_LAYER_ID, "circle-radius", RING); } catch { /* */ } return undefined; }
-    const end = ringRadiusAt(map.getZoom());
+    if (reduce) { try { map.setPaintProperty(SELECT_LAYER_ID, "circle-radius", ringExpr); } catch { /* */ } return undefined; }
+    const end = ringRadiusAt(map.getZoom(), ringStops);
     const start = end * 0.4;
     let raf, t0 = null;
     const step = (ts) => {
@@ -215,11 +223,11 @@ export default function AmenityPointMap({ layerId, title, selectorNode }) {
       const e = 1 - (1 - p) ** 3;   // ease-out cubic
       try { map.setPaintProperty(SELECT_LAYER_ID, "circle-radius", start + (end - start) * e); } catch { /* */ }
       if (p < 1) raf = requestAnimationFrame(step);
-      else { try { map.setPaintProperty(SELECT_LAYER_ID, "circle-radius", RING); } catch { /* */ } }
+      else { try { map.setPaintProperty(SELECT_LAYER_ID, "circle-radius", ringExpr); } catch { /* */ } }
     };
     raf = requestAnimationFrame(step);
     return () => { if (raf) cancelAnimationFrame(raf); };
-  }, [map, selected, layers]);
+  }, [map, selected, layers, ringExpr, ringStops]);
 
   // Category show/hide: the legend selection filters the dot layer (removes hidden points
   // from render AND hit-test — never opacity:0, directive §6). The GLYPH layer (when present)

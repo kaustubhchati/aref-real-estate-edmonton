@@ -61,6 +61,7 @@ export const GLYPH_CONFIG = {
     // lightness variants of those. Verify ON SCREEN, not in the registry (§3 caution).
     identityHue: QUALITATIVE_12[8],   // purple — Built & indoor is the dominant family (Arena+RecCentre = 43 of 109)
     channel: "both",
+    prominent: true,                  // larger disc + glyph from the home overview (sparse, 109 pts — KC 2026-07-27)
     field: "facility_type",
     colourByCategory: {
       // GREEN space — deep → light green
