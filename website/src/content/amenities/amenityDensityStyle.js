@@ -30,7 +30,16 @@ export const D_SELECT_ID        = "amenity-density-select";
 // three stages hand off cleanly: heatmap (≤~11) → clusters (~11–13) → stops (>13).
 export const D_CLUSTER_MAXZOOM = 13;
 export const D_CLUSTER_RADIUS  = 46;
-export const D_SOURCE_OPTIONS  = { cluster: true, clusterMaxZoom: D_CLUSTER_MAXZOOM, clusterRadius: D_CLUSTER_RADIUS };
+// CLUSTER FLOOR (directive §6): a disc labelled "2" is not a cluster — two individual stops carry
+// more information. clusterMinPoints=5 makes Supercluster keep groups of <5 as INDIVIDUAL points
+// (2–4-stop clusters never form). This ONLY works because the stop layer below now fades in with
+// the clusters (~z11.3), not at z12.5 — otherwise those small groups would be invisible in the
+// z11.3–12.5 band (worse than a "2" disc). The two changes are one fix; keep them in sync.
+export const D_CLUSTER_MIN_POINTS = 7;
+export const D_SOURCE_OPTIONS  = {
+  cluster: true, clusterMaxZoom: D_CLUSTER_MAXZOOM, clusterRadius: D_CLUSTER_RADIUS,
+  clusterMinPoints: D_CLUSTER_MIN_POINTS,
+};
 
 // A cream count label needs a fontstack the basemap actually serves (same stack the BC overlay
 // uses, proven against this style).
@@ -104,18 +113,20 @@ export function densitySelectLayer() {
   };
 }
 
-// STREET — the individual stops: the shared single-symbol disc + casing (smaller than the
-// sparse-layer dots, because bus stops are dense even at street level).
+// The individual stops (unclustered features). Two populations now render here: at STREET zoom,
+// every stop; at MID zoom, the small groups the cluster floor (clusterMinPoints) left unclustered.
+// So the fade-in was pulled from z12.5 back to ~z11.3 to meet the clusters — a sparse fringe shows
+// 2–4 real stops instead of a "2" disc or a gap (small at mid zoom, growing to the street radius).
 export function densityPointLayer() {
   return {
     id: D_POINT_ID, type: "circle", source: D_SOURCE_ID, filter: ["!", ["has", "point_count"]],
     paint: {
       "circle-color": SINGLE_SYMBOL_COLOUR,
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 12.5, 3, 15, 5, 17, 7],
-      "circle-opacity": ["interpolate", ["linear"], ["zoom"], 12.5, 0, 13.2, 0.92],
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 2.5, 12.5, 3, 15, 5, 17, 7],
+      "circle-opacity": ["interpolate", ["linear"], ["zoom"], 11, 0, 11.4, 0.92],
       "circle-stroke-color": POINT_CASING,
-      "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 13, 1.2, 17, 2],
-      "circle-stroke-opacity": ["interpolate", ["linear"], ["zoom"], 12.5, 0, 13.2, 1],
+      "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 11, 0.8, 13, 1.2, 17, 2],
+      "circle-stroke-opacity": ["interpolate", ["linear"], ["zoom"], 11, 0, 11.4, 1],
     },
   };
 }
