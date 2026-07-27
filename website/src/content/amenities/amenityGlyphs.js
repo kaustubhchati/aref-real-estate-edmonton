@@ -96,8 +96,10 @@ export const GLYPH_CONFIG = {
     },
   },
   // ── Standalone (one-layer selectors have nothing to select — §2) ────────────
-  police_stations:       { identityHue: QUALITATIVE_12[9],  channel: "none",   layerGlyph: "police" },        // magenta — distinct + vivid; the shield glyph carries the meaning
-  ev_charging:           { identityHue: QUALITATIVE_12[4],  channel: "colour", layerGlyph: "charging-station" }, // emerald — convention green, clear of the muted park fill (§5); disc per-level
+  // Both prominent (KC 2026-07-27, like RecFac): sparse layers (10 / 173 pts) whose bigger disc shows
+  // the glyph from the home overview.
+  police_stations:       { identityHue: QUALITATIVE_12[9],  channel: "none",   layerGlyph: "police",           prominent: true }, // magenta — distinct + vivid; the shield glyph carries the meaning
+  ev_charging:           { identityHue: QUALITATIVE_12[4],  channel: "colour", layerGlyph: "charging-station", prominent: true }, // emerald — convention green, clear of the muted park fill (§5); disc per-level
 };
 
 // Register every amenity icon on the map (idempotent). Resolves once all are loaded, so the caller
