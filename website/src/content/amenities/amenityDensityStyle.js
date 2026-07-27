@@ -25,6 +25,7 @@ export const D_CLUSTER_ID       = "amenity-cluster";
 export const D_CLUSTER_COUNT_ID = "amenity-cluster-count";
 export const D_POINT_ID         = "amenity-density-point";
 export const D_SELECT_ID        = "amenity-density-select";
+export const D_GLYPH_ID         = "amenity-density-glyph";
 
 // The source clusters BELOW this zoom; at/above it the individual stops render. Chosen so the
 // three stages hand off cleanly: heatmap (≤~11) → clusters (~11–13) → stops (>13).
@@ -127,6 +128,20 @@ export function densityPointLayer() {
       "circle-stroke-color": POINT_CASING,
       "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 11, 0.8, 13, 1.2, 17, 2],
       "circle-stroke-opacity": ["interpolate", ["linear"], ["zoom"], 11, 0, 11.4, 1],
+    },
+  };
+}
+
+// The cream bus glyph on the individual STOP (never on a cluster disc — that carries a count). STREET
+// zoom only (§4): where stops are big enough and few enough in view to hold a glyph; at mid zoom the
+// cluster discs + count carry the read. Non-SDF PNG, allow-overlap so a stop never draws bare.
+export function densityGlyphLayer() {
+  return {
+    id: D_GLYPH_ID, type: "symbol", source: D_SOURCE_ID, filter: ["!", ["has", "point_count"]], minzoom: 14,
+    layout: {
+      "icon-image": "bus",
+      "icon-allow-overlap": true, "icon-ignore-placement": true,
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 14, 0.32, 17, 0.55],
     },
   };
 }

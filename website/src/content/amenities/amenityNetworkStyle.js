@@ -14,6 +14,7 @@
 // =============================================================================
 
 import { POINT_CASING } from "./amenityPointStyle.js";
+import { GLYPH_CONFIG } from "./amenityGlyphs.js";
 
 export const N_LINES_SRC       = "lrt-lines";
 export const N_LINE_CASING_ID  = "lrt-line-casing";
@@ -21,7 +22,13 @@ export const N_LINE_ID         = "lrt-line";
 export const N_STATIONS_SRC    = "lrt-stations";
 export const N_NODE_ID         = "lrt-node";
 export const N_INTERCHANGE_ID  = "lrt-interchange";
+export const N_GLYPH_ID        = "lrt-node-glyph";
 export const N_SELECT_ID       = "lrt-select";
+
+// The station node fill = LRT's identity hue (petrol). Was a neutral white disc; a cream rail-light
+// glyph needs a DARK disc to read, and this gives the stations LRT's identity colour on the map (the
+// LINES still carry the per-line identity). Kept clear of the line hues (green/blue/gold).
+const NODE_COLOUR = GLYPH_CONFIG.lrt_stops.identityHue;
 
 export const INTERCHANGE_NAME  = "Churchill Stop";   // the one interchange in the network
 
@@ -57,7 +64,7 @@ export function nodeLayer() {
     id: N_NODE_ID, type: "circle", source: N_STATIONS_SRC,
     filter: ["!=", ["get", "lrt_stop_description"], INTERCHANGE_NAME],
     paint: {
-      "circle-color": "#ffffff",
+      "circle-color": NODE_COLOUR,
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 3.5, 13, 5.5, 17, 8],
       "circle-stroke-color": POINT_CASING,
       "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 10, 1.4, 13, 2, 17, 2.8],
@@ -71,13 +78,27 @@ export function interchangeLayer() {
     id: N_INTERCHANGE_ID, type: "circle", source: N_STATIONS_SRC,
     filter: ["==", ["get", "lrt_stop_description"], INTERCHANGE_NAME],
     paint: {
-      "circle-color": "#ffffff",
+      "circle-color": NODE_COLOUR,
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 6, 13, 9, 17, 13],
       "circle-stroke-color": POINT_CASING,
       "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 10, 2.6, 13, 3.4, 17, 4.2],
     },
   };
 }
+// The cream rail-light glyph on the station node (§1 — the glyph identifies the layer). Non-SDF PNG
+// (public/icons/rail-light.png), allow-overlap so a node never draws bare. From mid zoom, where the
+// node is big enough to hold it (below that the petrol node + line context reads).
+export function nodeGlyphLayer() {
+  return {
+    id: N_GLYPH_ID, type: "symbol", source: N_STATIONS_SRC, minzoom: 12,
+    layout: {
+      "icon-image": "rail-light",
+      "icon-allow-overlap": true, "icon-ignore-placement": true,
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 12, 0.45, 14, 0.6, 17, 0.85],
+    },
+  };
+}
+
 // The selection ring on a pinned station (violet, §1.3). Keyed on the promoted feature id.
 export function nodeSelectLayer() {
   return {

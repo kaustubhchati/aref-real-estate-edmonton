@@ -33,9 +33,10 @@ import { assetUrl } from "../../utils/assetUrl.js";
 import AmenityInfoRail from "./AmenityInfoRail.jsx";
 import { BASEMAP_STYLE, MAP_VIEW } from "./amenityPointStyle.js";
 import {
-  D_SOURCE_ID, D_HEAT_ID, D_CLUSTER_ID, D_CLUSTER_COUNT_ID, D_POINT_ID, D_SELECT_ID, D_SOURCE_OPTIONS,
-  heatLayer, clusterLayer, clusterCountLayer, densityPointLayer, densitySelectLayer,
+  D_SOURCE_ID, D_HEAT_ID, D_CLUSTER_ID, D_CLUSTER_COUNT_ID, D_POINT_ID, D_SELECT_ID, D_GLYPH_ID, D_SOURCE_OPTIONS,
+  heatLayer, clusterLayer, clusterCountLayer, densityPointLayer, densitySelectLayer, densityGlyphLayer,
 } from "./amenityDensityStyle.js";
+import { loadAmenityIcons } from "./amenityGlyphs.js";
 
 const MANIFEST_URL = assetUrl("/data/amenities/manifest.json");
 
@@ -80,6 +81,10 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id", title,
     if (import.meta.env.DEV) window.__amenityMap = m;
     for (const id of [D_HEAT_ID, D_SELECT_ID, D_CLUSTER_ID, D_POINT_ID, D_CLUSTER_COUNT_ID])
       if (m.getLayer(id)) m.moveLayer(id);
+    // The cream bus glyph on individual stops (street zoom) — load the icons THEN add it (no flash).
+    loadAmenityIcons(m).then(() => {
+      if (m.getSource(D_SOURCE_ID) && !m.getLayer(D_GLYPH_ID)) { m.addLayer(densityGlyphLayer()); m.moveLayer(D_GLYPH_ID); }
+    }).catch(() => { /* icons failed → stops read without the glyph */ });
     applyCameraPreset(m, HOME_VIEW.Edmonton, { ease: !firstHomeRef.current });
     firstHomeRef.current = false;
     if (!recentreAddedRef.current) {

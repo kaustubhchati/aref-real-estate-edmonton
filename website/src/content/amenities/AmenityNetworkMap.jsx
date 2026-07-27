@@ -28,9 +28,10 @@ import { assetUrl } from "../../utils/assetUrl.js";
 import AmenityInfoRail from "./AmenityInfoRail.jsx";
 import { BASEMAP_STYLE, MAP_VIEW } from "./amenityPointStyle.js";
 import {
-  N_LINES_SRC, N_LINE_CASING_ID, N_LINE_ID, N_STATIONS_SRC, N_NODE_ID, N_INTERCHANGE_ID, N_SELECT_ID,
-  lineCasingLayer, lineLayer, nodeLayer, interchangeLayer, nodeSelectLayer, deriveLineLegend,
+  N_LINES_SRC, N_LINE_CASING_ID, N_LINE_ID, N_STATIONS_SRC, N_NODE_ID, N_INTERCHANGE_ID, N_GLYPH_ID, N_SELECT_ID,
+  lineCasingLayer, lineLayer, nodeLayer, interchangeLayer, nodeGlyphLayer, nodeSelectLayer, deriveLineLegend,
 } from "./amenityNetworkStyle.js";
+import { loadAmenityIcons } from "./amenityGlyphs.js";
 
 const MANIFEST_URL = assetUrl("/data/amenities/manifest.json");
 const LINES_URL    = assetUrl("/data/amenities/lrt_lines.geojson");
@@ -96,6 +97,13 @@ export default function AmenityNetworkMap({ layerId, idField = "lrt_stop_number"
         if (!map.getLayer(layer.id)) map.addLayer(layer);
       }
       for (const id of [N_SELECT_ID, N_NODE_ID, N_INTERCHANGE_ID]) if (map.getLayer(id)) m_move(map, id);
+      // The cream rail-light glyph rides on top of the nodes — load the icons THEN add it (no flash).
+      loadAmenityIcons(map).then(() => {
+        if (map.getSource(N_STATIONS_SRC) && !map.getLayer(N_GLYPH_ID)) {
+          map.addLayer(nodeGlyphLayer());
+          map.moveLayer(N_GLYPH_ID);
+        }
+      }).catch(() => { /* icons failed → nodes read without the glyph */ });
     } catch { /* map tearing down */ }
   }, [map, stationsGj, idField]);
 
