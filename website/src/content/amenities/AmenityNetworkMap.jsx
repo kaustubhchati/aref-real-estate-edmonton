@@ -218,7 +218,7 @@ export default function AmenityNetworkMap({ layerId, idField = "lrt_stop_number"
             <section className="pa-card">
               <p className="pa-box-cite" style={{ margin: 0 }}>{currency}</p>
               <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>
-                {`${entry.featureCount} stops across ${lineLegend.length || 3} lines. Each dot is one stop record; Churchill (the interchange) is drawn larger.`}
+                {`${entry.featureCount} stops across ${lineLegend.length || 3} lines. Each dot is one stop — its platforms (a station's two records) merged to the centre; Churchill (the interchange) is drawn larger.`}
               </p>
               {/* The interaction prompt, homed in the console (D10a — was a detached float). */}
               <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>Hover a station for a reading; click to pin it.</p>

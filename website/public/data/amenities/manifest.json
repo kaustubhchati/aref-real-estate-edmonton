@@ -36,14 +36,14 @@
       "sourceDatasetId": "fhxi-cnhe",
       "sourceUpdatedAt": "2026-06-28",
       "fetchedAt": "2026-07-25",
-      "featureCount": 54,
+      "featureCount": 29,
       "categoryField": "",
       "categories": [],
       "categoryCounts": {},
       "categoryLabels": {},
       "residualCategories": [],
       "coverage": {
-        "withGeometry": 54,
+        "withGeometry": 29,
         "withoutGeometry": 0
       }
     },
