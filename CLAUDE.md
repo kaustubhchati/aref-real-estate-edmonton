@@ -1,16 +1,21 @@
 # CLAUDE.md
 
-> **Version: v1.15 — authoritative. Supersedes all prior versions (v0.1–v1.14).**
+> **Version: v1.18 — authoritative. Supersedes all prior versions (v0.1–v1.17).**
 > This is the single source of project context for every Claude Code session — read it first.
 > If any other note, comment, or older doc frames *the website* as an "agent-driven platform,"
 > that framing is **retired** — see §1.
 > Owner / **builder**: KC (Research Assistant, UAlberta) — direct-push authority to `main` (§7).
 > Verifier: Olivia (post-hoc review, §7). Supervisor: Prof. Haifang Huang.
-> Last updated: 2026-07-17. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
+> Last updated: 2026-07-27. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
 > current open work tracked in **PHASE2_STATUS.md**. Tier 2 (container-universe reconciliation)
-> is **CLOSED** end-to-end (§12 v1.11). Dwelling Units now carries the full analyst Data Console
-> (§12 v1.12); the DU backend was unfrozen to emit its combined all-years file. PA/DU/BC + the
-> BP point map now share ONE hand-ratified captured home camera (§12 v1.15).
+> is **CLOSED** end-to-end (§12 v1.11). The frontend matured substantially since v1.15
+> (§12 v1.16–v1.18): navigation moved to an **off-canvas drawer** and displayed identity is now
+> **REAL** (no longer placeholdered — §2/§6); the BP point map was redesigned (incandescent
+> heat→dots on a shared land-use basemap palette); the Economy group gained the **Business Census
+> points section** ("Businesses and Industry Specializations" + the LCLQ finding); and **Amenities
+> shipped** — a registry-driven backend (13 published layers) with a live frontend (8 point layers
+> across 4 consolidated view-selector sections). **Zoning** has a backend build (ratified 156→10
+> family crosswalk), frontend pending.
 
 ---
 
@@ -69,8 +74,12 @@ random forest is discarded).
   `import.meta.env.BASE_URL`; a no-op at base `/`) — the frontend analogue of the backend's
   sole-publisher seam. A subpath deploy (`VITE_BASE_PATH=/realestate/`) works end-to-end.
 - **GitHub = source of truth;** the host gets built artifacts only.
-- **Displayed identity is placeholdered** in `siteConfig.js` (§6) — no real
-  university / centre / professor / author strings baked into pages yet.
+- **Displayed identity is REAL, and lives only in `siteConfig.js`** (§6; populated 2026-07-20,
+  §12 v1.16): `org` = University of Alberta, `dept` = Department of Economics, `centre` /
+  `centreFull` = Open Data Centre (for Alberta Urban Real Estate), `funder` = Alberta Real Estate
+  Foundation, plus a UAlberta territorial acknowledgment and named data partners. The rule is
+  unchanged — identity is centralized in `siteConfig`, never hardcoded in components (§9) — only
+  the values are no longer placeholders.
 - **Orchestration = a thin in-repo runner (`run_section.R`), cwd-per-section,
   one fresh process per script.** The runner reads section config from
   `_whirl.yaml` (cwd + dependency-ordered script list), cds into each section's
@@ -132,12 +141,15 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
 │   │   │   └─ output/           #       this section's products: GeoJSON / CSVs
 │   │   ├─ building-permits/     #     BUILT — point GeoJSON (per-year) + neighbourhood aggregates
 │   │   ├─ economy/              #     ECONOMY section — neighbourhood-level economic data
-│   │   │   └─ business-census/  #       BUILT — Business Census choropleth; scripts/ data/ output/
-│   │   ├─ amenities/            #     BUILT (backend) — 12 point/line/polygon layers from ONE
+│   │   │   └─ business-census/  #       BUILT — TWO maps: neighbourhood choropleth (01, wh44-4bkz)
+│   │   │                        #       + per-business points (02, 8c4b-u4a4); LCLQ finding CSV via
+│   │   │                        #       eda/04 (out-of-band, hand-committed). scripts/ data/ output/
+│   │   ├─ amenities/            #     BUILT — 13 published layers (12 registry + lrt_lines) from ONE
 │   │   │                        #       registry-driven emitter (amenity_layer_registry) + a no-year
-│   │   │                        #       currency manifest; published to public/data/amenities/.
-│   │   │                        #       Frontend: point layers in progress (§6). (zoning is separate)
-│   │   ├─ crime/                #     (added when built)
+│   │   │                        #       currency manifest → public/data/amenities/. Frontend LIVE:
+│   │   │                        #       8 point layers, 4 view-selector sections (§6).
+│   │   ├─ zoning/               #     BUILT (backend) — zoning_bylaw.geojson + a RATIFIED
+│   │   │                        #       156-code→10-family crosswalk. Frontend pending (nav: soon).
 │   │   └─ …
 │   └─ yyc/                      #   CALGARY placeholder (.gitkeep only). Wired in the
 │                                #   Calgary-introduction campaign — §10. No contents yet.
@@ -146,15 +158,16 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
 │   ├─ public/data/              #   built data the site serves (copied from each section's
 │   │                            #   pipeline output; subfolder by section)
 │   ├─ src/
-│   │   ├─ config/siteConfig.js  #   identity + nav, in ONE place (placeholders)
-│   │   ├─ shell/                #   SCAFFOLD: Header, Nav, Footer, Layout — reused everywhere
+│   │   ├─ config/siteConfig.js  #   REAL identity + nav, in ONE place (§6; no longer placeholders)
+│   │   ├─ shell/                #   SCAFFOLD: Header, Drawer (off-canvas nav), Footer, Layout
 │   │   ├─ components/           #   shared blocks: MapView, Legend, Tooltip, DownloadButton
 │   │   └─ content/              #   ADDITIONS: one folder per section (mirrors pipeline/)
 │   │       ├─ property-assessment/
 │   │       ├─ building-permits/
-│   │       ├─ crime/
+│   │       ├─ economy/          #   business-census (2 maps: counts choropleth + census points)
+│   │       ├─ amenities/        #   generic point/network/density maps + AmenitySection selector
 │   │       ├─ report-card/
-│   │       └─ pages/            #   Home, About, Download, Feedback (simple text pages)
+│   │       └─ pages/            #   Home, About, Research Competition, Download (text pages)
 │   ├─ index.html
 │   ├─ package.json
 │   └─ vite.config.js
@@ -181,11 +194,11 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
   and are **gitignored** — never committed, never deployed.
 - **Fit note:** only create folders for sections that exist. Built today, all under
   `pipeline/yeg/`: `property-assessment`, `building-permits`, `economy/business-census`,
-  `amenities` (registry-driven backend, 12 layers published), plus the `pipeline/yeg/shared/`
-  base-geo section (boundary + Mature Neighbourhoods only; road/vegetation layers pending).
-  `pipeline/yyc/` exists as an empty Calgary placeholder
-  (`.gitkeep` only) — no section folders until Calgary is wired (§10). Copy the pattern per new
-  section — no empty stubs.
+  `amenities` (registry-driven backend, 13 layers published), `zoning` (backend build + ratified
+  family crosswalk; frontend pending), plus the `pipeline/yeg/shared/` base-geo section (boundary
+  + Mature Neighbourhoods only; road/vegetation layers pending). `pipeline/yyc/` exists as an empty
+  Calgary placeholder (`.gitkeep` only) — no section folders until Calgary is wired (§10). Copy the
+  pattern per new section — no empty stubs.
 
 ---
 
@@ -246,38 +259,53 @@ finding live in **PHASE1_STATUS.md**.
 ## 6. Website build (frontend)
 
 **Shell vs content.**
-- **Shell** = `Layout`, `Header`, `Nav`, `Footer`. Built once, wraps every page. Reads all
-  displayed identity from `siteConfig.js`.
+- **Shell** = `Layout`, `Header`, **`Drawer`** (the off-canvas nav — the horizontal `Nav` bar was
+  retired 2026-07-20, §12 v1.16), `Footer`. Built once, wraps every page. Reads all displayed
+  identity from `siteConfig.js`.
 - **Content** = one self-contained folder per section under `content/`. Adding a section
-  (e.g. crime) = add one folder; nothing else moves.
-- **`siteConfig.js`** = the single source of identity + navigation. All org-specific strings are
-  placeholders here, never hardcoded in components:
+  = add one folder; nothing else moves.
+- **`siteConfig.js`** = the single source of identity + navigation, still centralized here and
+  never hardcoded in components (§9) — but the values are now **REAL** (populated 2026-07-20,
+  §12 v1.16), no longer placeholders:
 
 ```js
 export const siteConfig = {
-  org:    "{University Name}",
-  centre: "{Data Centre Name}",
-  dept:   "{Department}",
-  funder: "{Funder}",
-  nav:    [ /* the section tree below */ ],
+  org:        "University of Alberta",
+  dept:       "Department of Economics",
+  centre:     "Open Data Centre",
+  centreFull: "Open Data Centre for Alberta Urban Real Estate",
+  funder:     "Alberta Real Estate Foundation",
+  nav:        [ /* the section tree below */ ],
 };
 ```
 
-**Nav tree** (from the live site; `map` = data/map page, `page` = text/utility):
-Home `page` · Data Collection → Neighbourhood Profile `map` · Properties & Property Assessment →
-Properties `map`, **Property Assessment `map` (first milestone)** · Building Activity → Dwelling
-Units `map`, Construction & Improvement `map` · Real Estate Market Activity → Land Transfers `map`
-· Amenities → Air Quality / Community Services / Crime / Public School / Public Transportation
-`map` ×5 · Businesses → Business Licences / Business Counts `map` ×2 · Neighbourhood Report Card
-`tables` · Download `page` · Research Competition `page` · About Us `page` · Feedback `page`.
-Footer (funder line, data partners, territorial acknowledgment, logo, copyright) — all from `siteConfig`.
+**Nav tree** (the CURRENT `siteConfig.nav`, rebuilt from the live-site tree 2026-07; `map` =
+data/map page, `tables`/`page` = utility). Navigation is a single **off-canvas left drawer**
+(`shell/Drawer.jsx`, opened by a Header hamburger) — there is no horizontal nav bar (§12 v1.16):
+Home `page` · **Properties & Land** → Property Assessment `map` (live), Zoning `map` (soon), Land
+Titles `map` (soon) · **Building Activity** → Dwelling Units `map` (live), Building Permits `map`
+(live; route held at `/activity/construction-improvement`) · **Economy** → Businesses and Industry
+Specializations `map` (live; route `/economy/business-census`), Business Counts `map` (live),
+Business Licences `map` (soon), Labour Market `map` (soon) · **Amenities** → Public Transportation
+`map` (live), Parks and Recreation `map` (live), Police Stations `map` (live), EV Charging Stations
+`map` (live) · Neighbourhood Report Card `tables` (live) · Download `page` · Research Competition
+`page` · About Us `page`. Footer (funder line, data partners, territorial acknowledgment, logo,
+copyright) — all from `siteConfig`. (Retired vs the old live-site tree: the Data Collection group +
+Neighbourhood Profile; Real Estate Market Activity + Land Transfers; the old Amenities 5-leaf list
+— Air Quality / Community Services / Crime / Public School; and the Feedback page.)
 
-**Built / live (2026-06):** Property Assessment `map` (5-metric choropleth), Construction &
-Improvement `map` (Building Permits point map), plus an **added** Permit Neighbourhoods `map`
-(neighbourhood choropleth, under Building Activity — our addition, not on the live source site),
-and the Download `page` (serves 3 cleaned CSVs from `public/downloads/`, `siteConfig.downloads`).
-Business Counts `map` (Business Census choropleth) is also built/live. Everything else remains a
-placeholder.
+**Built / live (2026-07):** eleven live surfaces. **Maps:** Property Assessment `map` (5-metric
+choropleth), Dwelling Units `map` (Permit Neighbourhoods choropleth + analyst Data Console),
+Building Permits `map` (per-year point map — incandescent heat→dots, §12 v1.16), Business Counts
+`map` (Business Census neighbourhood choropleth), Businesses and Industry Specializations `map` (the
+Business Census points section — 2 views: the census points + the LCLQ Industry Specializations
+finding, §12 v1.17), and the four **Amenities** maps — Public Transportation (Bus Stops + LRT
+Network views), Parks and Recreation (Playgrounds / Spray Parks / Recreation Facilities / Track
+Sports Fields views), Police Stations, EV Charging Stations (§12 v1.18). **Tables/pages:**
+Neighbourhood Report Card `tables`, Download `page` (3 cleaned CSVs from `public/downloads/`,
+`siteConfig.downloads`), plus the Home / About / Research Competition text pages. The three
+aggregate maps + the BP point map share ONE captured home camera (§12 v1.15). Zoning, Land Titles,
+Business Licences, and Labour Market are `soon` placeholders.
 
 **Host-portable + refresh-by-design (2026-06, the VM-readiness campaign — §12 v1.9).** The serve
 target is now config (§2) and a new data year needs no frontend edit:
@@ -421,7 +449,8 @@ Result: the **live clone** — shell + one real map — the proof the frame work
   headless — the analyst Data Console. Originally scoped to PA (KC's closing decision 2026-06-27);
   **scope widened to PA + Dwelling Units** when DU adopted the console (§12 v1.12, KC 2026-07-16).
   A third section reusing the shared console leaves is in-scope; a NEW stack is not.)
-  Everything else stays hand-rolled. (§2.)
+  Everything else stays hand-rolled. Vendored open-licence static **assets** (the Lucide icon set;
+  Maki 8.2.0 CC0 glyph PNGs in `public/icons/`, §12 v1.18) are assets, not stacks — allowed. (§2.)
 - Duplicate cross-section base geometry (boundary, road/vegetation layers) into sections — it lives in `pipeline/yeg/shared/`. (§3.)
 - Over-engineer, or merge code Olivia can't read. (§6.)
 - Reintroduce a year literal in a frontend section (filename, label, metric key, span). Source the
@@ -469,6 +498,94 @@ When in doubt, load §2 (locked architecture) and §9 (negative rules) — the l
 Revise when: a locked decision changes (§2), a new section is wired (§3), a new rule is validated
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
+- **v1.18 (2026-07-27)** — **Amenities shipped end-to-end (registry-driven backend + live
+  frontend); Zoning backend built.** **Backend:** ONE registry-driven emitter
+  (`pipeline/yeg/amenities/scripts/production/01_build_amenity_layers.R`, driven by
+  `data/reference/amenity_layer_registry_20260727.csv`) emits **12** layers; a second emitter
+  (`02_build_lrt_lines.R`) adds the LRT route lines — **13 published GeoJSONs** in
+  `website/public/data/amenities/` under ONE **no-year currency manifest** (`03_emit_manifest.R`;
+  per-layer `sourceUpdatedAt` / `fetchedAt` / `featureCount` / category counts). Registry rows carry
+  the per-layer rules: `keep_where` (bus stops → boardable `location_type=0` only, 6,882→6,673),
+  `dedup_key` (playgrounds one-per-playground 659→431; LRT platform-siblings 54→29),
+  `category_field`, `family`, renderable-column whitelist, size/row floors. Layers span point (bus,
+  LRT stops, police, playgrounds, EV, recreation facilities, spray parks, track sports fields),
+  polygon (parks, vegetation, school catchments), and line (bike routes); wired into `_whirl.yaml`
+  (runner is sole publisher). **Frontend LIVE:** 8 point layers across **4 consolidated
+  view-selector sections** — Public Transportation (Bus Stops density + LRT Network views), Parks
+  and Recreation (Playgrounds / Spray Parks / Recreation Facilities / Track Sports Fields views),
+  and standalone Police Stations + EV Charging. `AmenitySection.jsx` is the PA-selector pattern
+  (`?view=` URL, `SECTIONS` table); the generic maps are `AmenityPointMap` (categorical top-N+Other
+  discs, hover-grow, selection pulse, dark casing), `AmenityNetworkMap` (LRT route lines in official
+  ETS colours + station nodes), and `AmenityDensityMap` (bus cluster→point across zoom, clusters
+  coloured by operator). **Glyph is a 2nd data channel** (DESIGN_SYSTEM §1.4): where a category has
+  iconography, colour + a cream **Maki 8.2.0 CC0** glyph (`public/icons/`) both carry it, else colour
+  carries category and one glyph names the layer. Categorical **`QUALITATIVE_12`** palette LAW (grey
+  residual sorts last, 12-hue cap, per-layer identity hue on the selector chips). Retired per-layer
+  routes redirect into the sections; the polygon layers (parks / vegetation / schools) + bike routes
+  are published but not yet nav-surfaced. **Zoning:** backend build only — `01_build_zoning.R` emits
+  `zoning_bylaw.geojson` (11,516 polygons) joined to a **RATIFIED** 156-code→10-family crosswalk
+  (`zoning_family_crosswalk_20260725.csv`; stops loudly on an unmapped code, §4.7); no frontend map
+  yet (nav leaf `soon`, no published data). Shipped `126cd1a`→`c10a054`.
+- **v1.17 (2026-07-24)** — **Economy gains the Business Census points section — "Businesses and
+  Industry Specializations" + the LCLQ finding.** The one pipeline section
+  `pipeline/yeg/economy/business-census/` now feeds **two** maps at two routes: the older
+  neighbourhood choropleth (**Business Counts**, `/economy/business-counts`, `BusinessCensusMap.jsx`,
+  from the pre-aggregated `wh44-4bkz`) and the NEW points section (**Businesses and Industry
+  Specializations**, `/economy/business-census`, `BusinessCensusSection.jsx`, from the raw
+  business-level `8c4b-u4a4`). **Naming trap (documented so it is not mis-edited):**
+  `BusinessCensusMap.jsx` serves the *Business Counts* route; `BusinessCensusSection.jsx` serves the
+  *Business Census* route. **Backend:** `02_build_business_census_points.R` reads a MANUALLY-placed
+  raw snapshot (never fetches — a raw-marker guard stops if the aggregate is grabbed) and emits
+  `business_census_points_2025.geojson` (29,894 businesses; 8 props; `colour_key` = top-10 sector +
+  Other), wired into `_whirl.yaml` after 01. **The section is TWO views** (an earlier third view was
+  removed 2026-07-24): View 1 "Business Census" (the data — points coloured by sector, donut-wheel
+  legend, composition console, right InfoRail, a client-side KDE dominance surface) and View 2
+  "Industry Specializations" (a finding — the LCLQ result: only estimator-tested businesses drawn,
+  prominent=significant / faint=non-significant, ranked industry chips + a reporting-convention
+  readout). **LCLQ** (Local Colocation Quotient — observed÷expected citywide share; kNN k=10 with
+  self EXCLUDED, Gaussian adaptive kernel, 999-sim conditional permutation, BH-FDR across-all, min
+  group 30; `significant` = q≤0.05, a categorical gate; strength = the LCLQ multiplier) is computed
+  **OUT-OF-BAND** in `eda/04_build_mapping_frame.R` (~6-min permutation, NOT in the runner) and
+  shipped as the git-committed `bc_lclq_industry_group.csv` (28,381 tested, 133 groups, 4,226
+  significant). **Refresh-by-design exception:** the LCLQ CSV is a hand-committed EDA artifact — the
+  runner handoff copies only the two GeoJSONs, so a normal refresh does NOT regenerate or republish
+  it. The Economy consoles are hand-rolled (NOT `@tanstack` — the §9 note governs PA + DU only).
+  Shipped `825f138`→`2aa830d`.
+- **v1.16 (2026-07-20)** — **Frontend platform matured: off-canvas nav drawer + real identity +
+  home rework, BP point-map redesign, a shared land-use basemap palette, and code-split/perf.**
+  All frontend-only; no pipeline data logic changed. **(1) Navigation → off-canvas drawer.** The
+  horizontal nav bar (`Nav.jsx`) and `EdgeReveal.jsx` were deleted; navigation is now a single
+  accessible left **`Drawer.jsx`** (portaled, focus-trapped, scrim/Esc close, cream/green/gold
+  UAlberta palette) opened by a Header hamburger, on every route. The Header shows the UAlberta
+  Shield + an org/dept lockup; the full site name lives in the reworked **Home** hero (hero + 3-stat
+  strip + auto-looping demo tiles + a nav-derived category grid + funder block). **Feedback was
+  removed entirely** (nav item, `/feedback` route + page, `siteConfig.contact`, its CSS). **(2)
+  Displayed identity is now REAL** (§2/§6): `siteConfig` carries University of Alberta / Department
+  of Economics / Open Data Centre for Alberta Urban Real Estate / Alberta Real Estate Foundation +
+  a territorial acknowledgment + named data partners — still centralized, no longer placeholders.
+  **Nav-tree restructure:** groups renamed (Properties & Property Assessment → Properties & Land;
+  Businesses → Economy), new `soon` leaves added (Zoning, Land Titles, Labour Market), old leaves
+  removed (Neighbourhood Profile, Land Transfers, Crime, Air Quality, Community Services, Public
+  School). **(3) BP point-map redesign** (`content/building-permits/permitStyle.js`): a scale-tiered
+  representation — two single-hue **incandescent** heatmaps (dark-crust→bright-core, shoulder-heavy)
+  below z11, a cross-fade across z11→z12, value-sized categorical dots above (radius peaks at z14
+  then shrinks toward building zoom); the city interior is quieted by a warm-greige figure-ground
+  tint clipped to a dissolved single-polygon Edmonton boundary (`public/geo/edmonton_boundary.geojson`).
+  The BP console now mirrors PA — two-card Identity + Instrument column with an Edmonton/Calgary
+  switcher + S-E gating, a bottom Year+Month tuning bay (debounced), a nav stack, and a fixed right
+  `PermitInforail` (replacing floating popups). **(4) Shared land-use basemap palette** — ONE seam,
+  `components/basemapTheme.js::colourFor`, applied at runtime by `applyAppleClassic` in the shared
+  `MapView` for **every** map (PA/DU/BC/BP): a muted, convention-hued, luminance-laddered, CVD-safe
+  palette that now paints previously-unpainted CARTO classes (residential / commercial / industrial /
+  institutional land use, farmland, wetland, recreation, protected area, quarry, aerodrome) at all
+  zooms. NOTE: the `custom-basemap.json` `fill-color` literals are placeholder fallbacks the theme
+  OVERRIDES — the authoritative palette is `basemapTheme.js` (a reader trusting the JSON hex would be
+  wrong). On the choropleths, `suppressed_low_n` / `no_data` states now fill with a grey wash (was
+  near-white glass) so peripheral industrial areas no longer whiteout. **(5) Code-split + perf:** the
+  four maps + Report Card are `React.lazy` in own chunks (`lazyWithReload` recovers from a stale-chunk
+  404 after a deploy); MapLibre's CSS is imported before `index.css` in `main.jsx` (a cascade-order
+  fix — it had been collapsing maps to 0 height); precompress (`.br`/`.gz`) + cache headers for the
+  nginx VM (README). Shipped `3cc8bdd`→`7259d76` (+ later nav-pruning through `c10a054`).
 - **v1.15 (2026-07-17)** — **BP points: clipping fix + year-swap cross-fade + slider debounce. PA
   home is a hand-ratified CAPTURED camera (not a fit), now the ONE camera PA/DU/BC/BP share.** The
   polish the BP-points recon deferred to "separate rulings" (v1.14), plus the PA home resolution.

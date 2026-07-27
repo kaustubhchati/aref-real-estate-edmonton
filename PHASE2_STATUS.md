@@ -91,11 +91,12 @@ sections, agent pipeline, and infrastructure.
       property-assessment `.Rhistory` cleanup item).
 
 ### Frontend — sections not yet built
-- [~] **Point layers batch** (Amenities) — **BACKEND BUILT + published; frontend in progress.**
+- [x] **Point layers batch** (Amenities) — **DONE — backend published + frontend LIVE (§12 v1.18).**
       The stale "Pattern A = one `<layer>.pmtiles` on R2 + `<layer>_coverage.csv`" is retired:
       PMTiles/R2/tiler are gone (CLAUDE.md §12 v1.10, METHODOLOGY D1). The pattern is now
       **whole per-layer GeoJSON + one no-year currency manifest**, from ONE registry-driven
-      emitter (`pipeline/yeg/amenities/`, `amenity_layer_registry_20260725.csv`). 12 layers
+      emitter (`pipeline/yeg/amenities/`, `amenity_layer_registry_20260727.csv`) + a 2nd LRT-lines
+      emitter (`02_build_lrt_lines.R`). **13 layers**
       published to `website/public/data/amenities/`: bus_stops (4vt2-8zrq), lrt_stops
       (**fhxi-cnhe** — the old `j77g-ki3x` is dead/403), police_stations (e7aq-scxv), playgrounds,
       ev_charging, recreation_facilities, spray_parks, track_sports_fields (Family 1 points);
@@ -103,7 +104,14 @@ sections, agent pipeline, and infrastructure.
       (7yt8-7467) + Public Libraries (jn25-zspi) were **dropped** (not in the ratified source list;
       see `docs/AMENITIES_ZONING_BUILD_STRATEGY_20260725.md`). NOTE: the listed portal ids are
       Socrata visualization lenses — the pipeline fetches their `modifyingViewUid` parents.
-      Frontend: Family 1 point layers building now (playgrounds pilot first).
+      Frontend LIVE (§12 v1.18): 8 point layers across **4 consolidated view-selector sections** —
+      Public Transportation (Bus Stops density + LRT Network views), Parks and Recreation
+      (Playgrounds / Spray Parks / Recreation Facilities / Track Sports Fields views), and standalone
+      Police Stations + EV Charging. `AmenitySection.jsx` is the PA-selector shell (`?view=` URL);
+      generic maps are `AmenityPointMap` / `AmenityNetworkMap` (LRT) / `AmenityDensityMap` (bus
+      cluster→point). Glyph-is-a-2nd-channel (cream Maki PNGs) + `QUALITATIVE_12` palette law.
+      Polygon layers (parks / vegetation / schools) + bike routes are published but not yet
+      nav-surfaced.
 - [ ] **Permit Neighbourhoods choropleth** — BUILT with full
       Property Assessment parity: custom basemap, fill/outline/
       highlight/label layer stack (pnbhd-* ids), 3 polygon states,
@@ -113,13 +121,27 @@ sections, agent pipeline, and infrastructure.
       selector. 18-year GeoJSONs committed; route wired; deployed
       to the demo (eslint + build + local-dev verified). Only
       remaining: Olivia QA sign-off.
-- [ ] **Zoning choropleth** — nav leaf exists, no backend
-      data yet.
+- [~] **Zoning** — **BACKEND BUILT (§12 v1.18);** frontend pending.
+      `pipeline/yeg/zoning/scripts/production/01_build_zoning.R` emits `zoning_bylaw.geojson`
+      (11,516 polygons) joined to a **RATIFIED** 156-code→10-family crosswalk
+      (`zoning_family_crosswalk_20260725.csv`; stops loudly on an unmapped code, §4.7). No frontend
+      map yet — nav leaf is `soon`, no published data under `website/public/data/`, no map component.
 - [x] **Business Counts** — BUILT / live (Edmonton Business Census
       choropleth at `/economy/business-counts`; provenance note shipped).
       Refresh-by-design parity **PARKED**: its year is baked into the GeoJSON
       filename + column keys with no manifest to source it from — needs a
       backend `{surveyYear, priorYear}` emit. Spec: `docs/BC_MANIFEST_HANDBACK.md`.
+- [x] **Business Census points section** — BUILT / live (§12 v1.17): "Businesses and Industry
+      Specializations" at `/economy/business-census` (`BusinessCensusSection.jsx`), a SECOND Economy
+      map from the raw business-level `8c4b-u4a4`, alongside the older Business Counts choropleth.
+      TWO views: View 1 the census points (29,894 businesses, sector colour, donut legend, KDE
+      dominance surface, composition console + right InfoRail) and View 2 the LCLQ **Industry
+      Specializations** finding (prominent=significant / faint=non-significant, ranked industry
+      chips + reporting-convention readout). Backend points builder `02` is runner-wired; the LCLQ
+      statistic is computed **out-of-band** in `eda/04` and shipped as a **hand-committed** CSV
+      (`bc_lclq_industry_group.csv`) the runner handoff does NOT regenerate — a distinct
+      refresh-by-design exception. NAMING TRAP: `BusinessCensusMap.jsx` serves the *Business Counts*
+      route; `BusinessCensusSection.jsx` serves the *Business Census* route.
 - [ ] **Salary Ranges table** — city-wide non-spatial
       table under Economy. Backend not started.
 - [x] **Neighbourhood Report Card** — BUILT / live (`/report-card`): sortable,
@@ -269,6 +291,20 @@ run records) shipped (`e67a658`).
   camera (§12 v1.14/v1.15).
 - Permit Neighbourhoods choropleth — built (full assessment
   parity), deployed to demo; awaiting Olivia QA sign-off.
+- Amenities — 8 point layers live across 4 consolidated view-selector sections
+  (Public Transportation · Parks and Recreation · Police Stations · EV Charging);
+  registry-driven backend (13 published layers, no-year currency manifest);
+  glyph-as-2nd-channel (cream Maki PNGs) + QUALITATIVE_12 categorical palette (§12 v1.18).
+- Business Census points section — live (`/economy/business-census`, 2 views + the LCLQ
+  Industry Specializations finding); the raw points builder (02) is runner-wired, the LCLQ
+  CSV is a hand-committed EDA artifact the runner does not regenerate (§12 v1.17).
+- Navigation is a single off-canvas drawer (`shell/Drawer.jsx`) opened by a Header hamburger —
+  the horizontal nav bar (`Nav.jsx`) is retired. Displayed identity in `siteConfig` is REAL
+  (University of Alberta · Department of Economics · Open Data Centre for Alberta Urban Real
+  Estate · Alberta Real Estate Foundation), no longer placeholders (§12 v1.16).
+- Land-use basemap colour is ONE shared seam (`components/basemapTheme.js::colourFor`, applied at
+  runtime by `applyAppleClassic` in `MapView`) for every map — muted, convention-hued, CVD-safe;
+  the `custom-basemap.json` fill-color hex are placeholder fallbacks the theme overrides (§12 v1.16).
 - Download page — `/download` serves 3 cleaned CSVs (PA neighbourhood
   aggregates + permit category counts + permit coverage) from
   `website/public/downloads/`. Labels / filenames / coverage spans are
@@ -319,8 +355,9 @@ run records) shipped (`e67a658`).
    9 scripts + 15-year handoff, all ok; yoy populated (277/345); current-year
    staleness closed; manifest now built from output/ (fixed a stale-2026 scale
    bug). Next: replicate the runner pattern to building-permits + economy.
-5. Point layers batch — R pipeline first, then Pattern A frontend (one CC
-   session per layer).
+5. ~~Point layers batch — R pipeline then frontend~~ — **DONE (§12 v1.18).** Amenities shipped
+   end-to-end: registry-driven backend (13 layers) + 8 point layers live across 4 view-selector
+   sections. Zoning backend built (ratified crosswalk); its frontend map is the remaining piece.
 6. Permit Neighbourhoods choropleth — Olivia QA sign-off (built, deployed to demo).
 7. Add collaborators + branch protection.
 8. Layer 1b (LISA I) — stretch goal before agent work.

@@ -1,5 +1,5 @@
 # Open Data Centre for Alberta Urban Real Estate (Dev Build)
-**Live (Edmonton):** Property Assessment · Dwelling Units · Building Permits · Business Counts · Neighbourhood Report Card · Download — see **[Now Live](#now-live)** for links.
+**Live (Edmonton):** Property Assessment · Dwelling Units · Building Permits · Businesses and Industry Specializations · Business Counts · Amenities (Public Transportation · Parks and Recreation · Police Stations · EV Charging) · Neighbourhood Report Card · Download — see **[Now Live](#now-live)** for links.
 A **free-tier, static replication** of the public real-estate data website at
 `realestatedata.srv.ualberta.ca` — the Tableau Public dashboards rebuilt as our own maps and
 pages, fed by an R data pipeline. Phase 1 delivers Edmonton property-assessment cleaning
@@ -14,23 +14,29 @@ Maintained by **Kaustubh Chati** (Research Assistant, builder), with **Olivia** 
 QA and review gate), under **Prof. Haifang Huang**, University of Alberta, Department of Economics.
 The bar is "researchers and the public can rely on it," not five-nines uptime.
 
-> The deployed site's displayed identity (university, centre, funder names) is placeholdered in
-> `website/src/config/siteConfig.js` until finalised — see CLAUDE.md §6.
+> The deployed site's displayed identity (University of Alberta · Department of Economics · Open Data
+> Centre for Alberta Urban Real Estate · Alberta Real Estate Foundation) lives in
+> `website/src/config/siteConfig.js` — centralized there, never hardcoded in components (CLAUDE.md §6).
 
 ## Now Live
 
-Deployed on Cloudflare Pages — **[aref-real-estate-edmonton.pages.dev](https://aref-real-estate-edmonton.pages.dev/)** (Edmonton). Six sections shipped:
+Deployed on Cloudflare Pages — **[aref-real-estate-edmonton.pages.dev](https://aref-real-estate-edmonton.pages.dev/)** (Edmonton). Eleven sections shipped:
 
 | Section | Type | Link |
 | --- | --- | --- |
-| **Property Assessment** | 5-metric choropleth map | [aref-real-estate-edmonton.pages.dev/properties/property-assessment](https://aref-real-estate-edmonton.pages.dev/properties/property-assessment) |
-| **Dwelling Units** (permit neighbourhoods) | choropleth + analyst Data Console | [aref-real-estate-edmonton.pages.dev/activity/dwelling-units](https://aref-real-estate-edmonton.pages.dev/activity/dwelling-units) |
-| **Construction & Improvement** (Building Permits) | per-year point map | [aref-real-estate-edmonton.pages.dev/activity/construction-improvement](https://aref-real-estate-edmonton.pages.dev/activity/construction-improvement) |
-| **Business Counts** | choropleth map | [aref-real-estate-edmonton.pages.dev/economy/business-counts](https://aref-real-estate-edmonton.pages.dev/economy/business-counts) |
-| **Neighbourhood Report Card** | sortable / searchable table | [aref-real-estate-edmonton.pages.dev/report-card](https://aref-real-estate-edmonton.pages.dev/report-card) |
-| **Download** | 3 cleaned CSVs | [aref-real-estate-edmonton.pages.dev/download](https://aref-real-estate-edmonton.pages.dev/download) |
+| **Property Assessment** | 5-metric choropleth map | [/properties/property-assessment](https://aref-real-estate-edmonton.pages.dev/properties/property-assessment) |
+| **Dwelling Units** (permit neighbourhoods) | choropleth + analyst Data Console | [/activity/dwelling-units](https://aref-real-estate-edmonton.pages.dev/activity/dwelling-units) |
+| **Building Permits** (Construction & Improvement) | per-year point map (incandescent heat→dots) | [/activity/construction-improvement](https://aref-real-estate-edmonton.pages.dev/activity/construction-improvement) |
+| **Businesses and Industry Specializations** | business points + LCLQ finding (2 views) | [/economy/business-census](https://aref-real-estate-edmonton.pages.dev/economy/business-census) |
+| **Business Counts** | neighbourhood choropleth | [/economy/business-counts](https://aref-real-estate-edmonton.pages.dev/economy/business-counts) |
+| **Public Transportation** | Bus Stops + LRT Network (amenity views) | [/amenities/public-transportation](https://aref-real-estate-edmonton.pages.dev/amenities/public-transportation) |
+| **Parks and Recreation** | four point inventories (amenity views) | [/amenities/parks-and-recreation](https://aref-real-estate-edmonton.pages.dev/amenities/parks-and-recreation) |
+| **Police Stations** | point map | [/amenities/police-stations](https://aref-real-estate-edmonton.pages.dev/amenities/police-stations) |
+| **EV Charging Stations** | point map | [/amenities/ev-charging](https://aref-real-estate-edmonton.pages.dev/amenities/ev-charging) |
+| **Neighbourhood Report Card** | sortable / searchable table | [/report-card](https://aref-real-estate-edmonton.pages.dev/report-card) |
+| **Download** | 3 cleaned CSVs | [/download](https://aref-real-estate-edmonton.pages.dev/download) |
 
-The three aggregate maps + the Building Permits point map all land on one shared, hand-ratified home camera (Property Assessment is the standard — CLAUDE.md §12 v1.15). Everything else in the nav is a placeholder pending data.
+Navigation is a single off-canvas drawer (opened by the header hamburger). The three aggregate maps + the Building Permits point map share one hand-ratified home camera (Property Assessment is the standard — CLAUDE.md §12 v1.15). Zoning, Land Titles, Business Licences, and Labour Market are placeholders pending data.
 
 ## Context
 
