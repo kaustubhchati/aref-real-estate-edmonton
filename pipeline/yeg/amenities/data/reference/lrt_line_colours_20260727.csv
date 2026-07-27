@@ -1,0 +1,4 @@
+route_id,line,colour,date_curated,curated_by,source
+021R,Capital Line,#1d4ed8,2026-07-27,CC,vivid recolour (KC) — off the basemap water band; hue keeps the ETS blue identity
+022R,Metro Line,#f59e0b,2026-07-27,CC,vivid recolour (KC) — amber pushed off the yellow ROAD band (old ETS gold #ffc425 blended)
+023R,Valley Line,#16a34a,2026-07-27,CC,vivid recolour (KC) — saturated emerald off the muted park-green band
