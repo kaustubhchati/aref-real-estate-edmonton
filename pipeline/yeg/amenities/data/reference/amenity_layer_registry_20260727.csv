@@ -1,0 +1,13 @@
+layer_id,label,listed_id,data_id,geometry_type,geometry_column,category_field,dedup_key,renderable_cols,min_rows,min_size_kb,family
+bus_stops,Bus Stops,4vt2-8zrq,4vt2-8zrq,point,geometry_point,,,stop_id|stop_code|stop_name|zone_id|location_type,3000,300,D
+lrt_stops,LRT Stations and Stops,fhxi-cnhe,fhxi-cnhe,point,geometry_point,,,lrt_stop_number|lrt_stop_description,20,3,N
+police_stations,Police Stations,e7aq-scxv,e7aq-scxv,point,geometry_point,,,name|address,5,1,S
+playgrounds,Playgrounds,g57c-ph4j,9nqb-w48x,point,geometry_point,user_category,id,id|name|address|type|surface_type|accessibility|user_category|neighbourhood_id|neighbourhood_name,300,50,C
+ev_charging,EV Charging Stations,rg5m-e4tk,xzhy-xe8z,point,geometry,charging_level,,station_name|street_address|charging_level|ev_network|ev_connector_types|total_number_of_ports|status|ev_pricing,80,20,C
+recreation_facilities,Recreation Facilities,kab2-3f3p,nz3t-vyg3,point,geometry_point,facility_type,,category|facility_type|facility_name|address|website,50,10,C
+spray_parks,Spray Parks,jyra-si4k,jyra-si4k,point,geometry_point,type,,id|name|address|type|surface_type|accessibility|neighbourhood_id|neighbourhood_name,30,5,S
+track_sports_fields,Track Sports Fields,ykrg-bwt7,ykrg-bwt7,point,geometry_point,,,name,7,1,S
+parks,Parks,ex66-ku6s,gdd9-eqv9,multipolygon,multipolygon,class,,id|official_name|common_name|status|type|class|address,600,400,polygon
+vegetation,Vegetation Areas,pmka-uf4n,ct88-r8tk,multipolygon,multipolygon,vegetation_type,,id|vegetation_type|type|owner|maintainer,1500,1500,polygon
+schools,School Catchment Areas,kicz-beax,gc4g-ct3z,multipolygon,catchment_polygon,sch_type,,school_nam|sch_type|grades|sch_addres|sector|epsb_ward|attend|year,100,200,polygon
+bike_routes,Bike Routes,2bqu-nck6,vd4b-a4iv,multiline,geometry_line,classification,,id|type|classification|network_classification|road_segment_type|street_name_full|construction_year,5000,1000,line

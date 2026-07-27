@@ -71,16 +71,23 @@
       "sourceDatasetId": "9nqb-w48x",
       "sourceUpdatedAt": "2026-07-20",
       "fetchedAt": "2026-07-25",
-      "featureCount": 659,
+      "featureCount": 431,
       "categoryField": "user_category",
-      "categories": ["All Ages", "Inclusive", "Junior (18 months to 5 years)", "Junior/Senior (18 months to 12 years)", "Senior (6 to 12 years)", "Unknown"],
+      "categories": [
+        "All Ages",
+        "Inclusive",
+        "Junior (18 months to 5 years)",
+        "Junior/Senior (18 months to 12 years)",
+        "Senior (6 to 12 years)",
+        "Unknown"
+      ],
       "categoryCounts": {
-        "All Ages": 3,
+        "All Ages": 2,
         "Inclusive": 1,
-        "Junior (18 months to 5 years)": 61,
-        "Junior/Senior (18 months to 12 years)": 475,
-        "Senior (6 to 12 years)": 98,
-        "Unknown": 21
+        "Junior (18 months to 5 years)": 45,
+        "Junior/Senior (18 months to 12 years)": 332,
+        "Senior (6 to 12 years)": 42,
+        "Unknown": 9
       },
       "categoryLabels": {
         "All Ages": "All Ages",
@@ -90,9 +97,11 @@
         "Senior (6 to 12 years)": "Senior (6 to 12 years)",
         "Unknown": "Unknown"
       },
-      "residualCategories": ["Unknown"],
+      "residualCategories": [
+        "Unknown"
+      ],
       "coverage": {
-        "withGeometry": 659,
+        "withGeometry": 431,
         "withoutGeometry": 0
       }
     },
@@ -107,7 +116,10 @@
       "fetchedAt": "2026-07-25",
       "featureCount": 173,
       "categoryField": "charging_level",
-      "categories": ["DC Fast", "Level 2"],
+      "categories": [
+        "DC Fast",
+        "Level 2"
+      ],
       "categoryCounts": {
         "DC Fast": 23,
         "Level 2": 150
@@ -133,7 +145,19 @@
       "fetchedAt": "2026-07-25",
       "featureCount": 109,
       "categoryField": "facility_type",
-      "categories": ["Arena", "Arts Booking Facility", "Arts Program Facility", "City Park", "Golf Course", "Outdoor Pool", "Recreation Centre", "River Valley Park", "Snowshoeing", "Staffed Sports Field", "Tennis Court"],
+      "categories": [
+        "Arena",
+        "Arts Booking Facility",
+        "Arts Program Facility",
+        "City Park",
+        "Golf Course",
+        "Outdoor Pool",
+        "Recreation Centre",
+        "River Valley Park",
+        "Snowshoeing",
+        "Staffed Sports Field",
+        "Tennis Court"
+      ],
       "categoryCounts": {
         "Arena": 22,
         "Arts Booking Facility": 1,
@@ -177,7 +201,10 @@
       "fetchedAt": "2026-07-25",
       "featureCount": 77,
       "categoryField": "type",
-      "categories": ["Spray Deck", "Spray Park"],
+      "categories": [
+        "Spray Deck",
+        "Spray Park"
+      ],
       "categoryCounts": {
         "Spray Deck": 67,
         "Spray Park": 10
@@ -223,7 +250,18 @@
       "fetchedAt": "2026-07-25",
       "featureCount": 1195,
       "categoryField": "class",
-      "categories": ["City Park", "District Activity Park", "Greenway", "Natural Area Park", "Other Land Type", "Pocket Park", "PUL", "School and Community Park", "Unknown", "Urban Village Park"],
+      "categories": [
+        "City Park",
+        "District Activity Park",
+        "Greenway",
+        "Natural Area Park",
+        "Other Land Type",
+        "Pocket Park",
+        "PUL",
+        "School and Community Park",
+        "Unknown",
+        "Urban Village Park"
+      ],
       "categoryCounts": {
         "City Park": 50,
         "District Activity Park": 26,
@@ -248,7 +286,9 @@
         "Unknown": "Unknown",
         "Urban Village Park": "Urban Village Park"
       },
-      "residualCategories": ["Unknown"],
+      "residualCategories": [
+        "Unknown"
+      ],
       "coverage": {
         "withGeometry": 1195,
         "withoutGeometry": 0
@@ -265,7 +305,15 @@
       "fetchedAt": "2026-07-25",
       "featureCount": 3145,
       "categoryField": "vegetation_type",
-      "categories": ["Bioswale", "Grass with Trees or Shrubs", "Riparian", "Tree Stand", "Unknown", "Unmowed Grass", "Wildflower Meadow"],
+      "categories": [
+        "Bioswale",
+        "Grass with Trees or Shrubs",
+        "Riparian",
+        "Tree Stand",
+        "Unknown",
+        "Unmowed Grass",
+        "Wildflower Meadow"
+      ],
       "categoryCounts": {
         "Bioswale": 61,
         "Grass with Trees or Shrubs": 1331,
@@ -284,7 +332,9 @@
         "Unmowed Grass": "Unmowed Grass",
         "Wildflower Meadow": "Wildflower Meadow"
       },
-      "residualCategories": ["Unknown"],
+      "residualCategories": [
+        "Unknown"
+      ],
       "coverage": {
         "withGeometry": 3145,
         "withoutGeometry": 0
@@ -301,7 +351,13 @@
       "fetchedAt": "2026-07-25",
       "featureCount": 222,
       "categoryField": "sch_type",
-      "categories": ["EJ", "EJS", "EL", "JR", "SR"],
+      "categories": [
+        "EJ",
+        "EJS",
+        "EL",
+        "JR",
+        "SR"
+      ],
       "categoryCounts": {
         "EJ": 59,
         "EJS": 1,
@@ -333,7 +389,20 @@
       "fetchedAt": "2026-07-25",
       "featureCount": 10417,
       "categoryField": "classification",
-      "categories": ["Bus / Bike / Taxi Lane", "Contra-Flow Bike Lane", "Local Street Bikeway", "Maintenance Access", "Painted Bike Lane", "Protected Bike Lane", "Shared Pathway", "Shared Roadway - Higher Traffic", "Shared Roadway - Lower Traffic", "Shared Trail", "Unclassified", "Walkway / Breezeway"],
+      "categories": [
+        "Bus / Bike / Taxi Lane",
+        "Contra-Flow Bike Lane",
+        "Local Street Bikeway",
+        "Maintenance Access",
+        "Painted Bike Lane",
+        "Protected Bike Lane",
+        "Shared Pathway",
+        "Shared Roadway - Higher Traffic",
+        "Shared Roadway - Lower Traffic",
+        "Shared Trail",
+        "Unclassified",
+        "Walkway / Breezeway"
+      ],
       "categoryCounts": {
         "Bus / Bike / Taxi Lane": 65,
         "Contra-Flow Bike Lane": 56,
@@ -362,7 +431,9 @@
         "Unclassified": "Unclassified",
         "Walkway / Breezeway": "Walkway / Breezeway"
       },
-      "residualCategories": ["Unclassified"],
+      "residualCategories": [
+        "Unclassified"
+      ],
       "coverage": {
         "withGeometry": 10417,
         "withoutGeometry": 0

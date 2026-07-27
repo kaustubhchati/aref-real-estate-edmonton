@@ -160,6 +160,42 @@ for (i in seq_len(nrow(registry))) {
   # 2d. parse the WKT column -> sf, WGS84 (Socrata serves EPSG:4326; crs= sets it).
   layer_sf <- st_as_sf(raw, wkt = gcol, crs = 4326)
 
+  cf <- r$category_field   # the layer's category column (used by the dedup + the domain block below)
+
+  # 2d-bis. DEDUP to ONE feature per dedup_key (registry-driven, opt-in per layer).
+  # Some City POINT datasets carry one row per STRUCTURE — a playground has a row per play unit,
+  # so the same playground plots many times (a "double-counting" data-viz error). dedup_key
+  # collapses each group to ONE feature: the point becomes the group CENTROID (the site's
+  # location), and the kept attributes come from the group's MODAL category row (its dominant
+  # kind), so the map colour reflects what most of the site is. Counted, never silent (§9). A
+  # blank dedup_key (every other layer) is a no-op.
+  dk <- if ("dedup_key" %in% names(r)) str_trim(r$dedup_key) else NA_character_
+  n_pre_dedup <- nrow(layer_sf)
+  if (!is.na(dk) && nzchar(dk) && dk %in% names(layer_sf)) {
+    xy    <- st_coordinates(layer_sf)
+    att   <- st_drop_geometry(layer_sf)
+    key   <- as.character(att[[dk]])
+    cf_ok <- !is.na(cf) && nzchar(cf) && cf %in% names(att)
+    # representative ROW index per key: the modal category value (tie -> first), else first row.
+    rep_idx <- vapply(split(seq_len(nrow(att)), key), function(idx) {
+      if (cf_ok) {
+        cats  <- att[[cf]][idx]
+        modal <- names(which.max(table(cats)))
+        idx   <- idx[cats == modal]
+      }
+      idx[1]
+    }, integer(1))
+    # group CENTROID (mean lon/lat), aligned back to each representative row by its key.
+    clon   <- tapply(xy[, 1], key, mean)
+    clat   <- tapply(xy[, 2], key, mean)
+    rep_df <- att[rep_idx, , drop = FALSE]
+    rk     <- as.character(rep_df[[dk]])
+    rep_df$.dedup_lon <- as.numeric(clon[rk])
+    rep_df$.dedup_lat <- as.numeric(clat[rk])
+    layer_sf <- st_as_sf(rep_df, coords = c(".dedup_lon", ".dedup_lat"), crs = 4326)
+  }
+  n_deduped <- n_pre_dedup - nrow(layer_sf)
+
   # 2e. thin coordinates to 6 dp (~0.1 m, below web-zoom resolution) + emit.
   out_path <- file.path("output", paste0(r$layer_id, ".geojson"))
   if (file.exists(out_path)) file.remove(out_path)
@@ -174,8 +210,7 @@ for (i in seq_len(nrow(registry))) {
   # ALPHABETICAL (stable legend order); the parallel counts let the frontend pick a
   # top-N + Other collapse for a domain that overflows the palette (rec_facilities).
   cats <- character(0); cnts <- integer(0)
-  cf   <- r$category_field
-  if (!is.na(cf) && nzchar(cf) && cf %in% names(layer_sf)) {
+  if (!is.na(cf) && nzchar(cf) && cf %in% names(layer_sf)) {   # cf defined at 2d-bis
     vals    <- as.character(layer_sf[[cf]])
     present <- !is.na(vals) & nzchar(vals)
     cats    <- sort(unique(vals[present]))
@@ -184,8 +219,8 @@ for (i in seq_len(nrow(registry))) {
   labs  <- if (length(cats)) tidy_label(cats)  else character(0)   # display labels (D9)
   resid <- if (length(cats)) is_residual(cats) else logical(0)     # grey + last (D5)
 
-  cat(sprintf("   in=%d  emitted=%d  no_geometry=%d  %.1f KB  categories=%d\n",
-              n_in, n_emit, n_without, emit_kb, length(cats)))
+  cat(sprintf("   in=%d  emitted=%d  no_geometry=%d  deduped=%d  %.1f KB  categories=%d\n",
+              n_in, n_emit, n_without, n_deduped, emit_kb, length(cats)))
 
   build_log[[length(build_log) + 1L]] <- tibble(
     layer_id         = r$layer_id,
@@ -197,6 +232,7 @@ for (i in seq_len(nrow(registry))) {
     features_in      = n_in,
     features_emit    = n_emit,
     without_geometry = n_without,
+    deduped          = n_deduped,
     emit_kb          = emit_kb,
     categories        = paste(cats, collapse = "|"),
     category_counts   = paste(cnts, collapse = "|"),   # parallel to categories (alphabetical)
