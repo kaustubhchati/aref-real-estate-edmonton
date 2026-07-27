@@ -1,34 +1,64 @@
 // =============================================================================
 // AmenityLegend.jsx
 //
-// An INTERACTIVE categorical swatch legend for the amenity point layers — one swatch+label
-// row per category, click to show/hide that category on the map. This is NEW work
-// (directive §6): BC's point legend is the donut wheel, the shared Legend.jsx discrete
-// mode is display-only, and no point map has an interactive swatch legend today. The
-// nearest precedent is Legend.jsx's discrete rows (`.legend-*` chrome), reused here with
-// a click-to-filter affordance added.
+// An INTERACTIVE categorical legend for the amenity point layers — one row per category, click to
+// show/hide that category on the map. Two swatch modes, one behaviour:
+//   • COLOUR mode (default): a hue swatch, the SAME colour the map paints the disc from — colour
+//     carries the category (Playgrounds, Spray Parks, EV). The nearest precedent is Legend.jsx's
+//     discrete rows, reused here with a click-to-filter affordance.
+//   • GLYPH mode (§8): the category is carried by a cream GLYPH on a single identity-hue disc, so
+//     each row shows that disc + glyph — mirroring the map exactly (Recreation Facilities). Every
+//     category is named and shown; no hue ceiling, no collapse.
 //
-// Rows are BUTTONS (keyboard-operable, aria-pressed). A hidden category dims (chrome
-// state) — the MAP hides it by a layer filter, never opacity:0 (directive §6). The swatch
-// colour is the SAME assignment the map paints from (amenityPointStyle.categoryColours), so
-// the legend can never drift from the map.
+// Rows are BUTTONS (keyboard-operable, aria-pressed). A hidden category dims (chrome state) — the
+// MAP hides it by a layer filter, never opacity:0 (directive §6). The swatch can never drift from
+// the map because it is built from the same assignment (colour) or the same glyph the map draws.
 // =============================================================================
 
-export default function AmenityLegend({ title, note, items, active, onToggle }) {
+import { assetUrl } from "../../utils/assetUrl.js";
+
+// The swatch for one row: a glyph-disc in glyph mode (identity-hue disc + cream glyph, as on the
+// map), else the category's hue swatch. Both carry the shared dark casing (#141018) so the swatch
+// reads like the dot it stands for.
+function Swatch({ item, glyphMode, identityHue, glyphByCategory }) {
+  if (glyphMode) {
+    const glyph = glyphByCategory?.[item.key];
+    return (
+      <span
+        aria-hidden="true"
+        style={{
+          width: 16, height: 16, flexShrink: 0, borderRadius: "50%",
+          background: identityHue, boxShadow: "0 0 0 1px #141018",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}
+      >
+        {glyph && <img src={assetUrl(`/icons/${glyph}.png`)} alt="" style={{ width: 11, height: 11, display: "block" }} />}
+      </span>
+    );
+  }
+  return (
+    <span
+      aria-hidden="true"
+      style={{ width: 12, height: 12, flexShrink: 0, borderRadius: 3, background: item.colour, boxShadow: "0 0 0 1px #141018" }}
+    />
+  );
+}
+
+export default function AmenityLegend({ title, note, items, active, onToggle, glyphMode = false, identityHue, glyphByCategory }) {
   return (
     <div className="pa-col-mod pa-col-legend">
       <div className="pa-col-lab">{title}</div>
       {note && <div className="pa-detail-hint" style={{ margin: "0 0 4px" }}>{note}</div>}
       <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-        {items.map(({ key, label, colour }) => {
-          const on = active.has(key);
+        {items.map((item) => {
+          const on = active.has(item.key);
           return (
-            <li key={key}>
+            <li key={item.key}>
               <button
                 type="button"
-                onClick={() => onToggle(key)}
+                onClick={() => onToggle(item.key)}
                 aria-pressed={on}
-                title={on ? `Hide ${label}` : `Show ${label}`}
+                title={on ? `Hide ${item.label}` : `Show ${item.label}`}
                 style={{
                   display: "flex", alignItems: "center", gap: 8, width: "100%",
                   background: "none", border: "none", padding: "3px 2px",
@@ -36,17 +66,8 @@ export default function AmenityLegend({ title, note, items, active, onToggle }) 
                   opacity: on ? 1 : 0.4,
                 }}
               >
-                <span
-                  aria-hidden="true"
-                  style={{
-                    width: 12, height: 12, flexShrink: 0, borderRadius: 3,
-                    background: colour,
-                    // the dark point casing, mirrored as the swatch border so the swatch
-                    // reads like the dot it stands for (#141018).
-                    boxShadow: "0 0 0 1px #141018",
-                  }}
-                />
-                <span style={{ fontSize: "var(--t-xs)", lineHeight: 1.25 }}>{label}</span>
+                <Swatch item={item} glyphMode={glyphMode} identityHue={identityHue} glyphByCategory={glyphByCategory} />
+                <span style={{ fontSize: "var(--t-xs)", lineHeight: 1.25 }}>{item.label}</span>
               </button>
             </li>
           );

@@ -154,20 +154,23 @@ export function ringRadiusAt(zoom) {
   return s[s.length - 1];
 }
 
-// The GLYPH slot (A2), parameterised for A3 — glyphs appear ABOVE this zoom (a glyph is mud at
-// overview; the disc alone reads). The layer is created by the page ONLY once A3 registers icon
-// images via map.addImage; the factory + threshold live here so the construction is defined once.
+// The GLYPH slot — a cream Maki glyph on the disc (the "glyph is a 2nd data channel" rule). Glyphs
+// appear ABOVE this zoom (a glyph is mud at overview; the disc alone reads — §4). NON-SDF: the PNG
+// is pre-coloured cream (public/icons/), so there is NO `icon-color` (SDF carries a small-size
+// sharpness penalty we don't need — §3). `icon-allow-overlap:true` is mandatory: without it the
+// symbol layer's collision detection would hide glyphs while the disc keeps drawing, leaving empty
+// discs (§3, the single most likely defect). The layer is added by the page AFTER the icons load.
 export const GLYPH_LAYER_ID = "amenity-glyphs";
-export const GLYPH_MINZOOM  = 13;
+export const GLYPH_MINZOOM  = 11;   // mid — with the disc; below this the disc alone reads (§4)
 export function glyphLayer(iconImageExpression) {
   return {
     id: GLYPH_LAYER_ID, type: "symbol", source: SOURCE_ID, minzoom: GLYPH_MINZOOM,
     layout: {
       "icon-image": iconImageExpression,
       "icon-allow-overlap": true, "icon-ignore-placement": true,
-      "icon-size": ["interpolate", ["linear"], ["zoom"], 13, 0.5, 17, 0.85],
+      // cream PNG scaled to sit inside the disc (pixelRatio 4 → 16px natural, see amenityGlyphs.js)
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.45, 13, 0.62, 17, 0.9],
     },
-    paint: { "icon-color": "#f7f1df" },   // cream SDF glyph (A2); the casing carries figure-ground
   };
 }
 

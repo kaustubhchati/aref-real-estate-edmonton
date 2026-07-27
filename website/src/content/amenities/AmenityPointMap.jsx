@@ -38,8 +38,9 @@ import AmenityLegend from "./AmenityLegend.jsx";
 import {
   BASEMAP_STYLE, MAP_VIEW, SOURCE_ID, DOT_LAYER_ID, SELECT_LAYER_ID,
   buildColourExpression, resolveDisplayDomain, categoryFilter, dotLayer, selectLayer, amenityLabel,
-  RING, ringRadiusAt, labelLayer, LABEL_LAYER_ID,
+  RING, ringRadiusAt, labelLayer, LABEL_LAYER_ID, glyphLayer, GLYPH_LAYER_ID,
 } from "./amenityPointStyle.js";
+import { GLYPH_CONFIG, loadAmenityIcons, iconImageExpression } from "./amenityGlyphs.js";
 
 const MANIFEST_URL = assetUrl("/data/amenities/manifest.json");
 
@@ -50,6 +51,7 @@ export default function AmenityPointMap({ layerId, title, selectorNode }) {
   const [selected, setSelected] = useState(null); // { id, props } — pinned
   const [hovered, setHovered] = useState(null);   // { id, props } — hover preview
   const [active, setActive] = useState(null);     // Set of shown categories (legend filter)
+  const [glyphReady, setGlyphReady] = useState(false); // flips once the glyph layer is on the map
 
   // ── Manifest: find THIS layer's record (label, file, category field + domain,
   //    coverage, currency). No data literal — everything is read from the manifest. ──
@@ -72,6 +74,9 @@ export default function AmenityPointMap({ layerId, title, selectorNode }) {
   }, [layerId]);
 
   const categoryField = entry?.categoryField || "";
+  // This layer's glyph + identity config (§8), or null. channel "glyph" ⇒ disc is ONE identity hue
+  // and the GLYPH carries the category (Recreation Facilities); else the disc carries it (unchanged).
+  const glyphCfg = GLYPH_CONFIG[layerId] || null;
   const categories = useMemo(() => entry?.categories || [], [entry]);
   // Resolve to display items: ≤10 → one per category; >10 → top-10 by count + Other (§7.1).
   const domain = useMemo(
@@ -84,7 +89,12 @@ export default function AmenityPointMap({ layerId, title, selectorNode }) {
   // MapView adds them already-coloured (no post-hoc setPaintProperty).
   const layers = useMemo(() => {
     if (!entry) return null;
-    const base = [selectLayer(), dotLayer(buildColourExpression(categoryField, domain))];
+    // Glyph-carries-category layers get ONE identity-hue disc (the glyph, added on load, carries the
+    // category); every other layer keeps its per-category / single-symbol disc colour, unchanged.
+    const discColour = glyphCfg?.channel === "glyph"
+      ? glyphCfg.identityHue
+      : buildColourExpression(categoryField, domain);
+    const base = [selectLayer(), dotLayer(discColour)];
     if (entry.family === "S") base.push(labelLayer("name"));   // A6: sparse layers get name labels
     return base;
   }, [entry]);  // eslint-disable-line react-hooks/exhaustive-deps
@@ -102,6 +112,16 @@ export default function AmenityPointMap({ layerId, title, selectorNode }) {
     if (import.meta.env.DEV) window.__amenityMap = m;
     // Points sit ABOVE all basemap layers (MapView inserts data layers below labels).
     for (const id of [SELECT_LAYER_ID, DOT_LAYER_ID, LABEL_LAYER_ID]) if (m.getLayer(id)) m.moveLayer(id);
+    // Glyphs (§8): load the icons THEN add the glyph layer on TOP of the disc — load-first avoids a
+    // missing-image flash. loadAmenityIcons is idempotent; the fresh mount per view re-runs this.
+    if (glyphCfg) {
+      loadAmenityIcons(m).then(() => {
+        if (m.getSource(SOURCE_ID) && !m.getLayer(GLYPH_LAYER_ID)) {
+          m.addLayer(glyphLayer(iconImageExpression(glyphCfg)));
+          setGlyphReady(true);   // let the category-filter effect apply to the now-present glyph layer
+        }
+      }).catch(() => { /* icons failed to load → disc alone, never throw */ });
+    }
     applyCameraPreset(m, HOME_VIEW.Edmonton, { ease: !firstHomeRef.current });
     firstHomeRef.current = false;
     if (!recentreAddedRef.current) {
@@ -193,13 +213,16 @@ export default function AmenityPointMap({ layerId, title, selectorNode }) {
   }, [map, selected, layers]);
 
   // Category show/hide: the legend selection filters the dot layer (removes hidden points
-  // from render AND hit-test — never opacity:0, directive §6).
+  // from render AND hit-test — never opacity:0, directive §6). The GLYPH layer (when present)
+  // takes the SAME filter, so hiding a category drops its disc AND its glyph together.
   useEffect(() => {
     if (!map || !active || !map.getLayer(DOT_LAYER_ID)) return;
     try {
-      map.setFilter(DOT_LAYER_ID, categoryFilter(categoryField, active, domain));
+      const f = categoryFilter(categoryField, active, domain);
+      map.setFilter(DOT_LAYER_ID, f);
+      if (map.getLayer(GLYPH_LAYER_ID)) map.setFilter(GLYPH_LAYER_ID, f);
     } catch { /* map tearing down */ }
-  }, [map, active, categoryField, domain, layers]);
+  }, [map, active, categoryField, domain, layers, glyphReady]);
 
   function toggleCategory(key) {
     setActive((cur) => {
@@ -294,6 +317,11 @@ export default function AmenityPointMap({ layerId, title, selectorNode }) {
                   items={domain.items}
                   active={active}
                   onToggle={toggleCategory}
+                  // §8 glyph mode: the category is carried by the GLYPH, so each legend row shows
+                  // the identity-hue disc + its glyph (mirroring the map) instead of a hue swatch.
+                  glyphMode={glyphCfg?.channel === "glyph"}
+                  identityHue={glyphCfg?.identityHue}
+                  glyphByCategory={glyphCfg?.glyphByCategory}
                 />
               </section>
             )}
