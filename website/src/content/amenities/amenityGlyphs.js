@@ -55,7 +55,7 @@ export const GLYPH_CONFIG = {
     // Two teal steps (same family = same kind, §1 semantic adjacency), clear of the basemap water.
     colourByCategory: { "Spray Deck": "#00c9a7", "Spray Park": "#0f766e" },
   },
-  track_sports_fields:   { identityHue: QUALITATIVE_12[3],  channel: "none",   layerGlyph: "pitch",    prominent: true }, // lime  — field/grass read
+  track_sports_fields:   { identityHue: "#4d7c0f",          channel: "none",   layerGlyph: "pitch",    prominent: true }, // dark field-green — QUALITATIVE_12 lime (idx3) read too light on cream (KC); darkened, same green/field family
   recreation_facilities: {
     // COLOUR + GLYPH (KC 2026-07-27): all 11 facility types get their own hue AND glyph. Hue adjacency
     // is SEMANTIC (§3) — categories that must sit close in hue belong to the same FAMILY, a
