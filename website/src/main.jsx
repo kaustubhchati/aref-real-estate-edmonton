@@ -102,10 +102,8 @@ createRoot(document.getElementById("root")).render(
           <Route path="/properties/land-titles"            element={<Placeholder title="Land Titles"            kind="map" />} />
           <Route path="/activity/dwelling-units"           element={<PermitChoroplethMap />} />
           <Route path="/activity/construction-improvement" element={<BuildingPermitsMap />} />
-          <Route path="/amenities/air-quality"             element={<Placeholder title="Air Quality"            kind="map" />} />
           <Route path="/amenities/community-services"      element={<Placeholder title="Community Services"      kind="map" />} />
           <Route path="/amenities/crime"                   element={<Placeholder title="Crime"                  kind="map" />} />
-          <Route path="/amenities/public-school"           element={<Placeholder title="Public School"          kind="map" />} />
           {/* Public Transportation — the first CONSOLIDATED section: Bus Stops + LRT Network as
               exclusive VIEWS behind the PA-style selector (directive 2026-07-27). The two retired
               per-layer routes redirect in so already-shared URLs never 404. */}

@@ -224,8 +224,7 @@ export const siteConfig = {
   // keeps its /activity/construction-improvement URL though the label changed;
   // Property Assessment / Dwelling Units / Business Counts keep theirs (they are
   // also Layout's IMMERSIVE_ROUTES). Renamed ("Labour Market", ex-"Salary Ranges")
-  // and new ("Land Titles", "Air Quality", "Community Services", "Crime") leaves
-  // take fresh paths.
+  // and new ("Land Titles") leaves take fresh paths.
   nav: [
     { label: "Home", kind: "page", to: "/" },
 
@@ -263,11 +262,7 @@ export const siteConfig = {
       { label: "Parks and Recreation",   kind: "map", status: "live", to: "/amenities/parks-and-recreation" },
       { label: "Police Stations",        kind: "map", status: "live", to: "/amenities/police-stations" },
       { label: "EV Charging Stations",   kind: "map", status: "live", to: "/amenities/ev-charging" },
-      // Future (no built data yet). "School Catchments" (renamed from Public School, KC
-      // 2026-07-25) — the page renders catchment POLYGONS, not school locations (Family 3, later).
-      // Crime dropped (KC 2026-07-25): no source in the ratified list; "soon" must mean planned.
-      { label: "Air Quality",            kind: "map", status: "soon", to: "/amenities/air-quality" },
-      { label: "School Catchments",      kind: "map", status: "soon", to: "/amenities/public-school" },
+      // Air Quality + School Catchments removed entirely (KC 2026-07-27). Crime was dropped earlier.
     ]},
 
     { label: "Neighbourhood Report Card", kind: "tables", status: "live", to: "/report-card" },
