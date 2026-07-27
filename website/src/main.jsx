@@ -112,15 +112,15 @@ createRoot(document.getElementById("root")).render(
           <Route path="/amenities/public-transportation"   element={<AmenitySection sectionKey="public-transportation" />} />
           <Route path="/amenities/bus-stops"               element={<Navigate to="/amenities/public-transportation" replace />} />
           <Route path="/amenities/lrt-stations"            element={<Navigate to="/amenities/public-transportation?view=lrt-network" replace />} />
-          {/* Family-1 amenity POINT layers — one generic component per layer (layerId ->
-              its manifest record). Interim per-layer leaves; Playgrounds / Spray Parks /
-              Recreation Facilities / Track Sports Fields fold into a Parks & Recreation section
-              next (directive §7 step 5). Police + EV stay standalone (a one-layer selector has
-              nothing to select — directive §2). */}
-          <Route path="/amenities/playgrounds"             element={<AmenityPointMap layerId="playgrounds" />} />
-          <Route path="/amenities/spray-parks"             element={<AmenityPointMap layerId="spray_parks" />} />
-          <Route path="/amenities/recreation-facilities"   element={<AmenityPointMap layerId="recreation_facilities" />} />
-          <Route path="/amenities/track-sports-fields"     element={<AmenityPointMap layerId="track_sports_fields" />} />
+          {/* Parks & Recreation — the second CONSOLIDATED section: four point inventories as
+              exclusive VIEWS (directive §7 step 5). The four retired per-layer routes redirect in. */}
+          <Route path="/amenities/parks-and-recreation"    element={<AmenitySection sectionKey="parks-and-recreation" />} />
+          <Route path="/amenities/playgrounds"             element={<Navigate to="/amenities/parks-and-recreation" replace />} />
+          <Route path="/amenities/spray-parks"             element={<Navigate to="/amenities/parks-and-recreation?view=spray-parks" replace />} />
+          <Route path="/amenities/recreation-facilities"   element={<Navigate to="/amenities/parks-and-recreation?view=recreation-facilities" replace />} />
+          <Route path="/amenities/track-sports-fields"     element={<Navigate to="/amenities/parks-and-recreation?view=track-sports-fields" replace />} />
+          {/* Police + EV stay STANDALONE point maps (directive §2 — a one-layer selector has nothing
+              to select; each gains a section when a second civic / environment layer lands). */}
           <Route path="/amenities/police-stations"         element={<AmenityPointMap layerId="police_stations" />} />
           <Route path="/amenities/ev-charging"             element={<AmenityPointMap layerId="ev_charging" />} />
           <Route path="/economy/business-counts"           element={<BusinessCensusMap />} />

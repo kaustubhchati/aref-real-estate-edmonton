@@ -28,10 +28,7 @@ const IMMERSIVE_ROUTES = new Set([
   "/economy/business-census",
   "/activity/construction-improvement",
   "/amenities/public-transportation",
-  "/amenities/playgrounds",
-  "/amenities/spray-parks",
-  "/amenities/recreation-facilities",
-  "/amenities/track-sports-fields",
+  "/amenities/parks-and-recreation",
   "/amenities/police-stations",
   "/amenities/ev-charging",
 ]);

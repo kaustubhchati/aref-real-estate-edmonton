@@ -29,19 +29,33 @@ import EmptyState from "../../components/EmptyState.jsx";
 import SegmentedControl from "../../components/SegmentedControl.jsx";
 import AmenityDensityMap from "./AmenityDensityMap.jsx";
 import AmenityNetworkMap from "./AmenityNetworkMap.jsx";
+import AmenityPointMap from "./AmenityPointMap.jsx";
 
 // The section catalogue. Each section = a title + an ordered VIEWS table. A view row carries the
 // SegmentedControl fields (key/label — text-only, no icon by decision: the labels are
 // self-explanatory and PA's re-homed chips are text-only too) PLUS how to render it (component +
 // the manifest layerId, and idField where the map promotes a non-default id). The FIRST view is
 // the DEFAULT (a bare URL). Adding a view = one row here; adding a section = one entry + one
-// route in main.jsx. (Parks & Recreation joins after STOP B — directive §7 step 5.)
+// route in main.jsx.
 const SECTIONS = {
   "public-transportation": {
     title: "Public Transportation",
     views: [
       { key: "bus-stops",   label: "Bus Stops",   component: AmenityDensityMap, layerId: "bus_stops" },
       { key: "lrt-network", label: "LRT Network", component: AmenityNetworkMap, layerId: "lrt_stops", idField: "lrt_stop_number" },
+    ],
+  },
+  // Parks & Recreation — four unrelated inventories, four category axes, so the exclusive switch is
+  // straightforwardly right (one at a time — directive §4). All four are the generic point map.
+  // Named to accommodate the Parks POLYGON layer (1,195 feat) joining when Family 3 lands — do not
+  // narrow the name.
+  "parks-and-recreation": {
+    title: "Parks and Recreation",
+    views: [
+      { key: "playgrounds",           label: "Playgrounds",           component: AmenityPointMap, layerId: "playgrounds" },
+      { key: "spray-parks",           label: "Spray Parks",           component: AmenityPointMap, layerId: "spray_parks" },
+      { key: "recreation-facilities", label: "Recreation Facilities", component: AmenityPointMap, layerId: "recreation_facilities" },
+      { key: "track-sports-fields",   label: "Track Sports Fields",   component: AmenityPointMap, layerId: "track_sports_fields" },
     ],
   },
 };

@@ -253,15 +253,14 @@ export const siteConfig = {
     ]},
 
     { label: "Amenities", kind: "group", icon: "map-pin", children: [
-      // Public Transportation is CONSOLIDATED (Bus Stops + LRT Network behind one view selector,
-      // directive 2026-07-27). The recreation leaves below (Playgrounds / Spray Parks / Recreation
-      // Facilities / Track Sports Fields) fold into a "Parks and Recreation" section next; Police +
-      // EV stay standalone (a one-layer selector has nothing to select). Order: transport · recreation · civic.
+      // CONSOLIDATED sections (directive 2026-07-27): Public Transportation (Bus Stops + LRT Network)
+      // and Parks and Recreation (Playgrounds + Spray Parks + Recreation Facilities + Track Sports
+      // Fields) — each several layers behind one view selector. Police + EV stay standalone (a
+      // one-layer selector has nothing to select — build the wrapper when it gets a 2nd occupant).
+      // "Parks and Recreation" is named to accommodate the Parks polygon layer joining later.
+      // Order: transport · recreation · civic.
       { label: "Public Transportation",  kind: "map", status: "live", to: "/amenities/public-transportation" },
-      { label: "Playgrounds",            kind: "map", status: "live", to: "/amenities/playgrounds" },
-      { label: "Spray Parks",            kind: "map", status: "live", to: "/amenities/spray-parks" },
-      { label: "Recreation Facilities",  kind: "map", status: "live", to: "/amenities/recreation-facilities" },
-      { label: "Track Sports Fields",    kind: "map", status: "live", to: "/amenities/track-sports-fields" },
+      { label: "Parks and Recreation",   kind: "map", status: "live", to: "/amenities/parks-and-recreation" },
       { label: "Police Stations",        kind: "map", status: "live", to: "/amenities/police-stations" },
       { label: "EV Charging Stations",   kind: "map", status: "live", to: "/amenities/ev-charging" },
       // Future (no built data yet). "School Catchments" (renamed from Public School, KC
