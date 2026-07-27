@@ -6,9 +6,9 @@
 //   • COLOUR mode (default): a hue swatch, the SAME colour the map paints the disc from — colour
 //     carries the category (Playgrounds, Spray Parks, EV). The nearest precedent is Legend.jsx's
 //     discrete rows, reused here with a click-to-filter affordance.
-//   • GLYPH mode (§8): the category is carried by a cream GLYPH on a single identity-hue disc, so
-//     each row shows that disc + glyph — mirroring the map exactly (Recreation Facilities). Every
-//     category is named and shown; no hue ceiling, no collapse.
+//   • GLYPH mode ("both", §1): colour AND glyph carry the category, so each row shows the category's
+//     OWN hue disc + its cream glyph — mirroring the map exactly (Recreation Facilities). Every
+//     category is named and shown, hue + glyph.
 //
 // Rows are BUTTONS (keyboard-operable, aria-pressed). A hidden category dims (chrome state) — the
 // MAP hides it by a layer filter, never opacity:0 (directive §6). The swatch can never drift from
@@ -17,10 +17,10 @@
 
 import { assetUrl } from "../../utils/assetUrl.js";
 
-// The swatch for one row: a glyph-disc in glyph mode (identity-hue disc + cream glyph, as on the
-// map), else the category's hue swatch. Both carry the shared dark casing (#141018) so the swatch
-// reads like the dot it stands for.
-function Swatch({ item, glyphMode, identityHue, glyphByCategory }) {
+// The swatch for one row: a glyph-disc in "both" mode (the category's OWN hue disc + its cream glyph,
+// as on the map), else the category's plain hue swatch. Both carry the shared dark casing (#141018)
+// so the swatch reads like the dot it stands for.
+function Swatch({ item, glyphMode, glyphByCategory }) {
   if (glyphMode) {
     const glyph = glyphByCategory?.[item.key];
     return (
@@ -28,7 +28,7 @@ function Swatch({ item, glyphMode, identityHue, glyphByCategory }) {
         aria-hidden="true"
         style={{
           width: 16, height: 16, flexShrink: 0, borderRadius: "50%",
-          background: identityHue, boxShadow: "0 0 0 1px #141018",
+          background: item.colour, boxShadow: "0 0 0 1px #141018",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}
       >
@@ -44,7 +44,7 @@ function Swatch({ item, glyphMode, identityHue, glyphByCategory }) {
   );
 }
 
-export default function AmenityLegend({ title, note, items, active, onToggle, glyphMode = false, identityHue, glyphByCategory }) {
+export default function AmenityLegend({ title, note, items, active, onToggle, glyphMode = false, glyphByCategory }) {
   return (
     <div className="pa-col-mod pa-col-legend">
       <div className="pa-col-lab">{title}</div>
@@ -66,7 +66,7 @@ export default function AmenityLegend({ title, note, items, active, onToggle, gl
                   opacity: on ? 1 : 0.4,
                 }}
               >
-                <Swatch item={item} glyphMode={glyphMode} identityHue={identityHue} glyphByCategory={glyphByCategory} />
+                <Swatch item={item} glyphMode={glyphMode} glyphByCategory={glyphByCategory} />
                 <span style={{ fontSize: "var(--t-xs)", lineHeight: 1.25 }}>{item.label}</span>
               </button>
             </li>

@@ -83,17 +83,26 @@ export default function AmenityPointMap({ layerId, title, selectorNode }) {
     () => resolveDisplayDomain(categories, entry?.categoryCounts, entry?.categoryLabels, entry?.residualCategories),
     [entry],  // eslint-disable-line react-hooks/exhaustive-deps
   );
+  // A "both" layer (Recreation Facilities) colours by a FAMILY-grouped map from the config, not the
+  // default count-indexed palette — remap the resolved items onto those hues (keys/order/members
+  // unchanged, so the filter + legend still line up). A no-op for every other layer.
+  const domainColoured = useMemo(() => {
+    const cbc = glyphCfg?.colourByCategory;
+    if (!cbc) return domain;
+    return { ...domain, items: domain.items.map((it) => ({ ...it, colour: cbc[it.key] ?? it.colour })) };
+  }, [domain]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const geojsonUrl = entry ? assetUrl(`/data/amenities/${entry.file}`) : null;
   // The dot + ring, coloured from the resolved domain. Built once the entry exists, so
   // MapView adds them already-coloured (no post-hoc setPaintProperty).
   const layers = useMemo(() => {
     if (!entry) return null;
-    // Glyph-carries-category layers get ONE identity-hue disc (the glyph, added on load, carries the
-    // category); every other layer keeps its per-category / single-symbol disc colour, unchanged.
-    const discColour = glyphCfg?.channel === "glyph"
+    // Disc colour by channel (§1): "none" (single-symbol) layers get the layer's ONE identity hue;
+    // "colour" and "both" layers colour per-category (both = Recreation Facilities' family palette,
+    // via domainColoured; colour = the default per-category palette). Every layer has a distinct hue.
+    const discColour = glyphCfg?.channel === "none"
       ? glyphCfg.identityHue
-      : buildColourExpression(categoryField, domain);
+      : buildColourExpression(categoryField, domainColoured);
     const base = [selectLayer(), dotLayer(discColour)];
     if (entry.family === "S") base.push(labelLayer("name"));   // A6: sparse layers get name labels
     return base;
@@ -313,14 +322,14 @@ export default function AmenityPointMap({ layerId, title, selectorNode }) {
               <section className="pa-card pa-card-instrument">
                 <AmenityLegend
                   title={amenityLabel(categoryField)}
-                  note={domain.note}
-                  items={domain.items}
+                  note={domainColoured.note}
+                  items={domainColoured.items}
                   active={active}
                   onToggle={toggleCategory}
-                  // §8 glyph mode: the category is carried by the GLYPH, so each legend row shows
-                  // the identity-hue disc + its glyph (mirroring the map) instead of a hue swatch.
-                  glyphMode={glyphCfg?.channel === "glyph"}
-                  identityHue={glyphCfg?.identityHue}
+                  // §1 "both" mode: colour AND glyph carry the category, so each legend row shows the
+                  // category's own hue disc + its glyph (mirroring the map). Colour-only layers show
+                  // a plain hue swatch.
+                  glyphMode={glyphCfg?.channel === "both"}
                   glyphByCategory={glyphCfg?.glyphByCategory}
                 />
               </section>
