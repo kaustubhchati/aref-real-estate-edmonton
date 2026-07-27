@@ -48,7 +48,13 @@ export const GLYPH_CONFIG = {
   lrt_stops:             { identityHue: QUALITATIVE_12[11], channel: "none",   layerGlyph: "rail-light" },   // petrol — deep, distinct from bus; LINES keep official ETS colours (§5 exception)
   // ── Parks and Recreation section (4 layers → spread across the wheel) ───────
   playgrounds:           { identityHue: QUALITATIVE_12[0],  channel: "colour", layerGlyph: "amusement-park" },  // rose  — chip/identity; disc per-age-band; NOT prominent (659 pts — a prominent blanket); ferris-wheel reads clearer than the slide (KC)
-  spray_parks:           { identityHue: QUALITATIVE_12[5],  channel: "colour", layerGlyph: "swimming", prominent: true }, // teal  — off the WATER-blue band (§5 trap)
+  spray_parks: {
+    identityHue: QUALITATIVE_12[5], channel: "colour", layerGlyph: "swimming", prominent: true,  // teal — off the WATER-blue band (§5 trap)
+    // Its OWN teal-family category scheme (KC 2026-07-27). The default count-indexed palette gave
+    // Spray Deck/Park the same rose/orange as Playgrounds' top-two categories — a duplicate look.
+    // Two teal steps (same family = same kind, §1 semantic adjacency), clear of the basemap water.
+    colourByCategory: { "Spray Deck": "#00c9a7", "Spray Park": "#0f766e" },
+  },
   track_sports_fields:   { identityHue: QUALITATIVE_12[3],  channel: "none",   layerGlyph: "pitch",    prominent: true }, // lime  — field/grass read
   recreation_facilities: {
     // COLOUR + GLYPH (KC 2026-07-27): all 11 facility types get their own hue AND glyph. Hue adjacency
