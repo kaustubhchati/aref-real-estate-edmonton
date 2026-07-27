@@ -11,6 +11,11 @@
 //
 // idField = the layer's unique property (bus stops: stop_id), promoted to the MapLibre feature
 // id so the pin ring + hover key off it on a clustered source.
+//
+// title / selectorNode (OPTIONAL, injected by AmenitySection when this map is one VIEW of a
+// consolidated section): `title` overrides the column/tab title to the SECTION name; `selectorNode`
+// is the shared view <SegmentedControl>, rendered as the top module of the console column. Absent
+// on the standalone route → unchanged behaviour.
 // =============================================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -34,7 +39,7 @@ import {
 
 const MANIFEST_URL = assetUrl("/data/amenities/manifest.json");
 
-export default function AmenityDensityMap({ layerId, idField = "stop_id" }) {
+export default function AmenityDensityMap({ layerId, idField = "stop_id", title, selectorNode }) {
   const [entry, setEntry] = useState(null);
   const [fetchError, setFetchError] = useState(null);
   const [map, setMap] = useState(null);
@@ -64,9 +69,9 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id" }) {
   );
 
   useEffect(() => {
-    document.title = entry ? `${entry.label} · Edmonton` : "Open Data Centre";
+    document.title = entry ? `${title ?? entry.label} · Edmonton` : "Open Data Centre";
     return () => { document.title = "Open Data Centre"; };
-  }, [entry]);
+  }, [entry, title]);
 
   const firstHomeRef = useRef(true);
   const recentreAddedRef = useRef(false);
@@ -194,13 +199,22 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id" }) {
         {entry && (
           <div className="pa-float pa-column pa-column-lean">
             <section className="pa-card pa-card-identity">
-              <IdentityCard title={entry.label} />
+              <IdentityCard title={title ?? entry.label} />
             </section>
+            {/* View switch — the section's shared selector, injected by AmenitySection (the top
+                module of the console, PA's metric-module home). Absent on the standalone route. */}
+            {selectorNode && (
+              <section className="pa-card pa-card-instrument">
+                <div className="pa-col-mod pa-col-metric">{selectorNode}</div>
+              </section>
+            )}
             <section className="pa-card">
               <p className="pa-box-cite" style={{ margin: 0 }}>{currency}</p>
               <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>
                 Coverage as a heatmap when zoomed out; clusters, then individual stops as you zoom in.
               </p>
+              {/* The interaction prompt, homed in the console (D10a — was a detached float). */}
+              <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>Hover a stop for a reading; click to pin it.</p>
             </section>
           </div>
         )}

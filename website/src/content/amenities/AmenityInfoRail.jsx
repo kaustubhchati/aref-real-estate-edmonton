@@ -1,11 +1,13 @@
 // =============================================================================
 // AmenityInfoRail.jsx
 //
-// The amenity point map's fixed right INFORAIL — ONE frame (Principle 0), content swaps
-// with interaction state, the frame never moves. Forked from BusinessCensusInfoRail
-// (idle / preview / pinned; ✕ only when pinned; the .pa-detail / .pa-kv chrome), with the
-// BC-specific NAICS fields replaced by a GENERIC renderer: the amenity layers each carry a
-// different (but self-describing) property set, so the rail shows whatever the feature has.
+// The amenity point map's right INFORAIL — it appears on a hover/pin, anchored to the reading it
+// shows, and is gone otherwise. Forked from BusinessCensusInfoRail (preview / pinned; ✕ only when
+// pinned; the .pa-detail / .pa-kv chrome). IDLE renders NOTHING now: the old idle state floated a
+// "hover to read" hint detached in the right half of the map (defect D10a); that prompt moved to
+// the console column (the view components). The BC-specific NAICS fields are replaced by a GENERIC
+// renderer: the amenity layers each carry a different (but self-describing) property set, so the
+// rail shows whatever the feature has.
 //
 //   • title  — the feature's name-like property (name / stop_name / facility_name / …).
 //   • sub    — the category value (labelled by the category field), when the layer has one.
@@ -32,14 +34,9 @@ function titleField(props) {
 }
 
 export default function AmenityInfoRail({ selected, pinned = false, onClear, categoryField, categoryLabel, categoryLabels }) {
-  // IDLE — present but empty (Principle 0): a quiet prompt of what it does.
-  if (!selected) {
-    return (
-      <div className="pa-detail bc-inforail pa-detail-idle" aria-label="Amenity detail" aria-live="polite">
-        <p className="pa-detail-hint">Hover a point for a reading; click to pin it here.</p>
-      </div>
-    );
-  }
+  // IDLE — render nothing (D10a). No pin ⇒ no rail; the "hover to read" prompt lives in the
+  // console column now, so it is never a box floating detached in the middle of the map.
+  if (!selected) return null;
 
   const tField = titleField(selected);
   const title = tField ? String(selected[tField]) : "—";

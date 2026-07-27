@@ -16,7 +16,7 @@
 
 import { StrictMode, lazy } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Layout from "./shell/Layout.jsx";
 import Home from "./content/pages/Home.jsx";
@@ -69,8 +69,10 @@ const PermitChoroplethMap   = lazyWithReload(() => import("./content/building-pe
 const BusinessCensusMap     = lazyWithReload(() => import("./content/economy/BusinessCensusMap.jsx"));
 const BusinessCensusSection = lazyWithReload(() => import("./content/economy/BusinessCensusSection.jsx"));
 const AmenityPointMap       = lazyWithReload(() => import("./content/amenities/AmenityPointMap.jsx"));
-const AmenityDensityMap     = lazyWithReload(() => import("./content/amenities/AmenityDensityMap.jsx"));
-const AmenityNetworkMap     = lazyWithReload(() => import("./content/amenities/AmenityNetworkMap.jsx"));
+// AmenityDensityMap + AmenityNetworkMap are no longer routed directly — they are the two VIEWS of
+// the Public Transportation section (AmenitySection mounts them). The old /bus-stops + /lrt-stations
+// routes redirect into the section below.
+const AmenitySection        = lazyWithReload(() => import("./content/amenities/AmenitySection.jsx"));
 const ReportCard            = lazyWithReload(() => import("./content/report-card/ReportCard.jsx"));
 
 // basename mounts the app under Vite's base path. import.meta.env.BASE_URL is set
@@ -104,13 +106,17 @@ createRoot(document.getElementById("root")).render(
           <Route path="/amenities/community-services"      element={<Placeholder title="Community Services"      kind="map" />} />
           <Route path="/amenities/crime"                   element={<Placeholder title="Crime"                  kind="map" />} />
           <Route path="/amenities/public-school"           element={<Placeholder title="Public School"          kind="map" />} />
-          <Route path="/amenities/public-transportation"   element={<Placeholder title="Public Transportation"  kind="map" />} />
+          {/* Public Transportation — the first CONSOLIDATED section: Bus Stops + LRT Network as
+              exclusive VIEWS behind the PA-style selector (directive 2026-07-27). The two retired
+              per-layer routes redirect in so already-shared URLs never 404. */}
+          <Route path="/amenities/public-transportation"   element={<AmenitySection sectionKey="public-transportation" />} />
+          <Route path="/amenities/bus-stops"               element={<Navigate to="/amenities/public-transportation" replace />} />
+          <Route path="/amenities/lrt-stations"            element={<Navigate to="/amenities/public-transportation?view=lrt-network" replace />} />
           {/* Family-1 amenity POINT layers — one generic component per layer (layerId ->
-              its manifest record). Interim per-layer leaves; the thematic consolidation
-              (Public Transportation / Parks & Recreation / … multi-layer pages) is a later
-              session that folds these in. */}
-          <Route path="/amenities/bus-stops"               element={<AmenityDensityMap layerId="bus_stops" />} />
-          <Route path="/amenities/lrt-stations"            element={<AmenityNetworkMap layerId="lrt_stops" />} />
+              its manifest record). Interim per-layer leaves; Playgrounds / Spray Parks /
+              Recreation Facilities / Track Sports Fields fold into a Parks & Recreation section
+              next (directive §7 step 5). Police + EV stay standalone (a one-layer selector has
+              nothing to select — directive §2). */}
           <Route path="/amenities/playgrounds"             element={<AmenityPointMap layerId="playgrounds" />} />
           <Route path="/amenities/spray-parks"             element={<AmenityPointMap layerId="spray_parks" />} />
           <Route path="/amenities/recreation-facilities"   element={<AmenityPointMap layerId="recreation_facilities" />} />

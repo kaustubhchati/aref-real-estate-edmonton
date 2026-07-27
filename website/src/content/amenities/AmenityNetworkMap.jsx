@@ -6,6 +6,11 @@
 // "primary source via MapView + secondary via addSource in onLoad" pattern). Reads the station
 // layer's label/currency from the amenities manifest. A separate component (not a branch) — one
 // component per map type (§7). The line legend shows the three lines + their system-map colours.
+//
+// title / selectorNode (OPTIONAL, injected by AmenitySection when this is one VIEW of a
+// consolidated section): `title` overrides the column/tab title to the SECTION name; `selectorNode`
+// is the shared view <SegmentedControl>, rendered as the top module of the console column. Absent
+// on the standalone route → unchanged behaviour.
 // =============================================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -30,7 +35,7 @@ import {
 const MANIFEST_URL = assetUrl("/data/amenities/manifest.json");
 const LINES_URL    = assetUrl("/data/amenities/lrt_lines.geojson");
 
-export default function AmenityNetworkMap({ layerId, idField = "lrt_stop_number" }) {
+export default function AmenityNetworkMap({ layerId, idField = "lrt_stop_number", title, selectorNode }) {
   const [entry, setEntry] = useState(null);       // the STATION layer's manifest record
   const [fetchError, setFetchError] = useState(null);
   const [linesGj, setLinesGj] = useState(null);   // the route lines (legend)
@@ -59,9 +64,9 @@ export default function AmenityNetworkMap({ layerId, idField = "lrt_stop_number"
   const layers = useMemo(() => (linesGj ? [lineCasingLayer(), lineLayer()] : null), [linesGj]);
 
   useEffect(() => {
-    document.title = entry ? `${entry.label} · Edmonton` : "Open Data Centre";
+    document.title = entry ? `${title ?? entry.label} · Edmonton` : "Open Data Centre";
     return () => { document.title = "Open Data Centre"; };
-  }, [entry]);
+  }, [entry, title]);
 
   const firstHomeRef = useRef(true);
   const recentreAddedRef = useRef(false);
@@ -175,8 +180,16 @@ export default function AmenityNetworkMap({ layerId, idField = "lrt_stop_number"
         {entry && (
           <div className="pa-float pa-column pa-column-lean">
             <section className="pa-card pa-card-identity">
-              <IdentityCard title={entry.label} />
+              <IdentityCard title={title ?? entry.label} />
             </section>
+
+            {/* View switch — the section's shared selector, injected by AmenitySection (the top
+                module of the console). Absent on the standalone route. */}
+            {selectorNode && (
+              <section className="pa-card pa-card-instrument">
+                <div className="pa-col-mod pa-col-metric">{selectorNode}</div>
+              </section>
+            )}
 
             {lineLegend.length > 0 && (
               <section className="pa-card pa-card-instrument">
@@ -199,6 +212,8 @@ export default function AmenityNetworkMap({ layerId, idField = "lrt_stop_number"
               <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>
                 {`${entry.featureCount} stops across ${lineLegend.length || 3} lines. Each dot is one stop record; Churchill (the interchange) is drawn larger.`}
               </p>
+              {/* The interaction prompt, homed in the console (D10a — was a detached float). */}
+              <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>Hover a station for a reading; click to pin it.</p>
             </section>
           </div>
         )}

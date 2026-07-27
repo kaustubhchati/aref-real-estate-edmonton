@@ -253,12 +253,11 @@ export const siteConfig = {
     ]},
 
     { label: "Amenities", kind: "group", icon: "map-pin", children: [
-      // Family-1 point layers (LIVE). Interim per-layer leaves — the thematic consolidation
-      // (Public Transportation / Parks & Recreation multi-layer pages) folds these together
-      // in a later session, and Community Services / Public Transportation return then as the
-      // consolidated theme pages. Order: transport · recreation · civic.
-      { label: "Bus Stops",              kind: "map", status: "live", to: "/amenities/bus-stops" },
-      { label: "LRT Stations and Stops", kind: "map", status: "live", to: "/amenities/lrt-stations" },
+      // Public Transportation is CONSOLIDATED (Bus Stops + LRT Network behind one view selector,
+      // directive 2026-07-27). The recreation leaves below (Playgrounds / Spray Parks / Recreation
+      // Facilities / Track Sports Fields) fold into a "Parks and Recreation" section next; Police +
+      // EV stay standalone (a one-layer selector has nothing to select). Order: transport · recreation · civic.
+      { label: "Public Transportation",  kind: "map", status: "live", to: "/amenities/public-transportation" },
       { label: "Playgrounds",            kind: "map", status: "live", to: "/amenities/playgrounds" },
       { label: "Spray Parks",            kind: "map", status: "live", to: "/amenities/spray-parks" },
       { label: "Recreation Facilities",  kind: "map", status: "live", to: "/amenities/recreation-facilities" },

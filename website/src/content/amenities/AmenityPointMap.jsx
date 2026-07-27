@@ -14,6 +14,11 @@
 //
 // SINGLE-SYMBOL PATH is first-class: a layer with no category field (bus_stops, lrt_stops,
 // police_stations, track_sports_fields) renders ONE symbol and shows NO legend.
+//
+// title / selectorNode (OPTIONAL, injected by AmenitySection when this map is one VIEW of a
+// consolidated section — e.g. Parks & Recreation): `title` overrides the column/tab title to the
+// SECTION name; `selectorNode` is the shared view <SegmentedControl>, rendered as the top module
+// of the console column. Absent on a standalone route → unchanged behaviour.
 // =============================================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -38,7 +43,7 @@ import {
 
 const MANIFEST_URL = assetUrl("/data/amenities/manifest.json");
 
-export default function AmenityPointMap({ layerId }) {
+export default function AmenityPointMap({ layerId, title, selectorNode }) {
   const [entry, setEntry] = useState(null);       // this layer's manifest record
   const [fetchError, setFetchError] = useState(null);
   const [map, setMap] = useState(null);
@@ -85,9 +90,9 @@ export default function AmenityPointMap({ layerId }) {
   }, [entry]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    document.title = entry ? `${entry.label} · Edmonton` : "Open Data Centre";
+    document.title = entry ? `${title ?? entry.label} · Edmonton` : "Open Data Centre";
     return () => { document.title = "Open Data Centre"; };
-  }, [entry]);
+  }, [entry, title]);
 
   // ── Map load: lift the points above the basemap, land the home camera, add recentre ──
   const firstHomeRef = useRef(true);
@@ -270,8 +275,16 @@ export default function AmenityPointMap({ layerId }) {
         {entry && (
           <div className="pa-float pa-column pa-column-lean">
             <section className="pa-card pa-card-identity">
-              <IdentityCard title={entry.label} />
+              <IdentityCard title={title ?? entry.label} />
             </section>
+
+            {/* View switch — the section's shared selector, injected by AmenitySection (the top
+                module of the console). Absent on the standalone route. */}
+            {selectorNode && (
+              <section className="pa-card pa-card-instrument">
+                <div className="pa-col-mod pa-col-metric">{selectorNode}</div>
+              </section>
+            )}
 
             {categoryField && active && domain.items.length > 0 && (
               <section className="pa-card pa-card-instrument">
@@ -290,6 +303,8 @@ export default function AmenityPointMap({ layerId }) {
               {coverage && (
                 <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>{coverage}</p>
               )}
+              {/* The interaction prompt, homed in the console (D10a — was a detached float). */}
+              <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>Hover a point for a reading; click to pin it.</p>
             </section>
           </div>
         )}
