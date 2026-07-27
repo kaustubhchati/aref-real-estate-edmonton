@@ -30,7 +30,7 @@ import { QUALITATIVE_12 } from "./amenityPointStyle.js";
 // Every icon PNG in public/icons/ (Maki 8.2.0, CC0 — see public/icons/README.md). Loaded once per
 // map; loading them all (≈32 KB) is simpler than a per-layer list and they are cached by name.
 export const AMENITY_ICONS = [
-  "bus", "rail-light", "playground", "charging-station", "swimming", "police", "pitch",
+  "bus", "rail-light", "amusement-park", "charging-station", "swimming", "police", "pitch",
   "stadium", "fitness-centre", "park", "park-alt1", "tennis", "golf", "skiing", "theatre", "art-gallery",
 ];
 
@@ -47,9 +47,9 @@ export const GLYPH_CONFIG = {
   bus_stops:             { identityHue: QUALITATIVE_12[7],  channel: "none",   layerGlyph: "bus" },          // blue   — established transit blue
   lrt_stops:             { identityHue: QUALITATIVE_12[11], channel: "none",   layerGlyph: "rail-light" },   // petrol — deep, distinct from bus; LINES keep official ETS colours (§5 exception)
   // ── Parks and Recreation section (4 layers → spread across the wheel) ───────
-  playgrounds:           { identityHue: QUALITATIVE_12[0],  channel: "colour", layerGlyph: "playground" },       // rose  — chip/identity; disc stays per-age-band
-  spray_parks:           { identityHue: QUALITATIVE_12[5],  channel: "colour", layerGlyph: "swimming" },         // teal  — off the WATER-blue band (§5 trap)
-  track_sports_fields:   { identityHue: QUALITATIVE_12[3],  channel: "none",   layerGlyph: "pitch" },            // lime  — field/grass read
+  playgrounds:           { identityHue: QUALITATIVE_12[0],  channel: "colour", layerGlyph: "amusement-park" },  // rose  — chip/identity; disc per-age-band; NOT prominent (659 pts — a prominent blanket); ferris-wheel reads clearer than the slide (KC)
+  spray_parks:           { identityHue: QUALITATIVE_12[5],  channel: "colour", layerGlyph: "swimming", prominent: true }, // teal  — off the WATER-blue band (§5 trap)
+  track_sports_fields:   { identityHue: QUALITATIVE_12[3],  channel: "none",   layerGlyph: "pitch",    prominent: true }, // lime  — field/grass read
   recreation_facilities: {
     // COLOUR + GLYPH (KC 2026-07-27): all 11 facility types get their own hue AND glyph. Hue adjacency
     // is SEMANTIC (§3) — categories that must sit close in hue belong to the same FAMILY, a

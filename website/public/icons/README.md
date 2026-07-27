@@ -21,7 +21,7 @@ SVGs and re-run the raster step (cream `#f7f1df`, `source-in`, 64 px).
 |---|---|---|
 | `bus` | bus | Bus Stops (layer glyph) |
 | `rail-light` | rail-light | LRT Stations (layer glyph) |
-| `playground` | playground | Playgrounds (layer glyph; category on colour) |
+| `amusement-park` | amusement-park | Playgrounds (layer glyph; category on colour) — ferris wheel, reads clearer at map size than the slide-figure `playground` (KC 2026-07-27) |
 | `charging-station` | charging-station | EV Charging (layer glyph; category = level on colour) |
 | `swimming` | swimming | Spray Parks (layer glyph); Recreation Facilities → Outdoor Pool |
 | `police` | police | Police Stations (layer glyph) |
