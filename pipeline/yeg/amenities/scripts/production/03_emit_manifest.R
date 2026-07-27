@@ -76,6 +76,14 @@ for (i in seq_len(nrow(bl))) {
   resid <- if (is.na(resid) || !nzchar(resid)) integer(0) else as.integer(strsplit(resid, "\\|")[[1]])
   residualCategories <- if (length(cats) && length(resid) == length(cats)) cats[resid == 1L] else character(0)
 
+  # Excluded-by-value disclosure (§3, no silent drops): the keep_where filter's "val:count|..."
+  # -> a {value: count} object (e.g. bus_stops location_type {"2":109,"1":58,"3":42}). {} if none.
+  ebf <- if ("excluded_by_filter" %in% names(row)) row$excluded_by_filter else NA_character_
+  excludedByType <- if (is.na(ebf) || !nzchar(ebf)) setNames(list(), character(0)) else {
+    pairs <- strsplit(strsplit(ebf, "\\|")[[1]], ":", fixed = TRUE)
+    setNames(as.list(as.integer(vapply(pairs, `[`, "", 2))), vapply(pairs, `[`, "", 1))
+  }
+
   layers[[length(layers) + 1L]] <- list(
     id              = row$layer_id,
     file            = row$file,
@@ -94,7 +102,8 @@ for (i in seq_len(nrow(bl))) {
     coverage        = list(
       withGeometry    = as.integer(row$features_emit),
       withoutGeometry = as.integer(row$without_geometry)
-    )
+    ),
+    excludedByType  = excludedByType   # {value: count} of rows the keep_where filter dropped (§3)
   )
 }
 

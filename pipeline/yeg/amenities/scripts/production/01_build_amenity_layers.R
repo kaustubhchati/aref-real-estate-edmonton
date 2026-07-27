@@ -138,6 +138,27 @@ for (i in seq_len(nrow(registry))) {
   n_without <- sum(!has_geom)
   raw       <- raw[has_geom, , drop = FALSE]
 
+  # 2b-bis. registry-driven row FILTER (keep_where = "col=val"): plot only the wanted rows. A GTFS
+  # bus feed carries station / entrance / pathway-node records (location_type 1/2/3) that are not
+  # boardable stops — a location_type=1 station is a parent CONTAINER whose child platforms are
+  # already in the file, so plotting it double-plots. keep_where=location_type=0 keeps only stops.
+  # The EXCLUDED count BY that column's value is recorded for the manifest (§3, no silent drops —
+  # the same disclosure the Schools 222-of-259 uses). Blank keep_where (every other layer) = no-op.
+  kw <- if ("keep_where" %in% names(r)) str_trim(r$keep_where) else NA_character_
+  excluded_by <- ""
+  if (!is.na(kw) && nzchar(kw) && grepl("=", kw)) {
+    fparts <- str_split(kw, "=", n = 2)[[1]]
+    fcol   <- str_trim(fparts[1]); fval <- str_trim(fparts[2])
+    if (!fcol %in% names(raw)) {
+      stop(sprintf("Layer %s: keep_where column '%s' absent from the snapshot.", r$layer_id, fcol))
+    }
+    fvals    <- trimws(as.character(raw[[fcol]]))
+    keep_row <- !is.na(fvals) & fvals == fval
+    drop_tb  <- sort(table(fvals[!keep_row]), decreasing = TRUE)   # excluded counts, by value (desc)
+    excluded_by <- paste(sprintf("%s:%d", names(drop_tb), as.integer(drop_tb)), collapse = "|")
+    raw <- raw[keep_row, , drop = FALSE]
+  }
+
   # B5/D8 — EV charging LEVEL, derived from the level-count columns (only fires where they exist,
   # i.e. EV). The map should encode the CIVIC axis (can I charge here, how fast) not the
   # commercial network. A station's best level: DC Fast > Level 2 > Level 1. `charging_level`
@@ -219,8 +240,8 @@ for (i in seq_len(nrow(registry))) {
   labs  <- if (length(cats)) tidy_label(cats)  else character(0)   # display labels (D9)
   resid <- if (length(cats)) is_residual(cats) else logical(0)     # grey + last (D5)
 
-  cat(sprintf("   in=%d  emitted=%d  no_geometry=%d  deduped=%d  %.1f KB  categories=%d\n",
-              n_in, n_emit, n_without, n_deduped, emit_kb, length(cats)))
+  cat(sprintf("   in=%d  emitted=%d  no_geometry=%d  deduped=%d  excluded=[%s]  %.1f KB  categories=%d\n",
+              n_in, n_emit, n_without, n_deduped, excluded_by, emit_kb, length(cats)))
 
   build_log[[length(build_log) + 1L]] <- tibble(
     layer_id         = r$layer_id,
@@ -233,6 +254,7 @@ for (i in seq_len(nrow(registry))) {
     features_emit    = n_emit,
     without_geometry = n_without,
     deduped          = n_deduped,
+    excluded_by_filter = excluded_by,   # "val:count|..." for the manifest disclosure (§3)
     emit_kb          = emit_kb,
     categories        = paste(cats, collapse = "|"),
     category_counts   = paste(cnts, collapse = "|"),   # parallel to categories (alphabetical)

@@ -10,16 +10,21 @@
       "family": "D",
       "sourceDatasetId": "4vt2-8zrq",
       "sourceUpdatedAt": "2026-04-20",
-      "fetchedAt": "2026-07-25",
-      "featureCount": 6882,
+      "fetchedAt": "2026-07-27",
+      "featureCount": 6673,
       "categoryField": "",
       "categories": [],
       "categoryCounts": {},
       "categoryLabels": {},
       "residualCategories": [],
       "coverage": {
-        "withGeometry": 6882,
+        "withGeometry": 6673,
         "withoutGeometry": 0
+      },
+      "excludedByType": {
+        "2": 109,
+        "1": 58,
+        "3": 42
       }
     },
     {

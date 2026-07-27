@@ -31,9 +31,9 @@ export const D_GLYPH_ID         = "amenity-density-glyph";
 // three stages hand off cleanly: heatmap (≤~11) → clusters (~11–13) → stops (>13).
 export const D_CLUSTER_MAXZOOM = 13;
 export const D_CLUSTER_RADIUS  = 46;
-// CLUSTER FLOOR (directive §6): a disc labelled "2" is not a cluster — two individual stops carry
-// more information. clusterMinPoints=5 makes Supercluster keep groups of <5 as INDIVIDUAL points
-// (2–4-stop clusters never form). This ONLY works because the stop layer below now fades in with
+// CLUSTER FLOOR: a disc labelled "2" (or 4, or 6) is not a cluster — a few individual stops carry
+// more information. clusterMinPoints=7 makes Supercluster keep groups of <7 as INDIVIDUAL points
+// (2–6-stop clusters never form). This ONLY works because the stop layer below now fades in with
 // the clusters (~z11.3), not at z12.5 — otherwise those small groups would be invisible in the
 // z11.3–12.5 band (worse than a "2" disc). The two changes are one fix; keep them in sync.
 export const D_CLUSTER_MIN_POINTS = 7;
