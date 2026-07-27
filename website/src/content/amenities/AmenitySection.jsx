@@ -30,6 +30,7 @@ import SegmentedControl from "../../components/SegmentedControl.jsx";
 import AmenityDensityMap from "./AmenityDensityMap.jsx";
 import AmenityNetworkMap from "./AmenityNetworkMap.jsx";
 import AmenityPointMap from "./AmenityPointMap.jsx";
+import { GLYPH_CONFIG } from "./amenityGlyphs.js";
 
 // The section catalogue. Each section = a title + an ordered VIEWS table. A view row carries the
 // SegmentedControl fields (key/label — text-only, no icon by decision: the labels are
@@ -90,10 +91,16 @@ export default function AmenitySection({ sectionKey }) {
   const active = views.find((v) => v.key === view) ?? views[0];
   const View = active.component;
 
-  // The shared selector — text-only chips driven by the VIEWS table, writing the single `view`
-  // state. Reuses the metric-module column styling (.pa-col-metric) in the view's column.
+  // Each chip carries its layer's IDENTITY HUE as a dot (DESIGN_SYSTEM §1 — the switch says which
+  // layer, since with the exclusive selector only one is on screen). Read from the one source, the
+  // glyph/identity config, so a chip can never drift from the map's disc colour.
+  const swatches = Object.fromEntries(
+    views.map((v) => [v.key, GLYPH_CONFIG[v.layerId]?.identityHue]).filter(([, c]) => c),
+  );
+  // The shared selector — driven by the VIEWS table, writing the single `view` state. Reuses the
+  // metric-module column styling (.pa-col-metric) in the view's column.
   const selectorNode = (
-    <SegmentedControl label="View" options={views} value={view} onChange={setView} />
+    <SegmentedControl label="View" options={views} value={view} onChange={setView} swatches={swatches} />
   );
 
   // key={active.key} → each view is a FRESH mount (its own map, camera, fetch, selection) — the

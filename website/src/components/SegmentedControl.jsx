@@ -13,6 +13,9 @@
 //              option table (e.g. METRICS) so there are no option literals here.
 //   value    — the active option's `key`
 //   onChange — (key) => void
+//   swatches — OPTIONAL { key: colour } — a per-option identity-hue dot before the label
+//              (amenity view selector, DESIGN_SYSTEM §1: the chip carries the layer's
+//              identity hue so the switch says WHICH layer). Omitted → no dot (PA/DU/BC).
 //
 // a11y: a labelled radio-style group of buttons (aria-pressed marks the active
 // one), mirroring OptionToggle's pattern so screen-reader behaviour is familiar.
@@ -20,7 +23,7 @@
 
 import { useId } from "react";
 
-export default function SegmentedControl({ label, options, value, onChange }) {
+export default function SegmentedControl({ label, options, value, onChange, swatches }) {
   const groupId = useId();
   return (
     <div className="seg" role="group" aria-labelledby={`${groupId}-label`}>
@@ -36,6 +39,15 @@ export default function SegmentedControl({ label, options, value, onChange }) {
               onClick={() => onChange(opt.key)}
               aria-pressed={isActive}
             >
+              {swatches?.[opt.key] && (
+                <span
+                  aria-hidden="true"
+                  style={{
+                    width: 10, height: 10, flexShrink: 0, borderRadius: "50%",
+                    background: swatches[opt.key], boxShadow: "0 0 0 1px #14101833",
+                  }}
+                />
+              )}
               {opt.icon && (
                 <svg
                   className="seg-icon"
