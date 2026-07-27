@@ -9,8 +9,8 @@
 //   • never changes layer order (no addLayer / moveLayer here),
 //   • reversible — flip APPLY_APPLE_CLASSIC to false to restore the raw CARTO look.
 //
-// Called from MapView AND PermitMapView load handlers; every map section shares
-// the same basemap, so this one function gives full, consistent coverage.
+// Called from MapView's load handler (the retired PermitMapView is gone — §12 v1.10);
+// every map section shares the same basemap, so this one function gives full, consistent coverage.
 //
 // Coverage is pattern-based on the OpenMapTiles layer-id schema, so EVERY
 // fill/line/background/symbol layer gets a colour. Any layer whose id doesn't
