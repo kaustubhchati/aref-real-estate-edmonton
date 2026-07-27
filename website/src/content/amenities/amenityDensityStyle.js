@@ -118,11 +118,11 @@ export function densitySelectLayer() {
 // every stop; at MID zoom, the small groups the cluster floor (clusterMinPoints) left unclustered.
 // So the fade-in was pulled from z12.5 back to ~z11.3 to meet the clusters — a sparse fringe shows
 // 2–4 real stops instead of a "2" disc or a gap (small at mid zoom, growing to the street radius).
-export function densityPointLayer() {
+export function densityPointLayer(colour = SINGLE_SYMBOL_COLOUR) {
   return {
     id: D_POINT_ID, type: "circle", source: D_SOURCE_ID, filter: ["!", ["has", "point_count"]],
     paint: {
-      "circle-color": SINGLE_SYMBOL_COLOUR,
+      "circle-color": colour,   // single hue, or a per-zone match (bus regional operators, §2)
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 2.5, 12.5, 3, 15, 5, 17, 7],
       "circle-opacity": ["interpolate", ["linear"], ["zoom"], 11, 0, 11.4, 0.92],
       "circle-stroke-color": POINT_CASING,

@@ -37,8 +37,12 @@ import {
   heatLayer, clusterLayer, clusterCountLayer, densityPointLayer, densitySelectLayer, densityGlyphLayer,
 } from "./amenityDensityStyle.js";
 import { loadAmenityIcons } from "./amenityGlyphs.js";
+import { busZoneColour, BUS_ZONE_LEGEND, BUS_ZONE_OPERATOR } from "./busZones.js";
 
 const MANIFEST_URL = assetUrl("/data/amenities/manifest.json");
+
+// The location_type-excluded counts (manifest §3 disclosure) read into a sentence for the console.
+const EXCLUDED_LABEL = { "1": "stations", "2": "entrances", "3": "nodes" };
 
 export default function AmenityDensityMap({ layerId, idField = "stop_id", title, selectorNode }) {
   const [entry, setEntry] = useState(null);
@@ -63,9 +67,12 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id", title,
 
   const geojsonUrl = entry ? assetUrl(`/data/amenities/${entry.file}`) : null;
   const sourceOptions = useMemo(() => ({ ...D_SOURCE_OPTIONS, promoteId: idField }), [idField]);
-  // Stack bottom→top: heatmap · selection ring · cluster discs · stops · cluster counts.
+  // Stack bottom→top: heatmap · selection ring · cluster discs · stops · cluster counts. The
+  // individual STOPS are coloured by regional operator (§2, zone_id); the density stages (heatmap +
+  // clusters) stay the identity blue — they aggregate mixed zones, and Edmonton is 85% of stops, so
+  // the blue mass reads as "mostly Edmonton" and the regional stops read as the non-blue dots.
   const layers = useMemo(
-    () => (entry ? [heatLayer(), densitySelectLayer(), clusterLayer(), densityPointLayer(), clusterCountLayer()] : null),
+    () => (entry ? [heatLayer(), densitySelectLayer(), clusterLayer(), densityPointLayer(busZoneColour()), clusterCountLayer()] : null),
     [entry],
   );
 
@@ -160,6 +167,11 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id", title,
         ? `Updated ${entry.sourceUpdatedAt} · ${entry.featureCount.toLocaleString()} stops`
         : `Fetched ${entry.fetchedAt} · ${entry.featureCount.toLocaleString()} stops`)
     : "";
+  // §3 disclosure: the non-boardable records the location_type filter dropped (from the manifest).
+  const excl = entry?.excludedByType;
+  const excludedNote = excl && Object.keys(excl).length
+    ? "Excludes " + Object.entries(excl).map(([c, n]) => `${n.toLocaleString()} ${EXCLUDED_LABEL[c] || c}`).join(", ") + " (not boardable stops)."
+    : null;
   const detail = hovered ?? selected;
 
   return (
@@ -197,7 +209,9 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id", title,
             selected={detail?.props ?? null}
             pinned={hovered == null && selected != null}
             onClear={() => setSelected(null)}
-            categoryField=""
+            categoryField="zone_id"
+            categoryLabel="Operator"
+            categoryLabels={BUS_ZONE_OPERATOR}
           />
         )}
 
@@ -213,8 +227,26 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id", title,
                 <div className="pa-col-mod pa-col-metric">{selectorNode}</div>
               </section>
             )}
+            {/* OPERATOR-ZONE legend (§2): the stops are coloured by regional operator; the small
+                tail collapses to "Other regional". The exact operator is in the detail rail. */}
+            <section className="pa-card pa-card-instrument">
+              <div className="pa-col-mod pa-col-legend">
+                <div className="pa-col-lab">Operator zone</div>
+                <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                  {BUS_ZONE_LEGEND.map(({ key, label, colour }) => (
+                    <li key={key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "var(--t-xs)", lineHeight: 1.3 }}>
+                      <span aria-hidden="true" style={{ width: 12, height: 12, flexShrink: 0, borderRadius: "50%", background: colour, boxShadow: "0 0 0 1px #141018" }} />
+                      {label}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
             <section className="pa-card">
               <p className="pa-box-cite" style={{ margin: 0 }}>{currency}</p>
+              {excludedNote && (
+                <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>{excludedNote}</p>
+              )}
               <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>
                 Coverage as a heatmap when zoomed out; clusters, then individual stops as you zoom in.
               </p>
