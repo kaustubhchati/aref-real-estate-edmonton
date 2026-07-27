@@ -173,6 +173,22 @@ for (i in seq_len(nrow(registry))) {
                           ifelse(l1 > 0, "Level 1", "Unknown")))
   }
 
+  # Bus zone ORDINAL (D2): a numeric zone_idx in the ratified legend order, so a CLUSTERED source can
+  # carry the operator through min/max accumulators — a cluster spanning two operators has
+  # zmin != zmax (the zones are geographically disjoint, so most clusters are homogeneous). Curated
+  # zone -> idx map (reference table, §4.7 — dated, KC-ratified); fires only where zone_id + the map
+  # both exist. Blank/unmapped is ABSENCE, not an operator -> a residual index past the operators
+  # (frontend renders it grey; none exist today, the 151 blanks were non-stops removed by the filter).
+  if ("zone_id" %in% names(raw)) {
+    zref <- sort(list.files("data/reference", pattern = "^bus_zone_index_\\d{8}\\.csv$", full.names = TRUE))
+    if (length(zref)) {
+      zmap <- read_csv(tail(zref, 1), show_col_types = FALSE, col_types = cols(.default = "c"))
+      idx  <- setNames(suppressWarnings(as.integer(zmap$zone_idx)), zmap$zone_id)
+      raw$zone_idx <- unname(idx[trimws(as.character(raw$zone_id))])
+      raw$zone_idx[is.na(raw$zone_idx)] <- max(idx, na.rm = TRUE) + 1L   # residual, beyond any operator
+    }
+  }
+
   # 2c. keep only the registry's renderable columns (that exist) + geometry.
   keep <- str_trim(str_split(r$renderable_cols, "\\|")[[1]])
   keep <- intersect(keep, names(raw))

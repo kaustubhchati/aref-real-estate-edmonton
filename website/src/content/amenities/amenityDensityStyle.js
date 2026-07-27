@@ -1,36 +1,32 @@
 // =============================================================================
 // amenityDensityStyle.js
 //
-// Family D — a DENSE amenity point layer (bus stops, 6,882). ONE source, THREE stages across
-// zoom, all native MapLibre (no dependency — Supercluster ships inside the library):
-//   • OVERVIEW → a `heatmap` layer. 6,882 constant dots read as a solid mass and destroy the
-//     basemap (D2); a heatmap reads honestly as SERVICE COVERAGE at that scale.
-//   • MID      → CLUSTERS (`cluster:true` on the source supplies `point_count`). A `step`
-//     expression sizes the disc by count; a cream count label rides on it.
-//   • STREET   → the individual stops, the shared single-symbol disc.
+// Family D — a DENSE amenity point layer (bus stops, 6,673). ONE source, TWO stages across zoom,
+// native MapLibre (Supercluster ships inside the library):
+//   • OVERVIEW → CLUSTERS from the home camera down (`cluster:true` supplies `point_count`). A
+//     `step` sizes the disc by count; a cream count label rides on it. (The old heatmap stage was
+//     dropped — D1 2026-07-27: it read as empty smudges at home and carried no number.)
+//   • STREET   → the individual stops (above the cluster max-zoom).
 //
-// The cluster discs + the individual stops use the SAME disc-plus-casing grammar as every other
-// amenity symbol (the shared POINT_CASING #141018), so the density treatment reads as the SAME
-// system, not a different map (directive A5). Radius is always zoom-interpolated.
-//
-// This also answers the open Business Census View-2 overview-density question: one answer
-// (heatmap→cluster→point), ruled here, to be applied there.
+// Both the cluster discs AND the individual stops are coloured by regional OPERATOR (zone_id / the
+// clustered zone_idx accumulators — §D2, colour expressions passed in by the page), on the SAME
+// disc-plus-casing grammar as every other amenity symbol (the shared POINT_CASING #141018).
 // =============================================================================
 
 import { POINT_CASING, SINGLE_SYMBOL_COLOUR } from "./amenityPointStyle.js";
 
 export const D_SOURCE_ID        = "amenity-density";
-export const D_HEAT_ID          = "amenity-heat";
 export const D_CLUSTER_ID       = "amenity-cluster";
 export const D_CLUSTER_COUNT_ID = "amenity-cluster-count";
 export const D_POINT_ID         = "amenity-density-point";
 export const D_SELECT_ID        = "amenity-density-select";
 export const D_GLYPH_ID         = "amenity-density-glyph";
 
-// The source clusters BELOW this zoom; at/above it the individual stops render. Chosen so the
-// three stages hand off cleanly: heatmap (≤~11) → clusters (~11–13) → stops (>13).
+// TWO stages (D1 2026-07-27 — the heatmap was dropped; it read as empty smudges at home and carried
+// no number). Clusters render from the HOME overview down (~z10.3–13), each with its count; the
+// individual stops render above z13. clusterRadius tuned so home reads as a DISTRIBUTION, not a swarm.
 export const D_CLUSTER_MAXZOOM = 13;
-export const D_CLUSTER_RADIUS  = 46;
+export const D_CLUSTER_RADIUS  = 70;   // ~N discs at the z10.3 home camera (reported at build time)
 // CLUSTER FLOOR: a disc labelled "2" (or 4, or 6) is not a cluster — a few individual stops carry
 // more information. clusterMinPoints=7 makes Supercluster keep groups of <7 as INDIVIDUAL points
 // (2–6-stop clusters never form). This ONLY works because the stop layer below now fades in with
@@ -40,49 +36,37 @@ export const D_CLUSTER_MIN_POINTS = 7;
 export const D_SOURCE_OPTIONS  = {
   cluster: true, clusterMaxZoom: D_CLUSTER_MAXZOOM, clusterRadius: D_CLUSTER_RADIUS,
   clusterMinPoints: D_CLUSTER_MIN_POINTS,
+  // D2 — two accumulators carry the operator through aggregation (feature props don't survive
+  // clustering). Zones are geographically disjoint, so a cluster is almost always homogeneous
+  // (zmin == zmax); a cluster that SPANS operators has zmin != zmax and renders neutral.
+  clusterProperties: {
+    zmin: ["min", ["get", "zone_idx"]],
+    zmax: ["max", ["get", "zone_idx"]],
+  },
 };
 
 // A cream count label needs a fontstack the basemap actually serves (same stack the BC overlay
 // uses, proven against this style).
 const COUNT_FONT = ["Open Sans Bold", "Noto Sans Regular"];
 
-// OVERVIEW — the coverage heatmap. Blue (the bus single-symbol hue) so the layer reads as the
-// same system; transparent→blue→deep-blue by density. Fades OUT by ~z13 as clusters take over.
-export function heatLayer() {
-  return {
-    id: D_HEAT_ID, type: "heatmap", source: D_SOURCE_ID, maxzoom: 13.5,
-    paint: {
-      "heatmap-weight": 1,
-      "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 8, 0.5, 12, 1.1],
-      "heatmap-radius":    ["interpolate", ["linear"], ["zoom"], 8, 10, 11, 18, 13, 26],
-      "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"],
-        0,   "rgba(0,0,0,0)",
-        0.2, "rgba(91,124,255,0.35)",
-        0.45,"rgba(91,124,255,0.65)",
-        0.75,"#3b5bdb",
-        1,   "#1e3a8a"],
-      "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], 10, 0.9, 12, 0.55, 13, 0],
-    },
-  };
-}
-
-// MID — cluster discs: the shared disc + dark casing, sized by point_count (step), fading in as
-// the heatmap fades out. Blue like the stops.
-export function clusterLayer() {
+// The cluster discs (from the home overview down): the shared disc + dark casing, sized by
+// point_count (step), coloured by OPERATOR (colour expression passed in — busClusterColour; a
+// cluster spanning operators renders neutral). Casing stays #141018 at every colour (§D2).
+export function clusterLayer(colour = SINGLE_SYMBOL_COLOUR) {
   return {
     id: D_CLUSTER_ID, type: "circle", source: D_SOURCE_ID, filter: ["has", "point_count"],
     paint: {
-      "circle-color": SINGLE_SYMBOL_COLOUR,
+      "circle-color": colour,
       "circle-radius": ["step", ["get", "point_count"], 13, 25, 17, 100, 22, 400, 28],
-      "circle-opacity": ["interpolate", ["linear"], ["zoom"], 10.3, 0, 11.3, 0.95],
-      "circle-stroke-color": POINT_CASING,   // the shared casing (§4)
+      "circle-opacity": 0.95,
+      "circle-stroke-color": POINT_CASING,   // the shared casing (§4) — every colour
       "circle-stroke-width": 2,
-      "circle-stroke-opacity": ["interpolate", ["linear"], ["zoom"], 10.3, 0, 11.3, 1],
+      "circle-stroke-opacity": 1,
     },
   };
 }
 
-// The count label on the cluster disc (cream, like the deferred glyph ink).
+// The count label on the cluster disc (cream). Visible from the home overview (no minzoom gate now).
 export function clusterCountLayer() {
   return {
     id: D_CLUSTER_COUNT_ID, type: "symbol", source: D_SOURCE_ID, filter: ["has", "point_count"],
@@ -94,7 +78,7 @@ export function clusterCountLayer() {
     },
     paint: {
       "text-color": "#f7f1df",
-      "text-opacity": ["interpolate", ["linear"], ["zoom"], 10.5, 0, 11.3, 1],
+      "text-opacity": 1,
     },
   };
 }

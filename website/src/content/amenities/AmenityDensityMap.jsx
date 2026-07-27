@@ -33,11 +33,11 @@ import { assetUrl } from "../../utils/assetUrl.js";
 import AmenityInfoRail from "./AmenityInfoRail.jsx";
 import { BASEMAP_STYLE, MAP_VIEW } from "./amenityPointStyle.js";
 import {
-  D_SOURCE_ID, D_HEAT_ID, D_CLUSTER_ID, D_CLUSTER_COUNT_ID, D_POINT_ID, D_SELECT_ID, D_GLYPH_ID, D_SOURCE_OPTIONS,
-  heatLayer, clusterLayer, clusterCountLayer, densityPointLayer, densitySelectLayer, densityGlyphLayer,
+  D_SOURCE_ID, D_CLUSTER_ID, D_CLUSTER_COUNT_ID, D_POINT_ID, D_SELECT_ID, D_GLYPH_ID, D_SOURCE_OPTIONS,
+  clusterLayer, clusterCountLayer, densityPointLayer, densitySelectLayer, densityGlyphLayer,
 } from "./amenityDensityStyle.js";
 import { loadAmenityIcons } from "./amenityGlyphs.js";
-import { busZoneColour, BUS_ZONE_LEGEND, BUS_ZONE_OPERATOR } from "./busZones.js";
+import { busZoneColour, busClusterColour, busClusterLabel, BUS_ZONE_LEGEND, BUS_ZONE_OPERATOR } from "./busZones.js";
 
 const MANIFEST_URL = assetUrl("/data/amenities/manifest.json");
 
@@ -50,6 +50,7 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id", title,
   const [map, setMap] = useState(null);
   const [selected, setSelected] = useState(null);   // { id, props } — pinned stop
   const [hovered, setHovered] = useState(null);      // { id, props } — hover preview
+  const [clusterTip, setClusterTip] = useState(null); // { label, count, x, y } — cluster hover readout (§D2)
 
   useEffect(() => {
     let cancelled = false;
@@ -67,12 +68,12 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id", title,
 
   const geojsonUrl = entry ? assetUrl(`/data/amenities/${entry.file}`) : null;
   const sourceOptions = useMemo(() => ({ ...D_SOURCE_OPTIONS, promoteId: idField }), [idField]);
-  // Stack bottom→top: heatmap · selection ring · cluster discs · stops · cluster counts. The
-  // individual STOPS are coloured by regional operator (§2, zone_id); the density stages (heatmap +
-  // clusters) stay the identity blue — they aggregate mixed zones, and Edmonton is 85% of stops, so
-  // the blue mass reads as "mostly Edmonton" and the regional stops read as the non-blue dots.
+  // Stack bottom→top: selection ring · cluster discs · stops · cluster counts (no heatmap now, D1).
+  // BOTH the cluster discs and the individual stops are coloured by regional OPERATOR (§2/§D2): a
+  // homogeneous cluster takes its operator's colour, a cluster spanning operators is neutral, and
+  // each stop takes its own operator colour.
   const layers = useMemo(
-    () => (entry ? [heatLayer(), densitySelectLayer(), clusterLayer(), densityPointLayer(busZoneColour()), clusterCountLayer()] : null),
+    () => (entry ? [densitySelectLayer(), clusterLayer(busClusterColour()), densityPointLayer(busZoneColour()), clusterCountLayer()] : null),
     [entry],
   );
 
@@ -86,7 +87,7 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id", title,
   function handleMapLoad(m) {
     setMap(m);
     if (import.meta.env.DEV) window.__amenityMap = m;
-    for (const id of [D_HEAT_ID, D_SELECT_ID, D_CLUSTER_ID, D_POINT_ID, D_CLUSTER_COUNT_ID])
+    for (const id of [D_SELECT_ID, D_CLUSTER_ID, D_POINT_ID, D_CLUSTER_COUNT_ID])
       if (m.getLayer(id)) m.moveLayer(id);
     // The cream bus glyph on individual stops (street zoom) — load the icons THEN add it (no flash).
     loadAmenityIcons(m).then(() => {
@@ -128,15 +129,24 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id", title,
       const f = e.features?.[0]; if (!f) return;
       setSelected({ id: f.id, props: f.properties });
     }
-    function onClusterEnter() { map.getCanvas().style.cursor = "pointer"; }
-    function onClusterLeave() { map.getCanvas().style.cursor = ""; }
+    function onClusterMove(e) {
+      const f = e.features?.[0]; if (!f) return;
+      map.getCanvas().style.cursor = "pointer";
+      // §D2: name the operator (or "Mixed operators" when the cluster spans zones) + its count.
+      setClusterTip({
+        label: busClusterLabel(f.properties.zmin, f.properties.zmax),
+        count: f.properties.point_count,
+        x: e.point.x, y: e.point.y,
+      });
+    }
+    function onClusterLeave() { map.getCanvas().style.cursor = ""; setClusterTip(null); }
     function onDismiss(e) {
       const box = [[e.point.x - 4, e.point.y - 4], [e.point.x + 4, e.point.y + 4]];
       const hit = map.queryRenderedFeatures(box, { layers: [D_POINT_ID, D_CLUSTER_ID] });
       if (!hit.length) setSelected(null);
     }
     map.on("click", D_CLUSTER_ID, onClusterClick);
-    map.on("mouseenter", D_CLUSTER_ID, onClusterEnter);
+    map.on("mousemove", D_CLUSTER_ID, onClusterMove);
     map.on("mouseleave", D_CLUSTER_ID, onClusterLeave);
     map.on("mousemove", D_POINT_ID, onPointMove);
     map.on("mouseleave", D_POINT_ID, onPointLeave);
@@ -144,7 +154,7 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id", title,
     map.on("click", onDismiss);
     return () => {
       map.off("click", D_CLUSTER_ID, onClusterClick);
-      map.off("mouseenter", D_CLUSTER_ID, onClusterEnter);
+      map.off("mousemove", D_CLUSTER_ID, onClusterMove);
       map.off("mouseleave", D_CLUSTER_ID, onClusterLeave);
       map.off("mousemove", D_POINT_ID, onPointMove);
       map.off("mouseleave", D_POINT_ID, onPointLeave);
@@ -202,6 +212,19 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id", title,
               )}
             </>
           )}
+          {/* §D2 — cluster hover readout: the operator (or "Mixed operators") + the stop count, so
+              a disc says what it aggregates without a click. Positioned at the cursor; no pointer events. */}
+          {clusterTip && (
+            <div style={{
+              position: "absolute", left: clusterTip.x, top: clusterTip.y,
+              transform: "translate(-50%, calc(-100% - 14px))", pointerEvents: "none", zIndex: 5,
+              background: "#1a1c1f", color: "#f5f6f7", border: "1px solid #2a2d31",
+              borderRadius: 6, padding: "4px 8px", fontSize: "var(--t-xs)", whiteSpace: "nowrap",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+            }}>
+              {clusterTip.label} · {Number(clusterTip.count).toLocaleString()} stops
+            </div>
+          )}
         </div>
 
         {layers && (
@@ -248,7 +271,7 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id", title,
                 <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>{excludedNote}</p>
               )}
               <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>
-                Coverage as a heatmap when zoomed out; clusters, then individual stops as you zoom in.
+                Stops group into clusters (with a count) at the overview; individual stops appear as you zoom in.
               </p>
               {/* The interaction prompt, homed in the console (D10a — was a detached float). */}
               <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>Hover a stop for a reading; click to pin it.</p>

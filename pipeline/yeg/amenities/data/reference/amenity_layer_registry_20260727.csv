@@ -1,5 +1,5 @@
 layer_id,label,listed_id,data_id,geometry_type,geometry_column,category_field,dedup_key,keep_where,renderable_cols,min_rows,min_size_kb,family
-bus_stops,Bus Stops,4vt2-8zrq,4vt2-8zrq,point,geometry_point,,,location_type=0,stop_id|stop_code|stop_name|zone_id,3000,300,D
+bus_stops,Bus Stops,4vt2-8zrq,4vt2-8zrq,point,geometry_point,,,location_type=0,stop_id|stop_code|stop_name|zone_id|zone_idx,3000,300,D
 lrt_stops,LRT Stations and Stops,fhxi-cnhe,fhxi-cnhe,point,geometry_point,,,,lrt_stop_number|lrt_stop_description,20,3,N
 police_stations,Police Stations,e7aq-scxv,e7aq-scxv,point,geometry_point,,,,name|address,5,1,S
 playgrounds,Playgrounds,g57c-ph4j,9nqb-w48x,point,geometry_point,user_category,id,,id|name|address|type|surface_type|accessibility|user_category|neighbourhood_id|neighbourhood_name,300,50,C
