@@ -71,19 +71,24 @@ const areaName = (s) => titleCase(String(s).toLowerCase());
 // with CLUSTER STRENGTH (the statistical evidence) below them.
 function FullReadout({ detail, hue, onBack, nsimLabel, summaryRow }) {
   const maxN = detail.topNeighbourhoods.length ? detail.topNeighbourhoods[0].n || 1 : 1;
-  // T3a (ratified audit, 2026-07-28; prose EXPLANATORY per KC's amendment same day) — the
-  // sector-conditional line, from the per-group companion file (methodology note §7.4). The
-  // earlier "District core: N of M …" wording named a concept the reader was never taught; the
-  // line now TEACHES the mechanism first (an industry can look clustered merely because its
-  // sector clusters), then states the stricter test's result in the same terms. Survivors nest
-  // inside the significant set; a zero-survivor (sector-dominant) group gets the
-  // consistent-with-sector variant. Absent companion data → no line (graceful degradation).
+  // T3a (ratified audit, 2026-07-28; prose per KC's amendments same day) — the sector-
+  // conditional line, from the per-group companion file (methodology note §7.4). Explanatory
+  // (teach the mechanism, then the result) IN THE PAPER'S REGISTER (the academic-economics
+  // style guide: short active present-tense sentences; no filler like "simply"; no causal or
+  // agentive verbs — the earlier "can simply follow its sector" failed both; hedges calibrated
+  // to the statistic, "consistent with"). Every phrase is the note's own locked vocabulary:
+  // "register as concentrated" and the stricter-test question are §1/§7.4 verbatim
+  // constructions; the zero-survivor hedge is §7.4's "consistent with the spatial pattern of
+  // the broader sector". The sector-dominance conservatism caveat stays in Methodology (audit
+  // ruling), not here. Survivors nest inside the significant set; absent companion data →
+  // no line (graceful degradation).
   const coreN = summaryRow ? Number(summaryRow.n_sig_sector) : null;
-  const coreLead = "Part of an industry’s clustering can simply follow its sector.";
+  const coreLead = "An industry can register as concentrated partly because its whole sector concentrates.";
+  const coreAsk = `A stricter test asks whether these businesses concentrate beyond the ${titleCase(detail.sector)} sector’s own spatial pattern:`;
   const coreLine = !Number.isFinite(coreN) ? null
     : coreN > 0
-      ? `${coreLead} Under a stricter test that accounts for where the ${titleCase(detail.sector)} sector as a whole sits, ${coreN.toLocaleString("en-CA")} of the ${detail.sig.toLocaleString("en-CA")} significant businesses remain significant.`
-      : `${coreLead} Under a stricter test that accounts for where the ${titleCase(detail.sector)} sector as a whole sits, none remain significant: this pattern is consistent with the sector’s overall geography.`;
+      ? `${coreLead} ${coreAsk} ${coreN.toLocaleString("en-CA")} of the ${detail.sig.toLocaleString("en-CA")} do.`
+      : `${coreLead} ${coreAsk} none do, a result consistent with the spatial pattern of the broader sector.`;
   return (
     <div className={`bc-icn-readout${onBack ? " has-back" : ""}`} style={{ "--hue": hue }}>
       {onBack && (
