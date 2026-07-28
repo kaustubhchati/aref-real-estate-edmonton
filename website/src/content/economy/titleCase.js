@@ -36,7 +36,8 @@ const capFirst = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 // A token keeps an acronym / mixed-case word verbatim (RV, C.E.G.E.P.s). Detected by an
 // uppercase letter after the first char — the sentence-case source has none in a normal word.
-const isAcronym = (w) => /[A-Z]/.test(w.slice(1));
+// \p{Lu} (not [A-Z]) so an accented capital counts as uppercase too (2026-07-28 fix).
+const isAcronym = (w) => /\p{Lu}/u.test(w.slice(1));
 
 // One word core (letters/digits + internal hyphens/periods/apostrophes, no surrounding
 // punctuation). `force` = this word must capitalize regardless of minor status.
@@ -57,7 +58,11 @@ function caseWord(word, force) {
 
 export function titleCase(str) {
   if (!str) return str;
-  const WORD = /[A-Za-z0-9][A-Za-z0-9'’.-]*/g;   // a word core (keeps internal - . ')
+  // A word core (keeps internal - . '). UNICODE letter/number classes (\p{L}\p{N}), not
+  // [A-Za-z0-9]: the ASCII classes split an accented name at every non-ASCII letter —
+  // "wîhkwêntôwin" tokenised as w·hkw·nt·win and each fragment capitalised, rendering
+  // "WîHkwêNtôWin" (frontend adversarial audit 2026-07-28, finding 9). One token now.
+  const WORD = /[\p{L}\p{N}][\p{L}\p{N}'’.-]*/gu;
   const matches = [...str.matchAll(WORD)];
   if (!matches.length) return str;
   const firstOffset = matches[0].index;

@@ -2362,6 +2362,13 @@ p  { margin: 0 0 0.75rem; }
      guidance), so it must clear §4's AA 4.5:1 (--pa-mut 6.95:1; --pa-dim 4.02:1 would fail). */
   font-size: var(--t-xs); color: var(--pa-mut); text-align: center; line-height: 1.6;
 }
+.bc-icn-empty-p { margin: 0; }
+/* The zero-state sentence (re-ship T2-5; methodology §7.2) — same muted AA tier as the prompt,
+   one visual step quieter via size, never below the §4 floor. */
+.bc-icn-zero { margin: 6px auto 0; max-width: 62ch; font-size: var(--t-2xs); }
+/* The T3a sector-core line (methodology §7.4) — reader-facing content in the finding block,
+   subordinate to the headline + sub by size. */
+.bc-icn-core { font-size: var(--t-xs); line-height: 1.55; color: var(--pa-ink); margin: 8px 0 0; }
 /* LAYOUT (2026-07-24 convention rewrite): THE FINDING (prose) + WHERE IT CLUSTERS are the PAIRED
    reading, side by side; CLUSTER STRENGTH (the statistical evidence) follows below, full width.
    `has-back` (a focused card in multi-select) adds the breadcrumb row on top. */

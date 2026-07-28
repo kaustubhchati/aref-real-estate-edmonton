@@ -106,6 +106,11 @@ import { deriveAggregates } from "./businessCensusAggregates.js";
 
 const POINTS_URL = assetUrl("/data/economy/business_census_points_2025.geojson");
 const LCLQ_URL = assetUrl("/data/economy/bc_lclq_industry_group.csv");
+// The per-group companion (ratified audit E.3): one row per tested group — the group-level
+// (global CLQ) verdict that gates chip eligibility (methodology note §7.3) and the
+// sector-conditional survivor count behind the T3a core line (§7.4). Hand-committed alongside
+// the main CSV by the same out-of-band derivation (eda/10_build_lclq_group_summary.R).
+const LCLQ_SUMMARY_URL = assetUrl("/data/economy/bc_lclq_group_summary.csv");
 
 // The three views (spec Part 0). `status` is the epistemic banner; `icon` is a
 // single SVG path for the SegmentedControl (24×24 stroke). One active at a time.
@@ -353,6 +358,8 @@ export default function BusinessCensusSection() {
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
   const [lclqRows, setLclqRows] = useState(null);
+  const [lclqError, setLclqError] = useState(null);        // View 2's finding failed to load (user-facing, T2-12)
+  const [groupSummary, setGroupSummary] = useState(null);  // per-group companion (Map by industry_group; null until loaded)
   const [fetchError, setFetchError] = useState(null);
   const [nbhdGj, setNbhdGj] = useState(null);      // neighbourhood reference geometry
   const [consoleOpen, setConsoleOpen] = useState(false);   // bottom data console (pull-up, PA pattern)
@@ -411,7 +418,25 @@ export default function BusinessCensusSection() {
     fetch(LCLQ_URL)
       .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); })
       .then((text) => { if (!cancelled) setLclqRows(parseCsvAsObjects(text)); })
-      .catch((err) => console.error("[BusinessCensusSection] LCLQ load:", err.message));
+      .catch((err) => {
+        console.error("[BusinessCensusSection] LCLQ load:", err.message);
+        if (!cancelled) setLclqError(err.message);   // surfaced in the console (T2-12), not silent
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  // The per-group companion — non-fatal: absent/failed, the chips fall back ungated and the
+  // T3a core line simply does not render (graceful degradation, ratified audit E.3).
+  useEffect(() => {
+    let cancelled = false;
+    fetch(LCLQ_SUMMARY_URL)
+      .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); })
+      .then((text) => {
+        if (cancelled) return;
+        const rows = parseCsvAsObjects(text);
+        setGroupSummary(new Map(rows.map((r) => [r.industry_group, r])));
+      })
+      .catch((err) => console.error("[BusinessCensusSection] group summary load:", err.message));
     return () => { cancelled = true; };
   }, []);
 
@@ -461,8 +486,17 @@ export default function BusinessCensusSection() {
     if (selectedFeature && next != null && selectedFeature.industry_group !== next) setSelectedFeature(null);
   }
 
-  // View 2 finding: trades ranked by SHARE SIGNIFICANT (spec §2.1) — NOT count.
-  const trades = useMemo(() => (lclqRows ? rankTradesByShareSignificant(lclqRows) : null), [lclqRows]);
+  // View 2 finding: trades ranked by SHARE SIGNIFICANT (spec §2.1) — NOT count. Chip
+  // eligibility is GATED on the group-level test (ratified audit T2-11; methodology note
+  // §7.3: "Group-level claims in the published view rest on the group-level test") — a group
+  // without global significance never appears as an "industry that clusters". Companion
+  // absent → ungated fallback (never brick the chips on a missing summary file).
+  const trades = useMemo(() => {
+    if (!lclqRows) return null;
+    const ranked = rankTradesByShareSignificant(lclqRows);
+    if (!groupSummary) return ranked;
+    return ranked.filter((t) => groupSummary.get(t.group)?.global_sig !== "FALSE");
+  }, [lclqRows, groupSummary]);
   // View 2 MAP source — the points joined to the LCLQ result by objectid, client-side
   // (recon §4). `clusterFC` carries ONLY tested businesses, each tagged sig/nonsig +
   // multiplier; an untested business is absent by construction (never drawn).
@@ -609,10 +643,13 @@ export default function BusinessCensusSection() {
     }
   }, [domain]);
 
+  // Vintage FROM DATA (the CSV's survey_year), never a literal (ratified audit T1-2 /
+  // CLAUDE.md §9 refresh-by-design). Until the CSV lands the title carries no year.
+  const vintage = lclqRows?.[0]?.survey_year ?? null;
   useEffect(() => {
-    document.title = `Businesses and Industry Specializations · ${activeView.label} · Edmonton 2025`;
+    document.title = `Businesses and Industry Specializations · ${activeView.label} · Edmonton${vintage ? ` ${vintage}` : ""}`;
     return () => { document.title = "Open Data Centre"; };
-  }, [activeView]);
+  }, [activeView, vintage]);
 
   // ── Map ────────────────────────────────────────────────────────────────────
   const firstHomeRef = useRef(true);
@@ -1003,6 +1040,8 @@ export default function BusinessCensusSection() {
               focusedTrade={focusedTrade}
               onFocusTrade={setFocusedTrade}
               onClearFocus={() => setFocusedTrade(null)}
+              groupSummary={groupSummary}
+              loadError={lclqError}
             />
           </div>
         )}

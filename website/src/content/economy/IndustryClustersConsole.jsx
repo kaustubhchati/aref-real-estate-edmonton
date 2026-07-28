@@ -33,6 +33,14 @@
 // classes (label 13px/600 muted Title Case · value 19px/500 white tabular · muted foot) — the
 // PA-conformance idiom, one console language across sections. "Where It Clusters" values are
 // significant-business COUNTS (labelled as counts, §3) — never the multiplier.
+//
+// RE-SHIP ALIGNMENT (2026-07-28, KC-ratified adversarial audit + methodology note v2.0):
+//   • the significance pill's permutation count renders FROM the CSV's nsim column (T1-1);
+//   • tiles lead with the MEDIAN (§7.1: the representative magnitude; the maximum is a
+//     selected extreme, second with its foot);  • the empty state carries the zero-state
+//     sentence (§7.2);  • the baseline note states the ten-nearest-neighbour scale (§8.1);
+//   • the chip caption discloses the top-N cap;  • the T3a sector-core line renders from the
+//     per-group companion file (§7.4) when present;  • a failed CSV load is user-facing.
 // =============================================================================
 
 import { useEffect, useRef, useState } from "react";
@@ -61,8 +69,17 @@ const areaName = (s) => titleCase(String(s).toLowerCase());
 // LQ/CLQ convention (directive 2026-07-24; derivation in the component header). Layout: THE FINDING
 // (prose) and WHERE IT CLUSTERS (the geographic finding) sit PAIRED side by side — the "reading" —
 // with CLUSTER STRENGTH (the statistical evidence) below them.
-function FullReadout({ detail, hue, onBack }) {
+function FullReadout({ detail, hue, onBack, nsimLabel, summaryRow }) {
   const maxN = detail.topNeighbourhoods.length ? detail.topNeighbourhoods[0].n || 1 : 1;
+  // T3a (ratified audit, 2026-07-28) — the sector-conditional core line, from the per-group
+  // companion file (methodology note §7.4). Survivors nest inside the significant set; a
+  // sector-dominant group with zero survivors gets the consistent-with-sector variant. Absent
+  // companion data → no line (graceful degradation; the readout stands without it).
+  const coreN = summaryRow ? Number(summaryRow.n_sig_sector) : null;
+  const coreLine = !Number.isFinite(coreN) ? null
+    : coreN > 0
+      ? `District core: ${coreN.toLocaleString("en-CA")} of ${detail.sig.toLocaleString("en-CA")} concentrate beyond the ${titleCase(detail.sector)} sector's own pattern.`
+      : `This pattern is consistent with the ${titleCase(detail.sector)} sector's overall geography; the stricter sector test identifies no group-specific core.`;
   return (
     <div className={`bc-icn-readout${onBack ? " has-back" : ""}`} style={{ "--hue": hue }}>
       {onBack && (
@@ -93,6 +110,7 @@ function FullReadout({ detail, hue, onBack }) {
             <>, concentrated in {areaName(detail.topNeighbourhoods[0].name)}</>
           )}.
         </p>
+        {coreLine && <p className="bc-icn-core">{coreLine}</p>}
       </div>
       {/* WHERE IT CLUSTERS — the geographic finding, PAIRED with the prose. Significant-business
           COUNT per neighbourhood, labelled a count: a small bar means FEWER businesses, never "less
@@ -117,17 +135,22 @@ function FullReadout({ detail, hue, onBack }) {
           (floor-piled; it cannot grade strength). The gate + the once-stated baseline sit INLINE in
           the same row (the vertical budget: the evidence must stay above the fold, PA's rail-never-
           scrolls rule; the AREAS list is the internal scroll zone instead). */}
+      {/* TILE ORDER (ratified audit T2-4, methodology note §7.1): the MEDIAN leads the evidence
+          strip — "the more representative magnitude" — with the selected-extreme MAXIMUM second
+          (its "strongest significant business" foot retained); the count companion stays third.
+          The headline keeps the locked "up to" maximum form — hook hedged, evidence
+          representative-first. */}
       <div className="bc-icn-support">
         <div className="bc-icn-stats">
-          <div className="dt-tile">
-            <div className="dt-tile-l">Maximum LCLQ</div>
-            <div className="dt-tile-v">{times(detail.maxLclq)}</div>
-            <div className="dt-tile-ft"><span className="dt-tile-foot">strongest significant business</span></div>
-          </div>
           <div className="dt-tile">
             <div className="dt-tile-l">Median LCLQ</div>
             <div className="dt-tile-v">{times(detail.medianLclq)}</div>
             <div className="dt-tile-ft"><span className="dt-tile-foot">among significant businesses</span></div>
+          </div>
+          <div className="dt-tile">
+            <div className="dt-tile-l">Maximum LCLQ</div>
+            <div className="dt-tile-v">{times(detail.maxLclq)}</div>
+            <div className="dt-tile-ft"><span className="dt-tile-foot">strongest significant business</span></div>
           </div>
           <div className="dt-tile">
             <div className="dt-tile-l">Businesses in Cluster</div>
@@ -137,11 +160,14 @@ function FullReadout({ detail, hue, onBack }) {
           <div className="bc-icn-gateblock">
             <div className="bc-icn-gate">
               <span className="bc-icn-gate-dot" aria-hidden="true" />
-              <span className="bc-icn-gate-t">Significant · <span className="bc-icn-gate-m">FDR q&lt;0.05, 999 perms, BH</span></span>
+              {/* Permutation count renders FROM DATA (the CSV's nsim column) — never a literal
+                  (ratified audit T1-1: the "999 perms" literal became false at the 9,999 re-ship). */}
+              <span className="bc-icn-gate-t">Significant · <span className="bc-icn-gate-m">FDR q&lt;0.05, {nsimLabel} perms, BH</span></span>
             </div>
             <p className="bc-icn-baseline">
               Cluster strength is the LCLQ: observed ÷ expected, where expected is the
-              industry’s share of all Edmonton businesses.
+              industry’s share of all Edmonton businesses and each reading looks at a
+              business’s ten nearest neighbours.
             </p>
           </div>
         </div>
@@ -167,7 +193,7 @@ function ComparisonCards({ selectedTrades, lclqRows, onFocusTrade }) {
             className="bc-cmp-card"
             style={{ "--hue": hue }}
             onClick={() => onFocusTrade(g)}
-            title={`Focus ${titleCase(g)} — open its full finding`}
+            title={`Focus ${titleCase(g)}: open its full finding`}
           >
             <span className="bc-cmp-name">{titleCase(g)}</span>
             <span className="bc-cmp-hero"><span className="bc-cmp-upto">up to</span> {times(d.maxLclq)}</span>
@@ -186,7 +212,10 @@ function ComparisonCards({ selectedTrades, lclqRows, onFocusTrade }) {
 
 export default function IndustryClustersConsole({
   trades, selectedTrades, onToggleTrade, onClear, lclqRows, focusedTrade, onFocusTrade, onClearFocus,
+  groupSummary, loadError,
 }) {
+  // Permutation count FROM the loaded data (every CSV row carries nsim; ratified audit T1-1).
+  const nsimLabel = lclqRows?.length ? Number(lclqRows[0].nsim).toLocaleString("en-CA") : "";
   const atCap = selectedTrades.length >= CLUSTER_MAX_SELECT;
   const stripRef = useRef(null);
   const [fade, setFade] = useState({ left: false, right: false });
@@ -216,9 +245,10 @@ export default function IndustryClustersConsole({
   const detail = fullTrade && lclqRows ? tradeDetail(lclqRows, fullTrade) : null;
   const detailHue = fullTrade ? paletteSig(selectedTrades.indexOf(fullTrade)) : null;
 
+  // Cap disclosed (ratified audit T2-7): the strip offers the top TOP_CHIPS of the ranked list.
   const capText = selectedTrades.length
     ? `${selectedTrades.length} selected · pick up to ${CLUSTER_MAX_SELECT}`
-    : `ranked by share significant · pick up to ${CLUSTER_MAX_SELECT}`;
+    : `ranked by share significant · top ${TOP_CHIPS} · pick up to ${CLUSTER_MAX_SELECT}`;
 
   return (
     <section className="bc-icn" aria-label="Industry specializations console">
@@ -240,7 +270,10 @@ export default function IndustryClustersConsole({
         <div className={`bc-strip-wrap${fade.left ? " is-fade-l" : ""}${fade.right ? " is-fade-r" : ""}`}>
           <div className="bc-chip-strip" ref={stripRef} role="group" aria-label="Industries ranked by share that cluster">
             {!trades ? (
-              <span className="bc-icn-hint">Loading the finding…</span>
+              // Load failure is user-facing (ratified audit T2-12), not a silent forever-loading state.
+              <span className="bc-icn-hint">
+                {loadError ? "The finding could not be loaded. Try refreshing the page." : "Loading the finding…"}
+              </span>
             ) : (
               trades.slice(0, TOP_CHIPS).map((t) => {
                 const sel = selectedTrades.indexOf(t.group);
@@ -257,8 +290,8 @@ export default function IndustryClustersConsole({
                     onClick={() => onToggleTrade(t.group)}
                     style={chue ? { borderColor: chue, boxShadow: `inset 0 0 0 1px ${chue}` } : undefined}
                     title={isSel
-                      ? `${titleCase(t.group)} — selected; click to remove`
-                      : (disabled ? `Up to ${CLUSTER_MAX_SELECT} at once — deselect one first` : titleCase(t.group))}
+                      ? `${titleCase(t.group)}: selected; click to remove`
+                      : (disabled ? `Up to ${CLUSTER_MAX_SELECT} at once; deselect one first` : titleCase(t.group))}
                   >
                     <span className="bc-chip-share" style={chue ? { color: chue } : undefined}>{Math.round(t.share * 100)}%</span>
                     <span className="bc-chip-name">{titleCase(t.group)}</span>
@@ -274,10 +307,17 @@ export default function IndustryClustersConsole({
       {/* READOUT — empty (browse) / full readout (single OR a focused card) / comparison cards (multi) */}
       {selectedTrades.length === 0 || !lclqRows ? (
         <div className="bc-icn-empty">
-          Select an industry.
+          <p className="bc-icn-empty-p">Select an industry.</p>
+          {/* The zero state stated (ratified audit T2-5; methodology note §7.2): most businesses
+              are not in a cluster, and the blank rest map is that fact, not missing data. */}
+          <p className="bc-icn-zero">
+            Most businesses show no local concentration at this scale; the map lights the
+            significant members of the industries you select.
+          </p>
         </div>
       ) : detail ? (
-        <FullReadout detail={detail} hue={detailHue} onBack={validFocus ? onClearFocus : null} />
+        <FullReadout detail={detail} hue={detailHue} onBack={validFocus ? onClearFocus : null}
+                     nsimLabel={nsimLabel} summaryRow={groupSummary?.get(fullTrade)} />
       ) : (
         <ComparisonCards selectedTrades={selectedTrades} lclqRows={lclqRows} onFocusTrade={onFocusTrade} />
       )}
