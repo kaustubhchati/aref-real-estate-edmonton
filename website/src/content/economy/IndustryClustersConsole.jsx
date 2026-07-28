@@ -71,15 +71,19 @@ const areaName = (s) => titleCase(String(s).toLowerCase());
 // with CLUSTER STRENGTH (the statistical evidence) below them.
 function FullReadout({ detail, hue, onBack, nsimLabel, summaryRow }) {
   const maxN = detail.topNeighbourhoods.length ? detail.topNeighbourhoods[0].n || 1 : 1;
-  // T3a (ratified audit, 2026-07-28) — the sector-conditional core line, from the per-group
-  // companion file (methodology note §7.4). Survivors nest inside the significant set; a
-  // sector-dominant group with zero survivors gets the consistent-with-sector variant. Absent
-  // companion data → no line (graceful degradation; the readout stands without it).
+  // T3a (ratified audit, 2026-07-28; prose EXPLANATORY per KC's amendment same day) — the
+  // sector-conditional line, from the per-group companion file (methodology note §7.4). The
+  // earlier "District core: N of M …" wording named a concept the reader was never taught; the
+  // line now TEACHES the mechanism first (an industry can look clustered merely because its
+  // sector clusters), then states the stricter test's result in the same terms. Survivors nest
+  // inside the significant set; a zero-survivor (sector-dominant) group gets the
+  // consistent-with-sector variant. Absent companion data → no line (graceful degradation).
   const coreN = summaryRow ? Number(summaryRow.n_sig_sector) : null;
+  const coreLead = "Part of an industry’s clustering can simply follow its sector.";
   const coreLine = !Number.isFinite(coreN) ? null
     : coreN > 0
-      ? `District core: ${coreN.toLocaleString("en-CA")} of ${detail.sig.toLocaleString("en-CA")} concentrate beyond the ${titleCase(detail.sector)} sector's own pattern.`
-      : `This pattern is consistent with the ${titleCase(detail.sector)} sector's overall geography; the stricter sector test identifies no group-specific core.`;
+      ? `${coreLead} Under a stricter test that accounts for where the ${titleCase(detail.sector)} sector as a whole sits, ${coreN.toLocaleString("en-CA")} of the ${detail.sig.toLocaleString("en-CA")} significant businesses remain significant.`
+      : `${coreLead} Under a stricter test that accounts for where the ${titleCase(detail.sector)} sector as a whole sits, none remain significant: this pattern is consistent with the sector’s overall geography.`;
   return (
     <div className={`bc-icn-readout${onBack ? " has-back" : ""}`} style={{ "--hue": hue }}>
       {onBack && (
