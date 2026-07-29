@@ -141,22 +141,53 @@ st_write(zoning_sf, out_path, driver = "GeoJSON",
 n_emit   <- nrow(zoning_sf)
 emit_kb  <- round(file.info(out_path)$size / 1024, 1)
 families <- sort(unique(zoning_sf$zone_family))
+# Per-family polygon counts, aligned with `families` (both alphabetical) — the
+# manifest's categoryCounts, so the legend can order families by count.
+fam_counts <- zoning_sf |> st_drop_geometry() |> count(zone_family) |> arrange(zone_family)
+
+# ============================================================
+# 3b — Family-boundary dissolve (the z12–14 rung of the zoom ladder,
+#      docs/design/zoning_zoom_ladder_three_states.svg): one MULTILINESTRING per
+#      family — the outline of each family's merged mass. Parcel edges WITHIN a
+#      family disappear in the union, so the frontend can draw between-family
+#      boundaries at district zoom without drawing every parcel edge.
+# ============================================================
+bnd_path <- "output/zoning_family_boundaries.geojson"
+# The union runs in a PLANAR CRS (UTM 12N — Edmonton's zone): the source data has
+# self-crossing loops that s2's spherical validity rejects even after a planar
+# st_make_valid, and a city-scale dissolve is a planar operation anyway. Transform
+# back to 4326 for the emit.
+fam_bounds <- zoning_sf |>
+  st_transform(32612) |>
+  st_make_valid() |>
+  # make_valid can return GEOMETRYCOLLECTIONs (polygon + sliver line/point parts);
+  # keep only the polygonal parts — st_boundary rejects collections.
+  st_collection_extract("POLYGON") |>
+  group_by(zone_family) |>
+  summarise(.groups = "drop") |>
+  st_boundary() |>
+  st_transform(4326)
+if (file.exists(bnd_path)) invisible(file.remove(bnd_path))
+st_write(fam_bounds, bnd_path, driver = "GeoJSON",
+         layer_options = "COORDINATE_PRECISION=6", quiet = TRUE)
+bnd_kb <- round(file.info(bnd_path)$size / 1024, 1)
 
 # ============================================================
 # 4 — Build log (03_emit_manifest reads output/_log_*.csv)
 # ============================================================
 tibble(
-  layer_id         = "zoning_bylaw",
-  file             = "zoning_bylaw.geojson",
-  label            = "Zoning Bylaw",
-  geometry_type    = "multipolygon",
+  layer_id         = c("zoning_bylaw", "zoning_family_boundaries"),
+  file             = c("zoning_bylaw.geojson", "zoning_family_boundaries.geojson"),
+  label            = c("Zoning Bylaw", "Zoning Family Boundaries"),
+  geometry_type    = c("multipolygon", "multilinestring"),
   source_dataset   = DATA_ID,
-  category_field   = "zone_family",
-  features_in      = n_in,
-  features_emit    = n_emit,
-  without_geometry = n_without,
-  emit_kb          = emit_kb,
-  categories       = paste(families, collapse = "|"),
+  category_field   = c("zone_family", ""),
+  features_in      = c(n_in, n_emit),
+  features_emit    = c(n_emit, nrow(fam_bounds)),
+  without_geometry = c(n_without, 0L),
+  emit_kb          = c(emit_kb, bnd_kb),
+  categories       = c(paste(families, collapse = "|"), ""),
+  category_counts  = c(paste(fam_counts$n, collapse = "|"), ""),
   fetched_at       = format(Sys.Date(), "%Y-%m-%d")
 ) |> write_csv("output/_log_zoning_bylaw.csv")
 
