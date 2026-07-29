@@ -22,6 +22,7 @@
 import { CITY_BOUNDS } from "../../config/cityBounds.js";
 import {
   polygonFillLayer, polygonPatternLayer, patternImages, buildPolygonFillColour,
+  patternImageId, makeHatchImage, makeDotImage,
 } from "../../components/categoricalPolygon.js";
 
 export { BASEMAP_STYLE } from "../../components/basemapStyle.js";
@@ -78,11 +79,19 @@ export const FAMILY_STYLE = {
 // Texture zoom gates (optical pass §4): a pattern draws only where there are
 // pixels to draw it in — flat base tone below its gate, fading in over 0.5z.
 const PATTERN_GATES = { "Direct Control": 12, "Alternative Jurisdiction": 13 };
-const patternLayerId = (key) => "zoning-pattern-" + key.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-// Static meta (id + family + gate) for the map component's isolate effect.
+const slug = (key) => key.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+const patternLayerId = (key) => "zoning-pattern-" + slug(key);
+// Static meta for the map component's isolate effect: layer id, family, zoom
+// gate, and the two registered pattern images (atlas + figure-tier isolate).
 export const PATTERN_LAYERS = Object.entries(FAMILY_STYLE)
   .filter(([, s]) => s.pattern)
-  .map(([key]) => ({ id: patternLayerId(key), key, gate: PATTERN_GATES[key] ?? 12 }));
+  .map(([key, s]) => ({
+    id: patternLayerId(key),
+    key,
+    gate: PATTERN_GATES[key] ?? 12,
+    img: patternImageId({ key, pattern: s.pattern }),
+    isoImg: "catpoly-iso-" + slug(key),
+  }));
 export const patternGateOpacity = (gate) =>
   ["interpolate", ["linear"], ["zoom"], gate, 0, gate + 0.5, 1];
 
@@ -115,24 +124,36 @@ export function buildZoningDomain(entry) {
     });
 }
 
-// ---- Isolate mode (optical pass §6) -------------------------------------------
-// Clicking a legend row ISOLATES its family: it keeps its own treatment, every
-// other family drops to ONE quiet neutral — a filtering read instead of a
-// ten-hue decoding read. Nothing is hidden (mass stays mass); colour carries it.
-export const ISOLATE_NEUTRAL = "#e7e2d4";
+// ---- Isolate mode (optical pass §6; paint state re-derived pass 3 §4) ---------
+// Clicking a legend row ISOLATES its family. Two rules, both deliberate:
+//   • the isolated family paints at its FIGURE-TIER `iso` colour — with one hue
+//     on screen there is no atlas to harmonise with, so a ground-tier family
+//     (pale gold Residential) must not isolate as a whisper;
+//   • the remainder drops to TWO quiet neutrals, not one: parks keep a green
+//     cast so the river valley — the city's orienting form — stays legible,
+//     everything else takes the common neutral. Water + streets are basemap
+//     and stay as-is, so the isolated family can always be located.
+export const ISOLATE_NEUTRAL = "#eae6dc";
+export const ISOLATE_PARKS   = "#dde3d0";
+
+function isoColourOf(key) {
+  const s = FAMILY_STYLE[key];
+  if (!s) return "#c9c2b2";
+  return s.isoPattern ? s.isoPattern.base : (s.iso ?? s.colour);
+}
 
 export function zoningFillColour(domain, isolated = null) {
   if (!isolated) return buildPolygonFillColour("zone_family", domain);
-  const it = domain.find((d) => d.key === isolated);
-  const keep = it ? (it.pattern ? it.pattern.base : it.colour) : "#c9c2b2";
-  return ["match", ["get", "zone_family"], isolated, keep, ISOLATE_NEUTRAL];
+  const arms = [isolated, isoColourOf(isolated)];
+  if (isolated !== "Parks and Open Space") arms.push("Parks and Open Space", ISOLATE_PARKS);
+  return ["match", ["get", "zone_family"], ...arms, ISOLATE_NEUTRAL];
 }
 
 export function zoningLineTint(domain, isolated = null) {
   if (!isolated) return tintExpression(domain);
-  const it = domain.find((d) => d.key === isolated);
-  const keep = hairlineTint(it ? (it.pattern ? it.pattern.base : it.colour) : "#c9c2b2");
-  return ["match", ["get", "zone_family"], isolated, keep, hairlineTint(ISOLATE_NEUTRAL)];
+  const arms = [isolated, hairlineTint(isoColourOf(isolated))];
+  if (isolated !== "Parks and Open Space") arms.push("Parks and Open Space", hairlineTint(ISOLATE_PARKS));
+  return ["match", ["get", "zone_family"], ...arms, hairlineTint(ISOLATE_NEUTRAL)];
 }
 
 // ---- Layers ------------------------------------------------------------------
@@ -169,8 +190,21 @@ export function zoningFillLayers(domain) {
   ];
 }
 
+// Atlas pattern images PLUS the figure-tier isolate variants, registered up
+// front so isolate mode is a paint swap (fill-pattern id), never an image load.
 export function zoningPatternImages(domain) {
-  return patternImages(domain);
+  const iso = domain
+    .filter((it) => FAMILY_STYLE[it.key]?.isoPattern)
+    .map((it) => {
+      const p = FAMILY_STYLE[it.key].isoPattern;
+      return {
+        id: "catpoly-iso-" + slug(it.key),
+        make: () => (p.kind === "dots"
+          ? makeDotImage(p.base, p.ink, p.size, p.weight)
+          : makeHatchImage(p.base, p.ink, p.size, p.weight)),
+      };
+    });
+  return [...patternImages(domain), ...iso];
 }
 
 // One ["match", zone_family, ...tints] expression shared by both line rungs.

@@ -171,11 +171,21 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
       const tint = zoningLineTint(domain, isolated);
       if (map.getLayer(HAIRLINE_ID)) map.setPaintProperty(HAIRLINE_ID, "line-color", tint);
       if (map.getLayer(FAMILY_LINE_ID)) map.setPaintProperty(FAMILY_LINE_ID, "line-color", tint);
-      // A non-isolated governance pattern mutes to its (neutralised) base fill.
-      for (const { id, key, gate } of PATTERN_LAYERS) {
+      // Governance patterns: an ISOLATED pattern family goes figure-tier — the
+      // stronger iso image, visible at EVERY zoom (its gate lifts, since the
+      // texture is the whole signal in isolate); a non-isolated one mutes to
+      // its neutralised base fill.
+      for (const { id, key, gate, img, isoImg } of PATTERN_LAYERS) {
         if (!map.getLayer(id)) continue;
-        map.setPaintProperty(id, "fill-opacity",
-          isolated && key !== isolated ? 0 : patternGateOpacity(gate));
+        if (isolated === key) {
+          map.setLayerZoomRange(id, 0, 24);
+          map.setPaintProperty(id, "fill-pattern", isoImg);
+          map.setPaintProperty(id, "fill-opacity", 1);
+        } else {
+          map.setLayerZoomRange(id, gate, 24);
+          map.setPaintProperty(id, "fill-pattern", img);
+          map.setPaintProperty(id, "fill-opacity", isolated ? 0 : patternGateOpacity(gate));
+        }
       }
     } catch { /* map tearing down */ }
   }, [map, isolated, domain, layers]);
