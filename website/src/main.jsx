@@ -73,6 +73,7 @@ const AmenityPointMap       = lazyWithReload(() => import("./content/amenities/A
 // the Public Transportation section (AmenitySection mounts them). The old /bus-stops + /lrt-stations
 // routes redirect into the section below.
 const AmenitySection        = lazyWithReload(() => import("./content/amenities/AmenitySection.jsx"));
+const ZoningSection         = lazyWithReload(() => import("./content/zoning/ZoningSection.jsx"));
 const ReportCard            = lazyWithReload(() => import("./content/report-card/ReportCard.jsx"));
 // Scratch proof of the generic categorical polygon standard (schools) — URL-only, not in the nav.
 const CategoricalPolygonProof = lazyWithReload(() => import("./content/dev/CategoricalPolygonProof.jsx"));
@@ -100,7 +101,9 @@ createRoot(document.getElementById("root")).render(
               Parks, Playgrounds, Recreation Facilities, Bike Routes, EV Charging,
               Vegetation, Salary Ranges) were removed; new ones added. */}
           <Route path="/properties/property-assessment"    element={<PropertyAssessmentMap />} />
-          <Route path="/properties/zoning"                 element={<Placeholder title="Zoning"                 kind="map" />} />
+          {/* Zoning — a two-view section (Zones live; Overlays is v1.1): the shell
+              mounts the active view, selector chrome appears with the second view. */}
+          <Route path="/properties/zoning"                 element={<ZoningSection />} />
           <Route path="/properties/land-titles"            element={<Placeholder title="Land Titles"            kind="map" />} />
           <Route path="/activity/dwelling-units"           element={<PermitChoroplethMap />} />
           <Route path="/activity/construction-improvement" element={<BuildingPermitsMap />} />

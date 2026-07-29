@@ -230,7 +230,7 @@ export const siteConfig = {
 
     { label: "Properties & Land", kind: "group", icon: "home-dollar", children: [
       { label: "Property Assessment", kind: "map", status: "live", to: "/properties/property-assessment" },
-      { label: "Zoning",              kind: "map", status: "soon", to: "/properties/zoning" },
+      { label: "Zoning",              kind: "map", status: "live", to: "/properties/zoning" },
       { label: "Land Titles",         kind: "map", status: "soon", to: "/properties/land-titles" },
     ]},
 
