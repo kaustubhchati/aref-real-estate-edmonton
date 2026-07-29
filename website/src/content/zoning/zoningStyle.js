@@ -157,6 +157,8 @@ export function hairlineLayer(domain) {
 const LANDUSE_FILLS = /^(landcover|landuse|park|wood|sand|wetland)/;
 const ROAD_LINES    = /^(road|tunnel|bridge)_(mot|trunk|pri|sec|minor|service|path)/;
 const WATER_LAYERS  = /^(water$|water_shadow$|waterway)/;
+const BUILDING_FILLS = /^building/;
+const RAIL_LINES     = /rail/;
 
 export function applyZoningGround(map, firstSymbolId) {
   for (const layer of map.getStyle()?.layers ?? []) {
@@ -165,12 +167,25 @@ export function applyZoningGround(map, firstSymbolId) {
     try {
       if (type === "background") {
         map.setPaintProperty(id, "background-color", ZONING_GROUND);
+      } else if (type === "fill" && BUILDING_FILLS.test(id)) {
+        // Building footprints OFF entirely for v1 — they occlude the data and
+        // collide in value with two families (optical-pass ruling, 2026-07-29).
+        map.setLayoutProperty(id, "visibility", "none");
       } else if (type === "fill" && LANDUSE_FILLS.test(id)) {
         map.setPaintProperty(id, "fill-color", ZONING_GROUND);
       } else if (type === "fill" && WATER_LAYERS.test(id)) {
         map.moveLayer(id, firstSymbolId);            // river over the fill
       } else if (type === "line" && WATER_LAYERS.test(id)) {
         map.moveLayer(id, firstSymbolId);
+      } else if (type === "line" && RAIL_LINES.test(id)) {
+        // Rail was the heaviest mark over the fill: the white cross-tie dashes
+        // vanish, the base drops to a low-prominence hairline.
+        if (/dash/.test(id)) map.setLayoutProperty(id, "visibility", "none");
+        else {
+          map.setPaintProperty(id, "line-color", "#8d8574");
+          map.setPaintProperty(id, "line-opacity", 0.3);
+          try { map.setPaintProperty(id, "line-width", 0.8); } catch { /* width may be zoom-expr */ }
+        }
       } else if (type === "line" && ROAD_LINES.test(id)) {
         // The schematic's white street grid: casings + fills all white, promoted.
         map.setPaintProperty(id, "line-color", "#ffffff");
