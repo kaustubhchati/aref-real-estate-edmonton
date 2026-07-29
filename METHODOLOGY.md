@@ -272,3 +272,39 @@ argument has already been made once, correctly, and has already failed.
 
 The estimator itself is stable: `04:274` / `05:273` and the N<100 gate are frozen cores.
 Changing either changes every published YoY value and needs a STOP-gate.
+
+---
+
+## D8 — Zoning ships 156 codes grouped to 10 families via a ratified crosswalk; unmapped and blank codes halt
+
+### Decision
+The Zoning map fills polygons by **`zone_family`** — 10 families a human curated from the
+156 Zoning Bylaw codes in a **dated, ratified crosswalk**
+(`pipeline/yeg/zoning/data/reference/zoning_family_crosswalk_20260725.csv`, KC 2026-07-25),
+never by the raw code. The build **halts** on any code the crosswalk does not carry AND on
+any blank code; the zone code `NA` (Natural Areas) is handled as a **literal join key** on
+both sides of the join, so readr's NA-coercion can never route a blank onto its family.
+Families are a categorical fill; the exact code + description surface on hover/select.
+
+### Why
+A 156-class fill is unreadable — no categorical palette survives it — and the class list
+changes whenever Council amends the bylaw. Curation (with a fail-closed guard) turns both
+problems into one human decision per new code, on the §4.7 curated-mapping pattern; the
+guard makes an amendment surface loudly at refresh instead of silently mis-colouring.
+
+### Example
+The 2026-07-29 snapshot added codes `DC`, `RM h16`, `RSM h12` (+3 polygons) — all already
+in the crosswalk, so the refresh flowed through. A genuinely new code (or a blank) prints
+the offending codes with counts and stops with exit 1 (proven on a doctored copy).
+
+### Rejected
+Deriving families from `description` text (fuzzy, §4.7 forbids); rendering raw codes
+(illegible); a residual "Other" family (an unmapped code is a curation debt, not a class);
+`replace_na(zoning, "NA")` (re-opens the fail-open it closes: a blank would become
+Natural Areas).
+
+### When-this-changes
+A new ratified crosswalk version (new dated file, §4.4) — e.g. a family split/merge —
+recolours the map by design; re-run the section and re-ratify the palette row for any NEW
+family (DESIGN_SYSTEM §1.4 polygon law). If the City ever ships blank zone codes, the
+build halts until the rows are adjudicated.

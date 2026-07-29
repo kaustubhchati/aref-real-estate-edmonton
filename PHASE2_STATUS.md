@@ -121,11 +121,16 @@ sections, agent pipeline, and infrastructure.
       selector. 18-year GeoJSONs committed; route wired; deployed
       to the demo (eslint + build + local-dev verified). Only
       remaining: Olivia QA sign-off.
-- [~] **Zoning** — **BACKEND BUILT (§12 v1.18);** frontend pending.
-      `pipeline/yeg/zoning/scripts/production/01_build_zoning.R` emits `zoning_bylaw.geojson`
-      (11,516 polygons) joined to a **RATIFIED** 156-code→10-family crosswalk
-      (`zoning_family_crosswalk_20260725.csv`; stops loudly on an unmapped code, §4.7). No frontend
-      map yet — nav leaf is `soon`, no published data under `website/public/data/`, no map component.
+- [x] **Zoning** — **BUILT / live end-to-end (2026-07-29, CLAUDE.md §12 v1.19; METHODOLOGY D8).**
+      `/properties/zoning` renders the categorical FAMILY map (View 1 "Zones" of a ratified
+      two-view section; View 2 Overlays is v1.1, `6w3s-58pv` unfetched): 11,518 polygons at the
+      2026-07-29 snapshot, 10 ratified families, SVG-sourced palette + zoom ladder
+      (`docs/design/`), governance families as patterns, per-instance ground. Backend: NA
+      fail-open closed (blank codes halt; code "NA" is a literal key), family-boundary dissolve,
+      no-year currency manifest, runner-wired + published (`website/public/data/zoning/`).
+      Generic `CategoricalPolygonLayer`/legend proven on schools first
+      (`/dev/categorical-polygon-proof`). Remaining: KC eyeball + palette-measurement ratification;
+      Olivia QA.
 - [x] **Business Counts** — BUILT / live (Edmonton Business Census
       choropleth at `/economy/business-counts`; provenance note shipped).
       Refresh-by-design parity **PARKED**: its year is baked into the GeoJSON
@@ -357,7 +362,8 @@ run records) shipped (`e67a658`).
    bug). Next: replicate the runner pattern to building-permits + economy.
 5. ~~Point layers batch — R pipeline then frontend~~ — **DONE (§12 v1.18).** Amenities shipped
    end-to-end: registry-driven backend (13 layers) + 8 point layers live across 4 view-selector
-   sections. Zoning backend built (ratified crosswalk); its frontend map is the remaining piece.
+   sections. Zoning shipped end-to-end 2026-07-29 (§12 v1.19): family map live at
+   `/properties/zoning`; Z2 overlays deferred to v1.1.
 6. Permit Neighbourhoods choropleth — Olivia QA sign-off (built, deployed to demo).
 7. Add collaborators + branch protection.
 8. Layer 1b (LISA I) — stretch goal before agent work.

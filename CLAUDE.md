@@ -1,12 +1,12 @@
 # CLAUDE.md
 
-> **Version: v1.18 — authoritative. Supersedes all prior versions (v0.1–v1.17).**
+> **Version: v1.19 — authoritative. Supersedes all prior versions (v0.1–v1.18).**
 > This is the single source of project context for every Claude Code session — read it first.
 > If any other note, comment, or older doc frames *the website* as an "agent-driven platform,"
 > that framing is **retired** — see §1.
 > Owner / **builder**: KC (Research Assistant, UAlberta) — direct-push authority to `main` (§7).
 > Verifier: Olivia (post-hoc review, §7). Supervisor: Prof. Haifang Huang.
-> Last updated: 2026-07-27. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
+> Last updated: 2026-07-29. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
 > current open work tracked in **PHASE2_STATUS.md**. Tier 2 (container-universe reconciliation)
 > is **CLOSED** end-to-end (§12 v1.11). The frontend matured substantially since v1.15
 > (§12 v1.16–v1.18): navigation moved to an **off-canvas drawer** and displayed identity is now
@@ -14,8 +14,9 @@
 > heat→dots on a shared land-use basemap palette); the Economy group gained the **Business Census
 > points section** ("Businesses and Industry Specializations" + the LCLQ finding); and **Amenities
 > shipped** — a registry-driven backend (13 published layers) with a live frontend (8 point layers
-> across 4 consolidated view-selector sections). **Zoning** has a backend build (ratified 156→10
-> family crosswalk), frontend pending.
+> across 4 consolidated view-selector sections). **Zoning** shipped end-to-end (§12 v1.19):
+> the categorical family map is live at `/properties/zoning` (View 1 of a ratified two-view
+> section; Overlays = v1.1).
 
 ---
 
@@ -148,8 +149,8 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
 │   │   │                        #       registry-driven emitter (amenity_layer_registry) + a no-year
 │   │   │                        #       currency manifest → public/data/amenities/. Frontend LIVE:
 │   │   │                        #       8 point layers, 4 view-selector sections (§6).
-│   │   ├─ zoning/               #     BUILT (backend) — zoning_bylaw.geojson + a RATIFIED
-│   │   │                        #       156-code→10-family crosswalk. Frontend pending (nav: soon).
+│   │   ├─ zoning/               #     BUILT end-to-end — parcels + family-boundary dissolve +
+│   │   │                        #       no-year manifest; RATIFIED 156→10 crosswalk; frontend LIVE.
 │   │   └─ …
 │   └─ yyc/                      #   CALGARY placeholder (.gitkeep only). Wired in the
 │                                #   Calgary-introduction campaign — §10. No contents yet.
@@ -282,7 +283,7 @@ export const siteConfig = {
 **Nav tree** (the CURRENT `siteConfig.nav`, rebuilt from the live-site tree 2026-07; `map` =
 data/map page, `tables`/`page` = utility). Navigation is a single **off-canvas left drawer**
 (`shell/Drawer.jsx`, opened by a Header hamburger) — there is no horizontal nav bar (§12 v1.16):
-Home `page` · **Properties & Land** → Property Assessment `map` (live), Zoning `map` (soon), Land
+Home `page` · **Properties & Land** → Property Assessment `map` (live), Zoning `map` (live; two-view section, Overlays v1.1), Land
 Titles `map` (soon) · **Building Activity** → Dwelling Units `map` (live), Building Permits `map`
 (live; route held at `/activity/construction-improvement`) · **Economy** → Businesses and Industry
 Specializations `map` (live; route `/economy/business-census`), Business Counts `map` (live),
@@ -294,17 +295,19 @@ copyright) — all from `siteConfig`. (Retired vs the old live-site tree: the Da
 Neighbourhood Profile; Real Estate Market Activity + Land Transfers; the old Amenities 5-leaf list
 — Air Quality / Community Services / Crime / Public School; and the Feedback page.)
 
-**Built / live (2026-07):** eleven live surfaces. **Maps:** Property Assessment `map` (5-metric
+**Built / live (2026-07):** twelve live surfaces. **Maps:** Property Assessment `map` (5-metric
 choropleth), Dwelling Units `map` (Permit Neighbourhoods choropleth + analyst Data Console),
 Building Permits `map` (per-year point map — incandescent heat→dots, §12 v1.16), Business Counts
 `map` (Business Census neighbourhood choropleth), Businesses and Industry Specializations `map` (the
 Business Census points section — 2 views: the census points + the LCLQ Industry Specializations
 finding, §12 v1.17), and the four **Amenities** maps — Public Transportation (Bus Stops + LRT
 Network views), Parks and Recreation (Playgrounds / Spray Parks / Recreation Facilities / Track
-Sports Fields views), Police Stations, EV Charging Stations (§12 v1.18). **Tables/pages:**
+Sports Fields views), Police Stations, EV Charging Stations (§12 v1.18), and Zoning `map`
+(the categorical FAMILY fill — 10 ratified families, SVG-sourced palette, governance-pattern
+families, zoom ladder; §12 v1.19). **Tables/pages:**
 Neighbourhood Report Card `tables`, Download `page` (3 cleaned CSVs from `public/downloads/`,
 `siteConfig.downloads`), plus the Home / About / Research Competition text pages. The three
-aggregate maps + the BP point map share ONE captured home camera (§12 v1.15). Zoning, Land Titles,
+aggregate maps + the BP point map share ONE captured home camera (§12 v1.15). Land Titles,
 Business Licences, and Labour Market are `soon` placeholders.
 
 **Host-portable + refresh-by-design (2026-06, the VM-readiness campaign — §12 v1.9).** The serve
@@ -498,6 +501,34 @@ When in doubt, load §2 (locked architecture) and §9 (negative rules) — the l
 Revise when: a locked decision changes (§2), a new section is wired (§3), a new rule is validated
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
+- **v1.19 (2026-07-29)** — **Zoning shipped end-to-end — the site's first categorical polygon
+  fill, on a generic standard proven on schools first.** **Backend hardening:** the NA fail-open
+  closed (`01_build_zoning.R`: Edmonton's real zone code `NA` (Natural Areas, 99 polygons) now
+  survives as a LITERAL join key on both sides; a blank code becomes unmapped and HALTS —
+  proven by an A/B on the same snapshot (exactly 99 property deltas, null→"NA", 0 other changes)
+  and a guard-trip on a doctored copy). 01 also emits a **family-boundary dissolve**
+  (`zoning_family_boundaries.geojson`, 10 MULTILINESTRINGs, planar UTM-12N union) + per-family
+  counts in the build log; NEW `03_emit_manifest.R` (amenities no-year pattern: sourceUpdatedAt /
+  fetchedAt / featureCount / per-family counts; 02 reserved for Z2). **zoning is the FIFTH runner
+  section** (`_whirl.yaml`; handoff → `website/public/data/zoning/`, 3 files, sole-publisher).
+  **DESIGN_SYSTEM §1.4 gained the categorical POLYGON-FILL law** (convention hues · inverse-area
+  emphasis · patterns for governance categories; supersedes nothing for points — QUALITATIVE_12
+  stands for marks). **Generic standard:** `components/categoricalPolygon.js` (two-layer
+  flat+pattern construction, 8×8 hatch/dot ImageData factories) + `CategoricalPolygonLegend.jsx`,
+  proven on the published school catchments at the URL-only scratch route
+  `/dev/categorical-polygon-proof` BEFORE zoning consumed them. **Frontend:** `/properties/zoning`
+  is LIVE — `ZoningSection.jsx` (AmenitySection-pattern shell; ratified TWO views: "Zones" now,
+  "Overlays" v1.1 with `6w3s-58pv` UNFETCHED; selector chrome suppressed at one view; camera
+  preserved across views via a shell-owned cameraRef) mounting `ZoningZonesMap.jsx` (view-named —
+  the BC naming-trap lesson). Palette + zoom ladder are EXTRACTED from the two ratified SVGs in
+  `docs/design/` (the single source): 8 flat family fills + DC hatch + AJ dots; no line layers
+  below z12; dissolved family boundaries z12–14; family-TINTED parcel hairlines z15+ (never grey);
+  per-instance `applyZoningGround` (land-use muted to `#faf7ef`, water + WHITE streets promoted
+  over the fill — applyDeepenedGround precedent, contained). `basemapTheme.js` DATA_LAYER regex
+  gained `zoning-|catpoly-`. Working core verified frozen (PA/amenities render their own hues,
+  zero errors). METHODOLOGY **D8** (156→10 via ratified crosswalk; fail-closed). Shipped
+  `34cd8c2`→`d468bb2` (+ the records commit). Palette measurements (ΔE / CVD / moiré / adjacency)
+  reported to KC for ratification with the build report.
 - **v1.18 (2026-07-27)** — **Amenities shipped end-to-end (registry-driven backend + live
   frontend); Zoning backend built.** **Backend:** ONE registry-driven emitter
   (`pipeline/yeg/amenities/scripts/production/01_build_amenity_layers.R`, driven by
