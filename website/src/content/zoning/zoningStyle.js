@@ -46,17 +46,27 @@ export const HAIRLINE_ID      = "zoning-hairlines";
 export const ZONING_GROUND = "#faf7ef";      // the schematic's page ground
 const SELECT_COLOUR = "#8b5cf6";             // --pa-selection-outline (§1.3)
 
+// Register-derived (optical pass 3, 2026-07-29): hue = zoning convention; chroma
+// = the AREA TIER as a fraction of the measured site register (Apple-Classic
+// C* 7–66 med 15 · Vivid10/GTA5 C* 45–90 med 78; area ceiling ≈ C*65). Ground
+// tier (Ag 33% + Res 31% of area) lowest chroma; mid tier (Parks/Industrial/
+// Civic) ≈ C*28–34; figure tier (Commercial/Mixed Use/Future) C*40–63.
+// Direct Control is the tier exception: governance ⇒ near-zero chroma, presence
+// via the hatch. `iso`/`isoPattern` = the family's FIGURE-TIER paint for
+// isolate mode (§4) — a distinct paint state, not the atlas colour.
 export const FAMILY_STYLE = {
-  "Residential":               { colour: "#f0dfa8" },  // palest — the carpet
-  "Parks and Open Space":      { colour: "#b2cba6" },
-  "Civic and Public Service":  { colour: "#7fa8cc" },
-  "Direct Control":            { pattern: { kind: "hatch", base: "#cfc9bd", ink: "#a8a091", size: 12, weight: 0.6 } },
-  "Industrial and Employment": { colour: "#bcb5c4" },
-  "Commercial":                { colour: "#d9614e" },
-  "Mixed Use":                 { colour: "#e8a33d" },
-  "Agricultural and Rural":    { colour: "#d8d6b6" },
-  "Future and Reserve":        { colour: "#e4dfd6" },
-  "Alternative Jurisdiction":  { pattern: { kind: "dots", base: "#e2dcd2", ink: "#b5aea2", size: 10, weight: 0.55 } },
+  "Residential":               { colour: "#eedfb4", iso: "#d7c066" },  // L89 C23 h94 · ground
+  "Parks and Open Space":      { colour: "#a3c98f", iso: "#76af5c" },  // L77 C34 h133 · mid
+  "Civic and Public Service":  { colour: "#5996ca", iso: "#0083ca" },  // L60 C33 h262 · mid (darkened away from water)
+  "Direct Control":            { pattern: { kind: "hatch", base: "#ccc9c2", ink: "#b1aea6", size: 12, weight: 0.6 },
+                                 isoPattern: { kind: "hatch", base: "#b8b4ac", ink: "#8b877e", size: 12, weight: 0.7 } }, // governance · neutral C4
+  "Industrial and Employment": { colour: "#b9a9db", iso: "#957dd4" },  // L72 C28 h304 · mid
+  "Commercial":                { colour: "#d9614e", iso: "#d9614e" },  // L56 C57 h36 · figure (held)
+  "Mixed Use":                 { colour: "#e8a33d", iso: "#e8a33d" },  // L72 C63 h75 · figure (held)
+  "Agricultural and Rural":    { colour: "#c7cfa7", iso: "#9fb460" },  // L82 C21 h117 · ground
+  "Future and Reserve":        { colour: "#48c1a6", iso: "#00ae8f" },  // L71 C40 h175 · figure (teal — new hue)
+  "Alternative Jurisdiction":  { pattern: { kind: "dots", base: "#ded8ce", ink: "#a29a8b", size: 10, weight: 0.7 },
+                                 isoPattern: { kind: "dots", base: "#cfc8ba", ink: "#7d766a", size: 10, weight: 0.8 } }, // governance · texture presence
 };
 
 // Texture zoom gates (optical pass §4): a pattern draws only where there are
