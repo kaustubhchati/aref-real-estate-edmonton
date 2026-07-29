@@ -43,7 +43,13 @@ export const FAMILY_LINE_ID   = "zoning-family-lines";
 export const HAIRLINE_ID      = "zoning-hairlines";
 
 // ---- The ten family treatments (fills + patterns from the SVG <defs>) --------
-export const ZONING_GROUND = "#faf7ef";      // the schematic's page ground
+// Off-city ground: clearly LIGHTER and lower-chroma than the palest fill
+// (L98 C3 vs Residential L89 C23, ΔE 22) so the city reads as an island —
+// figure-ground is a first-class concern, not cleanup (optical pass 3 §3).
+export const ZONING_GROUND = "#fcfaf4";
+// Streets: the reference layer, warmed toward the site cream so it sits in
+// register rather than reading as pure UI white.
+const ROAD_WHITE = "#fbf7ec";
 const SELECT_COLOUR = "#8b5cf6";             // --pa-selection-outline (§1.3)
 
 // Register-derived (optical pass 3, 2026-07-29): hue = zoning convention; chroma
@@ -248,9 +254,17 @@ export function applyZoningGround(map, firstSymbolId) {
           try { map.setPaintProperty(id, "line-width", 0.8); } catch { /* width may be zoom-expr */ }
         }
       } else if (type === "line" && ROAD_LINES.test(id)) {
-        // The schematic's white street grid: casings + fills all white, promoted.
-        map.setPaintProperty(id, "line-color", "#ffffff");
-        map.setPaintProperty(id, "line-opacity", /mot|trunk|pri|sec/.test(id) ? 0.95 : 0.9);
+        // The schematic's street grid: cream-white, promoted over the fill.
+        map.setPaintProperty(id, "line-color", ROAD_WHITE);
+        if (/mot|trunk|pri|sec/.test(id)) {
+          // The arterial ring was the loudest mark at city zoom: fade it down
+          // at overview, full presence from district zoom. Widths untouched —
+          // district and parcel weights hold exactly as they were.
+          map.setPaintProperty(id, "line-opacity",
+            ["interpolate", ["linear"], ["zoom"], 10, 0.5, 11.8, 0.95]);
+        } else {
+          map.setPaintProperty(id, "line-opacity", 0.9);
+        }
         map.moveLayer(id, firstSymbolId);
       }
     } catch { /* layer gone / tearing down */ }
