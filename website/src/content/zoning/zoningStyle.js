@@ -10,7 +10,7 @@
 //   district z 12–14 — block structure: white streets over the fill + the
 //     dissolved FAMILY boundaries (backend emit — parcel edges would be noise);
 //   parcel  z ≥ 15 — per-parcel hairlines, TINTED from each family's own fill
-//     (never neutral grey; the SVG pins Residential #f0dfa8 → hairline #d4bf87,
+//     (never neutral grey; the SVG pins Residential #f0dfa8 → hairline #c0ac77,
 //     and every family derives its tint by the same per-channel transform).
 //
 // The polygon law (DESIGN_SYSTEM §1.4): convention hues, emphasis by inverse
@@ -38,7 +38,6 @@ export const MAP_VIEW = {
 export const SOURCE_ID        = "zoning-parcels";
 export const BOUNDS_SOURCE_ID = "zoning-bounds";
 export const FILL_ID          = "zoning-fill";
-export const PATTERN_ID       = "zoning-pattern";
 export const SELECT_ID        = "zoning-select";
 export const FAMILY_LINE_ID   = "zoning-family-lines";
 export const HAIRLINE_ID      = "zoning-hairlines";
@@ -51,19 +50,30 @@ export const FAMILY_STYLE = {
   "Residential":               { colour: "#f0dfa8" },  // palest — the carpet
   "Parks and Open Space":      { colour: "#b2cba6" },
   "Civic and Public Service":  { colour: "#7fa8cc" },
-  "Direct Control":            { pattern: { kind: "hatch", base: "#cfc9bd", ink: "#7d7669" } },
+  "Direct Control":            { pattern: { kind: "hatch", base: "#cfc9bd", ink: "#a8a091", size: 12, weight: 0.6 } },
   "Industrial and Employment": { colour: "#bcb5c4" },
   "Commercial":                { colour: "#d9614e" },
   "Mixed Use":                 { colour: "#e8a33d" },
   "Agricultural and Rural":    { colour: "#d8d6b6" },
   "Future and Reserve":        { colour: "#e4dfd6" },
-  "Alternative Jurisdiction":  { pattern: { kind: "dots", base: "#e2dcd2", ink: "#9a9287" } },
+  "Alternative Jurisdiction":  { pattern: { kind: "dots", base: "#e2dcd2", ink: "#b5aea2", size: 10, weight: 0.55 } },
 };
 
-// Parcel-hairline tint: each family's hairline is its OWN fill darkened by the
-// per-channel transform the SVG pins (#f0dfa8 → #d4bf87 ⇒ ×[0.883, 0.856, 0.804]).
-// Pattern families tint from their pattern BASE. Never neutral grey.
-const TINT = [0.883, 0.856, 0.804];
+// Texture zoom gates (optical pass §4): a pattern draws only where there are
+// pixels to draw it in — flat base tone below its gate, fading in over 0.5z.
+const PATTERN_GATES = { "Direct Control": 12, "Alternative Jurisdiction": 13 };
+const patternLayerId = (key) => "zoning-pattern-" + key.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+// Static meta (id + family) for the map component's filter/isolate effects.
+export const PATTERN_LAYERS = Object.entries(FAMILY_STYLE)
+  .filter(([, s]) => s.pattern)
+  .map(([key]) => ({ id: patternLayerId(key), key }));
+
+// Parcel-hairline tint: each family's hairline is its OWN fill darkened by a
+// per-channel transform (never neutral grey). Deepened in the optical pass —
+// the original SVG pin (×0.86) was imperceptible on its own fill at 0.7px; the
+// ladder SVG now pins Residential #f0dfa8 → #c0ac77 (×[0.80, 0.77, 0.71]).
+// Pattern families tint from their pattern BASE.
+const TINT = [0.80, 0.77, 0.71];
 export function hairlineTint(hex) {
   const ch = [1, 3, 5].map((i, k) =>
     Math.max(0, Math.min(255, Math.round(parseInt(hex.slice(i, i + 2), 16) * TINT[k]))));
@@ -90,10 +100,25 @@ export function buildZoningDomain(entry) {
 // line layers are zoning's own (they need the per-family tint + zoom gates).
 
 export function zoningFillLayers(domain) {
-  const pattern = polygonPatternLayer({ id: PATTERN_ID, classField: "zone_family", items: domain });
+  // One zoom-gated pattern layer PER governance family (the gates differ), each
+  // built by the generic standard from just that family's item.
+  const patternLayers = domain
+    .filter((it) => it.pattern)
+    .map((it) => {
+      const gate = PATTERN_GATES[it.key] ?? 12;
+      const spec = polygonPatternLayer({ id: patternLayerId(it.key), classField: "zone_family", items: [it] });
+      return {
+        ...spec,
+        minzoom: gate,
+        paint: {
+          ...spec.paint,
+          "fill-opacity": ["interpolate", ["linear"], ["zoom"], gate, 0, gate + 0.5, 1],
+        },
+      };
+    });
   return [
     polygonFillLayer({ id: FILL_ID, classField: "zone_family", items: domain, opacity: 1 }),
-    ...(pattern ? [pattern] : []),
+    ...patternLayers,
     // Selection outline — violet ring analogue for a polygon; filter armed on pin.
     {
       id: SELECT_ID,
@@ -132,6 +157,8 @@ export function familyLineLayer(domain) {
 }
 
 // Parcel rung (z ≥ 15, fades in 15→15.5): per-parcel hairlines, family-tinted.
+// Width 1.0 / full opacity past the fade — perceptible within a family without
+// reading as a data channel (optical pass §5).
 export function hairlineLayer(domain) {
   return {
     id: HAIRLINE_ID,
@@ -139,8 +166,8 @@ export function hairlineLayer(domain) {
     minzoom: 15,
     paint: {
       "line-color": tintExpression(domain),
-      "line-width": 0.7,
-      "line-opacity": ["interpolate", ["linear"], ["zoom"], 15, 0, 15.5, 0.9],
+      "line-width": 1.0,
+      "line-opacity": ["interpolate", ["linear"], ["zoom"], 15, 0, 15.5, 1],
     },
   };
 }

@@ -88,7 +88,9 @@ export function patternImageId(item) {
 }
 
 // One [{ id, make }] entry per patterned class — MapView registers them before
-// the layers are added.
+// the layers are added. A pattern def may carry optional geometry knobs:
+//   size   — tile pitch in px (default 8),
+//   weight — hatch stroke width / dot radius (default 0.9).
 export function patternImages(items) {
   return (items ?? [])
     .filter((it) => it.pattern)
@@ -96,44 +98,45 @@ export function patternImages(items) {
       id: patternImageId(it),
       make: () =>
         it.pattern.kind === "dots"
-          ? makeDotImage(it.pattern.base, it.pattern.ink)
-          : makeHatchImage(it.pattern.base, it.pattern.ink),
+          ? makeDotImage(it.pattern.base, it.pattern.ink, it.pattern.size, it.pattern.weight)
+          : makeHatchImage(it.pattern.base, it.pattern.ink, it.pattern.size, it.pattern.weight),
     }));
 }
 
-function patternCanvas(size = 8) {
+function patternCanvas(size) {
   const c = document.createElement("canvas");
   c.width = c.height = size;
   return [c, c.getContext("2d")];
 }
 
-// Diagonal hatch: base square + one ⟋ stroke (SVG: path M0 8L8 0, width 0.9).
-export function makeHatchImage(base, ink) {
-  const [c, ctx] = patternCanvas(8);
+// Diagonal hatch: base square + one ⟋ stroke per tile (SVG <pattern> analogue).
+export function makeHatchImage(base, ink, size = 8, weight = 0.9) {
+  const [c, ctx] = patternCanvas(size);
   ctx.fillStyle = base;
-  ctx.fillRect(0, 0, 8, 8);
+  ctx.fillRect(0, 0, size, size);
   ctx.strokeStyle = ink;
-  ctx.lineWidth = 0.9;
+  ctx.lineWidth = weight;
+  const h = size / 2;
   ctx.beginPath();
-  ctx.moveTo(0, 8);
-  ctx.lineTo(8, 0);
+  ctx.moveTo(0, size);
+  ctx.lineTo(size, 0);
   // Repeat the stroke in the two corners so the hatch tiles seamlessly.
-  ctx.moveTo(-4, 4);
-  ctx.lineTo(4, -4);
-  ctx.moveTo(4, 12);
-  ctx.lineTo(12, 4);
+  ctx.moveTo(-h, h);
+  ctx.lineTo(h, -h);
+  ctx.moveTo(h, size + h);
+  ctx.lineTo(size + h, h);
   ctx.stroke();
   return ctx.getImageData(0, 0, c.width, c.height);
 }
 
-// Dot grid: base square + one centred dot (SVG: circle cx4 cy4 r0.9).
-export function makeDotImage(base, ink) {
-  const [c, ctx] = patternCanvas(8);
+// Dot grid: base square + one centred dot (SVG <pattern> analogue).
+export function makeDotImage(base, ink, size = 8, weight = 0.9) {
+  const [c, ctx] = patternCanvas(size);
   ctx.fillStyle = base;
-  ctx.fillRect(0, 0, 8, 8);
+  ctx.fillRect(0, 0, size, size);
   ctx.fillStyle = ink;
   ctx.beginPath();
-  ctx.arc(4, 4, 0.9, 0, Math.PI * 2);
+  ctx.arc(size / 2, size / 2, weight, 0, Math.PI * 2);
   ctx.fill();
   return ctx.getImageData(0, 0, c.width, c.height);
 }

@@ -32,7 +32,7 @@ import { siteConfig } from "../../config/siteConfig.js";
 import { assetUrl } from "../../utils/assetUrl.js";
 import {
   BASEMAP_STYLE, MAP_VIEW, SOURCE_ID, BOUNDS_SOURCE_ID,
-  FILL_ID, PATTERN_ID, SELECT_ID, FAMILY_LINE_ID, HAIRLINE_ID,
+  FILL_ID, SELECT_ID, FAMILY_LINE_ID, HAIRLINE_ID, PATTERN_LAYERS,
   buildZoningDomain, zoningFillLayers, zoningPatternImages,
   familyLineLayer, hairlineLayer, applyZoningGround,
 } from "./zoningStyle.js";
@@ -169,10 +169,12 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
       map.setFilter(FILL_ID, f);
       if (map.getLayer(HAIRLINE_ID)) map.setFilter(HAIRLINE_ID, f);
       if (map.getLayer(FAMILY_LINE_ID)) map.setFilter(FAMILY_LINE_ID, f);
-      if (map.getLayer(PATTERN_ID)) {
-        const patterned = domain.filter((it) => it.pattern).map((it) => it.key);
-        const own = ["in", ["get", "zone_family"], ["literal", patterned]];
-        map.setFilter(PATTERN_ID, f ? ["all", own, f] : own);
+      // Each governance pattern rides its own zoom-gated layer; recombine its
+      // one-family filter with the legend filter.
+      for (const { id, key } of PATTERN_LAYERS) {
+        if (!map.getLayer(id)) continue;
+        const own = ["in", ["get", "zone_family"], ["literal", [key]]];
+        map.setFilter(id, f ? ["all", own, f] : own);
       }
       // A pin in a hidden family points at nothing — clear it.
       if (selected && !active.has(selected.props?.zone_family)) setSelected(null);
