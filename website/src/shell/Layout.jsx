@@ -31,6 +31,8 @@ const IMMERSIVE_ROUTES = new Set([
   "/amenities/parks-and-recreation",
   "/amenities/police-stations",
   "/amenities/ev-charging",
+  "/properties/zoning",
+  "/dev/categorical-polygon-proof",
 ]);
 
 // Shown in the content area while a code-split section chunk downloads (the maps +

@@ -74,6 +74,8 @@ const AmenityPointMap       = lazyWithReload(() => import("./content/amenities/A
 // routes redirect into the section below.
 const AmenitySection        = lazyWithReload(() => import("./content/amenities/AmenitySection.jsx"));
 const ReportCard            = lazyWithReload(() => import("./content/report-card/ReportCard.jsx"));
+// Scratch proof of the generic categorical polygon standard (schools) — URL-only, not in the nav.
+const CategoricalPolygonProof = lazyWithReload(() => import("./content/dev/CategoricalPolygonProof.jsx"));
 
 // basename mounts the app under Vite's base path. import.meta.env.BASE_URL is set
 // by vite.config's `base`, so it is "/" by default — basename="/" is a no-op — and
@@ -126,6 +128,9 @@ createRoot(document.getElementById("root")).render(
 
           {/* Report Card — Edmonton table; Calgary will join when its pipeline lands. */}
           <Route path="/report-card" element={<ReportCard />} />
+
+          {/* Scratch route — the categorical-polygon standard's proof mount (schools). */}
+          <Route path="/dev/categorical-polygon-proof" element={<CategoricalPolygonProof />} />
 
           {/* Catch-all */}
           <Route path="*" element={<Placeholder title="Page not found" kind="404" />} />
