@@ -1,0 +1,51 @@
+{
+  "section": "zoning",
+  "generatedAt": "2026-07-29",
+  "layers": [
+    {
+      "id": "zoning_bylaw",
+      "file": "zoning_bylaw.geojson",
+      "label": "Zoning Bylaw",
+      "geometry": "multipolygon",
+      "sourceDatasetId": "fixa-tstc",
+      "sourceUpdatedAt": "2026-07-27",
+      "fetchedAt": "2026-07-29",
+      "featureCount": 11518,
+      "categoryField": "zone_family",
+      "categories": ["Agricultural and Rural", "Alternative Jurisdiction", "Civic and Public Service", "Commercial", "Direct Control", "Future and Reserve", "Industrial and Employment", "Mixed Use", "Parks and Open Space", "Residential"],
+      "categoryCounts": {
+        "Agricultural and Rural": 151,
+        "Alternative Jurisdiction": 32,
+        "Civic and Public Service": 1109,
+        "Commercial": 590,
+        "Direct Control": 1070,
+        "Future and Reserve": 109,
+        "Industrial and Employment": 779,
+        "Mixed Use": 371,
+        "Parks and Open Space": 2052,
+        "Residential": 5255
+      },
+      "coverage": {
+        "withGeometry": 11518,
+        "withoutGeometry": 0
+      }
+    },
+    {
+      "id": "zoning_family_boundaries",
+      "file": "zoning_family_boundaries.geojson",
+      "label": "Zoning Family Boundaries",
+      "geometry": "multilinestring",
+      "sourceDatasetId": "fixa-tstc",
+      "sourceUpdatedAt": "2026-07-27",
+      "fetchedAt": "2026-07-29",
+      "featureCount": 10,
+      "categoryField": "",
+      "categories": [],
+      "categoryCounts": {},
+      "coverage": {
+        "withGeometry": 10,
+        "withoutGeometry": 0
+      }
+    }
+  ]
+}

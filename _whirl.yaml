@@ -236,3 +236,35 @@ sections:
           pattern:  "*.geojson"
       files:
         - { from: output/manifest.json, to: website/public/data/amenities/manifest.json }
+
+  zoning:
+    cwd: pipeline/yeg/zoning
+
+    # 01 fetches the Zoning Bylaw parent dataset (fixa-tstc), groups the 156 zone
+    # codes into 10 families via the RATIFIED crosswalk (halting on any unmapped
+    # or blank code — §4.7), and emits the parcels + the family-boundary dissolve;
+    # 03 emits the no-year currency manifest. (02 intentionally unused: RESERVED
+    # for the deferred Z2 overlays emitter — v1.1; 03 = manifest, the convention.)
+    scripts:
+      - scripts/production/01_build_zoning.R
+      - scripts/production/03_emit_manifest.R
+
+    # Representative non-empty guards; the handoff zero-byte check backstops every file.
+    expected_outputs:
+      scripts/production/01_build_zoning.R:
+        - output/zoning_bylaw.geojson
+        - output/zoning_family_boundaries.geojson
+      scripts/production/03_emit_manifest.R:
+        - output/manifest.json
+
+    # --- Handoff (Way A: glob + fixed-file copy) --------------------------------
+    # Both layer GeoJSONs publish via the year-free "*.geojson" glob; the manifest
+    # is a fixed-file copy. The build log (_log_zoning_bylaw.csv) is NOT *.geojson,
+    # so it stays internal to output/ (not published).
+    handoff:
+      glob:
+        - src_dir:  output
+          dest_dir: website/public/data/zoning
+          pattern:  "*.geojson"
+      files:
+        - { from: output/manifest.json, to: website/public/data/zoning/manifest.json }
