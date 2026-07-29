@@ -21,7 +21,7 @@
 
 import { CITY_BOUNDS } from "../../config/cityBounds.js";
 import {
-  polygonFillLayer, polygonPatternLayer, patternImages,
+  polygonFillLayer, polygonPatternLayer, patternImages, buildPolygonFillColour,
 } from "../../components/categoricalPolygon.js";
 
 export { BASEMAP_STYLE } from "../../components/basemapStyle.js";
@@ -63,10 +63,12 @@ export const FAMILY_STYLE = {
 // pixels to draw it in — flat base tone below its gate, fading in over 0.5z.
 const PATTERN_GATES = { "Direct Control": 12, "Alternative Jurisdiction": 13 };
 const patternLayerId = (key) => "zoning-pattern-" + key.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-// Static meta (id + family) for the map component's filter/isolate effects.
+// Static meta (id + family + gate) for the map component's isolate effect.
 export const PATTERN_LAYERS = Object.entries(FAMILY_STYLE)
   .filter(([, s]) => s.pattern)
-  .map(([key]) => ({ id: patternLayerId(key), key }));
+  .map(([key]) => ({ id: patternLayerId(key), key, gate: PATTERN_GATES[key] ?? 12 }));
+export const patternGateOpacity = (gate) =>
+  ["interpolate", ["linear"], ["zoom"], gate, 0, gate + 0.5, 1];
 
 // Parcel-hairline tint: each family's hairline is its OWN fill darkened by a
 // per-channel transform (never neutral grey). Deepened in the optical pass —
@@ -86,13 +88,35 @@ export function hairlineTint(hex) {
 // never silently invisible.
 export function buildZoningDomain(entry) {
   const counts = entry.categoryCounts || {};
+  const shares = entry.categoryAreaShare || {};
   return [...(entry.categories || [])]
     .sort((a, b) => (counts[b] || 0) - (counts[a] || 0) || a.localeCompare(b))
     .map((key) => {
       const style = FAMILY_STYLE[key];
       if (!style) console.warn(`[zoning] family "${key}" has no ratified fill — rendering fallback.`);
-      return { key, label: key, count: counts[key], ...(style ?? { colour: "#c9c2b2" }) };
+      return { key, label: key, count: counts[key], share: shares[key],
+               ...(style ?? { colour: "#c9c2b2" }) };
     });
+}
+
+// ---- Isolate mode (optical pass §6) -------------------------------------------
+// Clicking a legend row ISOLATES its family: it keeps its own treatment, every
+// other family drops to ONE quiet neutral — a filtering read instead of a
+// ten-hue decoding read. Nothing is hidden (mass stays mass); colour carries it.
+export const ISOLATE_NEUTRAL = "#e7e2d4";
+
+export function zoningFillColour(domain, isolated = null) {
+  if (!isolated) return buildPolygonFillColour("zone_family", domain);
+  const it = domain.find((d) => d.key === isolated);
+  const keep = it ? (it.pattern ? it.pattern.base : it.colour) : "#c9c2b2";
+  return ["match", ["get", "zone_family"], isolated, keep, ISOLATE_NEUTRAL];
+}
+
+export function zoningLineTint(domain, isolated = null) {
+  if (!isolated) return tintExpression(domain);
+  const it = domain.find((d) => d.key === isolated);
+  const keep = hairlineTint(it ? (it.pattern ? it.pattern.base : it.colour) : "#c9c2b2");
+  return ["match", ["get", "zone_family"], isolated, keep, hairlineTint(ISOLATE_NEUTRAL)];
 }
 
 // ---- Layers ------------------------------------------------------------------

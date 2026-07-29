@@ -27,7 +27,10 @@ function swatchBackground(item) {
   };
 }
 
-export default function CategoricalPolygonLegend({ title, note, items, active, onToggle }) {
+// interaction — the click model the PARENT implements, used only for row hints:
+//   "toggle" (default) — rows show/hide their class (the schools proof);
+//   "isolate"          — a row isolates its class, the rest drop to a neutral.
+export default function CategoricalPolygonLegend({ title, note, items, active, onToggle, interaction = "toggle" }) {
   return (
     <div className="pa-col-mod pa-col-legend">
       <div className="pa-col-lab">{title}</div>
@@ -41,7 +44,9 @@ export default function CategoricalPolygonLegend({ title, note, items, active, o
                 type="button"
                 onClick={() => onToggle(item.key)}
                 aria-pressed={on}
-                title={on ? `Hide ${item.label}` : `Show ${item.label}`}
+                title={interaction === "isolate"
+                  ? (on && active.size === 1 ? "Show all families" : `Isolate ${item.label}`)
+                  : (on ? `Hide ${item.label}` : `Show ${item.label}`)}
                 style={{
                   display: "flex", alignItems: "center", gap: 8, width: "100%",
                   background: "none", border: "none", padding: "3px 2px",
@@ -58,9 +63,13 @@ export default function CategoricalPolygonLegend({ title, note, items, active, o
                   }}
                 />
                 <span style={{ fontSize: "var(--t-xs)", lineHeight: 1.25, flex: 1 }}>{item.label}</span>
+                {/* Count is what the data says; AREA SHARE is what the eye sees —
+                    without it, 779 polygons filling a quarter of the screen reads
+                    as a defect. Share renders when the item carries one. */}
                 {item.count != null && (
                   <span style={{ fontSize: "var(--t-2xs)", opacity: 0.75, fontVariantNumeric: "tabular-nums" }}>
                     {item.count.toLocaleString()}
+                    {item.share != null && ` · ${item.share >= 10 ? Math.round(item.share) : item.share.toFixed(1)}%`}
                   </span>
                 )}
               </button>

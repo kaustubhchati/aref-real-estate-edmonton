@@ -24,7 +24,6 @@ import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import IdentityCard from "../../components/IdentityCard.jsx";
 import CategoricalPolygonLegend from "../../components/CategoricalPolygonLegend.jsx";
-import { polygonClassFilter } from "../../components/categoricalPolygon.js";
 import { HOME_VIEW, applyCameraPreset } from "../../components/mapCamera.js";
 import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
 import { ICON_RECENTRE } from "../../components/mapIcons.js";
@@ -35,6 +34,7 @@ import {
   FILL_ID, SELECT_ID, FAMILY_LINE_ID, HAIRLINE_ID, PATTERN_LAYERS,
   buildZoningDomain, zoningFillLayers, zoningPatternImages,
   familyLineLayer, hairlineLayer, applyZoningGround,
+  zoningFillColour, zoningLineTint, patternGateOpacity,
 } from "./zoningStyle.js";
 
 const MANIFEST_URL = assetUrl("/data/zoning/manifest.json");
@@ -46,7 +46,7 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
   const [map, setMap] = useState(null);
   const [selected, setSelected] = useState(null);  // { id, props } — pinned parcel
   const [hovered, setHovered] = useState(null);    // props — hover preview
-  const [active, setActive] = useState(null);      // Set of shown families
+  const [isolated, setIsolated] = useState(null);  // family key ISOLATED via the legend, or null
 
   useEffect(() => {
     let cancelled = false;
@@ -58,7 +58,6 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
         if (!bylaw) throw new Error('Layer "zoning_bylaw" not in the zoning manifest.');
         setEntry(bylaw);
         setBoundsFile(m.layers?.find((L) => L.id === "zoning_family_boundaries")?.file ?? null);
-        setActive(new Set(bylaw.categories));
       })
       .catch((err) => { if (!cancelled) setFetchError(err.message); });
     return () => { cancelled = true; };
@@ -161,32 +160,28 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     } catch { /* map tearing down */ }
   }, [map, selected, layers]);
 
-  // Legend show/hide → filter every family-driven layer together.
+  // Legend ISOLATE (optical pass §6): the picked family keeps its treatment,
+  // every other family drops to the one quiet neutral — a filtering read, not a
+  // ten-hue decode. Nothing is hidden; this is a RECOLOUR (paint swap), so mass
+  // stays mass and the hit-test set never changes.
   useEffect(() => {
-    if (!map || !active || !domain || !map.getLayer(FILL_ID)) return;
+    if (!map || !domain || !map.getLayer(FILL_ID)) return;
     try {
-      const f = polygonClassFilter("zone_family", active, domain);
-      map.setFilter(FILL_ID, f);
-      if (map.getLayer(HAIRLINE_ID)) map.setFilter(HAIRLINE_ID, f);
-      if (map.getLayer(FAMILY_LINE_ID)) map.setFilter(FAMILY_LINE_ID, f);
-      // Each governance pattern rides its own zoom-gated layer; recombine its
-      // one-family filter with the legend filter.
-      for (const { id, key } of PATTERN_LAYERS) {
+      map.setPaintProperty(FILL_ID, "fill-color", zoningFillColour(domain, isolated));
+      const tint = zoningLineTint(domain, isolated);
+      if (map.getLayer(HAIRLINE_ID)) map.setPaintProperty(HAIRLINE_ID, "line-color", tint);
+      if (map.getLayer(FAMILY_LINE_ID)) map.setPaintProperty(FAMILY_LINE_ID, "line-color", tint);
+      // A non-isolated governance pattern mutes to its (neutralised) base fill.
+      for (const { id, key, gate } of PATTERN_LAYERS) {
         if (!map.getLayer(id)) continue;
-        const own = ["in", ["get", "zone_family"], ["literal", [key]]];
-        map.setFilter(id, f ? ["all", own, f] : own);
+        map.setPaintProperty(id, "fill-opacity",
+          isolated && key !== isolated ? 0 : patternGateOpacity(gate));
       }
-      // A pin in a hidden family points at nothing — clear it.
-      if (selected && !active.has(selected.props?.zone_family)) setSelected(null);
     } catch { /* map tearing down */ }
-  }, [map, active, domain, layers]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [map, isolated, domain, layers]);
 
   function toggleFamily(key) {
-    setActive((cur) => {
-      const next = new Set(cur);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
+    setIsolated((cur) => (cur === key ? null : key));
   }
 
   // Currency from the manifest (whose date it is — the amenity honesty rule).
@@ -229,8 +224,8 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
           )}
         </div>
 
-        {domain && active && (
-          <div className="pa-float pa-column pa-column-lean">
+        {domain && (
+          <div className="pa-float pa-column pa-column-lean zoning-console">
             <section className="pa-card pa-card-identity">
               <IdentityCard title={title ?? entry.label} />
             </section>
@@ -245,9 +240,11 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
             <section className="pa-card pa-card-instrument">
               <CategoricalPolygonLegend
                 title="Zone Family"
+                note={isolated ? "Click the family again to show all." : "Click a family to isolate it."}
                 items={domain}
-                active={active}
+                active={isolated ? new Set([isolated]) : new Set(domain.map((it) => it.key))}
                 onToggle={toggleFamily}
+                interaction="isolate"
               />
             </section>
 
@@ -257,7 +254,10 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
                   <p className="pa-box-cite" style={{ margin: 0 }}>
                     {detail.zoning}{detail.dc2_sub_area ? ` · Sub-area ${detail.dc2_sub_area}` : ""}
                   </p>
-                  <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>{detail.description}</p>
+                  {/* When the code's description IS the family name (AJ, DC), one line says it once. */}
+                  {detail.description !== detail.zone_family && (
+                    <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>{detail.description}</p>
+                  )}
                   <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>{detail.zone_family}</p>
                 </>
               ) : (
