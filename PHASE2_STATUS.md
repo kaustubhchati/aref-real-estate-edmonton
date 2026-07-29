@@ -86,9 +86,9 @@ sections, agent pipeline, and infrastructure.
       output/ (geojson/csv/log, also the frontend deliverable source), while
       property-assessment + building-permits gitignore most regenerable output/. Decide a
       consistent policy. Low priority; surfaced during the Economy relocation.
-- [ ] **`shared/` tracked RStudio junk** — `.RData` + `.Rhistory` committed
-      under `pipeline/shared/`. Gitignore + untrack (same as the
-      property-assessment `.Rhistory` cleanup item).
+- [x] **Duplicate `shared/` removed 2026-07-29** — canonical is `pipeline/yeg/shared/`;
+      the `.RData`/`.Rhistory` under the removed `pipeline/shared/` were never tracked
+      in any ref (`git log --all` — the earlier "committed" claim here was wrong).
 
 ### Frontend — sections not yet built
 - [x] **Point layers batch** (Amenities) — **DONE — backend published + frontend LIVE (§12 v1.18).**
