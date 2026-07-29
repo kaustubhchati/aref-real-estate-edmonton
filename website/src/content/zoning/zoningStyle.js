@@ -49,13 +49,13 @@ const SELECT_COLOUR = "#8b5cf6";             // --pa-selection-outline (§1.3)
 
 export const FAMILY_STYLE = {
   "Residential":               { colour: "#f0dfa8" },  // palest — the carpet
-  "Parks and Open Space":      { colour: "#a9c99a" },
+  "Parks and Open Space":      { colour: "#b2cba6" },
   "Civic and Public Service":  { colour: "#7fa8cc" },
   "Direct Control":            { pattern: { kind: "hatch", base: "#cfc9bd", ink: "#7d7669" } },
-  "Industrial and Employment": { colour: "#a58bbf" },
+  "Industrial and Employment": { colour: "#bcb5c4" },
   "Commercial":                { colour: "#d9614e" },
   "Mixed Use":                 { colour: "#e8a33d" },
-  "Agricultural and Rural":    { colour: "#cdd0a0" },
+  "Agricultural and Rural":    { colour: "#d8d6b6" },
   "Future and Reserve":        { colour: "#e4dfd6" },
   "Alternative Jurisdiction":  { pattern: { kind: "dots", base: "#e2dcd2", ink: "#9a9287" } },
 };
