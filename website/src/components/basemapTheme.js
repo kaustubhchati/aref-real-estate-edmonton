@@ -63,7 +63,10 @@ const C = {
 };
 
 // Choropleth / data layers added by the sections — never restyle these.
-const DATA_LAYER = /^(nbhd|pnbhd|bcensus|permit)/;
+// (zoning-* / catpoly-* added 2026-07-29: run order already protects them —
+// applyAppleClassic fires before data layers exist — but the regex is the
+// belt-and-suspenders the other sections carry.)
+const DATA_LAYER = /^(nbhd|pnbhd|bcensus|permit|zoning-|catpoly-)/;
 
 const isPoi        = (id) => /^poi/.test(id);
 const isWaterLabel = (id) => /^water(way|name)/.test(id);
