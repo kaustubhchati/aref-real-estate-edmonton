@@ -226,6 +226,7 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
                     images={images}
                     onLoad={handleMapLoad}
                     cooperativeGestures={false}
+                    attributionCompact={false}
                     mapAttribution={siteConfig.mapAttributionStrip}
                   />
                 </MapErrorBoundary>
@@ -236,18 +237,18 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
 
         {domain && (
           <div className="pa-float pa-column pa-column-lean zoning-console">
-            <section className="pa-card pa-card-identity">
-              <IdentityCard title={title ?? entry.label} />
-            </section>
-
-            {/* View switch — injected by ZoningSection only when it has >1 view. */}
-            {selectorNode && (
-              <section className="pa-card pa-card-instrument">
-                <div className="pa-col-mod pa-col-metric">{selectorNode}</div>
-              </section>
-            )}
-
+            {/* ONE fused card (optical pass 3 §5): the seam KC flagged twice was
+                the inter-card gap showing map through — title, selector, legend
+                and readout are MODULES of a single card, divided by the console's
+                own hairlines, not separate floating cards. */}
             <section className="pa-card pa-card-instrument">
+              <div className="pa-col-mod">
+                <IdentityCard title={title ?? entry.label} />
+              </div>
+
+              {/* View switch — injected by ZoningSection only when it has >1 view. */}
+              {selectorNode && <div className="pa-col-mod pa-col-metric">{selectorNode}</div>}
+
               <CategoricalPolygonLegend
                 title="Zone Family"
                 note={isolated ? "Click the family again to show all." : "Click a family to isolate it."}
@@ -256,26 +257,26 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
                 onToggle={toggleFamily}
                 interaction="isolate"
               />
-            </section>
 
-            <section className="pa-card">
-              {detail ? (
-                <>
-                  <p className="pa-box-cite" style={{ margin: 0 }}>
-                    {detail.zoning}{detail.dc2_sub_area ? ` · Sub-area ${detail.dc2_sub_area}` : ""}
+              <div className="pa-col-mod">
+                {detail ? (
+                  <>
+                    <p className="pa-box-cite" style={{ margin: 0 }}>
+                      {detail.zoning}{detail.dc2_sub_area ? ` · Sub-area ${detail.dc2_sub_area}` : ""}
+                    </p>
+                    {/* When the code's description IS the family name (AJ, DC), one line says it once. */}
+                    {detail.description !== detail.zone_family && (
+                      <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>{detail.description}</p>
+                    )}
+                    <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>{detail.zone_family}</p>
+                  </>
+                ) : (
+                  <p className="pa-detail-hint" style={{ margin: 0 }}>
+                    Hover a parcel for its zone; click to pin it.
                   </p>
-                  {/* When the code's description IS the family name (AJ, DC), one line says it once. */}
-                  {detail.description !== detail.zone_family && (
-                    <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>{detail.description}</p>
-                  )}
-                  <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>{detail.zone_family}</p>
-                </>
-              ) : (
-                <p className="pa-detail-hint" style={{ margin: 0 }}>
-                  Hover a parcel for its zone; click to pin it.
-                </p>
-              )}
-              <p className="pa-box-cite" style={{ margin: "8px 0 0" }}>{currency}</p>
+                )}
+                <p className="pa-box-cite" style={{ margin: "8px 0 0" }}>{currency}</p>
+              </div>
             </section>
           </div>
         )}

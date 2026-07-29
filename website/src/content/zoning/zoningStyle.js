@@ -51,7 +51,10 @@ export const ZONING_GROUND = "#fcfaf4";
 // Streets: the reference layer, warmed toward the site cream so it sits in
 // register rather than reading as pure UI white.
 const ROAD_WHITE = "#fbf7ec";
-const SELECT_COLOUR = "#8b5cf6";             // --pa-selection-outline (§1.3)
+// Selection/hover highlight sits OUTSIDE the family palette (optical pass 3 §5):
+// the site's violet --pa-selection-outline collides with Industrial purple, so
+// zoning selects in MAGENTA (h340 — no family hue band touches it).
+const SELECT_COLOUR = "#b54a93";
 
 // Register-derived (optical pass 3, 2026-07-29): hue = zoning convention; chroma
 // = the AREA TIER as a fraction of the measured site register (Apple-Classic

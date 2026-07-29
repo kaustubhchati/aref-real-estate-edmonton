@@ -44,7 +44,10 @@ export default function CategoricalPolygonLegend({ title, note, items, active, o
                 type="button"
                 onClick={() => onToggle(item.key)}
                 aria-pressed={on}
-                title={interaction === "isolate"
+                // aria-label, NOT title: a native title tooltip hovers over the
+                // adjacent legend rows (optical pass 3 §5) — the note line above
+                // the rows carries the sighted affordance instead.
+                aria-label={interaction === "isolate"
                   ? (on && active.size === 1 ? "Show all families" : `Isolate ${item.label}`)
                   : (on ? `Hide ${item.label}` : `Show ${item.label}`)}
                 style={{
