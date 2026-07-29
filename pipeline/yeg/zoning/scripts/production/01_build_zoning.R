@@ -62,6 +62,18 @@ if (!GEOM_COL %in% names(raw)) {
   stop(sprintf("Zoning: geometry column '%s' absent from the snapshot.", GEOM_COL))
 }
 
+# Edmonton has a REAL zone code "NA" (Natural Areas — 99 polygons). readr's default
+# na strings coerce both that code AND a blank cell to R NA, and left_join matches
+# NA to NA — so a blank code would silently inherit Natural Areas' family instead of
+# tripping the guard (fail-open). Re-read ONLY the code column with NA disabled and
+# splice it in by row order: "NA" survives as a literal join key, while a genuinely
+# blank code stays "" — unmapped — and halts at the guard below.
+zoning_literal <- read_csv(raw_path, col_select = "zoning",
+                           col_types = cols(zoning = "c"), na = character(),
+                           show_col_types = FALSE)$zoning
+stopifnot(length(zoning_literal) == nrow(raw))
+raw$zoning <- trimws(zoning_literal)
+
 # Drop rows with no geometry (counted, never silently dropped — CLAUDE.md §9).
 gvals     <- as.character(raw[[GEOM_COL]])
 has_geom  <- !is.na(gvals) & nzchar(trimws(gvals))
@@ -79,15 +91,29 @@ if (length(xw_files) == 0) {
   stop("No zoning_family_crosswalk_<YYYYMMDD>.csv in data/reference/.")
 }
 xw_path <- tail(xw_files, 1)
-xw <- read_csv(xw_path, show_col_types = FALSE, col_types = cols(.default = "c"))
+# na = character(): the crosswalk's "NA" row (Natural Areas) must survive as a
+# literal code, matching the literal re-read of the raw side above.
+xw <- read_csv(xw_path, show_col_types = FALSE, col_types = cols(.default = "c"),
+               na = character())
 cat(sprintf("Crosswalk: %s  (%d codes)\n", basename(xw_path), nrow(xw)))
 if ("status" %in% names(xw) && any(xw$status != "RATIFIED")) {
   message("NOTE: crosswalk is PROPOSED (not yet RATIFIED) — families are provisional ",
           "until KC ratifies (README_zoning_crosswalk.md).")
 }
+# Crosswalk sanity (fail-closed): every row needs a non-blank code + family, and
+# codes must be unique — a malformed crosswalk halts here, never mis-joins.
+if (any(!nzchar(trimws(xw$zoning))) || any(!nzchar(trimws(xw$family)))) {
+  stop("Crosswalk has blank zoning/family cells — fix the crosswalk CSV.")
+}
+if (anyDuplicated(xw$zoning) > 0) {
+  stop("Crosswalk has duplicate zoning codes — fix the crosswalk CSV.")
+}
 
+# na_matches = "never": belt-and-braces — with literal keys neither side carries
+# R NA, but "never" guarantees a missing key can only ever fall to the guard.
 zoned <- raw |>
-  left_join(xw |> select(zoning, zone_family = family), by = "zoning")
+  left_join(xw |> select(zoning, zone_family = family), by = "zoning",
+            na_matches = "never")
 
 # THE GUARD: any zone code absent from the crosswalk halts the run loudly.
 n_unmapped <- sum(is.na(zoned$zone_family))
