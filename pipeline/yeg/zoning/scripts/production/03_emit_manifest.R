@@ -62,6 +62,12 @@ for (i in seq_len(nrow(bl))) {
   cnts <- if (is.na(cnts) || !nzchar(cnts)) integer(0) else as.integer(strsplit(cnts, "\\|")[[1]])
   categoryCounts <- if (length(cats) && length(cnts) == length(cats))
     setNames(as.list(cnts), cats) else setNames(list(), character(0))
+  # Planar area share per family (EPSG:26912, from 01) — count is what the data
+  # says; area is what the eye sees. The legend shows both.
+  shrs <- if ("category_area_pct" %in% names(row)) row$category_area_pct else NA_character_
+  shrs <- if (is.na(shrs) || !nzchar(shrs)) numeric(0) else as.numeric(strsplit(shrs, "\\|")[[1]])
+  categoryAreaShare <- if (length(cats) && length(shrs) == length(cats))
+    setNames(as.list(shrs), cats) else setNames(list(), character(0))
 
   layers[[length(layers) + 1L]] <- list(
     id              = row$layer_id,
@@ -71,10 +77,12 @@ for (i in seq_len(nrow(bl))) {
     sourceDatasetId = row$source_dataset,
     sourceUpdatedAt = source_updated_at(row$source_dataset),
     fetchedAt       = row$fetched_at,
+    rawSnapshot     = if ("raw_snapshot" %in% names(row)) row$raw_snapshot else NA_character_,
     featureCount    = as.integer(row$features_emit),
     categoryField   = row$category_field,   # "" for the boundaries file
     categories      = I(cats),              # I() -> always a JSON array
     categoryCounts  = categoryCounts,       # {family: polygon count}
+    categoryAreaShare = categoryAreaShare,  # {family: planar area %}
     coverage        = list(
       withGeometry    = as.integer(row$features_emit),
       withoutGeometry = as.integer(row$without_geometry)

@@ -10,6 +10,7 @@
       "sourceDatasetId": "fixa-tstc",
       "sourceUpdatedAt": "2026-07-27",
       "fetchedAt": "2026-07-29",
+      "rawSnapshot": "zoning_bylaw_20260729.csv",
       "featureCount": 11518,
       "categoryField": "zone_family",
       "categories": ["Agricultural and Rural", "Alternative Jurisdiction", "Civic and Public Service", "Commercial", "Direct Control", "Future and Reserve", "Industrial and Employment", "Mixed Use", "Parks and Open Space", "Residential"],
@@ -25,6 +26,18 @@
         "Parks and Open Space": 2052,
         "Residential": 5255
       },
+      "categoryAreaShare": {
+        "Agricultural and Rural": 32.58,
+        "Alternative Jurisdiction": 0.96,
+        "Civic and Public Service": 3.51,
+        "Commercial": 1.94,
+        "Direct Control": 4.09,
+        "Future and Reserve": 1.9,
+        "Industrial and Employment": 11.77,
+        "Mixed Use": 0.77,
+        "Parks and Open Space": 11.89,
+        "Residential": 30.58
+      },
       "coverage": {
         "withGeometry": 11518,
         "withoutGeometry": 0
@@ -38,10 +51,12 @@
       "sourceDatasetId": "fixa-tstc",
       "sourceUpdatedAt": "2026-07-27",
       "fetchedAt": "2026-07-29",
+      "rawSnapshot": "zoning_bylaw_20260729.csv",
       "featureCount": 10,
       "categoryField": "",
       "categories": [],
       "categoryCounts": {},
+      "categoryAreaShare": {},
       "coverage": {
         "withGeometry": 10,
         "withoutGeometry": 0

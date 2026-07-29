@@ -141,9 +141,18 @@ st_write(zoning_sf, out_path, driver = "GeoJSON",
 n_emit   <- nrow(zoning_sf)
 emit_kb  <- round(file.info(out_path)$size / 1024, 1)
 families <- sort(unique(zoning_sf$zone_family))
-# Per-family polygon counts, aligned with `families` (both alphabetical) — the
-# manifest's categoryCounts, so the legend can order families by count.
-fam_counts <- zoning_sf |> st_drop_geometry() |> count(zone_family) |> arrange(zone_family)
+# Planar working copy (EPSG:26912 — NAD83 / UTM 12N, the City's native datum):
+# per-family AREA shares for the legend (count says what the data holds; area is
+# what the eye sees — the palette's inverse-area emphasis reads this number),
+# and the same projection drives the family dissolve below.
+zp <- st_transform(zoning_sf, 26912)
+fam_stats <- tibble(zone_family = zoning_sf$zone_family,
+                    area_m2     = as.numeric(st_area(zp))) |>
+  group_by(zone_family) |>
+  summarise(n = n(), area_m2 = sum(area_m2), .groups = "drop") |>
+  mutate(area_pct = round(100 * area_m2 / sum(area_m2), 2)) |>
+  arrange(zone_family)
+fam_counts <- fam_stats   # aligned with `families` (both alphabetical)
 
 # ============================================================
 # 3b — Family-boundary dissolve (the z12–14 rung of the zoom ladder,
@@ -153,12 +162,11 @@ fam_counts <- zoning_sf |> st_drop_geometry() |> count(zone_family) |> arrange(z
 #      boundaries at district zoom without drawing every parcel edge.
 # ============================================================
 bnd_path <- "output/zoning_family_boundaries.geojson"
-# The union runs in a PLANAR CRS (UTM 12N — Edmonton's zone): the source data has
-# self-crossing loops that s2's spherical validity rejects even after a planar
-# st_make_valid, and a city-scale dissolve is a planar operation anyway. Transform
-# back to 4326 for the emit.
-fam_bounds <- zoning_sf |>
-  st_transform(32612) |>
+# The union runs in the PLANAR CRS above (the source data has self-crossing
+# loops that s2's spherical validity rejects even after a planar st_make_valid,
+# and a city-scale dissolve is a planar operation anyway). Transform back to
+# 4326 for the emit.
+fam_bounds <- zp |>
   st_make_valid() |>
   # make_valid can return GEOMETRYCOLLECTIONs (polygon + sliver line/point parts);
   # keep only the polygonal parts — st_boundary rejects collections.
@@ -181,6 +189,10 @@ tibble(
   label            = c("Zoning Bylaw", "Zoning Family Boundaries"),
   geometry_type    = c("multipolygon", "multilinestring"),
   source_dataset   = DATA_ID,
+  # PROVENANCE: the exact dated snapshot this build read — so a count that moves
+  # between builds (e.g. 11,516 -> 11,518 across the 07-25 -> 07-29 refetch) is
+  # attributable to its source file, not suspected as a defect.
+  raw_snapshot     = basename(raw_path),
   category_field   = c("zone_family", ""),
   features_in      = c(n_in, n_emit),
   features_emit    = c(n_emit, nrow(fam_bounds)),
@@ -188,6 +200,9 @@ tibble(
   emit_kb          = c(emit_kb, bnd_kb),
   categories       = c(paste(families, collapse = "|"), ""),
   category_counts  = c(paste(fam_counts$n, collapse = "|"), ""),
+  # Planar EPSG:26912 area share per family (alphabetical, aligned with
+  # categories) — what the eye actually sees; the legend shows it beside count.
+  category_area_pct = c(paste(sprintf("%.2f", fam_counts$area_pct), collapse = "|"), ""),
   fetched_at       = format(Sys.Date(), "%Y-%m-%d")
 ) |> write_csv("output/_log_zoning_bylaw.csv")
 
