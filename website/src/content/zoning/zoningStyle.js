@@ -48,17 +48,25 @@ export const LIMIT_LINE_ID    = "zoning-citylimit-line";
 // ---- The ten families (fill / hover / iso from the frozen derivation) --------
 // colour = resting band fill · hover = lightness LIFT, hue+chroma held ·
 // iso = Band-C toning of the same hue (isolate is a figure state).
+// SEMANTIC ASSIGNMENT (optical pass 5, _oneshot/assign_zoning_palette_20260729b.py
+// — Lin et al. 2013: generation and assignment are separate operations).
+// Absolute reservations: BLUE is water's (no family box); GREEN is Parks'
+// alone. One family per hue region; the naming gate passed with one common
+// name each: straw · gold · green · violet · brown · plum · red · rose ·
+// bronze · orange. Lightness bands BIND (measured, non-overlapping:
+// A 82.8–87.9 · B 62.0–70.1 · C 47.0–56.1). Stated chroma relaxations under
+// the ratified C*46 floor: DC brown 55→ok, FR dusty rose C52, AJ bronze C46.
 export const FAMILY_STYLE = {
-  "Residential":               { colour: "#c0e16c", hover: "#d4f57f", iso: "#688d08" },  // A · L85 C60 h118
-  "Agricultural and Rural":    { colour: "#24edd6", hover: "#70fee9", iso: "#179182" },  // A · L85 C51 h182
-  "Parks and Open Space":      { colour: "#25b9fc", hover: "#7bc9fc", iso: "#1b8abd" },  // B · L71 C46 h252
-  "Direct Control":            { colour: "#fd7b85", hover: "#fc9b9f", iso: "#fd1254" },  // B · L67 C54 h20
-  "Civic and Public Service":  { colour: "#ef73ec", hover: "#fe8cf9", iso: "#d43dd3" },  // B · L67 C75 h328
-  "Industrial and Employment": { colour: "#d09a0b", hover: "#e5ad28", iso: "#a57a08" },  // B · L67 C70 h82
-  "Mixed Use":                 { colour: "#d25f06", hover: "#e8711f", iso: "#d25f06" },  // C · L54 C74 h56
-  "Alternative Jurisdiction":  { colour: "#4679fc", hover: "#718cfc", iso: "#4579fc" },  // C · L54 C75 h291
-  "Future and Reserve":        { colour: "#f61092", hover: "#fd51a2", iso: "#f61092" },  // C · L54 C83 h354
-  "Commercial":                { colour: "#0f953e", hover: "#30a84f", iso: "#0f953e" },  // C · L54 C63 h145
+  "Agricultural and Rural":    { colour: "#d4e673", hover: "#e8fa86", iso: "#6f8504" },  // A · L88 C58 h113 · straw
+  "Residential":               { colour: "#eacd59", hover: "#ffe16e", iso: "#907b03" },  // A · L83 C60 h93 · gold
+  "Parks and Open Space":      { colour: "#17c383", hover: "#3bd795", iso: "#098e5e" },  // B · L70 C59 h159 · green
+  "Industrial and Employment": { colour: "#b977fa", hover: "#c990fe", iso: "#a055ee" },  // B · L62 C75 h312 · violet
+  "Direct Control":            { colour: "#e19549", hover: "#f6a85b", iso: "#b76904" },  // B · L68 C55 h67 · brown
+  "Civic and Public Service":  { colour: "#ff7dd9", hover: "#fea0e0", iso: "#e119b6" },  // B · L70 C65 h338 · plum
+  "Commercial":                { colour: "#ff2f56", hover: "#fe6571", iso: "#ff2f56" },  // C · L56 C82 h22 · red
+  "Future and Reserve":        { colour: "#b8467d", hover: "#cc598f", iso: "#b8467d" },  // C · L47 C52 h352 · rose
+  "Alternative Jurisdiction":  { colour: "#976523", hover: "#ab7634", iso: "#976523" },  // C · L47 C46 h72 · bronze
+  "Mixed Use":                 { colour: "#d25f06", hover: "#e8711f", iso: "#d25f06" },  // C · L54 C74 h56 · orange (pinned)
 };
 
 // ---- Ground + reference layers ------------------------------------------------
@@ -139,7 +147,9 @@ export function buildZoningDomain(entry) {
     const style = FAMILY_STYLE[key];
     if (!style) console.warn(`[zoning] family "${key}" has no derived fill — rendering fallback.`);
     return {
-      key, label: key, count: counts[key],
+      // Display label uses "&" so the longest family name holds one legend
+      // line (row-rhythm fix); the readout keeps the full data value.
+      key, label: key.replace(" and ", " & "), count: counts[key],
       share: shares[key], shareDisplay: (display[i] / 10).toFixed(1),
       ...(style ?? { colour: "#c9c2b2", hover: "#d6cfc0", iso: "#8f887b" }),
     };
@@ -153,7 +163,7 @@ export function buildZoningDomain(entry) {
 // stays legible; everything else takes the common quiet neutral. Water and
 // streets are basemap and stay.
 export const ISOLATE_NEUTRAL = "#eae6dc";
-export const ISOLATE_PARKS   = "#d8e3ec";
+export const ISOLATE_PARKS   = "#d9e7dc";   // pale cast of Parks' green — the valley stays legible
 
 function restFillExpression(domain, isolated) {
   if (!isolated) return buildPolygonFillColour("zone_family", domain);
