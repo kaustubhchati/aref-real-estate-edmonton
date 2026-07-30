@@ -194,9 +194,12 @@ export function buildZoningDomain(entry) {
     const style = FAMILY_STYLE[key];
     if (!style) console.warn(`[zoning] family "${key}" has no derived fill — rendering fallback.`);
     return {
-      // Display label uses "&" so the longest family name holds one legend
-      // line (row-rhythm fix); the readout keeps the full data value.
-      key, label: key.replace(" and ", " & "), count: counts[key],
+      // Display label = the RATIFIED crosswalk name verbatim ("Agricultural and
+      // Rural", not "& Rural") — pass 14 §1: the "&" was a width improvisation
+      // from the count-band era; with the band gone and the strip taller the
+      // ratified "and" form fits, and the ratified label wins (measured — a name
+      // still hides rather than truncates if its chip is too narrow).
+      key, label: key, count: counts[key],
       share: shares[key], shareDisplay: (display[i] / 10).toFixed(1),
       ...(style ?? { colour: "#c9c2b2", hover: "#d6cfc0", iso: "#8f887b" }),
     };

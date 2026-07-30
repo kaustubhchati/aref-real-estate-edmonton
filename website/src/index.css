@@ -4306,8 +4306,22 @@ p  { margin: 0 0 0.75rem; }
   display: flex; align-items: center; padding-left: 7px;
 }
 .zls-pct { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.zls-chip { transition: opacity 120ms var(--ease); }
+.zls-chip { transition: opacity 120ms var(--ease), transform 120ms var(--ease); }
 .zls-chip.is-dim { opacity: 0.16; }
+/* ABSOLUTE emphasis (§2) — a TWO-TONE casing + small lift on the focused chip
+   (hover / isolate / reciprocal-select — all ONE treatment). It does NOT touch
+   the fill (the colour the user is learning) and it holds at BOTH lightness
+   extremes: the LIGHT inner ring contrasts a DARK fill (Alternative
+   Jurisdiction), the DARK outer ring contrasts the cream panel and a PALE fill
+   (Agricultural), and the light↔dark boundary is visible on any background —
+   so the hovered chip is identifiable even with the dimming disabled. Same for
+   all ten, no per-family casing (box-shadow is outset, not clipped by the
+   chip's own overflow). */
+.zls-chip.is-emph {
+  position: relative; z-index: 2;
+  box-shadow: 0 0 0 1.5px #faf6ec, 0 0 0 3px #17131a;
+  transform: translateY(-2px);
+}
 /* Label row ⇄ readout share ONE 13px slot (grid-stack — no height change). */
 .zls-foot { display: grid; margin-top: 3px; height: 14px; }
 .zls-labels, .zls-readout { grid-area: 1 / 1; min-width: 0; }

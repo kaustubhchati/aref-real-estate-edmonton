@@ -93,12 +93,15 @@ export default function ZoningLegendStrip({
   function hoverEnd() { setChipHover(null); onHoverFamily?.(null); }
 
   return (
-    <div className="zls" role="group" aria-label="Zone families — share of city area">
+    <div className="zls" role="group" aria-label="Zone families by share of city area">
       {/* THE BAND — area-share chips with the share printed inside where it
-          fits. Passive visual; the hit layer below carries every interaction. */}
+          fits. Passive visual; the hit layer below carries every interaction.
+          The focused chip takes the ABSOLUTE two-tone emphasis (is-emph, §2);
+          the rest dim (secondary). */}
       <div ref={bandRef} className="zls-band zls-area" aria-hidden="true">
         {domain.map((it) => (
-          <div key={it.key} className={`zls-chip${dimmed(it.key) ? " is-dim" : ""}`}
+          <div key={it.key}
+               className={`zls-chip${it.key === focus ? " is-emph" : dimmed(it.key) ? " is-dim" : ""}`}
                data-family={it.key} style={{ ...cellStyle(it.share), background: it.colour }}>
             <span className="zls-pct"
                   style={{ color: inkForFill(it.colour), visibility: pctFits[it.key] ? "visible" : "hidden" }}>
@@ -119,14 +122,17 @@ export default function ZoningLegendStrip({
               <span style={{ visibility: labelFits[it.key] ? "visible" : "hidden" }}>{it.label}</span>
             </div>
           ))}
-          <span className="zls-hint">hover a segment for its family</span>
+          <span className="zls-hint">hover a segment to read its family</span>
         </div>
         {mode !== "rest" && focusItem && (
+          // Readout sentence (§1) — no em dash, no interpunct, one sentence.
+          // SPECIFIED (title-case) form, pending KC's capitalisation ruling:
+          // "Residential Class: 30.6% of City with 5,255 Zones".
           <p className="zls-readout" aria-live="polite">
-            <b>{focusItem.label}</b>
-            {" — "}{focusItem.shareDisplay}% of area · {focusItem.count?.toLocaleString()} zones
-            {mode === "isolated" && " · isolated — click again to show all"}
-            {mode === "selected" && " · the selected zone's family"}
+            <b>{focusItem.label}</b> Class: {focusItem.shareDisplay}% of City with{" "}
+            {focusItem.count?.toLocaleString()} Zones
+            {mode === "isolated" && ". Isolated; click again to show all"}
+            {mode === "selected" && ". The selected zone's family"}
           </p>
         )}
       </div>
@@ -140,7 +146,7 @@ export default function ZoningLegendStrip({
             key={it.key} type="button"
             style={cellStyle(it.share)}
             aria-pressed={isolated === it.key}
-            aria-label={`${it.label} — ${it.shareDisplay}% of city area, ${it.count?.toLocaleString()} zones. ${isolated === it.key ? "Isolated — press to show all." : "Press to isolate."}`}
+            aria-label={`${it.label} Class: ${it.shareDisplay}% of City with ${it.count?.toLocaleString()} Zones. ${isolated === it.key ? "Isolated. Press to show all." : "Press to isolate."}`}
             onMouseEnter={() => hoverStart(it.key)}
             onMouseLeave={hoverEnd}
             onFocus={() => hoverStart(it.key)}
