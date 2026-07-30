@@ -101,8 +101,10 @@ export default function ZoningLegendStrip({
 
       {/* LABEL row ⇄ READOUT — same slot, one height (grid-stack). */}
       <div className="zls-foot">
+        {/* opacity, NOT visibility: the fit-measured spans carry their own
+            visibility:visible, which would override a hidden ancestor. */}
         <div ref={labelRowRef} className="zls-labels"
-             style={{ visibility: mode === "rest" ? "visible" : "hidden" }} aria-hidden={mode !== "rest"}>
+             style={{ opacity: mode === "rest" ? 1 : 0 }} aria-hidden={mode !== "rest"}>
           {domain.map((it) => (
             <div key={it.key} className="zls-labelcell" data-family={it.key}
                  style={cellStyle(it.share, MIN_AREA_PX)}>
