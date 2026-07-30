@@ -30,8 +30,8 @@ export { BASEMAP_STYLE } from "../../components/basemapStyle.js";
 // Constructor seed matching the section home camera, which lives in
 // mapCamera.js (ZONING_HOME_VIEW — the camera-preset single source, pass 11 §1).
 export const MAP_VIEW = {
-  center: [-113.500, 53.535],
-  zoom: 10.275,
+  center: [-113.500, 53.522],
+  zoom: 10.1,
   minZoom: 7,
   maxZoom: 18,
   maxBounds: CITY_BOUNDS.Edmonton,

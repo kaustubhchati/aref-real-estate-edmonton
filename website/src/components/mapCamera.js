@@ -22,14 +22,17 @@ export const HOME_VIEW = {
   Edmonton: { center: [-113.4927, 53.4862], zoom: 10.3, pitch: 18, bearing: 0 },
 };
 
-// The ZONING section's home camera (pass 11 §1 — KC's ratified frame, captured
-// from their screenshot): the whole city with the annexed boundary in frame and
-// St. Albert, Sherwood Park and Big Lake visible for orientation; the scale
-// control reads 3 km. A documented deviation from the shared HOME_VIEW (the
-// zoning periphery IS data — the agricultural families); same capture rules:
-// a design constant, re-dial to re-capture, never data-derived.
+// The ZONING section's home camera (pass 11 §1 — KC's ratified frame): the
+// whole city with the annexed boundary inside the VISIBLE frame and
+// St. Albert, Sherwood Park and Big Lake in view for orientation; the scale
+// control reads 3 km. First solved against KC's screenshot's label anchors
+// (z10.275 @53.535), then widened one notch in the §4 re-check so the
+// southern annexation clears the always-on bottom console the same pass
+// added. A documented deviation from the shared HOME_VIEW (the zoning
+// periphery IS data — the agricultural families); same capture rules: a
+// design constant, re-dial to re-capture, never data-derived.
 export const ZONING_HOME_VIEW = {
-  Edmonton: { center: [-113.500, 53.535], zoom: 10.275, pitch: 18, bearing: 0 },
+  Edmonton: { center: [-113.500, 53.522], zoom: 10.1, pitch: 18, bearing: 0 },
 };
 
 // Apply a tuned camera PRESET (center/zoom/pitch/bearing). easeTo for a gentle landing;
