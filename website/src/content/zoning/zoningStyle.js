@@ -87,8 +87,10 @@ export const FAMILY_STYLE = {
 // THEMATIC map — the base provides geographic context and must visibly recede;
 // the zoning fill is the figure. No reference feature may compete with it.
 //
-// Off-city ground: outside the palette register entirely — highest lightness,
-// lowest chroma on the map (L98 C3). The city reads as an island.
+// Off-city BASE ground: outside the palette register (L98 C3). Since pass 10
+// the neighbouring areas keep the basemap's Apple-Classic FEATURE fills on
+// this base — the city still reads as the figure through vividness contrast
+// and the city-limit line, not through county blankness.
 export const ZONING_GROUND = "#fcfaf4";
 
 // Reference neutrals (all outside the family palette):
@@ -339,10 +341,9 @@ export function cityLimitLayer() {
 // The applyDeepenedGround precedent: contained to THIS map's instance, run in
 // onLoad AFTER applyAppleClassic. Roads disclose progressively by tier; rail
 // and buildings are reinstated at reference weight; labels take polarity;
-// land-use/landcover/park/AERODROME fills mute to the off-city ground,
+// land-use/landcover feature fills stay Apple-Classic (visible off-city),
 // buildings stay OFF, rail stays a low-prominence hairline, water + cream
 // streets promote over the fill (arterials fade at city zoom; widths held).
-const LANDUSE_FILLS = /^(landcover|landuse|park|wood|sand|wetland|aeroway)/;
 const WATER_LAYERS  = /^(water$|water_shadow$|waterway)/;
 const BUILDING_FILLS = /^building/;
 const RAIL_LINES     = /rail/;
@@ -456,8 +457,12 @@ export function applyZoningGround(map, firstSymbolId) {
         } else {
           map.setLayoutProperty(id, "visibility", "none");   // building-top stays off
         }
-      } else if (type === "fill" && LANDUSE_FILLS.test(id)) {
-        map.setPaintProperty(id, "fill-color", ZONING_GROUND);
+      // (Land-use/landcover/park/aeroway fills are NO LONGER muted — pass 10:
+      // the NEIGHBOURING AREAS keep the basemap's own Apple-Classic feature
+      // fills, so St. Albert / Sherwood Park / the rural fringe read as real
+      // places, not absence. Inside the city the opaque zoning fill covers
+      // them, so the figure is untouched; the island edge is carried by the
+      // city-limit line + the vividness contrast, not by blankness.)
       } else if ((type === "fill" || type === "line") && WATER_LAYERS.test(id)) {
         // Water goes DEEPER (optical pass 7 §1): it is basemap, not zoning, so
         // it carries no area-effect budget — a proper river blue. Still the
