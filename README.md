@@ -20,11 +20,12 @@ The bar is "researchers and the public can rely on it," not five-nines uptime.
 
 ## Now Live
 
-Deployed on Cloudflare Pages — **[aref-real-estate-edmonton.pages.dev](https://aref-real-estate-edmonton.pages.dev/)** (Edmonton). Eleven sections shipped:
+Deployed on Cloudflare Pages — **[aref-real-estate-edmonton.pages.dev](https://aref-real-estate-edmonton.pages.dev/)** (Edmonton). Twelve sections shipped:
 
 | Section | Type | Link |
 | --- | --- | --- |
 | **Property Assessment** | 5-metric choropleth map | [/properties/property-assessment](https://aref-real-estate-edmonton.pages.dev/properties/property-assessment) |
+| **Zoning** | categorical family map (proportional legend strip + two-stage rail) | [/properties/zoning](https://aref-real-estate-edmonton.pages.dev/properties/zoning) |
 | **Dwelling Units** (permit neighbourhoods) | choropleth + analyst Data Console | [/activity/dwelling-units](https://aref-real-estate-edmonton.pages.dev/activity/dwelling-units) |
 | **Building Permits** (Construction & Improvement) | per-year point map (incandescent heat→dots) | [/activity/construction-improvement](https://aref-real-estate-edmonton.pages.dev/activity/construction-improvement) |
 | **Businesses and Industry Specializations** | business points + LCLQ finding (2 views) | [/economy/business-census](https://aref-real-estate-edmonton.pages.dev/economy/business-census) |
@@ -36,7 +37,7 @@ Deployed on Cloudflare Pages — **[aref-real-estate-edmonton.pages.dev](https:/
 | **Neighbourhood Report Card** | sortable / searchable table | [/report-card](https://aref-real-estate-edmonton.pages.dev/report-card) |
 | **Download** | 3 cleaned CSVs | [/download](https://aref-real-estate-edmonton.pages.dev/download) |
 
-Navigation is a single off-canvas drawer (opened by the header hamburger). The three aggregate maps + the Building Permits point map share one hand-ratified home camera (Property Assessment is the standard — CLAUDE.md §12 v1.15). Zoning, Land Titles, Business Licences, and Labour Market are placeholders pending data.
+Navigation is a single off-canvas drawer (opened by the header hamburger). The three aggregate maps + the Building Permits point map share one hand-ratified home camera (Property Assessment is the standard — CLAUDE.md §12 v1.15); Zoning carries its own whole-city home camera (§12 v1.20). Land Titles, Business Licences, and Labour Market are placeholders pending data.
 
 ## Context
 

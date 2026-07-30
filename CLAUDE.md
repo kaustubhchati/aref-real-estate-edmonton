@@ -6,17 +6,22 @@
 > that framing is **retired** — see §1.
 > Owner / **builder**: KC (Research Assistant, UAlberta) — direct-push authority to `main` (§7).
 > Verifier: Olivia (post-hoc review, §7). Supervisor: Prof. Haifang Huang.
-> Last updated: 2026-07-29. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
+> Last updated: 2026-07-30. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
 > current open work tracked in **PHASE2_STATUS.md**. Tier 2 (container-universe reconciliation)
 > is **CLOSED** end-to-end (§12 v1.11). The frontend matured substantially since v1.15
-> (§12 v1.16–v1.18): navigation moved to an **off-canvas drawer** and displayed identity is now
+> (§12 v1.16–v1.20): navigation moved to an **off-canvas drawer** and displayed identity is now
 > **REAL** (no longer placeholdered — §2/§6); the BP point map was redesigned (incandescent
 > heat→dots on a shared land-use basemap palette); the Economy group gained the **Business Census
 > points section** ("Businesses and Industry Specializations" + the LCLQ finding); and **Amenities
 > shipped** — a registry-driven backend (13 published layers) with a live frontend (8 point layers
-> across 4 consolidated view-selector sections). **Zoning** shipped end-to-end (§12 v1.19):
-> the categorical family map is live at `/properties/zoning` (View 1 of a ratified two-view
-> section; Overlays = v1.1).
+> across 4 consolidated view-selector sections). **Zoning** shipped end-to-end (§12 v1.19) and its
+> View 1 frontend then **matured across six directive passes (§12 v1.20)**: a whole-city home
+> camera, selection-inversion highlighting, a **proportional legend strip** (area band with in-chip
+> percentages + an absolute two-tone chip emphasis, on the dark console shade), a **two-stage right
+> rail** (absent at rest → hover header → pinned card), the sentence-case "of Edmonton" readout, a
+> hardened hover chain, and full DESIGN_SYSTEM compliance. The **built-in attribution went COMPACT ⓘ
+> on every map** (v1.20, superseding PA's always-visible strip — DESIGN_SYSTEM §6 amended). Live at
+> `/properties/zoning` (View 1 of a ratified two-view section; Overlays = v1.1).
 
 ---
 
@@ -303,8 +308,9 @@ Business Census points section — 2 views: the census points + the LCLQ Industr
 finding, §12 v1.17), and the four **Amenities** maps — Public Transportation (Bus Stops + LRT
 Network views), Parks and Recreation (Playgrounds / Spray Parks / Recreation Facilities / Track
 Sports Fields views), Police Stations, EV Charging Stations (§12 v1.18), and Zoning `map`
-(the categorical FAMILY fill — 10 ratified families, SVG-sourced palette, governance-pattern
-families, zoom ladder; §12 v1.19). **Tables/pages:**
+(the categorical FAMILY fill — 10 ratified families in an algorithmically DERIVED banded palette
+[all real hues, no patterns], zoom ladder, a proportional legend strip + two-stage rail +
+selection inversion; §12 v1.19→v1.20). **Tables/pages:**
 Neighbourhood Report Card `tables`, Download `page` (3 cleaned CSVs from `public/downloads/`,
 `siteConfig.downloads`), plus the Home / About / Research Competition text pages. The three
 aggregate maps + the BP point map share ONE captured home camera (§12 v1.15). Land Titles,
@@ -501,6 +507,42 @@ When in doubt, load §2 (locked architecture) and §9 (negative rules) — the l
 Revise when: a locked decision changes (§2), a new section is wired (§3), a new rule is validated
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
+- **v1.20 (2026-07-30)** — **Zoning View 1 matured across six directive passes; the attribution
+  went compact site-wide; DESIGN_SYSTEM §5/§6 amended. Shipped + PUSHED (`71abd88`→`5dd2d9d`).**
+  Frontend-only (no pipeline data logic changed). **(1) Home camera** — a whole-city KC-ratified
+  frame (annexed boundary + St. Albert / Sherwood Park / Big Lake in view, scale 3 km) lives in
+  `components/mapCamera.js` as `ZONING_HOME_VIEW`; the reset control + `?zone=` deep link both land
+  on it (the deep link no longer flies to the zone — with §2 inversion the pinned zone is the sole
+  figure, locatable from the city frame). **(2) Selection inversion** — pinning a zone drops every
+  other to the isolate neutral so the selected zone is the sole figure (hover-lift + commitment
+  casing); hover cannot repaint while pinned. **(3) Proportional legend strip**
+  (`ZoningLegendStrip.jsx`) REPLACED the bottom data console (that console was built then reverted):
+  a single AREA band (chips ∝ area share, in-chip percentages with per-chip ink derived from fill
+  luminance), family labels below (measured hide-not-drift, ratified "and" names), a hover/isolate/
+  select **readout as a sentence** ("Residential class: 30.6% of Edmonton, 5,255 zones" — KC
+  sentence-case ruling), and an **ABSOLUTE two-tone chip emphasis** (light `#faf6ec` + near-black
+  `#141018` casing ring + lift) that holds at both lightness extremes where the old relative dimming
+  failed. On the **dark console shade** (`--glass-panel-fill`, DS §1.1 — reverting a pass-12
+  light-cream deviation). **(4) Two-stage right rail** (`ZoningRail.jsx`, extract-by-copy of the BC
+  rail frame): ABSENT at rest → stage 1 hover (swatch · family · neighbourhood) → stage 2 pinned
+  (the byte-identical header expands downward + zone code large in mono, description, dc2 sub-area
+  when populated, area, family share, copy-link); three-way dismissal. **(5) Attribution → COMPACT
+  ⓘ on ALL SIX maps** — the built-in `AttributionControl` runs `compact:true` everywhere (MapView
+  removes MapLibre-5.x's init `-show` to start collapsed + a click-outside collapse), a dark-glass ⓘ
+  chip that expands to the credit string on click. Supersedes PA's always-visible strip;
+  licence-compliant (present + discoverable). **(6) Hover-chain hardening** (a real-GPU bug batch):
+  the emphasised chip's `z-index:2` stole the pointer from the hit layer → a mouseleave/mouseenter
+  **colouring loop** (fixed: band `pointer-events:none`); per-button leave fired in the 2px hit
+  seams → a **full-palette flash** (fixed: clear on the container, not the buttons); a chip click
+  while pinned **silently armed isolate** that sprang on dismiss (fixed: click clears the pin +
+  isolates); and a fast sweep fired 28 full-layer fill-colour repaints → an **animation cascade**
+  (fixed: the map preview is debounced to the cursor's rest — 28→4 paints). **(7) DESIGN_SYSTEM
+  compliance** — the dark-shade revert, the §1.5 type floor (strip 10.5/10px → `--t-2xs`), on-scale
+  tokens (rail code 21px → `--t-xl`), §2 Title-Case rail chrome + `tabular-nums` readout, §6 teal
+  focus rings, and **DESIGN_SYSTEM §5 amended** to ratify the zoning building-fill carve-out (the
+  height-tiered translucent achromatic fill is compliant reference texture, not the outline-only
+  default) and **§6's attribution standard is superseded** by the compact-everywhere change. All
+  verified headless (Playwright + colour science); memory: `zoning-section-shipped.md`.
 - **v1.19 (2026-07-29)** — **Zoning shipped end-to-end — the site's first categorical polygon
   fill, on a generic standard proven on schools first.** **Backend hardening:** the NA fail-open
   closed (`01_build_zoning.R`: Edmonton's real zone code `NA` (Natural Areas, 99 polygons) now

@@ -121,16 +121,23 @@ sections, agent pipeline, and infrastructure.
       selector. 18-year GeoJSONs committed; route wired; deployed
       to the demo (eslint + build + local-dev verified). Only
       remaining: Olivia QA sign-off.
-- [x] **Zoning** — **BUILT / live end-to-end (2026-07-29, CLAUDE.md §12 v1.19; METHODOLOGY D8).**
-      `/properties/zoning` renders the categorical FAMILY map (View 1 "Zones" of a ratified
-      two-view section; View 2 Overlays is v1.1, `6w3s-58pv` unfetched): 11,518 polygons at the
-      2026-07-29 snapshot, 10 ratified families, SVG-sourced palette + zoom ladder
-      (`docs/design/`), governance families as patterns, per-instance ground. Backend: NA
-      fail-open closed (blank codes halt; code "NA" is a literal key), family-boundary dissolve,
-      no-year currency manifest, runner-wired + published (`website/public/data/zoning/`).
-      Generic `CategoricalPolygonLayer`/legend proven on schools first
-      (`/dev/categorical-polygon-proof`). Remaining: KC eyeball + palette-measurement ratification;
-      Olivia QA.
+- [x] **Zoning** — **BUILT / live end-to-end + View-1 frontend MATURED & PUSHED (2026-07-30,
+      CLAUDE.md §12 v1.19→v1.20; METHODOLOGY D8).** `/properties/zoning` renders the categorical
+      FAMILY map (View 1 "Zones" of a ratified two-view section; View 2 Overlays is v1.1,
+      `6w3s-58pv` unfetched): 11,518 polygons at the 2026-07-29 snapshot, 10 ratified families in an
+      algorithmically DERIVED banded palette (all real hues — the earlier governance-pattern fills
+      were retired), zoom ladder, per-instance ground; the county keeps the basemap's own
+      Apple-Classic feature fills. Backend: NA fail-open closed (blank codes halt; code "NA" is a
+      literal key), family-boundary dissolve, neighbourhood + area_m2 joined, no-year currency
+      manifest, runner-wired + published (`website/public/data/zoning/`). **Frontend (§12 v1.20, six
+      passes):** whole-city home camera, selection-inversion highlighting, a proportional legend
+      strip (area band + in-chip percentages + absolute two-tone emphasis, on the dark console
+      shade), a two-stage right rail, the sentence-case "of Edmonton" readout, compact ⓘ
+      attribution site-wide, a hardened hover chain (loop / seam / pinned-interplay / preview-
+      debounce fixes), and full DESIGN_SYSTEM compliance (§5 building-fill carve-out + §6 attribution
+      amended). Generic `categoricalPolygon`/legend proven on schools first
+      (`/dev/categorical-polygon-proof`). Whole zoning build pushed (`71abd88`→`5dd2d9d`). Remaining:
+      Olivia QA; V2 Overlays (v1.1) when `6w3s-58pv` is wired.
 - [x] **Business Counts** — BUILT / live (Edmonton Business Census
       choropleth at `/economy/business-counts`; provenance note shipped).
       Refresh-by-design parity **PARKED**: its year is baked into the GeoJSON
@@ -363,7 +370,10 @@ run records) shipped (`e67a658`).
 5. ~~Point layers batch — R pipeline then frontend~~ — **DONE (§12 v1.18).** Amenities shipped
    end-to-end: registry-driven backend (13 layers) + 8 point layers live across 4 view-selector
    sections. Zoning shipped end-to-end 2026-07-29 (§12 v1.19): family map live at
-   `/properties/zoning`; Z2 overlays deferred to v1.1.
+   `/properties/zoning`; its View-1 frontend then matured across six passes + pushed (§12 v1.20 —
+   home camera, selection inversion, proportional legend strip, two-stage rail, compact ⓘ
+   attribution site-wide, hover-chain hardening, DESIGN_SYSTEM compliance); Z2 overlays deferred to
+   v1.1.
 6. Permit Neighbourhoods choropleth — Olivia QA sign-off (built, deployed to demo).
 7. Add collaborators + branch protection.
 8. Layer 1b (LISA I) — stretch goal before agent work.
