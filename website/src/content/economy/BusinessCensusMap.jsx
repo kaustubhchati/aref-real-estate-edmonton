@@ -491,7 +491,6 @@ export default function BusinessCensusMap() {
                   images={[]}
                   onLoad={handleMapLoad}
                   cooperativeGestures={false}
-                  attributionCompact={false}
                   mapAttribution={siteConfig.mapAttributionStrip}
                 />
               </MapErrorBoundary>

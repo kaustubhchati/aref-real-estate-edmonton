@@ -353,7 +353,6 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
                     layers={layers}
                     onLoad={handleMapLoad}
                     cooperativeGestures={false}
-                    attributionCompact={false}
                     mapAttribution={siteConfig.mapAttributionStrip}
                   />
                 </MapErrorBoundary>

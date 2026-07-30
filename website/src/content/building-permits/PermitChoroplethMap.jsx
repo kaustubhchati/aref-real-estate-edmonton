@@ -663,7 +663,6 @@ export default function PermitChoroplethMap() {
                   boxSelect={boxSelect}
                   preserveDrawingBuffer
                   cooperativeGestures={false}
-                  attributionCompact={false}
                   mapAttribution={siteConfig.mapAttributionStrip}
                 />
               </MapErrorBoundary>

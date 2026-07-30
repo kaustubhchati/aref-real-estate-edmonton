@@ -61,16 +61,12 @@ export default function MapView({
   preserveDrawingBuffer = false,
   cooperativeGestures = true,
   className = "",
-  // Attribution shape (§6). Defaults reproduce the compact "i" every section had.
-  //   • attributionCompact — false = an always-visible inline strip (no toggle). PA, DU
-  //     and BC ALL pass false now (the standardization gave DU/BC PA's links strip + the
-  //     attribution panel); the `true` default is only the built-in fallback for a caller
-  //     that passes nothing (e.g. the permit POINT map). The fuller record lives in the
-  //     database-control attribution panel.
-  //   • mapAttribution — the customAttribution entries (CARTO/OSM come from the TileJSON
-  //     automatically, on top of these). PA passes the links-only strip; the default
-  //     carries the disclaimer too.
-  attributionCompact = true,
+  // Attribution (§6): ALWAYS the built-in COMPACT control (KC ruling, zoning
+  // pass 13 §1) — collapsed to the circular ⓘ, expanding on click. Compact is
+  // the licence-compliant form (ODbL / CARTO / Open Government Licence require
+  // attribution PRESENT and DISCOVERABLE, not always-expanded); absent would
+  // be a breach — never remove it. mapAttribution = the customAttribution
+  // entries (CARTO/OSM come from the TileJSON automatically, on top of these).
   mapAttribution = siteConfig.mapAttribution,
 }) {
   const containerRef = useRef(null);
@@ -127,10 +123,9 @@ export default function MapView({
       // MAP_VIEW.maxBounds) so the user can't pan off into empty basemap.
       maxBounds: view.maxBounds,
       // The basemap CARTO/OSM credit comes from the TileJSON automatically;
-      // customAttribution APPENDS our data credit (siteConfig §6). PA, DU and BC all run
-      // the always-visible links strip (compact:false); the compact "i" toggle (default
-      // true) is only the fallback for a caller that passes nothing (the permit point map).
-      attributionControl: { compact: attributionCompact, customAttribution: mapAttribution },
+      // customAttribution APPENDS our data credit (siteConfig §6). Compact on
+      // EVERY map (the ⓘ chip — see the prop note above).
+      attributionControl: { compact: true, customAttribution: mapAttribution },
       // Default: scrolling zooms only with ctrl/⌘ (or two fingers); a plain wheel scrolls
       // the PAGE, so an embedded map doesn't hijack scroll. PA/DU/BC all opt OUT
       // (cooperativeGestures=false) for a free-roam, full-bleed map:
@@ -161,6 +156,22 @@ export default function MapView({
       }),
       "top-right",
     );
+
+    // Attribution = the built-in compact control (pass 13 §1). MapLibre 5.x adds
+    // it EXPANDED on init; start it COLLAPSED to the ⓘ chip by removing the
+    // -show class (exactly what MapLibre's own drag-minimize does — the ⓘ
+    // button's native click still toggles it open/closed). Also collapse on a
+    // click OUTSIDE the control (the directive's third route; drag-collapse is
+    // MapLibre-native). Attribution stays PRESENT + DISCOVERABLE = licence-
+    // compliant (ODbL / CARTO / Open Government Licence).
+    const attribEl = map.getContainer().querySelector(".maplibregl-ctrl-attrib");
+    attribEl?.classList.remove("maplibregl-compact-show");
+    const collapseAttribOutside = (e) => {
+      if (attribEl?.classList.contains("maplibregl-compact-show") && !attribEl.contains(e.target)) {
+        attribEl.classList.remove("maplibregl-compact-show");
+      }
+    };
+    document.addEventListener("pointerdown", collapseAttribOutside, true);
 
     map.on("error", (e) => {
       // Surface map errors honestly instead of swallowing them — CLAUDE.md §6.
@@ -214,6 +225,7 @@ export default function MapView({
       // Stop any in-flight cross-fade (timers, listeners, ghost) BEFORE destroying the
       // map, so nothing fires against a removed map.
       abortCrossFade(map, crossFadeRef, layers);
+      document.removeEventListener("pointerdown", collapseAttribOutside, true);
       mapRef.current = null;
       map.remove();
     };

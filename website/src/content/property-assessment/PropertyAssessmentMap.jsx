@@ -1470,7 +1470,6 @@ export default function PropertyAssessmentMap() {
                     // Always-visible LINKS-ONLY strip (§6). The disclaimer moves to the
                     // attribution panel (the database control) — keeping the strip narrow
                     // so it clears the tuning bay + Data Console handle.
-                    attributionCompact={false}
                     mapAttribution={siteConfig.mapAttributionStrip}
                   />
                 </MapErrorBoundary>
