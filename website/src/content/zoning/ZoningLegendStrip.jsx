@@ -51,7 +51,7 @@ function inkForFill(hex) {
 }
 
 export default function ZoningLegendStrip({
-  domain, isolated, emphasis, onToggleFamily, onHoverFamily,
+  domain, isolated, emphasis, pinned, onToggleFamily, onHoverFamily,
 }) {
   const [chipHover, setChipHover] = useState(null);
 
@@ -89,7 +89,11 @@ export default function ZoningLegendStrip({
 
   const dimmed = (key) => (focus != null && key !== focus);
 
-  function hoverStart(key) { setChipHover(key); onHoverFamily?.(key); }
+  // While a zone is PINNED the selection owns the view (pass 15 audit): hover is
+  // INERT, so the strip keeps showing the selected family (no contradictory
+  // strip-vs-map double-highlight, no dead map-preview promise). A CLICK still
+  // acts — the parent clears the pin and isolates the clicked family.
+  function hoverStart(key) { if (pinned) return; setChipHover(key); onHoverFamily?.(key); }
   function hoverEnd() { setChipHover(null); onHoverFamily?.(null); }
 
   return (
@@ -139,8 +143,14 @@ export default function ZoningLegendStrip({
 
       {/* HIT layer — transparent buttons over the whole strip height, same
           proportional division as the band. Keyboard: focus emphasises (hover
-          parity), Enter/Space toggles isolate (native button). */}
-      <div className="zls-hits">
+          parity), Enter/Space toggles isolate (native button).
+          The mouse-leave CLEAR lives on the CONTAINER, not the buttons (pass 15
+          audit): the band keeps its 2px visual gaps, but clearing per-button
+          would fire in the handler-less seams between buttons and flash the map
+          back to the full palette on a slow scan. Container-leave clears only
+          when the cursor leaves the whole strip; scanning chip→chip just
+          overwrites the hovered family, no intermediate reset. */}
+      <div className="zls-hits" onMouseLeave={hoverEnd}>
         {domain.map((it) => (
           <button
             key={it.key} type="button"
@@ -148,7 +158,6 @@ export default function ZoningLegendStrip({
             aria-pressed={isolated === it.key}
             aria-label={`${it.label} class: ${it.shareDisplay}% of Edmonton, ${it.count?.toLocaleString()} zones. ${isolated === it.key ? "Isolated. Press to show all." : "Press to isolate."}`}
             onMouseEnter={() => hoverStart(it.key)}
-            onMouseLeave={hoverEnd}
             onFocus={() => hoverStart(it.key)}
             onBlur={hoverEnd}
             onClick={() => onToggleFamily(it.key)}

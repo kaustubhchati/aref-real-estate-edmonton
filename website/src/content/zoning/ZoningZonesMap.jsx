@@ -338,6 +338,18 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
   }, [map, isolated, domain, layers, hasSelection, chipPreview]);
 
   function toggleFamily(key) {
+    // Clicking a legend chip while a zone is PINNED is a NEW focus intent
+    // (pass 15 audit): drop the pin and isolate that family, so the click takes
+    // effect IMMEDIATELY and visibly. Without this the isolate armed silently
+    // behind the selection (buildSelectedPaint ignores it) and sprang into view
+    // only when the pin was later dismissed — breaking the "clearing the
+    // selection returns to full colour" invariant. Selection and isolate stay
+    // mutually exclusive in BOTH directions now.
+    if (selected) {
+      setSelected(null);
+      setIsolated(key);
+      return;
+    }
     setIsolated((cur) => (cur === key ? null : key));
   }
 
@@ -388,6 +400,7 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
             domain={domain}
             isolated={isolated}
             emphasis={selected?.props?.zone_family ?? null}
+            pinned={selected != null}
             onToggleFamily={toggleFamily}
             onHoverFamily={setChipPreview}
           />
