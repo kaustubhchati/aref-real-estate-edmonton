@@ -56,17 +56,24 @@ export const LIMIT_LINE_ID    = "zoning-citylimit-line";
 // bronze · orange. Lightness bands BIND (measured, non-overlapping:
 // A 82.8–87.9 · B 62.0–70.1 · C 47.0–56.1). Stated chroma relaxations under
 // the ratified C*46 floor: DC brown 55→ok, FR dusty rose C52, AJ bronze C46.
+// Colour-concentration corrections (optical pass 7 §1–2, KC-directed): Parks
+// deepened jade→emerald; Ag richer + hue-shifted greener away from Residential
+// (the 63% Band-A edge: dE 21.0→33.4); Civic down from hot pink into Band B as
+// deep rose; the warm-brown cluster broken (MU brighter orange · AJ near-black
+// umber, semantically "outside jurisdiction" · DC holds copper); the two reds
+// separated (FR maroon→plum, dE vs Commercial 65.7). Industrial HELD — KC's
+// optional call declined: the ladder + polarity labels already tame it.
 export const FAMILY_STYLE = {
-  "Agricultural and Rural":    { colour: "#d4e673", hover: "#e8fa86", iso: "#6f8504" },  // A · L88 C58 h113 · straw
+  "Agricultural and Rural":    { colour: "#b8ea66", hover: "#ccfe79", iso: "#5e8b0c" },  // A · L87 C68 h122 · lime
   "Residential":               { colour: "#eacd59", hover: "#ffe16e", iso: "#907b03" },  // A · L83 C60 h93 · gold
-  "Parks and Open Space":      { colour: "#17c383", hover: "#3bd795", iso: "#098e5e" },  // B · L70 C59 h159 · green
-  "Industrial and Employment": { colour: "#b977fa", hover: "#c990fe", iso: "#a055ee" },  // B · L62 C75 h312 · violet
-  "Direct Control":            { colour: "#e19549", hover: "#f6a85b", iso: "#b76904" },  // B · L68 C55 h67 · brown
-  "Civic and Public Service":  { colour: "#ff7dd9", hover: "#fea0e0", iso: "#e119b6" },  // B · L70 C65 h338 · plum
-  "Commercial":                { colour: "#ff2f56", hover: "#fe6571", iso: "#ff2f56" },  // C · L56 C82 h22 · red
-  "Future and Reserve":        { colour: "#b8467d", hover: "#cc598f", iso: "#b8467d" },  // C · L47 C52 h352 · rose
-  "Alternative Jurisdiction":  { colour: "#976523", hover: "#ab7634", iso: "#976523" },  // C · L47 C46 h72 · bronze
-  "Mixed Use":                 { colour: "#d25f06", hover: "#e8711f", iso: "#d25f06" },  // C · L54 C74 h56 · orange (pinned)
+  "Parks and Open Space":      { colour: "#0e9f68", hover: "#30b27a", iso: "#0b8455" },  // B · L58 C52 h158 · emerald
+  "Industrial and Employment": { colour: "#b977fa", hover: "#c990fe", iso: "#a055ee" },  // B · L62 C75 h312 · violet (held)
+  "Direct Control":            { colour: "#e19549", hover: "#f6a85b", iso: "#b76904" },  // B · L68 C55 h67 · copper
+  "Civic and Public Service":  { colour: "#e76ca8", hover: "#fc7fbb", iso: "#cc3d85" },  // B · L62 C55 h350 · rose
+  "Commercial":                { colour: "#ff2f56", hover: "#fe6571", iso: "#ff2f56" },  // C · L56 C82 h22 · crimson
+  "Future and Reserve":        { colour: "#9b5394", hover: "#ae65a7", iso: "#9b5394" },  // C · L46 C46 h330 · plum
+  "Alternative Jurisdiction":  { colour: "#674728", hover: "#795738", iso: "#674728" },  // C · L33 C26 h67 · umber (KC: below Band C by design)
+  "Mixed Use":                 { colour: "#e56507", hover: "#fc7821", iso: "#e56507" },  // C · L58 C80 h55 · orange
 };
 
 // ---- Ground + the REFERENCE SYSTEM ---------------------------------------------
@@ -350,6 +357,11 @@ export function applyZoningGround(map, firstSymbolId) {
       } else if (type === "fill" && LANDUSE_FILLS.test(id)) {
         map.setPaintProperty(id, "fill-color", ZONING_GROUND);
       } else if ((type === "fill" || type === "line") && WATER_LAYERS.test(id)) {
+        // Water goes DEEPER (optical pass 7 §1): it is basemap, not zoning, so
+        // it carries no area-effect budget — a proper river blue. Still the
+        // map's only blue; the valley system is Edmonton's signature form.
+        map.setPaintProperty(id, type === "fill" ? "fill-color" : "line-color",
+          id === "water_shadow" ? "#157fad" : "#318fbd");
         map.moveLayer(id, firstSymbolId);            // the river over the fill
       } else if (type === "line" && RAIL_LINES.test(id)) {
         if (/dash/.test(id)) map.setLayoutProperty(id, "visibility", "none");
