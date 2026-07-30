@@ -32,7 +32,7 @@ import { siteConfig } from "../../config/siteConfig.js";
 import { assetUrl } from "../../utils/assetUrl.js";
 import {
   BASEMAP_STYLE, MAP_VIEW, SOURCE_ID, BOUNDS_SOURCE_ID, LIMIT_SOURCE_ID,
-  FILL_ID, FAMILY_LINE_ID, HAIRLINE_ID,
+  FILL_ID, HAIRLINE_ID,
   buildZoningDomain, zoningFillLayers, familyLineLayer, hairlineLayer,
   cityLimitLayer, applyZoningGround, buildFillPaint, zoningLineTint,
 } from "./zoningStyle.js";
@@ -85,7 +85,7 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     // so it is added here, not via MapView's single-source layers prop.
     if (boundsFile && !m.getSource(BOUNDS_SOURCE_ID)) {
       m.addSource(BOUNDS_SOURCE_ID, { type: "geojson", data: assetUrl(`/data/zoning/${boundsFile}`) });
-      m.addLayer(familyLineLayer(domain), firstSymbol);
+      m.addLayer(familyLineLayer(), firstSymbol);
     }
     // The city-limit line: the island's edge, named. Added before the ground
     // treatment so the promoted roads/water draw over it.
@@ -195,9 +195,12 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     if (!map || !domain || !map.getLayer(FILL_ID)) return;
     try {
       map.setPaintProperty(FILL_ID, "fill-color", buildFillPaint(domain, isolated));
-      const tint = zoningLineTint(domain, isolated);
-      if (map.getLayer(HAIRLINE_ID)) map.setPaintProperty(HAIRLINE_ID, "line-color", tint);
-      if (map.getLayer(FAMILY_LINE_ID)) map.setPaintProperty(FAMILY_LINE_ID, "line-color", tint);
+      // Parcel hairlines follow the isolate tint; the FAMILY boundary is the
+      // constant dark neutral and is never re-tinted (optical pass 6 — the one
+      // line that never gives way).
+      if (map.getLayer(HAIRLINE_ID)) {
+        map.setPaintProperty(HAIRLINE_ID, "line-color", zoningLineTint(domain, isolated));
+      }
     } catch { /* map tearing down */ }
   }, [map, isolated, domain, layers]);
 

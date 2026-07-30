@@ -69,15 +69,41 @@ export const FAMILY_STYLE = {
   "Mixed Use":                 { colour: "#d25f06", hover: "#e8711f", iso: "#d25f06" },  // C · L54 C74 h56 · orange (pinned)
 };
 
-// ---- Ground + reference layers ------------------------------------------------
+// ---- Ground + the REFERENCE SYSTEM ---------------------------------------------
+// GOVERNING PRINCIPLE (optical pass 6; also DESIGN_SYSTEM §5): this is a
+// THEMATIC map — the base provides geographic context and must visibly recede;
+// the zoning fill is the figure. No reference feature may compete with it.
+//
 // Off-city ground: outside the palette register entirely — highest lightness,
-// lowest chroma on the map (L98 C3). The city reads as an island; the county
-// reads as absence.
+// lowest chroma on the map (L98 C3). The city reads as an island.
 export const ZONING_GROUND = "#fcfaf4";
-// Streets: the reference layer, warmed toward the site cream (in register).
-const ROAD_WHITE = "#fbf7ec";
-// The city-limit line: quiet warm ink, under the roads, over the fill.
-const LIMIT_COLOUR = "#b3ab9c";
+
+// Reference neutrals (all outside the family palette):
+const ROAD_FILL     = "#ede7d7";   // warm near-neutral (L92 C7) — continuous, never white
+const ROAD_CASE     = "#a19682";   // freeway/arterial casing: DARKER than the road (recession, not glow)
+const RAIL_COLOUR   = "#b3a996";   // reference weight, single thin line
+const BUILDING_INK  = "rgba(122,110,92,0.45)"; // engraved outline texture, z>=16, no fill
+const LIMIT_COLOUR  = "#b3ab9c";   // the city-limit line
+export const FAMILY_BOUNDARY_COLOUR = "#6f6555"; // dark warm neutral — the crisp zone edge
+
+// THE LINE-WEIGHT LADDER (named constants; px at [z10, z13, z16]; widest→thinnest:
+// freeway → arterial → family boundary → collector → local → parcel → building).
+// No two rungs share a weight at any zoom — equal weights read as mesh.
+export const LADDER = {
+  freeway:  { gate: 0,  w: { 10: 2.0,  13: 3.2,  16: 5.5 } },
+  arterial: { gate: 11, w: { 10: 0,    13: 1.8,  16: 3.4 } },
+  family:   { gate: 10, w: { 10: 1.0,  13: 1.5,  16: 2.2 } },
+  collector:{ gate: 13, w: { 10: 0,    13: 0.7,  16: 1.8 } },
+  local:    { gate: 15, w: { 10: 0,    13: 0,    16: 1.1 } },
+  rail:     { gate: 13, w: { 10: 0,    13: 0.7,  16: 0.9 } },
+  parcel:   { gate: 15, w: { 10: 0,    13: 0,    16: 0.9 } },
+  // buildings: the style's 1px fill-outline — thinnest by construction, and
+  // lowest-contrast by ink (BUILDING_INK alpha), below the parcel rung.
+};
+const ladderWidth = (rung, extra = 0) => ["interpolate", ["linear"], ["zoom"],
+  10, LADDER[rung].w[10] + extra,
+  13, LADDER[rung].w[13] + extra,
+  16, LADDER[rung].w[16] + extra];
 
 // =============================================================================
 // HIGHLIGHT REGISTER — the state × zoom matrix (optical pass 4 §3).
@@ -213,23 +239,29 @@ function tintExpression(domain, isolated = null) {
 }
 export const zoningLineTint = tintExpression;
 
-// District rung (z12–14, fades over 12→13): the dissolved family-boundary lines.
-export function familyLineLayer(domain) {
+// FAMILY BOUNDARY (primary — the boundary answer, optical pass 6 §2): the
+// backend dissolve (zoning_family_boundaries.geojson, one MULTILINESTRING per
+// family — never derived client-side), drawn from z10 at ALL zooms in the dark
+// warm neutral OUTSIDE the family palette. The only stroke at overview, and
+// the one line that never gives way — where two Band-A families meet (the
+// straw/gold edge), it alone carries the boundary.
+export function familyLineLayer() {
   return {
     id: FAMILY_LINE_ID,
     type: "line",
     source: BOUNDS_SOURCE_ID,
-    minzoom: 12,
-    maxzoom: 15,
+    minzoom: 10,
     paint: {
-      "line-color": tintExpression(domain),
-      "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.8, 14.5, 1.4],
-      "line-opacity": ["interpolate", ["linear"], ["zoom"], 12, 0, 13, 0.85],
+      "line-color": FAMILY_BOUNDARY_COLOUR,
+      "line-width": ladderWidth("family"),
+      "line-opacity": 0.85,
     },
   };
 }
 
-// Parcel rung (z ≥ 15, fades in 15→15.5): per-parcel hairlines, family-tinted.
+// PARCEL BOUNDARY (secondary, z ≥ 15 only): tinted from the fill it bounds,
+// never neutral, visibly thinner than the family line — subdivision within a
+// family, not a zone change. First to give way if downtown reads as noise.
 export function hairlineLayer(domain) {
   return {
     id: HAIRLINE_ID,
@@ -237,8 +269,8 @@ export function hairlineLayer(domain) {
     minzoom: 15,
     paint: {
       "line-color": tintExpression(domain),
-      "line-width": 1.0,
-      "line-opacity": ["interpolate", ["linear"], ["zoom"], 15, 0, 15.5, 1],
+      "line-width": ladderWidth("parcel"),
+      "line-opacity": ["interpolate", ["linear"], ["zoom"], 15, 0, 15.5, 0.9],
     },
   };
 }
@@ -258,17 +290,36 @@ export function cityLimitLayer() {
   };
 }
 
-// ---- Per-instance ground treatment ------------------------------------------
+// ---- Per-instance ground treatment (the reference system, optical pass 6) ----
 // The applyDeepenedGround precedent: contained to THIS map's instance, run in
-// onLoad AFTER applyAppleClassic. Ten vivid fills mean the reference layer
-// recedes: land-use/landcover/park/AERODROME fills mute to the off-city ground,
+// onLoad AFTER applyAppleClassic. Roads disclose progressively by tier; rail
+// and buildings are reinstated at reference weight; labels take polarity;
+// land-use/landcover/park/AERODROME fills mute to the off-city ground,
 // buildings stay OFF, rail stays a low-prominence hairline, water + cream
 // streets promote over the fill (arterials fade at city zoom; widths held).
 const LANDUSE_FILLS = /^(landcover|landuse|park|wood|sand|wetland|aeroway)/;
-const ROAD_LINES    = /^(road|tunnel|bridge)_(mot|trunk|pri|sec|minor|service|path)/;
 const WATER_LAYERS  = /^(water$|water_shadow$|waterway)/;
 const BUILDING_FILLS = /^building/;
 const RAIL_LINES     = /rail/;
+// Four road tiers with PROGRESSIVE DISCLOSURE (locals never render at district
+// zoom). The tile schema exposes exactly four line classes (mot|trunk ·
+// pri|sec · minor · service|path) — they map 1:1 onto the tiers. Casing only
+// on freeway/arterial, darker than the road (recession, never glow).
+const ROAD_TIERS = [
+  { rung: "freeway",   re: /^(road|tunnel|bridge)_(mot|trunk)_/,   cased: true  },
+  { rung: "arterial",  re: /^(road|tunnel|bridge)_(pri|sec)_/,     cased: true  },
+  { rung: "collector", re: /^(road|tunnel|bridge)_minor_/,         cased: false },
+  { rung: "local",     re: /^(road|tunnel|bridge)_(service|path)/, cased: false },
+];
+// Labels get POLARITY, not blending: dark warm text on a light halo, per class
+// (halo ≤ ¼ font size; a light blur so the halo reads as soft ground).
+const LABEL_INK  = "#2a2621";
+const LABEL_HALO = "#faf6ec";
+const HALO_BY_CLASS = [
+  [/^place_/, 2.4, 0.8],               // neighbourhood/place caps (~12–16px)
+  [/^roadname|^housenumber/, 1.4, 0.6],
+  [/^water/, 2.0, 0.7],
+];
 
 export function applyZoningGround(map, firstSymbolId) {
   for (const layer of map.getStyle()?.layers ?? []) {
@@ -277,33 +328,56 @@ export function applyZoningGround(map, firstSymbolId) {
     try {
       if (type === "background") {
         map.setPaintProperty(id, "background-color", ZONING_GROUND);
+      } else if (type === "symbol") {
+        // Polarity for every label class; layout (tracked caps etc.) untouched.
+        map.setPaintProperty(id, "text-color", LABEL_INK);
+        map.setPaintProperty(id, "text-halo-color", LABEL_HALO);
+        const [, w, blur] = HALO_BY_CLASS.find(([re]) => re.test(id)) ?? [null, 1.6, 0.6];
+        map.setPaintProperty(id, "text-halo-width", w);
+        map.setPaintProperty(id, "text-halo-blur", blur);
       } else if (type === "fill" && BUILDING_FILLS.test(id)) {
-        // Building footprints OFF entirely for v1 (optical-pass ruling).
-        map.setLayoutProperty(id, "visibility", "none");
+        if (id === "building") {
+          // Buildings reinstated z≥16 as OUTLINE ONLY — engraved texture over
+          // continuous zone colour, never figure (transparent fill + the
+          // style's 1px fill-outline, the ladder's thinnest + faintest rung).
+          map.setLayoutProperty(id, "visibility", "visible");
+          map.setLayerZoomRange(id, 16, 24);
+          map.setPaintProperty(id, "fill-color", "rgba(0,0,0,0)");
+          map.setPaintProperty(id, "fill-outline-color", BUILDING_INK);
+        } else {
+          map.setLayoutProperty(id, "visibility", "none");   // building-top stays off
+        }
       } else if (type === "fill" && LANDUSE_FILLS.test(id)) {
         map.setPaintProperty(id, "fill-color", ZONING_GROUND);
-      } else if (type === "fill" && WATER_LAYERS.test(id)) {
-        map.moveLayer(id, firstSymbolId);            // river over the fill
-      } else if (type === "line" && WATER_LAYERS.test(id)) {
-        map.moveLayer(id, firstSymbolId);
+      } else if ((type === "fill" || type === "line") && WATER_LAYERS.test(id)) {
+        map.moveLayer(id, firstSymbolId);            // the river over the fill
       } else if (type === "line" && RAIL_LINES.test(id)) {
-        // Rail: cross-tie dashes off; base drops to a low-prominence hairline.
         if (/dash/.test(id)) map.setLayoutProperty(id, "visibility", "none");
         else {
-          map.setPaintProperty(id, "line-color", "#8d8574");
-          map.setPaintProperty(id, "line-opacity", 0.3);
-          try { map.setPaintProperty(id, "line-width", 0.8); } catch { /* width may be zoom-expr */ }
+          // Rail reinstated at reference weight: one thin neutral line z≥13,
+          // no tie marks, below the family boundary in the ladder.
+          map.setLayoutProperty(id, "visibility", "visible");
+          map.setLayerZoomRange(id, LADDER.rail.gate, 24);
+          map.setPaintProperty(id, "line-color", RAIL_COLOUR);
+          map.setPaintProperty(id, "line-opacity", 0.7);
+          map.setPaintProperty(id, "line-width", ladderWidth("rail"));
         }
-      } else if (type === "line" && ROAD_LINES.test(id)) {
-        // Cream street grid, promoted; arterials fade at city zoom (widths held).
-        map.setPaintProperty(id, "line-color", ROAD_WHITE);
-        if (/mot|trunk|pri|sec/.test(id)) {
-          map.setPaintProperty(id, "line-opacity",
-            ["interpolate", ["linear"], ["zoom"], 10, 0.5, 11.8, 0.95]);
-        } else {
-          map.setPaintProperty(id, "line-opacity", 0.9);
+      } else if (type === "line") {
+        const tier = ROAD_TIERS.find((t) => t.re.test(id));
+        if (tier) {
+          const isCase = /_case/.test(id);
+          if (isCase && !tier.cased) {
+            map.setLayoutProperty(id, "visibility", "none");
+          } else {
+            map.setLayerZoomRange(id, LADDER[tier.rung].gate, 24);
+            map.setPaintProperty(id, "line-color", isCase ? ROAD_CASE : ROAD_FILL);
+            // (casing width = fill width + 1.2, baked into the interpolate stops
+            // — arithmetic AROUND a zoom interpolate is illegal in MapLibre)
+            map.setPaintProperty(id, "line-width", ladderWidth(tier.rung, isCase ? 1.2 : 0));
+            map.setPaintProperty(id, "line-opacity", isCase ? 0.6 : 0.95);
+            map.moveLayer(id, firstSymbolId);
+          }
         }
-        map.moveLayer(id, firstSymbolId);
       }
     } catch { /* layer gone / tearing down */ }
   }
