@@ -4278,23 +4278,24 @@ p  { margin: 0 0 0.75rem; }
 }
 
 
-/* === Zoning PROPORTIONAL LEGEND STRIP (pass 12 §2) ==========================
+/* === Zoning PROPORTIONAL LEGEND STRIP ======================================
    Bottom-docked, inset from the map edges (an object ON the map, not a page
-   footer). Light glass, not the dark shell — the §5 watch item: a dark
-   full-width bar is the heaviest object on a light map and pulls the eye off
-   it; the vivid chips carry their own colour and read better on cream.
-   Anatomy (≈50px): the single AREA band 24px (§2 took the height the count
-   band vacated) · gap 3 · label row 13px, padding 5/10/4. The hit layer spans
-   the FULL height. */
+   footer). DARK console glass — the standard chassis shade, DESIGN_SYSTEM §1.1
+   (`--glass-panel-fill`, the L5 dark glass the scale bar + attribution chip use),
+   reverting the pass-12 light-cream deviation: a console base is the dark shell
+   per design law, like the rail and every other console. All surface/text
+   colours reference tokens (§1 — no raw hex in the surface).
+   Anatomy (≈50px): the single AREA band 24px · gap 3 · label row 13px,
+   padding 5/10/4. The hit layer spans the FULL height. */
 .zls {
   position: absolute; left: 16px; right: 16px; bottom: 14px; z-index: 15;
   max-width: 1240px; margin: 0 auto;
   padding: 5px 10px 4px;
-  background: rgba(252, 250, 244, 0.88);
+  background: var(--glass-panel-fill);
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  border: 1px solid rgba(61, 58, 52, 0.28);
-  border-radius: 9px;
-  box-shadow: 0 4px 16px rgba(40, 34, 24, 0.18);
+  border: 1px solid var(--pa-hair);
+  border-radius: var(--r-md);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
   pointer-events: auto;
 }
 .zls-band { display: flex; gap: 2px; }
@@ -4327,22 +4328,26 @@ p  { margin: 0 0 0.75rem; }
    chip's own overflow). */
 .zls-chip.is-emph {
   position: relative; z-index: 2;
-  box-shadow: 0 0 0 1.5px #faf6ec, 0 0 0 3px #17131a;
+  /* Achromatic-extreme casing (DESIGN_SYSTEM §1.4 polygon HIGHLIGHT: near-white
+     preview + near-black #141018-precedent commitment) — the sanctioned casing
+     register, not data colour. Two-tone still holds on the dark panel: the light
+     ring pops on dark fills, the near-black on the pale ones, boundary always. */
+  box-shadow: 0 0 0 1.5px #faf6ec, 0 0 0 3px #141018;
   transform: translateY(-2px);
 }
 /* Label row ⇄ readout share ONE 13px slot (grid-stack — no height change). */
 .zls-foot { display: grid; margin-top: 3px; height: 14px; }
 .zls-labels, .zls-readout { grid-area: 1 / 1; min-width: 0; }
 .zls-labels { display: flex; gap: 2px; position: relative; }
-.zls-labelcell { overflow: hidden; white-space: nowrap; font-size: 10.5px; line-height: 14px; color: #4c463c; }
+.zls-labelcell { overflow: hidden; white-space: nowrap; font-size: 10.5px; line-height: 14px; color: var(--pa-mut); }
 /* inline-block so scrollWidth reports the label's true width (an inline span
    measures 0) — the fit check in ZoningLegendStrip depends on it. */
 .zls-labelcell span { display: inline-block; }
 .zls-hint {
   position: absolute; right: 2px; top: 0; font-size: 10px; line-height: 14px;
-  color: #8a8172; font-style: italic; pointer-events: none;
+  color: var(--pa-mut); font-style: italic; pointer-events: none;
 }
-.zls-readout { margin: 0; font-size: 11px; line-height: 14px; color: #37322a;
+.zls-readout { margin: 0; font-size: 11px; line-height: 14px; color: var(--pa-ink);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .zls-readout b { font-weight: 700; }
 /* Hit layer — transparent buttons over the whole strip (narrow chips stay
@@ -4354,7 +4359,7 @@ p  { margin: 0 0 0.75rem; }
   background: none; border: none; padding: 0; margin: 0; cursor: pointer;
   border-radius: 6px;
 }
-.zls-hits button:focus-visible { outline: 2px solid var(--sel); outline-offset: -2px; }
+.zls-hits button:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: -2px; }   /* DESIGN_SYSTEM §6: focus rings are teal (interactive), not coral */
 /* The strip owns the bottom edge — the bottom-right controls (scale +
    attribution) lift above it. Fixed lift: strip bottom inset 14 + ~49px
    strip + 8px gap (the strip's height is a design constant, not content). */
