@@ -24,7 +24,6 @@ import MapView, { findFirstSymbolLayerId } from "../../components/MapView.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
 import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
-import ZoningConsole from "./ZoningConsole.jsx";
 import { applyCameraPreset, ZONING_HOME_VIEW } from "../../components/mapCamera.js";
 import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
 import { ICON_RECENTRE } from "../../components/mapIcons.js";
@@ -364,25 +363,9 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
           )}
         </div>
 
-        {/* BOTTOM DATA CONSOLE (pass 11 §3): both rails retired — the family
-            legend (click-to-isolate) AND the hover/pin reading live in ONE
-            bottom-docked surface; the map above is unobstructed. */}
-        {domain && (
-          <div className="pa-foot">
-            <ZoningConsole
-              title={title ?? entry.label}
-              selectorNode={selectorNode}
-              domain={domain}
-              domainByKey={domainByKey}
-              isolated={isolated}
-              onToggleFamily={toggleFamily}
-              detail={detail}
-              pinned={selected != null}
-              onClear={() => setSelected(null)}
-              currency={currency}
-            />
-          </div>
-        )}
+        {/* Pass 12: the bottom data console is REVERTED (superseded directive).
+            The proportional legend strip (§2) and the two-stage rail (§3)
+            replace it — mounted in the pass-12 commits that follow. */}
       </div>
     </article>
   );
