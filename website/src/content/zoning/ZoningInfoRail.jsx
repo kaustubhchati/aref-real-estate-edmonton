@@ -26,11 +26,36 @@ function formatArea(m2) {
   return `${(m2 / 1e6).toFixed(2)} km²`;
 }
 
-export default function ZoningInfoRail({ detail, pinned = false, onClear, domainByKey, currency }) {
-  // IDLE — the existing prompt wording, plus currency (updated date + count).
+export default function ZoningInfoRail({ detail, pinned = false, onClear, domainByKey, domain, currency }) {
+  // IDLE — a STANDING SUMMARY, not dead space (pass 9 §5): the largest families
+  // with their area shares as proportional bars, so the rail teaches the
+  // palette before any hover happens. Hover replaces it.
   if (!detail) {
+    const top = (domain ?? []).slice(0, 5);
+    const maxShare = top.length ? Number(top[0].share) || 1 : 1;
     return (
       <div className="pa-detail bc-inforail zoning-rail pa-detail-idle" aria-label="Zoning detail" aria-live="polite">
+        {top.length > 0 && (
+          <>
+            <div className="pa-col-lab" style={{ marginBottom: 6 }}>City area by family</div>
+            <ul style={{ listStyle: "none", margin: "0 0 10px", padding: 0, display: "flex", flexDirection: "column", gap: 5 }}>
+              {top.map((it) => (
+                <li key={it.key}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--t-2xs)", marginBottom: 2 }}>
+                    <span>{it.label}</span>
+                    <span style={{ opacity: 0.75, fontVariantNumeric: "tabular-nums" }}>{it.shareDisplay}%</span>
+                  </div>
+                  <div style={{ height: 5, borderRadius: 3, background: "rgba(255,255,255,0.08)" }}>
+                    <div style={{
+                      height: 5, borderRadius: 3, background: it.colour,
+                      width: `${Math.max(3, (Number(it.share) / maxShare) * 100)}%`,
+                    }} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
         <p className="pa-detail-hint">Hover a zone for its reading; click to pin it.</p>
         {currency && <p className="pa-box-cite" style={{ margin: "8px 0 0" }}>{currency}</p>}
       </div>

@@ -27,7 +27,7 @@ import EmptyState from "../../components/EmptyState.jsx";
 import IdentityCard from "../../components/IdentityCard.jsx";
 import CategoricalPolygonLegend from "../../components/CategoricalPolygonLegend.jsx";
 import ZoningInfoRail from "./ZoningInfoRail.jsx";
-import { HOME_VIEW, applyCameraPreset } from "../../components/mapCamera.js";
+import { applyCameraPreset } from "../../components/mapCamera.js";
 import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
 import { ICON_RECENTRE } from "../../components/mapIcons.js";
 import { siteConfig } from "../../config/siteConfig.js";
@@ -36,7 +36,7 @@ import {
   BASEMAP_STYLE, MAP_VIEW, SOURCE_ID, BOUNDS_SOURCE_ID, LIMIT_SOURCE_ID,
   LRT_SOURCE_ID, FILL_ID, HAIRLINE_ID,
   buildZoningDomain, zoningFillLayers, familyLineLayer, hairlineLayer,
-  cityLimitLayer, lrtLayer, applyZoningGround, buildFillPaint, zoningLineTint,
+  cityLimitLayer, lrtLayer, applyZoningGround, buildFillPaint, zoningLineTint, ZONING_HOME,
 } from "./zoningStyle.js";
 
 const MANIFEST_URL = assetUrl("/data/zoning/manifest.json");
@@ -111,12 +111,12 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     applyZoningGround(m, firstSymbol);
     // Land on the section camera: the shell preserves it across views (v1.1 seam);
     // first entry uses the shared home preset.
-    applyCameraPreset(m, cameraRef?.current ?? HOME_VIEW.Edmonton, { ease: false });
+    applyCameraPreset(m, cameraRef?.current ?? ZONING_HOME, { ease: false });
     if (!recentreAddedRef.current) {
       m.addControl(makeIconButtonControl({
         svg: railGlyph(ICON_RECENTRE),
         label: "Return to home view",
-        onClick: () => applyCameraPreset(m, HOME_VIEW.Edmonton, { ease: true }),
+        onClick: () => applyCameraPreset(m, ZONING_HOME, { ease: true }),
       }), "top-right");
       recentreAddedRef.current = true;
     }
@@ -349,6 +349,7 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
             pinned={hovered == null && selected != null}
             onClear={() => setSelected(null)}
             domainByKey={domainByKey}
+            domain={domain}
             currency={currency}
           />
         )}
