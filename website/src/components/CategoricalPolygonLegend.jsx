@@ -72,7 +72,10 @@ export default function CategoricalPolygonLegend({ title, note, items, active, o
                 {item.count != null && (
                   <span style={{ fontSize: "var(--t-2xs)", opacity: 0.75, fontVariantNumeric: "tabular-nums" }}>
                     {item.count.toLocaleString()}
-                    {item.share != null && ` · ${item.share >= 10 ? Math.round(item.share) : item.share.toFixed(1)}%`}
+                    {/* shareDisplay = largest-remainder-rounded (column sums to 100.0);
+                        raw share is the fallback for callers that don't precompute. */}
+                    {(item.shareDisplay ?? item.share) != null &&
+                      ` · ${item.shareDisplay ?? item.share.toFixed(1)}%`}
                   </span>
                 )}
               </button>

@@ -7,12 +7,13 @@
 // mounts this; View 2 (Overlays, v1.1) will be its own component — adding it
 // must not touch this file.
 //
-// The map: 11,518 zoning parcels flat-filled by their RATIFIED family
-// (categoricalPolygon standard; palette + zoom ladder in zoningStyle.js — the
-// SVG schematics are the spec), the two governance families as patterns, the
-// dissolved family boundaries at district zoom, family-tinted parcel hairlines
-// at parcel zoom, and a per-instance ground treatment that mutes the basemap's
-// own land-use hues under the fill and promotes white streets + water over it.
+// The map: 11,518 zoning parcels flat-filled by their family in the
+// ALGORITHMICALLY DERIVED banded palette (zoningStyle.js — the frozen _oneshot
+// derivation is the spec), the dissolved family boundaries at district zoom,
+// family-tinted parcel hairlines at parcel zoom, the city-limit line, and a
+// per-instance ground treatment that mutes the basemap under the fill. The
+// HIGHLIGHT REGISTER rides feature-state: hover = lightness-lifted fill +
+// near-white casing (preview); selected = near-black casing (commitment).
 // Everything data-driven from the zoning manifest — no family/year literal here.
 // =============================================================================
 
@@ -30,11 +31,10 @@ import { ICON_RECENTRE } from "../../components/mapIcons.js";
 import { siteConfig } from "../../config/siteConfig.js";
 import { assetUrl } from "../../utils/assetUrl.js";
 import {
-  BASEMAP_STYLE, MAP_VIEW, SOURCE_ID, BOUNDS_SOURCE_ID,
-  FILL_ID, SELECT_ID, FAMILY_LINE_ID, HAIRLINE_ID, PATTERN_LAYERS,
-  buildZoningDomain, zoningFillLayers, zoningPatternImages,
-  familyLineLayer, hairlineLayer, applyZoningGround,
-  zoningFillColour, zoningLineTint, patternGateOpacity,
+  BASEMAP_STYLE, MAP_VIEW, SOURCE_ID, BOUNDS_SOURCE_ID, LIMIT_SOURCE_ID,
+  FILL_ID, FAMILY_LINE_ID, HAIRLINE_ID,
+  buildZoningDomain, zoningFillLayers, familyLineLayer, hairlineLayer,
+  cityLimitLayer, applyZoningGround, buildFillPaint, zoningLineTint,
 } from "./zoningStyle.js";
 
 const MANIFEST_URL = assetUrl("/data/zoning/manifest.json");
@@ -63,13 +63,12 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     return () => { cancelled = true; };
   }, []);
 
-  // Families ordered count-desc, styled from the ratified table (zoningStyle).
+  // Families ordered by AREA SHARE desc, styled from the derived table.
   const domain = useMemo(() => (entry ? buildZoningDomain(entry) : null), [entry]);
   const layers = useMemo(
     () => (domain ? [...zoningFillLayers(domain), hairlineLayer(domain)] : null),
     [domain],
   );
-  const images = useMemo(() => (domain ? zoningPatternImages(domain) : []), [domain]);
 
   useEffect(() => {
     document.title = entry ? `${title ?? entry.label} · Edmonton` : "Open Data Centre";
@@ -87,6 +86,12 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     if (boundsFile && !m.getSource(BOUNDS_SOURCE_ID)) {
       m.addSource(BOUNDS_SOURCE_ID, { type: "geojson", data: assetUrl(`/data/zoning/${boundsFile}`) });
       m.addLayer(familyLineLayer(domain), firstSymbol);
+    }
+    // The city-limit line: the island's edge, named. Added before the ground
+    // treatment so the promoted roads/water draw over it.
+    if (!m.getSource(LIMIT_SOURCE_ID)) {
+      m.addSource(LIMIT_SOURCE_ID, { type: "geojson", data: assetUrl("/geo/edmonton_boundary.geojson") });
+      m.addLayer(cityLimitLayer(), firstSymbol);
     }
     // Per-instance ground: mute basemap land-use, lighten, promote water + white
     // streets over the fill (contained to this map — applyDeepenedGround precedent).
@@ -119,16 +124,31 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     return () => { map.off("moveend", save); };
   }, [map, cameraRef]);
 
-  // ── Hover preview + click-pin (readout: zone code · description · family) ────
+  // ── Hover + click-pin ride FEATURE-STATE (the highlight register, §3):
+  //    hover lifts the fill's lightness + draws the near-white preview casing;
+  //    a click pins the near-black commitment casing. setFeatureState only —
+  //    the layer is never re-styled per interaction.
   useEffect(() => {
     if (!map) return undefined;
+    let lastHoverId = null;
+    const setHoverFs = (id) => {
+      if (id === lastHoverId) return;
+      try {
+        if (lastHoverId != null) map.setFeatureState({ source: SOURCE_ID, id: lastHoverId }, { hover: false });
+        if (id != null) map.setFeatureState({ source: SOURCE_ID, id }, { hover: true });
+      } catch { /* map tearing down */ }
+      lastHoverId = id;
+    };
     function onMove(e) {
       if (!e.features?.length) return;
       map.getCanvas().style.cursor = "pointer";
-      setHovered(e.features[0].properties);
+      const f = e.features[0];
+      setHoverFs(f.id);
+      setHovered(f.properties);
     }
     function onLeave() {
       map.getCanvas().style.cursor = "";
+      setHoverFs(null);
       setHovered(null);
     }
     function onSelect(e) {
@@ -152,41 +172,32 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     };
   }, [map]);
 
-  // Outline the pinned parcel.
+  // Selection state → the commitment casing (persists until cleared).
+  const lastSelectedRef = useRef(null);
   useEffect(() => {
-    if (!map || !map.getLayer(SELECT_ID)) return;
+    if (!map) return;
     try {
-      map.setFilter(SELECT_ID, ["==", ["id"], selected?.id != null ? selected.id : -1]);
+      if (lastSelectedRef.current != null) {
+        map.setFeatureState({ source: SOURCE_ID, id: lastSelectedRef.current }, { selected: false });
+      }
+      if (selected?.id != null) {
+        map.setFeatureState({ source: SOURCE_ID, id: selected.id }, { selected: true });
+      }
+      lastSelectedRef.current = selected?.id ?? null;
     } catch { /* map tearing down */ }
-  }, [map, selected, layers]);
+  }, [map, selected]);
 
-  // Legend ISOLATE (optical pass §6): the picked family keeps its treatment,
-  // every other family drops to the one quiet neutral — a filtering read, not a
-  // ten-hue decode. Nothing is hidden; this is a RECOLOUR (paint swap), so mass
-  // stays mass and the hit-test set never changes.
+  // Legend ISOLATE: the picked family paints at its Band-C iso (a figure state);
+  // the remainder drops to the oriented neutrals. A RECOLOUR via buildFillPaint —
+  // the hover lift composes on top through feature-state, so a hovered parcel in
+  // isolate previews its true family colour.
   useEffect(() => {
     if (!map || !domain || !map.getLayer(FILL_ID)) return;
     try {
-      map.setPaintProperty(FILL_ID, "fill-color", zoningFillColour(domain, isolated));
+      map.setPaintProperty(FILL_ID, "fill-color", buildFillPaint(domain, isolated));
       const tint = zoningLineTint(domain, isolated);
       if (map.getLayer(HAIRLINE_ID)) map.setPaintProperty(HAIRLINE_ID, "line-color", tint);
       if (map.getLayer(FAMILY_LINE_ID)) map.setPaintProperty(FAMILY_LINE_ID, "line-color", tint);
-      // Governance patterns: an ISOLATED pattern family goes figure-tier — the
-      // stronger iso image, visible at EVERY zoom (its gate lifts, since the
-      // texture is the whole signal in isolate); a non-isolated one mutes to
-      // its neutralised base fill.
-      for (const { id, key, gate, img, isoImg } of PATTERN_LAYERS) {
-        if (!map.getLayer(id)) continue;
-        if (isolated === key) {
-          map.setLayerZoomRange(id, 0, 24);
-          map.setPaintProperty(id, "fill-pattern", isoImg);
-          map.setPaintProperty(id, "fill-opacity", 1);
-        } else {
-          map.setLayerZoomRange(id, gate, 24);
-          map.setPaintProperty(id, "fill-pattern", img);
-          map.setPaintProperty(id, "fill-opacity", isolated ? 0 : patternGateOpacity(gate));
-        }
-      }
     } catch { /* map tearing down */ }
   }, [map, isolated, domain, layers]);
 
@@ -223,7 +234,6 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
                     sourceId={SOURCE_ID}
                     sourceOptions={{ generateId: true }}
                     layers={layers}
-                    images={images}
                     onLoad={handleMapLoad}
                     cooperativeGestures={false}
                     attributionCompact={false}
