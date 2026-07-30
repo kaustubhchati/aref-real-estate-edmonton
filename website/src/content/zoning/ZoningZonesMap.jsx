@@ -18,6 +18,7 @@
 // =============================================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import MapView, { findFirstSymbolLayerId } from "../../components/MapView.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
@@ -25,6 +26,7 @@ import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import IdentityCard from "../../components/IdentityCard.jsx";
 import CategoricalPolygonLegend from "../../components/CategoricalPolygonLegend.jsx";
+import ZoningInfoRail from "./ZoningInfoRail.jsx";
 import { HOME_VIEW, applyCameraPreset } from "../../components/mapCamera.js";
 import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
 import { ICON_RECENTRE } from "../../components/mapIcons.js";
@@ -47,6 +49,8 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
   const [selected, setSelected] = useState(null);  // { id, props } — pinned parcel
   const [hovered, setHovered] = useState(null);    // props — hover preview
   const [isolated, setIsolated] = useState(null);  // family key ISOLATED via the legend, or null
+  const [searchParams, setSearchParams] = useSearchParams();
+  const restoredRef = useRef(false);               // ?zone= permalink restored once
 
   useEffect(() => {
     let cancelled = false;
@@ -65,6 +69,10 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
 
   // Families ordered by AREA SHARE desc, styled from the derived table.
   const domain = useMemo(() => (entry ? buildZoningDomain(entry) : null), [entry]);
+  const domainByKey = useMemo(
+    () => (domain ? Object.fromEntries(domain.map((it) => [it.key, it])) : null),
+    [domain],
+  );
   const layers = useMemo(
     () => (domain ? [...zoningFillLayers(domain), hairlineLayer(domain)] : null),
     [domain],
@@ -124,13 +132,23 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     return () => { map.off("moveend", save); };
   }, [map, cameraRef]);
 
-  // ── Hover + click-pin ride FEATURE-STATE (the highlight register, §3):
-  //    hover lifts the fill's lightness + draws the near-white preview casing;
-  //    a click pins the near-black commitment casing. setFeatureState only —
-  //    the layer is never re-styled per interaction.
+  // ── Hover + click-pin (optical pass 7 §4). FEATURE-STATE ONLY — no setFilter
+  //    anywhere in the hover path (setFilter is documented to fail above 10k
+  //    features; we have 11,518). The source rides promoteId:"id", so a parcel
+  //    split across internal tile boundaries takes hover state on EVERY part.
+  //    mousemove is throttled to ~16ms; the FILL/casing state follows the
+  //    cursor immediately (cheap), while the RAIL updates on PAUSE — the
+  //    reading settles when the cursor does (SETTLE_MS delay, SETTLE_PX
+  //    tolerance), not on every boundary crossed in transit.
+  const SETTLE_MS = 120;
+  const SETTLE_PX = 4;
   useEffect(() => {
     if (!map) return undefined;
     let lastHoverId = null;
+    let lastMoveT = 0;
+    let settleTimer = null;
+    let lastPt = null;
+    let dragging = false;
     const setHoverFs = (id) => {
       if (id === lastHoverId) return;
       try {
@@ -140,15 +158,30 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
       lastHoverId = id;
     };
     function onMove(e) {
+      if (dragging) return;
+      const now = performance.now();
+      if (now - lastMoveT < 16) return;          // ~16ms throttle
+      lastMoveT = now;
       if (!e.features?.length) return;
       map.getCanvas().style.cursor = "pointer";
       const f = e.features[0];
-      setHoverFs(f.id);
-      setHovered(f.properties);
+      setHoverFs(f.id);                          // paint state: immediate
+      // Rail state: on settle only (one reusable update path — setState, no
+      // per-move component recreation; React re-renders the same rail).
+      const pt = e.point;
+      if (settleTimer) clearTimeout(settleTimer);
+      const from = { x: pt.x, y: pt.y, props: f.properties };
+      lastPt = from;
+      settleTimer = setTimeout(() => {
+        if (lastPt && Math.hypot(lastPt.x - from.x, lastPt.y - from.y) <= SETTLE_PX) {
+          setHovered(from.props);
+        }
+      }, SETTLE_MS);
     }
     function onLeave() {
       map.getCanvas().style.cursor = "";
       setHoverFs(null);
+      if (settleTimer) clearTimeout(settleTimer);
       setHovered(null);
     }
     function onSelect(e) {
@@ -160,15 +193,27 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
       const box = [[e.point.x - 4, e.point.y - 4], [e.point.x + 4, e.point.y + 4]];
       if (!map.queryRenderedFeatures(box, { layers: [FILL_ID] }).length) setSelected(null);
     }
+    // Cursor feedback: pointer over a parcel; grab(bing) while dragging.
+    function onDragStart() { dragging = true; map.getCanvas().style.cursor = "grabbing"; }
+    function onDragEnd()   { dragging = false; map.getCanvas().style.cursor = ""; }
+    // Escape clears the selection (click-outside is onDismiss above).
+    function onKey(e) { if (e.key === "Escape") setSelected(null); }
     map.on("mousemove", FILL_ID, onMove);
     map.on("mouseleave", FILL_ID, onLeave);
     map.on("click", FILL_ID, onSelect);
     map.on("click", onDismiss);
+    map.on("dragstart", onDragStart);
+    map.on("dragend", onDragEnd);
+    window.addEventListener("keydown", onKey);
     return () => {
+      if (settleTimer) clearTimeout(settleTimer);
       map.off("mousemove", FILL_ID, onMove);
       map.off("mouseleave", FILL_ID, onLeave);
       map.off("click", FILL_ID, onSelect);
       map.off("click", onDismiss);
+      map.off("dragstart", onDragStart);
+      map.off("dragend", onDragEnd);
+      window.removeEventListener("keydown", onKey);
     };
   }, [map]);
 
@@ -186,6 +231,46 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
       lastSelectedRef.current = selected?.id ?? null;
     } catch { /* map tearing down */ }
   }, [map, selected]);
+
+  // ── Permalink (§5, the ZoLa precedent): the selection mirrors to ?zone=<id>
+  //    (merge-writes so the section's ?view= param survives), and a shared
+  //    ?zone= URL restores the selection AND flies the camera to the parcel.
+  useEffect(() => {
+    if (!restoredRef.current && !selected) return;   // don't wipe the param before restore
+    setSearchParams((prev) => {
+      const p = new URLSearchParams(prev);
+      if (selected?.id != null) p.set("zone", String(Math.round(selected.id)));
+      else p.delete("zone");
+      return p;
+    }, { replace: true });
+  }, [selected]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!map || !entry || restoredRef.current) return;
+    restoredRef.current = true;
+    const zoneParam = searchParams.get("zone");
+    if (!zoneParam) return;
+    const zoneId = Number(zoneParam);
+    // The permalink is the one path that needs the raw GeoJSON (to find the
+    // parcel + its extent before it is tiled into view) — fetched only here.
+    fetch(assetUrl(`/data/zoning/${entry.file}`))
+      .then((r) => r.json())
+      .then((g) => {
+        const f = g.features.find((x) => Number(x.properties.id) === zoneId);
+        if (!f) return;
+        let minX = 180, minY = 90, maxX = -180, maxY = -90;
+        const walk = (c) => {
+          if (typeof c[0] === "number") {
+            minX = Math.min(minX, c[0]); maxX = Math.max(maxX, c[0]);
+            minY = Math.min(minY, c[1]); maxY = Math.max(maxY, c[1]);
+          } else c.forEach(walk);
+        };
+        walk(f.geometry.coordinates);
+        map.fitBounds([[minX, minY], [maxX, maxY]], { padding: 120, maxZoom: 15.5, duration: 0 });
+        setSelected({ id: Number(f.properties.id), props: f.properties });
+      })
+      .catch(() => { /* a stale permalink id fails soft — the map stays at home */ });
+  }, [map, entry]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Legend ISOLATE: the picked family paints at its Band-C iso (a figure state);
   // the remainder drops to the oriented neutrals. A RECOLOUR via buildFillPaint —
@@ -235,7 +320,10 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
                     geojsonUrl={assetUrl(`/data/zoning/${entry.file}`)}
                     view={MAP_VIEW}
                     sourceId={SOURCE_ID}
-                    sourceOptions={{ generateId: true }}
+                    // promoteId (not generateId): feature-state keys on the
+                    // PARCEL id property, so a parcel split across internal
+                    // tile boundaries takes hover/selected state on every part.
+                    sourceOptions={{ promoteId: "id" }}
                     layers={layers}
                     onLoad={handleMapLoad}
                     cooperativeGestures={false}
@@ -248,12 +336,22 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
           )}
         </div>
 
+        {/* The right INFORAIL (optical pass 7 §3): detail leaves the left
+            console; hover previews here, a pin holds here. */}
+        {layers && (
+          <ZoningInfoRail
+            detail={detail}
+            pinned={hovered == null && selected != null}
+            onClear={() => setSelected(null)}
+            domainByKey={domainByKey}
+            currency={currency}
+          />
+        )}
+
         {domain && (
           <div className="pa-float pa-column pa-column-lean zoning-console">
-            {/* ONE fused card (optical pass 3 §5): the seam KC flagged twice was
-                the inter-card gap showing map through — title, selector, legend
-                and readout are MODULES of a single card, divided by the console's
-                own hairlines, not separate floating cards. */}
+            {/* ONE fused card: LEFT holds title + legend (detail lives in the
+                right rail now); modules divided by the console's hairlines. */}
             <section className="pa-card pa-card-instrument">
               <div className="pa-col-mod">
                 <IdentityCard title={title ?? entry.label} />
@@ -270,26 +368,6 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
                 onToggle={toggleFamily}
                 interaction="isolate"
               />
-
-              <div className="pa-col-mod">
-                {detail ? (
-                  <>
-                    <p className="pa-box-cite" style={{ margin: 0 }}>
-                      {detail.zoning}{detail.dc2_sub_area ? ` · Sub-area ${detail.dc2_sub_area}` : ""}
-                    </p>
-                    {/* When the code's description IS the family name (AJ, DC), one line says it once. */}
-                    {detail.description !== detail.zone_family && (
-                      <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>{detail.description}</p>
-                    )}
-                    <p className="pa-detail-hint" style={{ margin: "4px 0 0" }}>{detail.zone_family}</p>
-                  </>
-                ) : (
-                  <p className="pa-detail-hint" style={{ margin: 0 }}>
-                    Hover a parcel for its zone; click to pin it.
-                  </p>
-                )}
-                <p className="pa-box-cite" style={{ margin: "8px 0 0" }}>{currency}</p>
-              </div>
             </section>
           </div>
         )}

@@ -50,10 +50,14 @@ export default function ZoningSection({ sectionKey = "zoning" }) {
   const cameraRef = useRef(null);
 
   // Mirror the view to the URL — deviation only, replace:true (the PA rule).
+  // MERGE-writes: other params (the map's ?zone= permalink) must survive.
   useEffect(() => {
-    const params = {};
-    if (view && view !== views[0]?.key) params.view = view;
-    setSearchParams(params, { replace: true });
+    setSearchParams((prev) => {
+      const p = new URLSearchParams(prev);
+      if (view && view !== views[0]?.key) p.set("view", view);
+      else p.delete("view");
+      return p;
+    }, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- write on view change; views is section-const
   }, [view]);
 
