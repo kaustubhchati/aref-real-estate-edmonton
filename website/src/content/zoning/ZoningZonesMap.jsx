@@ -25,6 +25,7 @@ import MapSkeleton from "../../components/MapSkeleton.jsx";
 import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import ZoningLegendStrip from "./ZoningLegendStrip.jsx";
+import ZoningRail from "./ZoningRail.jsx";
 import { applyCameraPreset, ZONING_HOME_VIEW } from "../../components/mapCamera.js";
 import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
 import { ICON_RECENTRE } from "../../components/mapIcons.js";
@@ -322,16 +323,10 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     setIsolated((cur) => (cur === key ? null : key));
   }
 
-  // Currency from the manifest (whose date it is — the amenity honesty rule).
-  const currency = entry
-    ? (entry.sourceUpdatedAt
-        ? `Updated ${entry.sourceUpdatedAt} · ${entry.featureCount.toLocaleString()} zones`
-        : `Fetched ${entry.fetchedAt} · ${entry.featureCount.toLocaleString()} zones`)
-    : "";
-
-  // §2: the selection owns the readout while pinned (hover is gated off then,
-  // but the precedence states the rule even if a stray hover lands).
-  const detail = selected?.props ?? hovered ?? null;
+  // (The manifest currency line lost its home with the console reversal —
+  // flagged in the pass-12 report; the About page still carries provenance.
+  // `selectorNode` has no mount point either until Overlays lands — the v1.1
+  // seam will need a small floating pill for it, decided then.)
 
   return (
     <article className="content-map pa-map zoning-map">
@@ -377,6 +372,17 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
             emphasis={null}
             onToggleFamily={toggleFamily}
             onHoverFamily={setChipPreview}
+          />
+        )}
+
+        {/* TWO-STAGE RIGHT RAIL (pass 12 §3) — absent at rest; hover = the
+            identity header, click = the pinned full reading. */}
+        {layers && (
+          <ZoningRail
+            hovered={hovered}
+            selected={selected}
+            domainByKey={domainByKey}
+            onClear={() => setSelected(null)}
           />
         )}
       </div>

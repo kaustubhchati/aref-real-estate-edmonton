@@ -4324,3 +4324,33 @@ p  { margin: 0 0 0.75rem; }
    attribution) lift above it. Fixed lift: strip bottom inset 14 + ~49px
    strip + 8px gap (the strip's height is a design constant, not content). */
 .zoning-map .maplibregl-ctrl-bottom-right { margin-bottom: 72px; }
+
+/* === Zoning two-stage RIGHT RAIL (pass 12 §3) — absent at rest =============
+   The shared .pa-detail frame (dark card, absolute right). Stage 1 = header
+   only (swatch · family · neighbourhood); stage 2 pins and grows DOWNWARD
+   from the same fixed top edge — the header block never moves (the ✕
+   overlays absolutely). Top derived for the ZONING nav stack (3 groups):
+   container top 40 + zoom (10+60+2) + fullscreen (10+30+2) + recentre
+   (10+30+2) = 196, + 12px gap = 208. Re-derive if a control joins the rail. */
+.zn-rail { top: 208px; width: 264px; padding: 10px 12px; }
+.zn-rail-head { position: relative; display: flex; align-items: flex-start; gap: 9px; padding-right: 24px; }
+.zn-rail-sw {
+  width: 13px; height: 13px; border-radius: 3px; flex: 0 0 auto; margin-top: 2px;
+  box-shadow: inset 0 0 0 1px rgba(20, 16, 24, 0.35);
+}
+.zn-rail-idtxt { display: flex; flex-direction: column; min-width: 0; }
+.zn-rail-family { font-size: var(--t-sm); font-weight: 700; color: var(--pa-ink); line-height: 1.25; }
+.zn-rail-nbhd { font-size: var(--t-2xs); color: var(--pa-mut); overflow-wrap: break-word; line-height: 1.3; }
+.zn-rail-close { position: absolute; top: 0; right: 0; }
+.zn-rail-mod { border-top: 1px solid var(--pa-hair); margin-top: 9px; padding-top: 8px; }
+/* The zone code — the one string the reader takes away: large, mono. */
+.zn-rail-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 21px; font-weight: 600; color: var(--pa-ink); letter-spacing: 0.02em;
+}
+.zn-rail-desc { margin: 3px 0 0; font-size: var(--t-xs); color: var(--pa-mut); line-height: 1.4; }
+.zn-rail-copy {
+  width: 100%; padding: 5px 8px; background: var(--pa-card); color: var(--pa-ink);
+  border: 1px solid var(--pa-hair); border-radius: 7px; font-size: var(--t-xs); cursor: pointer;
+}
+.zn-rail-copy:hover { border-color: var(--tx-mut); }
