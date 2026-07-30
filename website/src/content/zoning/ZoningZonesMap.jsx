@@ -34,9 +34,9 @@ import { siteConfig } from "../../config/siteConfig.js";
 import { assetUrl } from "../../utils/assetUrl.js";
 import {
   BASEMAP_STYLE, MAP_VIEW, SOURCE_ID, BOUNDS_SOURCE_ID, LIMIT_SOURCE_ID,
-  FILL_ID, HAIRLINE_ID,
+  LRT_SOURCE_ID, FILL_ID, HAIRLINE_ID,
   buildZoningDomain, zoningFillLayers, familyLineLayer, hairlineLayer,
-  cityLimitLayer, applyZoningGround, buildFillPaint, zoningLineTint,
+  cityLimitLayer, lrtLayer, applyZoningGround, buildFillPaint, zoningLineTint,
 } from "./zoningStyle.js";
 
 const MANIFEST_URL = assetUrl("/data/zoning/manifest.json");
@@ -100,6 +100,11 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     if (!m.getSource(LIMIT_SOURCE_ID)) {
       m.addSource(LIMIT_SOURCE_ID, { type: "geojson", data: assetUrl("/geo/edmonton_boundary.geojson") });
       m.addLayer(cityLimitLayer(), firstSymbol);
+    }
+    // LRT — civic infrastructure reference (published amenities route lines).
+    if (!m.getSource(LRT_SOURCE_ID)) {
+      m.addSource(LRT_SOURCE_ID, { type: "geojson", data: assetUrl("/data/amenities/lrt_lines.geojson") });
+      m.addLayer(lrtLayer(), firstSymbol);
     }
     // Per-instance ground: mute basemap land-use, lighten, promote water + white
     // streets over the fill (contained to this map — applyDeepenedGround precedent).

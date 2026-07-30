@@ -89,6 +89,7 @@ export const ZONING_GROUND = "#fcfaf4";
 const ROAD_FILL     = "#ede7d7";   // warm near-neutral (L92 C7) — continuous, never white
 const ROAD_CASE     = "#a19682";   // freeway/arterial casing: DARKER than the road (recession, not glow)
 const RAIL_COLOUR   = "#b3a996";   // reference weight, single thin line
+const LRT_COLOUR    = "#7a7264";   // LRT: darker end of the reference register — civic infrastructure
 const BUILDING_INK  = "rgba(122,110,92,0.45)"; // engraved outline texture, z>=16, no fill
 const LIMIT_COLOUR  = "#b3ab9c";   // the city-limit line
 export const FAMILY_BOUNDARY_COLOUR = "#6f6555"; // dark warm neutral — the crisp zone edge
@@ -100,10 +101,11 @@ export const LADDER = {
   freeway:  { gate: 0,  w: { 10: 2.0,  13: 3.2,  16: 5.5 } },
   arterial: { gate: 11, w: { 10: 0,    13: 1.8,  16: 3.4 } },
   family:   { gate: 10, w: { 10: 1.0,  13: 1.5,  16: 2.2 } },
+  lrt:      { gate: 12, w: { 10: 0,    13: 1.1,  16: 2.0 } },  // civic infrastructure (pass 7)
   collector:{ gate: 13, w: { 10: 0,    13: 0.7,  16: 1.8 } },
   local:    { gate: 15, w: { 10: 0,    13: 0,    16: 1.1 } },
-  rail:     { gate: 13, w: { 10: 0,    13: 0.7,  16: 0.9 } },
-  parcel:   { gate: 15, w: { 10: 0,    13: 0,    16: 0.9 } },
+  rail:     { gate: 13, w: { 10: 0,    13: 0.6,  16: 1.0 } },  // was 0.7@z13 = collector — equal rungs fixed
+  parcel:   { gate: 15, w: { 10: 0,    13: 0,    16: 0.8 } },
   // buildings: the style's 1px fill-outline — thinnest by construction, and
   // lowest-contrast by ink (BUILDING_INK alpha), below the parcel rung.
 };
@@ -282,6 +284,27 @@ export function hairlineLayer(domain) {
   };
 }
 
+// LRT — a DISTINCT reference line, z ≥ 12 (optical pass 7 §6): it structures
+// Edmonton and reads as civic infrastructure. Data is the published amenities
+// route-line emit (cross-section read of website/public data, no re-fetch);
+// one dark reference colour, NOT the ETS route colours (that identity belongs
+// to the amenity map). Sits between family boundary and collector in the ladder.
+export const LRT_SOURCE_ID = "zoning-lrt";
+export const LRT_LINE_ID   = "zoning-lrt-line";
+export function lrtLayer() {
+  return {
+    id: LRT_LINE_ID,
+    type: "line",
+    source: LRT_SOURCE_ID,
+    minzoom: 12,
+    paint: {
+      "line-color": LRT_COLOUR,
+      "line-width": ladderWidth("lrt"),
+      "line-opacity": 0.75,
+    },
+  };
+}
+
 // The city-limit line (carried defect: the island needs its edge named) —
 // quiet warm ink over the fill, under the roads and labels.
 export function cityLimitLayer() {
@@ -342,6 +365,14 @@ export function applyZoningGround(map, firstSymbolId) {
         const [, w, blur] = HALO_BY_CLASS.find(([re]) => re.test(id)) ?? [null, 1.6, 0.6];
         map.setPaintProperty(id, "text-halo-width", w);
         map.setPaintProperty(id, "text-halo-blur", blur);
+        // Label classes by zoom (§6): neighbourhood names z≥11; PARK NAMES z≥13
+        // (poi_park is re-shown — Apple Classic hides all POI; parks earn their
+        // name on a zoning map); street names z≥15; water names throughout.
+        if (/^place_(suburbs|hamlet|villages)/.test(id)) map.setLayerZoomRange(id, 11, 24);
+        else if (id === "poi_park") {
+          map.setLayoutProperty(id, "visibility", "visible");
+          map.setLayerZoomRange(id, 13, 24);
+        } else if (/^roadname/.test(id)) map.setLayerZoomRange(id, 15, 24);
       } else if (type === "fill" && BUILDING_FILLS.test(id)) {
         if (id === "building") {
           // Buildings reinstated z≥16 as OUTLINE ONLY — engraved texture over
