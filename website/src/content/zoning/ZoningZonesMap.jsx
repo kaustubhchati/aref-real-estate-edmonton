@@ -37,6 +37,7 @@ import {
   LRT_SOURCE_ID, FILL_ID, HAIRLINE_ID,
   buildZoningDomain, zoningFillLayers, familyLineLayer, hairlineLayer,
   cityLimitLayer, lrtLayer, applyZoningGround, buildFillPaint, zoningLineTint,
+  buildSelectedPaint, zoningLineTintSelected,
 } from "./zoningStyle.js";
 
 const ZONING_HOME = ZONING_HOME_VIEW.Edmonton;
@@ -149,6 +150,11 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
   //    tolerance), not on every boundary crossed in transit.
   const SETTLE_MS = 120;
   const SETTLE_PX = 4;
+  // Mirrors `selected != null` for the hover handlers (§2: while a zone is
+  // pinned, hover must not repaint the field — the selection owns the
+  // highlight until cleared). A ref, not state — the handlers live in a
+  // [map]-keyed effect and need the live value without re-binding.
+  const pinnedRef = useRef(false);
   useEffect(() => {
     if (!map) return undefined;
     let lastHoverId = null;
@@ -166,6 +172,14 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     };
     function onMove(e) {
       if (dragging) return;
+      // §2: a pinned selection owns the highlight — no hover paint, no readout
+      // churn. The cursor stays a pointer (clicking another zone re-pins).
+      if (pinnedRef.current) {
+        map.getCanvas().style.cursor = "pointer";
+        setHoverFs(null);
+        if (settleTimer) clearTimeout(settleTimer);
+        return;
+      }
       const now = performance.now();
       if (now - lastMoveT < 16) return;          // ~16ms throttle
       lastMoveT = now;
@@ -194,6 +208,12 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     function onSelect(e) {
       if (!e.features?.length) return;
       const f = e.features[0];
+      // The selection takes over from the hover preview at once (the ref flips
+      // here, not in the effect, so no mousemove sneaks a hover in between).
+      pinnedRef.current = true;
+      setHoverFs(null);
+      if (settleTimer) clearTimeout(settleTimer);
+      setHovered(null);
       setSelected({ id: f.id, props: f.properties });
     }
     function onDismiss(e) {
@@ -227,6 +247,7 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
   // Selection state → the commitment casing (persists until cleared).
   const lastSelectedRef = useRef(null);
   useEffect(() => {
+    pinnedRef.current = selected != null;
     if (!map) return;
     try {
       if (lastSelectedRef.current != null) {
@@ -273,22 +294,28 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
       .catch(() => { /* a stale permalink id fails soft — the map stays at home */ });
   }, [map, entry]);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Legend ISOLATE: the picked family paints at its Band-C iso (a figure state);
-  // the remainder drops to the oriented neutrals. A RECOLOUR via buildFillPaint —
-  // the hover lift composes on top through feature-state, so a hovered zone in
-  // isolate previews its true family colour.
+  // FIELD PAINT — one effect owns the fill + hairline recolour, by state rank:
+  //   pinned (§2, selection inversion) — the selected zone is the SOLE figure
+  //     (hover-lift fill + commitment casing); everything else drops to the
+  //     isolate neutrals (parks keep their pale cast for orientation);
+  //   isolate — the picked family at its Band-C iso, remainder neutral; the
+  //     hover lift composes on top through feature-state;
+  //   rest — the full palette.
+  // Clearing the pin restores whichever of the lower states is live. The
+  // FAMILY boundary is the constant dark neutral and is never re-tinted
+  // (optical pass 6 — the one line that never gives way).
+  const hasSelection = selected != null;
   useEffect(() => {
     if (!map || !domain || !map.getLayer(FILL_ID)) return;
     try {
-      map.setPaintProperty(FILL_ID, "fill-color", buildFillPaint(domain, isolated));
-      // Zone hairlines follow the isolate tint; the FAMILY boundary is the
-      // constant dark neutral and is never re-tinted (optical pass 6 — the one
-      // line that never gives way).
+      map.setPaintProperty(FILL_ID, "fill-color",
+        hasSelection ? buildSelectedPaint(domain) : buildFillPaint(domain, isolated));
       if (map.getLayer(HAIRLINE_ID)) {
-        map.setPaintProperty(HAIRLINE_ID, "line-color", zoningLineTint(domain, isolated));
+        map.setPaintProperty(HAIRLINE_ID, "line-color",
+          hasSelection ? zoningLineTintSelected() : zoningLineTint(domain, isolated));
       }
     } catch { /* map tearing down */ }
-  }, [map, isolated, domain, layers]);
+  }, [map, isolated, domain, layers, hasSelection]);
 
   function toggleFamily(key) {
     setIsolated((cur) => (cur === key ? null : key));
@@ -301,7 +328,9 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
         : `Fetched ${entry.fetchedAt} · ${entry.featureCount.toLocaleString()} zones`)
     : "";
 
-  const detail = hovered ?? selected?.props ?? null;
+  // §2: the selection owns the readout while pinned (hover is gated off then,
+  // but the precedence states the rule even if a stray hover lands).
+  const detail = selected?.props ?? hovered ?? null;
 
   return (
     <article className="content-map pa-map">
@@ -342,7 +371,7 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
         {layers && (
           <ZoningInfoRail
             detail={detail}
-            pinned={hovered == null && selected != null}
+            pinned={selected != null}
             onClear={() => setSelected(null)}
             domainByKey={domainByKey}
             domain={domain}

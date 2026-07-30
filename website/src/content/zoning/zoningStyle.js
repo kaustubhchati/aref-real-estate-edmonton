@@ -230,6 +230,31 @@ export function buildFillPaint(domain, isolated = null) {
   return ["case", stateFlag("hover"), hoverExpr, restFillExpression(domain, isolated)];
 }
 
+// ---- Selection inversion (pass 11 §2) ------------------------------------------
+// While a zone is PINNED it is the SOLE FIGURE: the selected zone carries the
+// hover lightness lift (the near-black commitment casing rides feature-state
+// as usual), and every other zone drops to the isolate register — the common
+// quiet neutral, with parks keeping their pale cast so the river valley, the
+// water and the street grid still orient the reader (exactly what isolate
+// does). Hover is gated off by the component while pinned (the selection owns
+// the highlight until cleared), so this expression never composes with hover.
+export function buildSelectedPaint(domain) {
+  const arms = [];
+  for (const it of domain) arms.push(it.key, it.hover);
+  const lift = ["match", ["get", "zone_family"], ...arms, "#d6cfc0"];
+  const rest = ["match", ["get", "zone_family"],
+    "Parks and Open Space", ISOLATE_PARKS, ISOLATE_NEUTRAL];
+  return ["case", stateFlag("selected"), lift, rest];
+}
+
+// Hairline tint while a zone is pinned: the whole field is neutral (parks keep
+// the pale cast), matching the fill above — the pinned zone's own edge is the
+// commitment casing's job, not the hairline's.
+export function zoningLineTintSelected() {
+  return ["match", ["get", "zone_family"],
+    "Parks and Open Space", hairlineTint(ISOLATE_PARKS), hairlineTint(ISOLATE_NEUTRAL)];
+}
+
 export function zoningFillLayers(domain) {
   return [
     polygonFillLayer({ id: FILL_ID, classField: "zone_family", items: domain, opacity: 1 }),
