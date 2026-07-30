@@ -230,6 +230,23 @@ export function buildFillPaint(domain, isolated = null) {
   return ["case", stateFlag("hover"), hoverExpr, restFillExpression(domain, isolated)];
 }
 
+// ---- Legend strip (pass 12 §2) -------------------------------------------------
+// The COUNT BAND flag: the strip's thin second band (share of zone count) is
+// the analytically richest element and the one most at risk of reading as
+// decoration — it ships behind this flag, DEFAULT ON, for KC to ratify both
+// ways. Flipping to false leaves the area band + labels untouched.
+export const SHOW_COUNT_BAND = true;
+
+// Chip-hover map preview: the hovered family LIFTS to its hover hex on the
+// map while everything else keeps the current base (rest or isolate) — the
+// strip and the map point at each other. Never applied while a zone is
+// pinned (the selection owns the paint, pass 11 §2).
+export function buildChipPreviewPaint(domain, isolated, previewKey) {
+  const it = domain.find((d) => d.key === previewKey);
+  return ["case", ["==", ["get", "zone_family"], previewKey], it?.hover ?? "#ffffff",
+    buildFillPaint(domain, isolated)];
+}
+
 // ---- Selection inversion (pass 11 §2) ------------------------------------------
 // While a zone is PINNED it is the SOLE FIGURE: the selected zone carries the
 // hover lightness lift (the near-black commitment casing rides feature-state

@@ -24,6 +24,7 @@ import MapView, { findFirstSymbolLayerId } from "../../components/MapView.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
 import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
+import ZoningLegendStrip from "./ZoningLegendStrip.jsx";
 import { applyCameraPreset, ZONING_HOME_VIEW } from "../../components/mapCamera.js";
 import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
 import { ICON_RECENTRE } from "../../components/mapIcons.js";
@@ -34,7 +35,7 @@ import {
   LRT_SOURCE_ID, FILL_ID, HAIRLINE_ID,
   buildZoningDomain, zoningFillLayers, familyLineLayer, hairlineLayer,
   cityLimitLayer, lrtLayer, applyZoningGround, buildFillPaint, zoningLineTint,
-  buildSelectedPaint, zoningLineTintSelected,
+  buildSelectedPaint, zoningLineTintSelected, buildChipPreviewPaint,
 } from "./zoningStyle.js";
 
 const ZONING_HOME = ZONING_HOME_VIEW.Edmonton;
@@ -48,7 +49,8 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
   const [map, setMap] = useState(null);
   const [selected, setSelected] = useState(null);  // { id, props } — pinned zone
   const [hovered, setHovered] = useState(null);    // props — hover preview
-  const [isolated, setIsolated] = useState(null);  // family key ISOLATED via the legend, or null
+  const [isolated, setIsolated] = useState(null);  // family key ISOLATED via the strip, or null
+  const [chipPreview, setChipPreview] = useState(null);  // family under the strip cursor (§2)
   const [searchParams, setSearchParams] = useSearchParams();
   const restoredRef = useRef(false);               // ?zone= permalink restored once
 
@@ -292,13 +294,13 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
   }, [map, entry]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // FIELD PAINT — one effect owns the fill + hairline recolour, by state rank:
-  //   pinned (§2, selection inversion) — the selected zone is the SOLE figure
-  //     (hover-lift fill + commitment casing); everything else drops to the
-  //     isolate neutrals (parks keep their pale cast for orientation);
-  //   isolate — the picked family at its Band-C iso, remainder neutral; the
-  //     hover lift composes on top through feature-state;
+  //   pinned (pass 11 §2, selection inversion) — the selected zone is the
+  //     SOLE figure; everything else drops to the isolate neutrals;
+  //   chip preview (pass 12 §2) — the family under the strip cursor lifts to
+  //     its hover hex over the current base (never while pinned);
+  //   isolate — the picked family at its Band-C iso, remainder neutral;
   //   rest — the full palette.
-  // Clearing the pin restores whichever of the lower states is live. The
+  // Clearing a higher state restores whichever lower state is live. The
   // FAMILY boundary is the constant dark neutral and is never re-tinted
   // (optical pass 6 — the one line that never gives way).
   const hasSelection = selected != null;
@@ -306,13 +308,15 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     if (!map || !domain || !map.getLayer(FILL_ID)) return;
     try {
       map.setPaintProperty(FILL_ID, "fill-color",
-        hasSelection ? buildSelectedPaint(domain) : buildFillPaint(domain, isolated));
+        hasSelection ? buildSelectedPaint(domain)
+          : chipPreview ? buildChipPreviewPaint(domain, isolated, chipPreview)
+            : buildFillPaint(domain, isolated));
       if (map.getLayer(HAIRLINE_ID)) {
         map.setPaintProperty(HAIRLINE_ID, "line-color",
           hasSelection ? zoningLineTintSelected() : zoningLineTint(domain, isolated));
       }
     } catch { /* map tearing down */ }
-  }, [map, isolated, domain, layers, hasSelection]);
+  }, [map, isolated, domain, layers, hasSelection, chipPreview]);
 
   function toggleFamily(key) {
     setIsolated((cur) => (cur === key ? null : key));
@@ -363,9 +367,18 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
           )}
         </div>
 
-        {/* Pass 12: the bottom data console is REVERTED (superseded directive).
-            The proportional legend strip (§2) and the two-stage rail (§3)
-            replace it — mounted in the pass-12 commits that follow. */}
+        {/* PROPORTIONAL LEGEND STRIP (pass 12 §2) — the only chrome at rest:
+            two share encodings + labels, hover-preview + click-to-isolate. */}
+        {domain && (
+          <ZoningLegendStrip
+            domain={domain}
+            totalCount={entry.featureCount}
+            isolated={isolated}
+            emphasis={null}
+            onToggleFamily={toggleFamily}
+            onHoverFamily={setChipPreview}
+          />
+        )}
       </div>
     </article>
   );
