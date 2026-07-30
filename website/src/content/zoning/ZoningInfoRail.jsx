@@ -30,7 +30,7 @@ export default function ZoningInfoRail({ detail, pinned = false, onClear, domain
   // IDLE — the existing prompt wording, plus currency (updated date + count).
   if (!detail) {
     return (
-      <div className="pa-detail bc-inforail pa-detail-idle" aria-label="Zoning detail" aria-live="polite">
+      <div className="pa-detail bc-inforail zoning-rail pa-detail-idle" aria-label="Zoning detail" aria-live="polite">
         <p className="pa-detail-hint">Hover a zone for its reading; click to pin it.</p>
         {currency && <p className="pa-box-cite" style={{ margin: "8px 0 0" }}>{currency}</p>}
       </div>
@@ -41,7 +41,7 @@ export default function ZoningInfoRail({ detail, pinned = false, onClear, domain
   const item = domainByKey?.[family];
 
   return (
-    <div className="pa-detail bc-inforail" aria-label="Zoning detail" aria-live="polite">
+    <div className="pa-detail bc-inforail zoning-rail" aria-label="Zoning detail" aria-live="polite">
       <div className="pa-detail-head">
         {/* Family swatch + name — the rail ties visually to the legend row. */}
         <h2 className="pa-detail-name" title={family}>

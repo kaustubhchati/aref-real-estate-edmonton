@@ -4276,3 +4276,9 @@ p  { margin: 0 0 0.75rem; }
    The instrument card's --accent-edge-image top sweep reads as a clipped stray
    element under the Zoning title card (optical pass §7); off for this console. */
 .zoning-console .pa-card-instrument::before { background: none; }
+
+/* Zoning rail (scoped): long right-aligned values — QUEEN ALEXANDRA,
+   WÎHKWÊNTÔWIN — wrap at word boundaries (break-word only as a last resort)
+   with a tightened line height, so a two-line value reads as one entry. */
+.zoning-rail .pa-kv { align-items: baseline; }
+.zoning-rail .pa-kv-v { overflow-wrap: break-word; hyphens: auto; line-height: 1.25; }
