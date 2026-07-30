@@ -363,13 +363,15 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
         </div>
 
         {/* PROPORTIONAL LEGEND STRIP (pass 12 §2) — the only chrome at rest:
-            two share encodings + labels, hover-preview + click-to-isolate. */}
+            two share encodings + labels, hover-preview + click-to-isolate.
+            emphasis (§4): a pinned zone's family takes the chip hover
+            treatment — rail and legend point at each other. */}
         {domain && (
           <ZoningLegendStrip
             domain={domain}
             totalCount={entry.featureCount}
             isolated={isolated}
-            emphasis={null}
+            emphasis={selected?.props?.zone_family ?? null}
             onToggleFamily={toggleFamily}
             onHoverFamily={setChipPreview}
           />
