@@ -223,6 +223,17 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     // Cursor feedback: pointer over a zone; grab(bing) while dragging.
     function onDragStart() { dragging = true; map.getCanvas().style.cursor = "grabbing"; }
     function onDragEnd()   { dragging = false; map.getCanvas().style.cursor = ""; }
+    // Any CAMERA move (zoom / pan / fly) makes the hover reading stale: the lit
+    // zone may no longer sit under the cursor, and no mousemove fires to refresh
+    // it (pass 13 §4 — the orphaned-hover-on-zoom/pan defect). Clear the hover
+    // highlight + rail on movestart so it never orphans; the next move re-reads.
+    // Selection is a SEPARATE feature-state and is untouched (its pin survives
+    // zoom/pan — verified).
+    function onMoveStart() {
+      setHoverFs(null);
+      if (settleTimer) clearTimeout(settleTimer);
+      setHovered(null);
+    }
     // Escape clears the selection (click-outside is onDismiss above).
     function onKey(e) { if (e.key === "Escape") setSelected(null); }
     map.on("mousemove", FILL_ID, onMove);
@@ -231,6 +242,7 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     map.on("click", onDismiss);
     map.on("dragstart", onDragStart);
     map.on("dragend", onDragEnd);
+    map.on("movestart", onMoveStart);
     window.addEventListener("keydown", onKey);
     return () => {
       if (settleTimer) clearTimeout(settleTimer);
@@ -240,6 +252,7 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
       map.off("click", onDismiss);
       map.off("dragstart", onDragStart);
       map.off("dragend", onDragEnd);
+      map.off("movestart", onMoveStart);
       window.removeEventListener("keydown", onKey);
     };
   }, [map]);
