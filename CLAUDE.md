@@ -149,7 +149,7 @@ aref-real-estate/                # main folder = the repo (one clone = everythin
 │   │   │                        #       registry-driven emitter (amenity_layer_registry) + a no-year
 │   │   │                        #       currency manifest → public/data/amenities/. Frontend LIVE:
 │   │   │                        #       8 point layers, 4 view-selector sections (§6).
-│   │   ├─ zoning/               #     BUILT end-to-end — parcels + family-boundary dissolve +
+│   │   ├─ zoning/               #     BUILT end-to-end — zone polygons + family-boundary dissolve +
 │   │   │                        #       no-year manifest; RATIFIED 156→10 crosswalk; frontend LIVE.
 │   │   └─ …
 │   └─ yyc/                      #   CALGARY placeholder (.gitkeep only). Wired in the

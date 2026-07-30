@@ -16,7 +16,7 @@
 // hue's job is discrimination; the legend and readout carry the meaning.
 // Direct Control and Alternative Jurisdiction are REAL HUES (patterns retired
 // — DESIGN_SYSTEM §1.4). The zoom ladder (no line layers below z12; dissolved
-// family boundaries z12–14; family-tinted parcel hairlines z15+) transcribes
+// family boundaries z12–14; family-tinted zone hairlines z15+) transcribes
 // docs/design/zoning_zoom_ladder_three_states.svg.
 // =============================================================================
 
@@ -36,7 +36,7 @@ export const MAP_VIEW = {
   maxBounds: CITY_BOUNDS.Edmonton,
 };
 
-export const SOURCE_ID        = "zoning-parcels";
+export const SOURCE_ID        = "zoning-zones";
 export const BOUNDS_SOURCE_ID = "zoning-bounds";
 export const LIMIT_SOURCE_ID  = "zoning-citylimit";
 export const FILL_ID          = "zoning-fill";
@@ -95,7 +95,7 @@ const LIMIT_COLOUR  = "#b3ab9c";   // the city-limit line
 export const FAMILY_BOUNDARY_COLOUR = "#6f6555"; // dark warm neutral — the crisp zone edge
 
 // THE LINE-WEIGHT LADDER (named constants; px at [z10, z13, z16]; widest→thinnest:
-// freeway → arterial → family boundary → collector → local → parcel → building).
+// freeway → arterial → family boundary → collector → local → zone → building).
 // No two rungs share a weight at any zoom — equal weights read as mesh.
 export const LADDER = {
   freeway:  { gate: 0,  w: { 10: 2.0,  13: 3.2,  16: 5.5 } },
@@ -105,9 +105,9 @@ export const LADDER = {
   collector:{ gate: 13, w: { 10: 0,    13: 0.7,  16: 1.8 } },
   local:    { gate: 15, w: { 10: 0,    13: 0,    16: 1.1 } },
   rail:     { gate: 13, w: { 10: 0,    13: 0.6,  16: 1.0 } },  // was 0.7@z13 = collector — equal rungs fixed
-  parcel:   { gate: 15, w: { 10: 0,    13: 0,    16: 0.8 } },
+  zone:     { gate: 15, w: { 10: 0,    13: 0,    16: 0.8 } },
   // buildings: the style's 1px fill-outline — thinnest by construction, and
-  // lowest-contrast by ink (BUILDING_INK alpha), below the parcel rung.
+  // lowest-contrast by ink (BUILDING_INK alpha), below the zone rung.
 };
 const ladderWidth = (rung, extra = 0) => ["interpolate", ["linear"], ["zoom"],
   10, LADDER[rung].w[10] + extra,
@@ -118,12 +118,12 @@ const ladderWidth = (rung, extra = 0) => ["interpolate", ["linear"], ["zoom"],
 // HIGHLIGHT REGISTER — the state × zoom matrix (optical pass 4 §3).
 // With a vivid resting palette, highlight is a DIFFERENT CHANNEL, not more
 // colour: fill takes a LIGHTNESS LIFT (hue + chroma held — the per-family
-// `hover` hex), and a CASING outlines the parcel. Ten vivid hues occupy most
+// `hover` hex), and a CASING outlines the zone. Ten vivid hues occupy most
 // of the wheel, so casings are ACHROMATIC-EXTREME on the #141018 dot-casing
 // precedent (DESIGN_SYSTEM: the no-greys rule governs data fills; casings and
 // chrome are a separate register). Hover is a PREVIEW (near-white casing,
 // lighter fill); selection is a COMMITMENT (near-black casing, resting fill,
-// persists until cleared). Widths are zoom-interpolated: [cityZoom, parcelZoom].
+// persists until cleared). Widths are zoom-interpolated: [cityZoom, zoneZoom].
 // =============================================================================
 export const HIGHLIGHT = {
   rest:     { casing: null,      width: { 10: 0,   15: 0   }, fill: "colour" },
@@ -209,7 +209,7 @@ function restFillExpression(domain, isolated) {
 }
 
 // The COMPLETE fill paint: hover's lightness lift rides feature-state OVER the
-// resting (or isolate) expression. In isolate mode a hovered parcel previews
+// resting (or isolate) expression. In isolate mode a hovered zone previews
 // its true family colour — the hover channel composes, no special cases.
 export function buildFillPaint(domain, isolated = null) {
   const hoverArms = [];
@@ -226,7 +226,7 @@ export function zoningFillLayers(domain) {
 }
 
 // ---- Zoom-ladder line rungs -----------------------------------------------------
-// Parcel-hairline tint: each family's hairline is its OWN fill darkened by the
+// Zone-hairline tint: each family's hairline is its OWN fill darkened by the
 // per-channel transform the ladder SVG pins (never neutral grey).
 const TINT = [0.80, 0.77, 0.71];
 export function hairlineTint(hex) {
@@ -268,7 +268,7 @@ export function familyLineLayer() {
   };
 }
 
-// PARCEL BOUNDARY (secondary, z ≥ 15 only): tinted from the fill it bounds,
+// ZONE BOUNDARY (secondary, z ≥ 15 only): tinted from the fill it bounds,
 // never neutral, visibly thinner than the family line — subdivision within a
 // family, not a zone change. First to give way if downtown reads as noise.
 export function hairlineLayer(domain) {
@@ -278,7 +278,7 @@ export function hairlineLayer(domain) {
     minzoom: 15,
     paint: {
       "line-color": tintExpression(domain),
-      "line-width": ladderWidth("parcel"),
+      "line-width": ladderWidth("zone"),
       "line-opacity": ["interpolate", ["linear"], ["zoom"], 15, 0, 15.5, 0.9],
     },
   };

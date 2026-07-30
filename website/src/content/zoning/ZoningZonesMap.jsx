@@ -7,10 +7,10 @@
 // mounts this; View 2 (Overlays, v1.1) will be its own component — adding it
 // must not touch this file.
 //
-// The map: 11,518 zoning parcels flat-filled by their family in the
+// The map: 11,518 zoning polygons flat-filled by their family in the
 // ALGORITHMICALLY DERIVED banded palette (zoningStyle.js — the frozen _oneshot
 // derivation is the spec), the dissolved family boundaries at district zoom,
-// family-tinted parcel hairlines at parcel zoom, the city-limit line, and a
+// family-tinted zone hairlines at zone zoom, the city-limit line, and a
 // per-instance ground treatment that mutes the basemap under the fill. The
 // HIGHLIGHT REGISTER rides feature-state: hover = lightness-lifted fill +
 // near-white casing (preview); selected = near-black casing (commitment).
@@ -46,7 +46,7 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
   const [boundsFile, setBoundsFile] = useState(null);
   const [fetchError, setFetchError] = useState(null);
   const [map, setMap] = useState(null);
-  const [selected, setSelected] = useState(null);  // { id, props } — pinned parcel
+  const [selected, setSelected] = useState(null);  // { id, props } — pinned zone
   const [hovered, setHovered] = useState(null);    // props — hover preview
   const [isolated, setIsolated] = useState(null);  // family key ISOLATED via the legend, or null
   const [searchParams, setSearchParams] = useSearchParams();
@@ -139,7 +139,7 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
 
   // ── Hover + click-pin (optical pass 7 §4). FEATURE-STATE ONLY — no setFilter
   //    anywhere in the hover path (setFilter is documented to fail above 10k
-  //    features; we have 11,518). The source rides promoteId:"id", so a parcel
+  //    features; we have 11,518). The source rides promoteId:"id", so a zone
   //    split across internal tile boundaries takes hover state on EVERY part.
   //    mousemove is throttled to ~16ms; the FILL/casing state follows the
   //    cursor immediately (cheap), while the RAIL updates on PAUSE — the
@@ -198,7 +198,7 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
       const box = [[e.point.x - 4, e.point.y - 4], [e.point.x + 4, e.point.y + 4]];
       if (!map.queryRenderedFeatures(box, { layers: [FILL_ID] }).length) setSelected(null);
     }
-    // Cursor feedback: pointer over a parcel; grab(bing) while dragging.
+    // Cursor feedback: pointer over a zone; grab(bing) while dragging.
     function onDragStart() { dragging = true; map.getCanvas().style.cursor = "grabbing"; }
     function onDragEnd()   { dragging = false; map.getCanvas().style.cursor = ""; }
     // Escape clears the selection (click-outside is onDismiss above).
@@ -239,7 +239,7 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
 
   // ── Permalink (§5, the ZoLa precedent): the selection mirrors to ?zone=<id>
   //    (merge-writes so the section's ?view= param survives), and a shared
-  //    ?zone= URL restores the selection AND flies the camera to the parcel.
+  //    ?zone= URL restores the selection AND flies the camera to the zone.
   useEffect(() => {
     if (!restoredRef.current && !selected) return;   // don't wipe the param before restore
     setSearchParams((prev) => {
@@ -257,7 +257,7 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     if (!zoneParam) return;
     const zoneId = Number(zoneParam);
     // The permalink is the one path that needs the raw GeoJSON (to find the
-    // parcel + its extent before it is tiled into view) — fetched only here.
+    // zone + its extent before it is tiled into view) — fetched only here.
     fetch(assetUrl(`/data/zoning/${entry.file}`))
       .then((r) => r.json())
       .then((g) => {
@@ -279,13 +279,13 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
 
   // Legend ISOLATE: the picked family paints at its Band-C iso (a figure state);
   // the remainder drops to the oriented neutrals. A RECOLOUR via buildFillPaint —
-  // the hover lift composes on top through feature-state, so a hovered parcel in
+  // the hover lift composes on top through feature-state, so a hovered zone in
   // isolate previews its true family colour.
   useEffect(() => {
     if (!map || !domain || !map.getLayer(FILL_ID)) return;
     try {
       map.setPaintProperty(FILL_ID, "fill-color", buildFillPaint(domain, isolated));
-      // Parcel hairlines follow the isolate tint; the FAMILY boundary is the
+      // Zone hairlines follow the isolate tint; the FAMILY boundary is the
       // constant dark neutral and is never re-tinted (optical pass 6 — the one
       // line that never gives way).
       if (map.getLayer(HAIRLINE_ID)) {
@@ -301,8 +301,8 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
   // Currency from the manifest (whose date it is — the amenity honesty rule).
   const currency = entry
     ? (entry.sourceUpdatedAt
-        ? `Updated ${entry.sourceUpdatedAt} · ${entry.featureCount.toLocaleString()} zoned parcels`
-        : `Fetched ${entry.fetchedAt} · ${entry.featureCount.toLocaleString()} zoned parcels`)
+        ? `Updated ${entry.sourceUpdatedAt} · ${entry.featureCount.toLocaleString()} zones`
+        : `Fetched ${entry.fetchedAt} · ${entry.featureCount.toLocaleString()} zones`)
     : "";
 
   const detail = hovered ?? selected?.props ?? null;
@@ -326,7 +326,7 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
                     view={MAP_VIEW}
                     sourceId={SOURCE_ID}
                     // promoteId (not generateId): feature-state keys on the
-                    // PARCEL id property, so a parcel split across internal
+                    // PARCEL id property, so a zone split across internal
                     // tile boundaries takes hover/selected state on every part.
                     sourceOptions={{ promoteId: "id" }}
                     layers={layers}

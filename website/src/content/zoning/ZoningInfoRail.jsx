@@ -6,19 +6,19 @@
 // reused exactly, with zoning content; AmenityInfoRail is the same sibling
 // pattern. A props-generic extraction is the flagged future de-dup.)
 //
-//   • PREVIEW (hovering a parcel) — the full hierarchy, no ✕ (nothing pinned).
-//   • PINNED (a parcel was clicked) — held until dismissed (✕, Escape, or a
-//     click on empty map); the parcel keeps its commitment casing on the map.
+//   • PREVIEW (hovering a zone) — the full hierarchy, no ✕ (nothing pinned).
+//   • PINNED (a zone was clicked) — held until dismissed (✕, Escape, or a
+//     click on empty map); the zone keeps its commitment casing on the map.
 //   • IDLE — the prompt plus the dataset's currency line (the panel is
 //     persistent, never blank — Principle 0).
 //
 // Row order (optical pass 7 §3): family swatch + name (ties rail to legend) →
 // zone code + description → sub-area when populated (the Direct Control
-// detail) → neighbourhood (the backend spatial join) → parcel area → the
+// detail) → neighbourhood (the backend spatial join) → zone area → the
 // family's share of city area as context.
 // =============================================================================
 
-// Parcel area, honest units: m² below a hectare, hectares below a km², else km².
+// Zone area, honest units: m² below a hectare, hectares below a km², else km².
 function formatArea(m2) {
   if (m2 == null) return "—";
   if (m2 < 10000) return `${Math.round(m2).toLocaleString()} m²`;
@@ -31,7 +31,7 @@ export default function ZoningInfoRail({ detail, pinned = false, onClear, domain
   if (!detail) {
     return (
       <div className="pa-detail bc-inforail pa-detail-idle" aria-label="Zoning detail" aria-live="polite">
-        <p className="pa-detail-hint">Hover a parcel for its zone; click to pin it.</p>
+        <p className="pa-detail-hint">Hover a zone for its reading; click to pin it.</p>
         {currency && <p className="pa-box-cite" style={{ margin: "8px 0 0" }}>{currency}</p>}
       </div>
     );
@@ -80,7 +80,7 @@ export default function ZoningInfoRail({ detail, pinned = false, onClear, domain
           </span>
         </div>
         <div className="pa-kv">
-          <span className="pa-kv-k">Parcel area</span>
+          <span className="pa-kv-k">Zone area</span>
           <span className="pa-kv-v">{formatArea(detail.area_m2)}</span>
         </div>
       </div>
