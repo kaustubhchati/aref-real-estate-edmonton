@@ -4298,6 +4298,14 @@ p  { margin: 0 0 0.75rem; }
   pointer-events: auto;
 }
 .zls-band { display: flex; gap: 2px; }
+/* The band + foot are PURELY PRESENTATIONAL — ALL interaction lives in the
+   .zls-hits button layer. This is load-bearing: the emphasised chip carries
+   z-index:2 (so its ring draws over neighbours), which raised it ABOVE the
+   transparent hit layer and let it STEAL the pointer — firing mouseleave then
+   mouseenter in a loop, which flip-flopped the map preview (the "colouring
+   loop") and jittered the chip lift. pointer-events:none keeps the hit layer
+   the sole pointer target no matter how the chips stack. */
+.zls-band, .zls-foot { pointer-events: none; }
 /* One taller band (§2). Each chip is a flex box holding its share, printed
    inside battery-indicator style where it fits (overflow hides an over-wide
    number; the component toggles the span's visibility on a measured fit). */
@@ -4338,8 +4346,10 @@ p  { margin: 0 0 0.75rem; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .zls-readout b { font-weight: 700; }
 /* Hit layer — transparent buttons over the whole strip (narrow chips stay
-   usable: the hit is the full ~49px height at the area band's widths). */
-.zls-hits { position: absolute; inset: 0; display: flex; gap: 2px; padding: 0 10px; }
+   usable: the hit is the full ~49px height at the area band's widths).
+   z-index above the emphasised chip's z-index:2 so it is unambiguously the
+   topmost pointer target (belt-and-suspenders with the band's pointer-events). */
+.zls-hits { position: absolute; inset: 0; display: flex; gap: 2px; padding: 0 10px; z-index: 3; }
 .zls-hits button {
   background: none; border: none; padding: 0; margin: 0; cursor: pointer;
   border-radius: 6px;
