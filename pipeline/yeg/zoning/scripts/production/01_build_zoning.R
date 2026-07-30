@@ -133,6 +133,28 @@ keep     <- intersect(c("id", "zoning", "description", "dc2_sub_area", "zone_fam
 zoned    <- zoned[, c(keep, GEOM_COL), drop = FALSE]
 zoning_sf <- st_as_sf(zoned, wkt = GEOM_COL, crs = 4326)
 
+# --- Neighbourhood join + parcel area (backend, never client-side) -----------
+# The join that connects zoning to the rest of the site: each parcel takes the
+# neighbourhood (407-polygon canonical universe, shared boundary CSV, newest by
+# glob) containing its REPRESENTATIVE POINT — planar, point-on-surface, so a
+# parcel spanning a boundary lands in exactly one neighbourhood. Parcel area is
+# planar EPSG:26912, rounded to whole m².
+nb_files <- sort(list.files(shared_path("data"),
+  pattern = "^City_of_Edmonton_-_Neighbourhoods_\\d{8}\\.csv$", full.names = TRUE))
+if (length(nb_files) == 0) stop("No shared neighbourhood boundary CSV found.")
+nb_sf <- read_csv(tail(nb_files, 1), show_col_types = FALSE) |>
+  st_as_sf(wkt = "Geometry Multipolygon", crs = 4326) |>
+  st_transform(26912) |> st_make_valid()
+zp_planar <- st_transform(zoning_sf, 26912)
+zoning_sf$area_m2 <- round(as.numeric(st_area(zp_planar)))
+pos <- st_point_on_surface(st_geometry(zp_planar))
+hit <- st_intersects(pos, nb_sf)
+zoning_sf$neighbourhood <- vapply(hit, function(i)
+  if (length(i)) nb_sf$`Neighbourhood Name`[i[1]] else NA_character_, character(1))
+cat(sprintf("Neighbourhood join: %d of %d parcels matched (%d outside the universe)\n",
+            sum(!is.na(zoning_sf$neighbourhood)), nrow(zoning_sf),
+            sum(is.na(zoning_sf$neighbourhood))))
+
 out_path <- "output/zoning_bylaw.geojson"
 if (file.exists(out_path)) file.remove(out_path)
 st_write(zoning_sf, out_path, driver = "GeoJSON",
