@@ -28,7 +28,7 @@
 // other). Precedence: chip hover > emphasis (pinned) > isolated > rest.
 // =============================================================================
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 const MIN_AREA_PX = 10;   // chip floor — nothing renders as a hairline
 
@@ -54,6 +54,17 @@ export default function ZoningLegendStrip({
   domain, isolated, emphasis, pinned, onToggleFamily, onHoverFamily,
 }) {
   const [chipHover, setChipHover] = useState(null);
+  // The MAP preview is DEBOUNCED (see hoverStart): a fast sweep across chips
+  // fires one onMouseEnter per chip crossed, and each map preview is a full
+  // 11,518-feature fill-colour re-evaluation — a burst of them backs up the
+  // render loop into a visible cascade of snaps that lag the cursor and keep
+  // playing after a click. The strip EMPHASIS stays instant; only the costly
+  // map paint waits for the cursor to settle.
+  const previewTimer = useRef(null);
+  const clearPreviewTimer = () => {
+    if (previewTimer.current) { clearTimeout(previewTimer.current); previewTimer.current = null; }
+  };
+  useEffect(() => clearPreviewTimer, []);   // cancel a pending preview on unmount
 
   // The emphasised family and which reading the readout states.
   const focus = chipHover ?? emphasis ?? isolated;
@@ -93,8 +104,23 @@ export default function ZoningLegendStrip({
   // INERT, so the strip keeps showing the selected family (no contradictory
   // strip-vs-map double-highlight, no dead map-preview promise). A CLICK still
   // acts — the parent clears the pin and isolates the clicked family.
-  function hoverStart(key) { if (pinned) return; setChipHover(key); onHoverFamily?.(key); }
-  function hoverEnd() { setChipHover(null); onHoverFamily?.(null); }
+  // The strip emphasis is INSTANT; the map preview is debounced to the cursor's
+  // REST (PREVIEW_DELAY), so a fast sweep collapses to one paint, not a cascade.
+  const PREVIEW_DELAY = 80;
+  function hoverStart(key) {
+    if (pinned) return;
+    setChipHover(key);                 // emphasis: immediate (cheap DOM)
+    clearPreviewTimer();
+    previewTimer.current = setTimeout(() => onHoverFamily?.(key), PREVIEW_DELAY);   // map: on settle
+  }
+  function hoverEnd() {
+    setChipHover(null);
+    clearPreviewTimer();
+    onHoverFamily?.(null);             // clear the preview immediately on strip-leave
+  }
+  // A click is a committed choice — cancel any pending preview so it can't fire
+  // AFTER the isolate/select and repaint a stale preview over it.
+  function handleClick(key) { clearPreviewTimer(); onToggleFamily(key); }
 
   return (
     <div className="zls" role="group" aria-label="Zone families by share of city area">
@@ -160,7 +186,7 @@ export default function ZoningLegendStrip({
             onMouseEnter={() => hoverStart(it.key)}
             onFocus={() => hoverStart(it.key)}
             onBlur={hoverEnd}
-            onClick={() => onToggleFamily(it.key)}
+            onClick={() => handleClick(it.key)}
           />
         ))}
       </div>
