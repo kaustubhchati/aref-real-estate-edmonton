@@ -27,7 +27,7 @@ import EmptyState from "../../components/EmptyState.jsx";
 import IdentityCard from "../../components/IdentityCard.jsx";
 import CategoricalPolygonLegend from "../../components/CategoricalPolygonLegend.jsx";
 import ZoningInfoRail from "./ZoningInfoRail.jsx";
-import { applyCameraPreset } from "../../components/mapCamera.js";
+import { applyCameraPreset, ZONING_HOME_VIEW } from "../../components/mapCamera.js";
 import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
 import { ICON_RECENTRE } from "../../components/mapIcons.js";
 import { siteConfig } from "../../config/siteConfig.js";
@@ -36,8 +36,10 @@ import {
   BASEMAP_STYLE, MAP_VIEW, SOURCE_ID, BOUNDS_SOURCE_ID, LIMIT_SOURCE_ID,
   LRT_SOURCE_ID, FILL_ID, HAIRLINE_ID,
   buildZoningDomain, zoningFillLayers, familyLineLayer, hairlineLayer,
-  cityLimitLayer, lrtLayer, applyZoningGround, buildFillPaint, zoningLineTint, ZONING_HOME,
+  cityLimitLayer, lrtLayer, applyZoningGround, buildFillPaint, zoningLineTint,
 } from "./zoningStyle.js";
+
+const ZONING_HOME = ZONING_HOME_VIEW.Edmonton;
 
 const MANIFEST_URL = assetUrl("/data/zoning/manifest.json");
 
@@ -256,22 +258,16 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     const zoneParam = searchParams.get("zone");
     if (!zoneParam) return;
     const zoneId = Number(zoneParam);
-    // The permalink is the one path that needs the raw GeoJSON (to find the
-    // zone + its extent before it is tiled into view) — fetched only here.
+    // The permalink is the one path that needs the raw GeoJSON (to recover the
+    // zone's properties before it is tiled into view) — fetched only here.
+    // The CAMERA stays at the section home (pass 11 §1): with the selection
+    // inversion (§2) the pinned zone is the only coloured zone, so it is
+    // locatable from the city frame — no fly-to.
     fetch(assetUrl(`/data/zoning/${entry.file}`))
       .then((r) => r.json())
       .then((g) => {
         const f = g.features.find((x) => Number(x.properties.id) === zoneId);
         if (!f) return;
-        let minX = 180, minY = 90, maxX = -180, maxY = -90;
-        const walk = (c) => {
-          if (typeof c[0] === "number") {
-            minX = Math.min(minX, c[0]); maxX = Math.max(maxX, c[0]);
-            minY = Math.min(minY, c[1]); maxY = Math.max(maxY, c[1]);
-          } else c.forEach(walk);
-        };
-        walk(f.geometry.coordinates);
-        map.fitBounds([[minX, minY], [maxX, maxY]], { padding: 120, maxZoom: 15.5, duration: 0 });
         setSelected({ id: Number(f.properties.id), props: f.properties });
       })
       .catch(() => { /* a stale permalink id fails soft — the map stays at home */ });

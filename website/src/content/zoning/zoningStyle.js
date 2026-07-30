@@ -27,20 +27,15 @@ import {
 
 export { BASEMAP_STYLE } from "../../components/basemapStyle.js";
 
-// Shared pitched home camera frame (mapCamera.js HOME_VIEW.Edmonton).
+// Constructor seed matching the section home camera, which lives in
+// mapCamera.js (ZONING_HOME_VIEW — the camera-preset single source, pass 11 §1).
 export const MAP_VIEW = {
-  center: [-113.4927, 53.4862],
-  zoom: 10.3,
+  center: [-113.500, 53.535],
+  zoom: 10.275,
   minZoom: 7,
   maxZoom: 18,
   maxBounds: CITY_BOUNDS.Edmonton,
 };
-
-// The zoning HOME camera is TIGHTER than the shared HOME_VIEW (pass 9 §5):
-// ~a third of the shared frame is agricultural periphery, which dilutes the
-// home read — zoning lands on the BUILT-UP ENVELOPE instead. A documented,
-// KC-directed deviation from the one-camera law (v1.15); zoning-only.
-export const ZONING_HOME = { center: [-113.4919, 53.5365], zoom: 10.75, pitch: 18, bearing: 0 };
 
 export const SOURCE_ID        = "zoning-zones";
 export const BOUNDS_SOURCE_ID = "zoning-bounds";
