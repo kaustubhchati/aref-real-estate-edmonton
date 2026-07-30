@@ -24,9 +24,7 @@ import MapView, { findFirstSymbolLayerId } from "../../components/MapView.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
 import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
-import IdentityCard from "../../components/IdentityCard.jsx";
-import CategoricalPolygonLegend from "../../components/CategoricalPolygonLegend.jsx";
-import ZoningInfoRail from "./ZoningInfoRail.jsx";
+import ZoningConsole from "./ZoningConsole.jsx";
 import { applyCameraPreset, ZONING_HOME_VIEW } from "../../components/mapCamera.js";
 import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
 import { ICON_RECENTRE } from "../../components/mapIcons.js";
@@ -333,7 +331,7 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
   const detail = selected?.props ?? hovered ?? null;
 
   return (
-    <article className="content-map pa-map">
+    <article className="content-map pa-map zoning-map">
       <div className="pa-canvas">
         <div className="canvas-wrap">
           {fetchError ? (
@@ -366,40 +364,23 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
           )}
         </div>
 
-        {/* The right INFORAIL (optical pass 7 §3): detail leaves the left
-            console; hover previews here, a pin holds here. */}
-        {layers && (
-          <ZoningInfoRail
-            detail={detail}
-            pinned={selected != null}
-            onClear={() => setSelected(null)}
-            domainByKey={domainByKey}
-            domain={domain}
-            currency={currency}
-          />
-        )}
-
+        {/* BOTTOM DATA CONSOLE (pass 11 §3): both rails retired — the family
+            legend (click-to-isolate) AND the hover/pin reading live in ONE
+            bottom-docked surface; the map above is unobstructed. */}
         {domain && (
-          <div className="pa-float pa-column pa-column-lean zoning-console">
-            {/* ONE fused card: LEFT holds title + legend (detail lives in the
-                right rail now); modules divided by the console's hairlines. */}
-            <section className="pa-card pa-card-instrument">
-              <div className="pa-col-mod">
-                <IdentityCard title={title ?? entry.label} />
-              </div>
-
-              {/* View switch — injected by ZoningSection only when it has >1 view. */}
-              {selectorNode && <div className="pa-col-mod pa-col-metric">{selectorNode}</div>}
-
-              <CategoricalPolygonLegend
-                title="Zone Family"
-                note={isolated ? "Click the family again to show all." : "Click a family to isolate it."}
-                items={domain}
-                active={isolated ? new Set([isolated]) : new Set(domain.map((it) => it.key))}
-                onToggle={toggleFamily}
-                interaction="isolate"
-              />
-            </section>
+          <div className="pa-foot">
+            <ZoningConsole
+              title={title ?? entry.label}
+              selectorNode={selectorNode}
+              domain={domain}
+              domainByKey={domainByKey}
+              isolated={isolated}
+              onToggleFamily={toggleFamily}
+              detail={detail}
+              pinned={selected != null}
+              onClear={() => setSelected(null)}
+              currency={currency}
+            />
           </div>
         )}
       </div>

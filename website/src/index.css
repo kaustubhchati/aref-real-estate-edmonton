@@ -4272,13 +4272,32 @@ p  { margin: 0 0 0.75rem; }
 }
 
 
-/* === Zoning console (scoped — other sections keep their ratified accent) ====
-   The instrument card's --accent-edge-image top sweep reads as a clipped stray
-   element under the Zoning title card (optical pass §7); off for this console. */
-.zoning-console .pa-card-instrument::before { background: none; }
-
-/* Zoning rail (scoped): long right-aligned values — QUEEN ALEXANDRA,
-   WÎHKWÊNTÔWIN — wrap at word boundaries (break-word only as a last resort)
-   with a tightened line height, so a two-line value reads as one entry. */
-.zoning-rail .pa-kv { align-items: baseline; }
-.zoning-rail .pa-kv-v { overflow-wrap: break-word; hyphens: auto; line-height: 1.25; }
+/* === Zoning BOTTOM data console (pass 11 §3) =================================
+   Both zoning rails are retired; their jobs fold into ONE bottom-docked
+   surface on the BC console chrome (.bc-icn frame + .bc-cn cells + .dt-tile
+   metrics). TWO STATES, ONE HEIGHT: rest and active are stacked into the same
+   grid cell; the inactive one keeps its layout (visibility:hidden), so the
+   console is the taller of the two at any width and the map never resizes
+   under the cursor. */
+.zn-cn-title { margin: 0; font-size: var(--t-sm); font-weight: 700; color: var(--pa-ink); }
+.zn-cn-headright { display: flex; align-items: baseline; gap: 14px; flex: 0 0 auto; }
+.zn-cn-body { display: grid; }
+.zn-cn-state { grid-area: 1 / 1; min-width: 0; display: flex; flex-direction: column; }
+.zn-cn-state.is-off { visibility: hidden; }
+/* Ten family cells laid HORIZONTALLY (the point of the bottom dock): 240px
+   minimum tracks give a balanced 5×2 at desktop widths, wrapping deeper only
+   as the viewport narrows. */
+.zn-cn-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); padding-top: var(--s2); }
+.zn-cn-prompt { margin: 0; padding: 0 var(--s4) var(--s3); font-size: var(--t-2xs); color: var(--pa-mut); }
+/* ACTIVE — one horizontal reading strip: identity block then metric tiles. */
+.zn-cn-active { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px 36px; padding: var(--s3) 20px var(--s3); }
+.zn-cn-lead { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.zn-cn-leadtxt { display: flex; flex-direction: column; min-width: 0; }
+.zn-cn-family { font-size: var(--t-sm); font-weight: 700; color: var(--pa-ink); }
+.zn-cn-code { font-size: var(--t-2xs); color: var(--pa-mut); }
+.zn-cn-tiles { display: flex; flex-wrap: wrap; gap: 10px 36px; min-width: 0; }
+/* The always-on dock covers the map's bottom edge — lift the bottom-right
+   controls (scale bar + attribution) above it. The console reports its real
+   height as --zn-foot-h on .pa-canvas (ResizeObserver in ZoningConsole), so
+   the lift tracks the dock at every viewport width. */
+.zoning-map .maplibregl-ctrl-bottom-right { margin-bottom: calc(var(--zn-foot-h, 0px) + 8px); }
