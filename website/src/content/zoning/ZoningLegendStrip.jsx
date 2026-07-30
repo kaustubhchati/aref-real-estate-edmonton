@@ -152,7 +152,7 @@ export default function ZoningLegendStrip({
               <span style={{ visibility: labelFits[it.key] ? "visible" : "hidden" }}>{it.label}</span>
             </div>
           ))}
-          <span className="zls-hint">hover a segment to read its family</span>
+          <span className="zls-hint">Hover a segment to read its family</span>
         </div>
         {mode !== "rest" && focusItem && (
           // Readout sentence (§1) — no em dash, no interpunct, one sentence.

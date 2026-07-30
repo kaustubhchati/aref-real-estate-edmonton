@@ -1319,6 +1319,7 @@ p  { margin: 0 0 0.75rem; }
   background: var(--pa-card); color: var(--pa-mut); font-size: var(--t-2xs); line-height: 1; cursor: pointer;
 }
 .pa-detail-clear:hover { color: var(--pa-ink); }
+.pa-detail-clear:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }   /* §6: teal focus (also fixes the PA/BP/BC rail clears) */
 .pa-detail-sub { margin: 2px 0 0; font-size: var(--t-2xs); color: var(--pa-mut); }
 .pa-detail .sparkline { display: block; width: 100%; height: 26px; margin: 7px 0 2px; }
 .pa-detail-trip { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; margin-top: 7px; text-align: center; }
@@ -4314,7 +4315,7 @@ p  { margin: 0 0 0.75rem; }
   height: 24px; border-radius: 3px; overflow: hidden;
   display: flex; align-items: center; padding-left: 7px;
 }
-.zls-pct { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.zls-pct { font-size: var(--t-2xs); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .zls-chip { transition: opacity 120ms var(--ease), transform 120ms var(--ease); }
 .zls-chip.is-dim { opacity: 0.16; }
 /* ABSOLUTE emphasis (§2) — a TWO-TONE casing + small lift on the focused chip
@@ -4339,15 +4340,16 @@ p  { margin: 0 0 0.75rem; }
 .zls-foot { display: grid; margin-top: 3px; height: 14px; }
 .zls-labels, .zls-readout { grid-area: 1 / 1; min-width: 0; }
 .zls-labels { display: flex; gap: 2px; position: relative; }
-.zls-labelcell { overflow: hidden; white-space: nowrap; font-size: 10.5px; line-height: 14px; color: var(--pa-mut); }
+.zls-labelcell { overflow: hidden; white-space: nowrap; font-size: var(--t-2xs); line-height: 14px; color: var(--pa-mut); }
 /* inline-block so scrollWidth reports the label's true width (an inline span
    measures 0) — the fit check in ZoningLegendStrip depends on it. */
 .zls-labelcell span { display: inline-block; }
 .zls-hint {
-  position: absolute; right: 2px; top: 0; font-size: 10px; line-height: 14px;
+  position: absolute; right: 2px; top: 0; font-size: var(--t-2xs); line-height: 14px;
   color: var(--pa-mut); font-style: italic; pointer-events: none;
 }
-.zls-readout { margin: 0; font-size: 11px; line-height: 14px; color: var(--pa-ink);
+.zls-readout { margin: 0; font-size: var(--t-2xs); line-height: 14px; color: var(--pa-ink);
+  font-variant-numeric: tabular-nums;   /* DESIGN_SYSTEM §2: tabular-nums on all readouts */
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .zls-readout b { font-weight: 700; }
 /* Hit layer — transparent buttons over the whole strip (narrow chips stay
@@ -4386,11 +4388,12 @@ p  { margin: 0 0 0.75rem; }
 /* The zone code — the one string the reader takes away: large, mono. */
 .zn-rail-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 21px; font-weight: 600; color: var(--pa-ink); letter-spacing: 0.02em;
+  font-size: var(--t-xl); font-weight: 600; color: var(--pa-ink); letter-spacing: 0.02em;   /* on the named scale (§1.5); the hero string */
 }
 .zn-rail-desc { margin: 3px 0 0; font-size: var(--t-xs); color: var(--pa-mut); line-height: 1.4; }
 .zn-rail-copy {
   width: 100%; padding: 5px 8px; background: var(--pa-card); color: var(--pa-ink);
-  border: 1px solid var(--pa-hair); border-radius: 7px; font-size: var(--t-xs); cursor: pointer;
+  border: 1px solid var(--pa-hair); border-radius: var(--r-sm); font-size: var(--t-xs); cursor: pointer;
 }
 .zn-rail-copy:hover { border-color: var(--tx-mut); }
+.zn-rail-copy:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }   /* §6: teal focus on every control */

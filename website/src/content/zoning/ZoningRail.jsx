@@ -83,24 +83,24 @@ export default function ZoningRail({ hovered, selected, domainByKey, onClear }) 
           <div className="zn-rail-mod">
             {detail.dc2_sub_area != null && detail.dc2_sub_area !== "" && (
               <div className="pa-kv">
-                <span className="pa-kv-k">Sub-area</span>
+                <span className="pa-kv-k">Sub-Area</span>
                 <span className="pa-kv-v">{detail.dc2_sub_area}</span>
               </div>
             )}
             <div className="pa-kv">
-              <span className="pa-kv-k">Zone area</span>
+              <span className="pa-kv-k">Zone Area</span>
               <span className="pa-kv-v">{formatArea(detail.area_m2)}</span>
             </div>
             {item?.shareDisplay != null && (
               <div className="pa-kv">
-                <span className="pa-kv-k">Family share of city</span>
+                <span className="pa-kv-k">Family Share of City</span>
                 <span className="pa-kv-v">{item.shareDisplay}%</span>
               </div>
             )}
           </div>
           <div className="zn-rail-mod">
             <button type="button" className="zn-rail-copy" onClick={copyLink}>
-              {copied ? "Link copied ✓" : "Copy link to this zone"}
+              {copied ? "Link Copied ✓" : "Copy Link to This Zone"}
             </button>
           </div>
         </>
