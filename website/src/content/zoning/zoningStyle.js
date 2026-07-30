@@ -36,6 +36,12 @@ export const MAP_VIEW = {
   maxBounds: CITY_BOUNDS.Edmonton,
 };
 
+// The zoning HOME camera is TIGHTER than the shared HOME_VIEW (pass 9 §5):
+// ~a third of the shared frame is agricultural periphery, which dilutes the
+// home read — zoning lands on the BUILT-UP ENVELOPE instead. A documented,
+// KC-directed deviation from the one-camera law (v1.15); zoning-only.
+export const ZONING_HOME = { center: [-113.4919, 53.5365], zoom: 10.75, pitch: 18, bearing: 0 };
+
 export const SOURCE_ID        = "zoning-zones";
 export const BOUNDS_SOURCE_ID = "zoning-bounds";
 export const LIMIT_SOURCE_ID  = "zoning-citylimit";
@@ -64,7 +70,7 @@ export const LIMIT_LINE_ID    = "zoning-citylimit-line";
 // separated (FR maroon→plum, dE vs Commercial 65.7). Industrial HELD — KC's
 // optional call declined: the ladder + polarity labels already tame it.
 export const FAMILY_STYLE = {
-  "Agricultural and Rural":    { colour: "#b8ea66", hover: "#ccfe79", iso: "#5e8b0c" },  // A · L87 C68 h122 · lime
+  "Agricultural and Rural":    { colour: "#bce1b7", hover: "#d4f4cf", iso: "#63925f" },  // A · L86 C26 h140 · sage — LEFT the yellow family (pass 9: peripheral/annexed reads "not city"; dE vs Res 33.4→46.6, the 63% merge broken)
   "Residential":               { colour: "#eacd59", hover: "#ffe16e", iso: "#907b03" },  // A · L83 C60 h93 · gold
   "Parks and Open Space":      { colour: "#0e9f68", hover: "#30b27a", iso: "#0b8455" },  // B · L58 C52 h158 · emerald
   "Industrial and Employment": { colour: "#b977fa", hover: "#c990fe", iso: "#a055ee" },  // B · L62 C75 h312 · violet (held)
@@ -388,9 +394,31 @@ export function applyZoningGround(map, firstSymbolId) {
         else if (id === "poi_park") {
           map.setLayoutProperty(id, "visibility", "visible");
           map.setLayerZoomRange(id, 13, 24);
-        } else if (id === "housenumber") map.setLayerZoomRange(id, 18, 24);
-        else if (/^roadname/.test(id)) {
+        } else if (id === "poi_stadium") {
+          // Large-building names, z≥15 — the one building-name class the tiles carry.
+          map.setLayoutProperty(id, "visibility", "visible");
           map.setLayerZoomRange(id, 15, 24);
+        } else if (id === "housenumber") {
+          // Building numbers, z≥17 (the ladder's last rung), on the PA/BP/BC
+          // symbol contract: centred, no offset, collision-dropped rather than
+          // drifted (allow-overlap false + padding — a number that cannot sit
+          // clean does not render). The tile generator anchors most numbers at
+          // the address GEOMETRY's label point (building-polygon addresses =
+          // the footprint's own point); entrance-node addresses are OSM data
+          // provenance, not style.
+          map.setLayerZoomRange(id, 17, 24);
+          map.setLayoutProperty(id, "text-anchor", "center");
+          map.setLayoutProperty(id, "text-justify", "center");
+          map.setLayoutProperty(id, "text-offset", [0, 0]);
+          map.setLayoutProperty(id, "text-allow-overlap", false);
+          map.setLayoutProperty(id, "text-padding", 4);
+          map.setLayoutProperty(id, "text-size",
+            ["interpolate", ["linear"], ["zoom"], 17, 8.5, 19, 11]);
+        } else if (/^roadname_(major|pri)/.test(id)) {
+          map.setLayerZoomRange(id, 13, 24);          // arterial names from z13
+          map.setLayoutProperty(id, "symbol-spacing", 420);
+        } else if (/^roadname/.test(id)) {
+          map.setLayerZoomRange(id, 15, 24);          // collector/local names from z15
           map.setLayoutProperty(id, "symbol-spacing", 420);
         }
       } else if (type === "fill" && BUILDING_FILLS.test(id)) {
