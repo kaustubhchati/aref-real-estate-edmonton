@@ -214,6 +214,11 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
       setHoverFs(null);
       if (settleTimer) clearTimeout(settleTimer);
       setHovered(null);
+      // A selection is the MORE SPECIFIC focus, so it CLEARS any active isolate
+      // (KC ruling, pass 13 §4): the two are mutually exclusive — never a
+      // legend chip pressed for family A while a zone in family B is pinned.
+      // Clearing the selection then returns to full colour, not the isolate.
+      setIsolated(null);
       setSelected({ id: f.id, props: f.properties });
     }
     function onDismiss(e) {
