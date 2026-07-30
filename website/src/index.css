@@ -4283,8 +4283,9 @@ p  { margin: 0 0 0.75rem; }
    footer). Light glass, not the dark shell — the §5 watch item: a dark
    full-width bar is the heaviest object on a light map and pulls the eye off
    it; the vivid chips carry their own colour and read better on cream.
-   Anatomy (≈49px): area band 18px · gap 2 · count band 5px · gap 3 ·
-   label row 13px, padding 5/10/4. The hit layer spans the FULL height. */
+   Anatomy (≈50px): the single AREA band 24px (§2 took the height the count
+   band vacated) · gap 3 · label row 13px, padding 5/10/4. The hit layer spans
+   the FULL height. */
 .zls {
   position: absolute; left: 16px; right: 16px; bottom: 14px; z-index: 15;
   max-width: 1240px; margin: 0 auto;
@@ -4297,12 +4298,16 @@ p  { margin: 0 0 0.75rem; }
   pointer-events: auto;
 }
 .zls-band { display: flex; gap: 2px; }
-.zls-area .zls-chip { height: 18px; border-radius: 2.5px; }
-.zls-count { margin-top: 2px; }
-.zls-count .zls-chip { height: 5px; border-radius: 1.5px; opacity: 0.62; }   /* quieter — same hue, lower presence */
+/* One taller band (§2). Each chip is a flex box holding its share, printed
+   inside battery-indicator style where it fits (overflow hides an over-wide
+   number; the component toggles the span's visibility on a measured fit). */
+.zls-area .zls-chip {
+  height: 24px; border-radius: 3px; overflow: hidden;
+  display: flex; align-items: center; padding-left: 7px;
+}
+.zls-pct { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .zls-chip { transition: opacity 120ms var(--ease); }
 .zls-chip.is-dim { opacity: 0.16; }
-.zls-count .zls-chip.is-dim { opacity: 0.10; }
 /* Label row ⇄ readout share ONE 13px slot (grid-stack — no height change). */
 .zls-foot { display: grid; margin-top: 3px; height: 14px; }
 .zls-labels, .zls-readout { grid-area: 1 / 1; min-width: 0; }

@@ -231,12 +231,6 @@ export function buildFillPaint(domain, isolated = null) {
 }
 
 // ---- Legend strip (pass 12 §2) -------------------------------------------------
-// The COUNT BAND flag: the strip's thin second band (share of zone count) is
-// the analytically richest element and the one most at risk of reading as
-// decoration — it ships behind this flag, DEFAULT ON, for KC to ratify both
-// ways. Flipping to false leaves the area band + labels untouched.
-export const SHOW_COUNT_BAND = true;
-
 // Chip-hover map preview: the hovered family LIFTS to its hover hex on the
 // map while everything else keeps the current base (rest or isolate) — the
 // strip and the map point at each other. Never applied while a zone is

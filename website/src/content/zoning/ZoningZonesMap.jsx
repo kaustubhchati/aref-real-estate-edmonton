@@ -368,7 +368,6 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
         {domain && (
           <ZoningLegendStrip
             domain={domain}
-            totalCount={entry.featureCount}
             isolated={isolated}
             emphasis={selected?.props?.zone_family ?? null}
             onToggleFamily={toggleFamily}

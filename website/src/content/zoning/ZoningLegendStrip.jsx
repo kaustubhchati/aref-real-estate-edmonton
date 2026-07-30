@@ -1,29 +1,27 @@
 // =============================================================================
-// ZoningLegendStrip.jsx — the PROPORTIONAL legend strip (pass 12 §2): the
-// legend panel is gone; this bottom-docked object on the map carries the
-// palette AND two encodings at once.
+// ZoningLegendStrip.jsx — the PROPORTIONAL legend strip (pass 12 §2; pass 13 §2
+// removed the count band). The legend panel is gone; this bottom-docked object
+// on the map carries the palette AND the area encoding.
 //
-//   • UPPER band (thicker) — ten chips, widths proportional to AREA SHARE,
-//     ordered area-descending. The primary encoding.
-//   • LOWER band (thin, quieter) — same order, same colours, widths
-//     proportional to COUNT SHARE. Behind SHOW_COUNT_BAND (default on).
-//     The divergence between the bands is the point: Agricultural is 32.6%
-//     of area from 151 zones; Residential is 30.6% from 5,255.
-//   • LABEL row — family names beneath chips wide enough to hold them,
-//     measured, never shrunk/truncated (hide-not-drift, the building-number
-//     principle); a quiet trailing hint covers the unlabelled tail. On hover/
-//     isolate/selection the row is REPLACED by a readout stating the true
-//     numbers (name · area share · zone count · count share) — the number
-//     corrects the pixel wherever the minimum chip width distorts.
+//   • THE BAND — ten chips, widths proportional to AREA SHARE, ordered
+//     area-descending. Each wide-enough chip prints its share INSIDE itself,
+//     battery-indicator style; the ink is derived per chip from the fill's
+//     lightness (dark on the pale Band-A families, light on the saturated
+//     rest — a single fixed colour fails at one end). Narrow chips print no
+//     number (measured, never shrunk — hide-not-drift, the building-number
+//     principle); the hover readout supplies it.
+//   • LABEL row — family names beneath chips wide enough to hold them, same
+//     measured fit; a quiet trailing hint covers the unlabelled tail. On
+//     hover/isolate/selection it is REPLACED by a readout stating the true
+//     numbers (name · area share · zone count).
 //
 // INTERACTION: the hit layer is a row of transparent BUTTONS spanning the
-// strip's FULL height (visual chips are 18px; hits are the whole ~50px band —
-// narrow chips stay usable), with the same proportional widths as the area
-// band. Hover/focus emphasise the family in both bands + preview it on the
-// map (onHoverFamily); click/Enter/Space toggles isolate (onToggleFamily);
-// chips are focusable in area order, aria-pressed carries the isolate state.
-// A minimum visual width keeps the smallest chips from becoming hairlines
-// (MIN_AREA_PX / MIN_COUNT_PX); the readout states true shares.
+// strip's FULL height (narrow chips stay usable — the hit is the whole band),
+// with the same proportional widths as the visual band. Hover/focus emphasise
+// the family + preview it on the map (onHoverFamily); click/Enter/Space toggles
+// isolate (onToggleFamily); chips are focusable in area order, aria-pressed
+// carries the isolate state. A minimum visual width (MIN_AREA_PX) keeps the
+// smallest chips off a hairline; the readout states the true share.
 //
 // `emphasis` — a family key to emphasise from OUTSIDE the strip (§4: a pinned
 // zone's family takes the hover treatment, so rail and legend point at each
@@ -31,20 +29,29 @@
 // =============================================================================
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { SHOW_COUNT_BAND } from "./zoningStyle.js";
 
-const MIN_AREA_PX = 10;   // area-band chip floor — nothing renders as a hairline
-const MIN_COUNT_PX = 4;   // count-band floor (visual only — hits ride the area row)
+const MIN_AREA_PX = 10;   // chip floor — nothing renders as a hairline
 
-// One proportional row of cells: flex-grow carries the share, min-width the
-// floor. Used four times (area band, count band, hit layer, label row) so all
-// rows divide the strip identically.
-const cellStyle = (share, minPx) => ({
-  flex: `${Math.max(share, 0.0001)} 1 0px`, minWidth: minPx, minHeight: 0,
+// One proportional cell: flex-grow carries the share, min-width the floor.
+// Used by the band, the hit layer and the label row so all three divide
+// the strip identically.
+const cellStyle = (share) => ({
+  flex: `${Math.max(share, 0.0001)} 1 0px`, minWidth: MIN_AREA_PX, minHeight: 0,
 });
 
+// Per-chip ink from fill lightness (§2): dark on the pale families, light on
+// the saturated rest — the map's own polarity inks (#2a2621 / #faf6ec). WCAG
+// relative luminance, threshold 0.42 cleanly splits sage/gold (dark) from the
+// rest (light). Derived, never a single hardcoded colour that fails at one end.
+function inkForFill(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const lin = (c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  return L > 0.42 ? "#2a2621" : "#faf6ec";
+}
+
 export default function ZoningLegendStrip({
-  domain, totalCount, isolated, emphasis, onToggleFamily, onHoverFamily,
+  domain, isolated, emphasis, onToggleFamily, onHoverFamily,
 }) {
   const [chipHover, setChipHover] = useState(null);
 
@@ -53,51 +60,53 @@ export default function ZoningLegendStrip({
   const mode = chipHover ? "hover" : emphasis ? "selected" : isolated ? "isolated" : "rest";
   const focusItem = focus ? domain.find((d) => d.key === focus) : null;
 
-  // Label fitting — measured, not guessed: a name renders only when its cell
-  // holds it whole (hide-not-drift). Re-measured on any strip resize.
+  // Fit measurement — the in-chip percentage AND the family name each render
+  // only when their cell holds them whole (hide-not-drift). Both re-measured
+  // on any strip resize.
+  const bandRef = useRef(null);
   const labelRowRef = useRef(null);
-  const [fits, setFits] = useState({});
+  const [pctFits, setPctFits] = useState({});
+  const [labelFits, setLabelFits] = useState({});
   useLayoutEffect(() => {
-    const row = labelRowRef.current;
-    if (!row) return undefined;
-    const measure = () => {
+    const measureRow = (row, setter, slack) => {
+      if (!row) return;
       const next = {};
       for (const cell of row.querySelectorAll("[data-family]")) {
-        const span = cell.firstChild;
-        next[cell.dataset.family] = span ? span.scrollWidth <= cell.clientWidth - 2 : false;
+        const span = cell.querySelector("span");
+        next[cell.dataset.family] = span ? span.scrollWidth <= cell.clientWidth - slack : false;
       }
-      setFits(next);
+      setter(next);
+    };
+    const measure = () => {
+      measureRow(bandRef.current, setPctFits, 12);   // chip padding 7L + a right breath
+      measureRow(labelRowRef.current, setLabelFits, 2);
     };
     measure();
     const ro = new ResizeObserver(measure);
-    ro.observe(row);
+    if (bandRef.current) ro.observe(bandRef.current);
     return () => ro.disconnect();
   }, [domain]);
 
-  const countShare = (it) => (totalCount ? (it.count / totalCount) * 100 : 0);
   const dimmed = (key) => (focus != null && key !== focus);
 
   function hoverStart(key) { setChipHover(key); onHoverFamily?.(key); }
   function hoverEnd() { setChipHover(null); onHoverFamily?.(null); }
 
   return (
-    <div className="zls" role="group" aria-label="Zone families — share of city area and zone count">
-      {/* AREA band (primary) + COUNT band (flagged) — passive visuals; the
-          hit layer above carries every interaction. */}
-      <div className="zls-band zls-area" aria-hidden="true">
+    <div className="zls" role="group" aria-label="Zone families — share of city area">
+      {/* THE BAND — area-share chips with the share printed inside where it
+          fits. Passive visual; the hit layer below carries every interaction. */}
+      <div ref={bandRef} className="zls-band zls-area" aria-hidden="true">
         {domain.map((it) => (
           <div key={it.key} className={`zls-chip${dimmed(it.key) ? " is-dim" : ""}`}
-               style={{ ...cellStyle(it.share, MIN_AREA_PX), background: it.colour }} />
+               data-family={it.key} style={{ ...cellStyle(it.share), background: it.colour }}>
+            <span className="zls-pct"
+                  style={{ color: inkForFill(it.colour), visibility: pctFits[it.key] ? "visible" : "hidden" }}>
+              {it.shareDisplay}%
+            </span>
+          </div>
         ))}
       </div>
-      {SHOW_COUNT_BAND && (
-        <div className="zls-band zls-count" aria-hidden="true">
-          {domain.map((it) => (
-            <div key={it.key} className={`zls-chip${dimmed(it.key) ? " is-dim" : ""}`}
-                 style={{ ...cellStyle(countShare(it), MIN_COUNT_PX), background: it.colour }} />
-          ))}
-        </div>
-      )}
 
       {/* LABEL row ⇄ READOUT — same slot, one height (grid-stack). */}
       <div className="zls-foot">
@@ -106,9 +115,8 @@ export default function ZoningLegendStrip({
         <div ref={labelRowRef} className="zls-labels"
              style={{ opacity: mode === "rest" ? 1 : 0 }} aria-hidden={mode !== "rest"}>
           {domain.map((it) => (
-            <div key={it.key} className="zls-labelcell" data-family={it.key}
-                 style={cellStyle(it.share, MIN_AREA_PX)}>
-              <span style={{ visibility: fits[it.key] ? "visible" : "hidden" }}>{it.label}</span>
+            <div key={it.key} className="zls-labelcell" data-family={it.key} style={cellStyle(it.share)}>
+              <span style={{ visibility: labelFits[it.key] ? "visible" : "hidden" }}>{it.label}</span>
             </div>
           ))}
           <span className="zls-hint">hover a segment for its family</span>
@@ -117,7 +125,6 @@ export default function ZoningLegendStrip({
           <p className="zls-readout" aria-live="polite">
             <b>{focusItem.label}</b>
             {" — "}{focusItem.shareDisplay}% of area · {focusItem.count?.toLocaleString()} zones
-            {SHOW_COUNT_BAND && ` · ${countShare(focusItem).toFixed(1)}% of count`}
             {mode === "isolated" && " · isolated — click again to show all"}
             {mode === "selected" && " · the selected zone's family"}
           </p>
@@ -125,15 +132,15 @@ export default function ZoningLegendStrip({
       </div>
 
       {/* HIT layer — transparent buttons over the whole strip height, same
-          proportional division as the area band. Keyboard: focus emphasises
-          (hover parity), Enter/Space toggles isolate (native button). */}
+          proportional division as the band. Keyboard: focus emphasises (hover
+          parity), Enter/Space toggles isolate (native button). */}
       <div className="zls-hits">
         {domain.map((it) => (
           <button
             key={it.key} type="button"
-            style={cellStyle(it.share, MIN_AREA_PX)}
+            style={cellStyle(it.share)}
             aria-pressed={isolated === it.key}
-            aria-label={`${it.label} — ${it.shareDisplay}% of city area, ${it.count?.toLocaleString()} zones (${countShare(it).toFixed(1)}% of count). ${isolated === it.key ? "Isolated — press to show all." : "Press to isolate."}`}
+            aria-label={`${it.label} — ${it.shareDisplay}% of city area, ${it.count?.toLocaleString()} zones. ${isolated === it.key ? "Isolated — press to show all." : "Press to isolate."}`}
             onMouseEnter={() => hoverStart(it.key)}
             onMouseLeave={hoverEnd}
             onFocus={() => hoverStart(it.key)}
