@@ -126,11 +126,11 @@ export default function ZoningLegendStrip({
         </div>
         {mode !== "rest" && focusItem && (
           // Readout sentence (§1) — no em dash, no interpunct, one sentence.
-          // SPECIFIED (title-case) form, pending KC's capitalisation ruling:
-          // "Residential Class: 30.6% of City with 5,255 Zones".
+          // KC ruling (pass 14): SENTENCE CASE, and the city is NAMED:
+          // "Residential class: 30.6% of Edmonton, 5,255 zones".
           <p className="zls-readout" aria-live="polite">
-            <b>{focusItem.label}</b> Class: {focusItem.shareDisplay}% of City with{" "}
-            {focusItem.count?.toLocaleString()} Zones
+            <b>{focusItem.label}</b> class: {focusItem.shareDisplay}% of Edmonton,{" "}
+            {focusItem.count?.toLocaleString()} zones
             {mode === "isolated" && ". Isolated; click again to show all"}
             {mode === "selected" && ". The selected zone's family"}
           </p>
@@ -146,7 +146,7 @@ export default function ZoningLegendStrip({
             key={it.key} type="button"
             style={cellStyle(it.share)}
             aria-pressed={isolated === it.key}
-            aria-label={`${it.label} Class: ${it.shareDisplay}% of City with ${it.count?.toLocaleString()} Zones. ${isolated === it.key ? "Isolated. Press to show all." : "Press to isolate."}`}
+            aria-label={`${it.label} class: ${it.shareDisplay}% of Edmonton, ${it.count?.toLocaleString()} zones. ${isolated === it.key ? "Isolated. Press to show all." : "Press to isolate."}`}
             onMouseEnter={() => hoverStart(it.key)}
             onMouseLeave={hoverEnd}
             onFocus={() => hoverStart(it.key)}
