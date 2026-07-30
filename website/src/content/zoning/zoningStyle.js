@@ -68,7 +68,7 @@ export const FAMILY_STYLE = {
   "Residential":               { colour: "#eacd59", hover: "#ffe16e", iso: "#907b03" },  // A · L83 C60 h93 · gold
   "Parks and Open Space":      { colour: "#0e9f68", hover: "#30b27a", iso: "#0b8455" },  // B · L58 C52 h158 · emerald
   "Industrial and Employment": { colour: "#b977fa", hover: "#c990fe", iso: "#a055ee" },  // B · L62 C75 h312 · violet (held)
-  "Direct Control":            { colour: "#e19549", hover: "#f6a85b", iso: "#b76904" },  // B · L68 C55 h67 · copper
+  "Direct Control":            { colour: "#ca8748", hover: "#df9959", iso: "#b06c28" },  // B · L62 C48 h66 · copper (pass 8: min dE 34.6 vs gold/orange/umber, was 30.3 vs gold)
   "Civic and Public Service":  { colour: "#e76ca8", hover: "#fc7fbb", iso: "#cc3d85" },  // B · L62 C55 h350 · rose
   "Commercial":                { colour: "#ff2f56", hover: "#fe6571", iso: "#ff2f56" },  // C · L56 C82 h22 · crimson
   "Future and Reserve":        { colour: "#9b5394", hover: "#ae65a7", iso: "#9b5394" },  // C · L46 C46 h330 · plum
@@ -90,7 +90,16 @@ const ROAD_FILL     = "#ede7d7";   // warm near-neutral (L92 C7) — continuous,
 const ROAD_CASE     = "#a19682";   // freeway/arterial casing: DARKER than the road (recession, not glow)
 const RAIL_COLOUR   = "#b3a996";   // reference weight, single thin line
 const LRT_COLOUR    = "#7a7264";   // LRT: darker end of the reference register — civic infrastructure
-const BUILDING_INK  = "rgba(122,110,92,0.45)"; // engraved outline texture, z>=16, no fill
+// BUILDINGS (pass 8): fill returns — outline-only was an over-correction; the
+// fix was moving the fill OUT of the palette's hue space, not removing it. A
+// single warm near-achromatic dark (charcoal-umber) at zoom-graded TRANSLUCENT
+// opacity: the zone colour reading faintly through a building correctly says
+// "this building sits in this zone". Height is a second channel (render_height
+// is 100%-populated in our tiles): three tone steps, taller = darker. The
+// no-greys rule governs data fills; buildings are reference (casing carve-out).
+const BUILDING_TONES = ["#4a443c", "#3a342c", "#2b2620"];   // <15m · 15–40m · ≥40m
+const BUILDING_OUTLINE = "rgba(28,23,18,0.55)";             // slightly darker than the fill
+const BUILDING_SHADOW  = "#17130e";                          // the offset cast-shadow experiment
 const LIMIT_COLOUR  = "#b3ab9c";   // the city-limit line
 export const FAMILY_BOUNDARY_COLOUR = "#6f6555"; // dark warm neutral — the crisp zone edge
 
@@ -336,11 +345,15 @@ const RAIL_LINES     = /rail/;
 // pri|sec · minor · service|path) — they map 1:1 onto the tiers. Casing only
 // on freeway/arterial, darker than the road (recession, never glow).
 const ROAD_TIERS = [
-  { rung: "freeway",   re: /^(road|tunnel|bridge)_(mot|trunk)_/,   cased: true  },
-  { rung: "arterial",  re: /^(road|tunnel|bridge)_(pri|sec)_/,     cased: true  },
-  { rung: "collector", re: /^(road|tunnel|bridge)_minor_/,         cased: false },
-  { rung: "local",     re: /^(road|tunnel|bridge)_(service|path)/, cased: false },
+  { rung: "freeway",   re: /^(road|tunnel|bridge)_(mot|trunk)_/, cased: true  },
+  { rung: "arterial",  re: /^(road|tunnel|bridge)_(pri|sec)_/,   cased: true  },
+  { rung: "collector", re: /^(road|tunnel|bridge)_minor_/,       cased: false },
+  { rung: "local",     re: /^(road|tunnel|bridge)_service/,      cased: false },
 ];
+// The dashed high-zoom lines were the *_path layers ([2,2] dash from z15) —
+// footpaths/alleys competing with zone boundaries and buildings. Removed on
+// this instance (pass 8 §4); `service` remains the local tier.
+const PATH_LINES = /^(road|tunnel|bridge)_path/;
 // Labels get POLARITY, not blending: dark warm text on a light halo, per class
 // (halo ≤ ¼ font size; a light blur so the halo reads as soft ground).
 const LABEL_INK  = "#2a2621";
@@ -368,20 +381,50 @@ export function applyZoningGround(map, firstSymbolId) {
         // Label classes by zoom (§6): neighbourhood names z≥11; PARK NAMES z≥13
         // (poi_park is re-shown — Apple Classic hides all POI; parks earn their
         // name on a zoning map); street names z≥15; water names throughout.
+        // Declutter (pass 8): house numbers to z18 (dominant noise, zero zoning
+        // value); street-name repeats spaced out (76 Avenue NW printed 4× in
+        // one frame — symbol-spacing 250 → 420).
         if (/^place_(suburbs|hamlet|villages)/.test(id)) map.setLayerZoomRange(id, 11, 24);
         else if (id === "poi_park") {
           map.setLayoutProperty(id, "visibility", "visible");
           map.setLayerZoomRange(id, 13, 24);
-        } else if (/^roadname/.test(id)) map.setLayerZoomRange(id, 15, 24);
+        } else if (id === "housenumber") map.setLayerZoomRange(id, 18, 24);
+        else if (/^roadname/.test(id)) {
+          map.setLayerZoomRange(id, 15, 24);
+          map.setLayoutProperty(id, "symbol-spacing", 420);
+        }
       } else if (type === "fill" && BUILDING_FILLS.test(id)) {
         if (id === "building") {
-          // Buildings reinstated z≥16 as OUTLINE ONLY — engraved texture over
-          // continuous zone colour, never figure (transparent fill + the
-          // style's 1px fill-outline, the ladder's thinnest + faintest rung).
+          // Buildings with FILL again, z≥14 (pass 8): warm charcoal-umber,
+          // height-stepped (taller darker), zoom-graded translucency — texture
+          // at the bottom of the ramp, objects at the top. Minzoom 14 is the
+          // typology mechanism: large footprints survive, small ones go
+          // sub-pixel and vanish on their own (no size filter).
           map.setLayoutProperty(id, "visibility", "visible");
-          map.setLayerZoomRange(id, 16, 24);
-          map.setPaintProperty(id, "fill-color", "rgba(0,0,0,0)");
-          map.setPaintProperty(id, "fill-outline-color", BUILDING_INK);
+          map.setLayerZoomRange(id, 14, 24);
+          map.setPaintProperty(id, "fill-color",
+            ["step", ["coalesce", ["get", "render_height"], 0],
+              BUILDING_TONES[0], 15, BUILDING_TONES[1], 40, BUILDING_TONES[2]]);
+          map.setPaintProperty(id, "fill-opacity",
+            ["interpolate", ["linear"], ["zoom"], 14, 0.10, 15, 0.16, 16, 0.26, 17, 0.36]);
+          map.setPaintProperty(id, "fill-outline-color", BUILDING_OUTLINE);
+          // Cast-shadow experiment: a duplicate fill 1.5px SE in a darker tone,
+          // beneath the main fill — physical presence without 3D/blend/glow.
+          if (!map.getLayer("zoning-building-shadow")) {
+            map.addLayer({
+              id: "zoning-building-shadow",
+              type: "fill",
+              source: layer.source,
+              "source-layer": layer["source-layer"],
+              minzoom: 15,
+              paint: {
+                "fill-color": BUILDING_SHADOW,
+                "fill-opacity": ["interpolate", ["linear"], ["zoom"], 15, 0.06, 17, 0.16],
+                "fill-translate": [1.5, 1.5],
+                "fill-translate-anchor": "viewport",
+              },
+            }, id);
+          }
         } else {
           map.setLayoutProperty(id, "visibility", "none");   // building-top stays off
         }
@@ -405,6 +448,8 @@ export function applyZoningGround(map, firstSymbolId) {
           map.setPaintProperty(id, "line-opacity", 0.7);
           map.setPaintProperty(id, "line-width", ladderWidth("rail"));
         }
+      } else if (type === "line" && PATH_LINES.test(id)) {
+        map.setLayoutProperty(id, "visibility", "none");   // dashed footpaths off
       } else if (type === "line") {
         const tier = ROAD_TIERS.find((t) => t.re.test(id));
         if (tier) {
