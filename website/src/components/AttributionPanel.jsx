@@ -14,10 +14,11 @@
 // Content is data-driven from siteConfig (dataSource + BASEMAP_SOURCES) — no hardcoded
 // strings, one source of truth shared with the strip + the exports.
 //
-// Dismissal mirrors MapTipsPopover EXACTLY (one control, one mental model): the database
-// button is the SINGLE affordance — click to open, click to close; Esc also closes (a
-// keyboard user must not have to tab back to it). There is deliberately no ×, and NO
-// click-outside dismissal (clicking the map is exploration, not a dismiss gesture).
+// Dismissal — THREE routes (attribution-consolidation §2, now this is the SOLE attribution
+// surface): the database button (click to open, click to close), Esc, and click-OUTSIDE.
+// (Click-outside was previously omitted; as the single attribution surface the panel adopts
+// the standard three-way dismissal.) There is deliberately no ×. The outside handler excludes
+// the bottom-right control cluster so the toggle button owns its own click (no reopen race).
 //
 // Props:
 //   open    — visible? (parent-owned; the database control toggles it and glows while open)
@@ -41,12 +42,27 @@ export default function AttributionPanel({ open, onClose, dataset = null }) {
   // Fade the bottom edge while content runs below the fold (same cue as the tips popover).
   useScrollFade(panelRef, [open]);
 
-  // Esc closes — keyboard convention + a11y. No click-outside handler (see header).
+  // Esc closes — keyboard convention + a11y.
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e) => { if (e.key === "Escape") onClose?.(); };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  // Click-OUTSIDE closes (§2). Exclude the panel itself AND the bottom-right control cluster
+  // (the database toggle lives there and owns its own click — excluding it prevents the
+  // classic close-then-reopen race where both the outside handler and the toggle fire).
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (e) => {
+      const t = e.target;
+      if (panelRef.current?.contains(t)) return;
+      if (t?.closest?.(".maplibregl-ctrl-bottom-right")) return;
+      onClose?.();
+    };
+    document.addEventListener("pointerdown", onDown, true);
+    return () => document.removeEventListener("pointerdown", onDown, true);
   }, [open, onClose]);
 
   if (!open) return null;

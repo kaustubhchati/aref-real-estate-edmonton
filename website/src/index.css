@@ -4099,10 +4099,11 @@ p  { margin: 0 0 0.75rem; }
    [scale, then database button], so column-reverse renders the button on top; the gap is
    the named constant --map-corner-gap. No-op for native maps (marker absent). */
 :root { --map-corner-gap: 6px; }   /* the standardized ⓘ↔scale-bar spacing */
-.mapview.map-consolidated-attrib .maplibregl-ctrl-bottom-right {
-  flex-direction: column-reverse;   /* [scale, button] DOM → [button, scale] visual */
-  gap: var(--map-corner-gap);
-}
+/* Order the corner as ⓘ button ABOVE the scale bar. Force the SCALE to the bottom
+   (order:1) so the button (order:0) sits on top REGARDLESS of the control add-order
+   (which varies — e.g. a view-switch remount can add controls in a different sequence). */
+.mapview.map-consolidated-attrib .maplibregl-ctrl-bottom-right { gap: var(--map-corner-gap); }
+.mapview.map-consolidated-attrib .maplibregl-ctrl-scale { order: 1; }
 
 /* Scale bar — dark glass to match (was a light pill). Light text + muted ruler border. */
 .maplibregl-ctrl-scale {
@@ -4378,6 +4379,9 @@ p  { margin: 0 0 0.75rem; }
    attribution) lift above it. Fixed lift: strip bottom inset 14 + ~49px
    strip + 8px gap (the strip's height is a design constant, not content). */
 .zoning-map .maplibregl-ctrl-bottom-right { margin-bottom: 72px; }
+/* The corner is lifted 72px above the legend strip, so lift the attribution panel the
+   same amount — otherwise it opens OVER the raised ⓘ button (default bottom is 92px). */
+.zoning-map .pa-attrib-pop { bottom: 164px; }
 
 /* === Zoning two-stage RIGHT RAIL (pass 12 §3) — absent at rest =============
    The shared .pa-detail frame (dark card, absolute right). Stage 1 = header
