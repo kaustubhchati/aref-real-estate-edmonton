@@ -1,12 +1,12 @@
 # CLAUDE.md
 
-> **Version: v1.19 — authoritative. Supersedes all prior versions (v0.1–v1.18).**
+> **Version: v1.22 — authoritative. Supersedes all prior versions (v0.1–v1.21).**
 > This is the single source of project context for every Claude Code session — read it first.
 > If any other note, comment, or older doc frames *the website* as an "agent-driven platform,"
 > that framing is **retired** — see §1.
 > Owner / **builder**: KC (Research Assistant, UAlberta) — direct-push authority to `main` (§7).
 > Verifier: Olivia (post-hoc review, §7). Supervisor: Prof. Haifang Huang.
-> Last updated: 2026-07-30. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
+> Last updated: 2026-07-31. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
 > current open work tracked in **PHASE2_STATUS.md**. Tier 2 (container-universe reconciliation)
 > is **CLOSED** end-to-end (§12 v1.11). The frontend matured substantially since v1.15
 > (§12 v1.16–v1.20): navigation moved to an **off-canvas drawer** and displayed identity is now
@@ -507,6 +507,31 @@ When in doubt, load §2 (locked architecture) and §9 (negative rules) — the l
 Revise when: a locked decision changes (§2), a new section is wired (§3), a new rule is validated
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
+- **v1.22 (2026-07-31)** — **Attribution consolidation + corner standardization across ALL six
+  sections. Merged to `main`.** (v1.21 is the parallel zoning-console/panel-toggle retrofit on branch
+  `feature/zoning-console-panel-retrofit`, PR #10 — not yet merged; these two campaigns are
+  independent.) Frontend-only. **The duplicate native MapLibre attribution bar is REMOVED from every
+  map; the custom `AttributionPanel` (bottom-right `database` control) is the SINGLE attribution
+  surface.** Licence-safe because deleting attribution is not — every string the native bar carried
+  survives in the panel (data-driven from `siteConfig`): City of Edmonton Open Data · OGL Terms v2.1 ·
+  © CARTO · © OpenStreetMap contributors · the disclaimer; ODbL/CARTO/OGL require attribution
+  present + discoverable, which a click-to-open panel satisfies. **Four sections that had NO panel
+  (BC-census / BP-point / amenities×3 / zoning) GAINED it** — so they now also show the disclaimer
+  they previously showed nowhere; **BC-census's unique "Edmonton Business Census" dataset link is
+  preserved** via a new `AttributionPanel` `dataset` prop (structured `BC_DATASET` in siteConfig, §5
+  — a per-section string kept, never normalised away). **Mechanism:** MapView gains
+  `nativeAttribution` (default true; false → `attributionControl:false` + a `map-consolidated-attrib`
+  marker); the panel adopts THREE-way dismissal (toggle · Esc · click-outside, the outside handler
+  excluding the bottom-right cluster to avoid a reopen race). **Corner standardized:** ⓘ button ABOVE
+  the scale bar (scale forced to `order:1`, robust to control add-order), named `--map-corner-gap`
+  (6px); the panel opens up-and-left, clears the scale bar + the bottom-centre console tab, and stays
+  in-viewport at 1280/1440/1920 (zoning's panel lifted 72px to clear its raised corner). **The
+  About&tips HELP ⓘ is OUT OF SCOPE** (a different category from attribution; §5 froze it). DESIGN_SYSTEM
+  §6 amended: the consolidation supersedes the compact-ⓘ + two-surface notes, plus the utility-control
+  boundary (the button standard governs DATA panels — Legend/Console; map utility controls — zoom /
+  fullscreen / reset / locate / attribution — stay icon-only) and the corner slot rule. Verified
+  headless on all nine map surfaces (every string present, links live, three close routes, geometry at
+  three widths, no console errors). One commit per section (prep + shared fix + 6 sections).
 - **v1.20 (2026-07-30)** — **Zoning View 1 matured across six directive passes; the attribution
   went compact site-wide; DESIGN_SYSTEM §5/§6 amended. Shipped + PUSHED (`71abd88`→`5dd2d9d`).**
   Frontend-only (no pipeline data logic changed). **(1) Home camera** — a whole-city KC-ratified
