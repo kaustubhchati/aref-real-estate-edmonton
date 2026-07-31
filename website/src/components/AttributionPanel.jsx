@@ -22,13 +22,19 @@
 // Props:
 //   open    — visible? (parent-owned; the database control toggles it and glows while open)
 //   onClose — dismiss (Esc here, or the database control)
+//   dataset — OPTIONAL { label, url }: a section-specific SOURCE DATASET link, shown as an
+//             extra "Dataset" row under "Data source". Used where a section's attribution
+//             cited a specific dataset the generic portal link does not name (e.g. the
+//             Business Census points map's "Edmonton Business Census" link) — so that
+//             string survives the native-bar removal (attribution-consolidation §5: a
+//             per-section string is kept, never normalised away). Omit → no Dataset row.
 // =============================================================================
 
 import { useEffect, useRef } from "react";
 import { useScrollFade } from "./useScrollFade.js";
 import { siteConfig, BASEMAP_SOURCES } from "../config/siteConfig.js";
 
-export default function AttributionPanel({ open, onClose }) {
+export default function AttributionPanel({ open, onClose, dataset = null }) {
   const panelRef = useRef(null);
   const ds = siteConfig.dataSource;
 
@@ -56,6 +62,17 @@ export default function AttributionPanel({ open, onClose }) {
         <dd>
           <a href={ds.url} target="_blank" rel="noopener noreferrer">{ds.name} Portal</a>
         </dd>
+
+        {/* Optional per-section dataset link — preserves a section-specific source string
+            (e.g. "Edmonton Business Census") that the generic portal link doesn't name. */}
+        {dataset && (
+          <>
+            <dt>Dataset</dt>
+            <dd>
+              <a href={dataset.url} target="_blank" rel="noopener noreferrer">{dataset.label}</a>
+            </dd>
+          </>
+        )}
 
         <dt>Licence</dt>
         <dd>

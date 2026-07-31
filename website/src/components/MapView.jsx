@@ -68,6 +68,12 @@ export default function MapView({
   // be a breach — never remove it. mapAttribution = the customAttribution
   // entries (CARTO/OSM come from the TileJSON automatically, on top of these).
   mapAttribution = siteConfig.mapAttribution,
+  // nativeAttribution: keep MapLibre's own compact ⓘ control? DEFAULT true (unchanged).
+  // A section passes FALSE once it has consolidated attribution into the custom
+  // AttributionPanel (the licence strings — City / OGL / CARTO / OSM / disclaimer — all
+  // survive in that panel; removing the native bar drops nothing). See the attribution-
+  // consolidation campaign; the panel is the single, licence-compliant attribution surface.
+  nativeAttribution = true,
 }) {
   const containerRef = useRef(null);
 
@@ -125,7 +131,12 @@ export default function MapView({
       // The basemap CARTO/OSM credit comes from the TileJSON automatically;
       // customAttribution APPENDS our data credit (siteConfig §6). Compact on
       // EVERY map (the ⓘ chip — see the prop note above).
-      attributionControl: { compact: true, customAttribution: mapAttribution },
+      // Native compact ⓘ ONLY when nativeAttribution (default). A consolidated section
+      // passes false → attributionControl:false, and its custom AttributionPanel is the
+      // sole (licence-compliant) attribution surface.
+      attributionControl: nativeAttribution
+        ? { compact: true, customAttribution: mapAttribution }
+        : false,
       // Default: scrolling zooms only with ctrl/⌘ (or two fingers); a plain wheel scrolls
       // the PAGE, so an embedded map doesn't hijack scroll. PA/DU/BC all opt OUT
       // (cooperativeGestures=false) for a free-roam, full-bleed map:
@@ -164,14 +175,19 @@ export default function MapView({
     // click OUTSIDE the control (the directive's third route; drag-collapse is
     // MapLibre-native). Attribution stays PRESENT + DISCOVERABLE = licence-
     // compliant (ODbL / CARTO / Open Government Licence).
-    const attribEl = map.getContainer().querySelector(".maplibregl-ctrl-attrib");
-    attribEl?.classList.remove("maplibregl-compact-show");
-    const collapseAttribOutside = (e) => {
-      if (attribEl?.classList.contains("maplibregl-compact-show") && !attribEl.contains(e.target)) {
-        attribEl.classList.remove("maplibregl-compact-show");
-      }
-    };
-    document.addEventListener("pointerdown", collapseAttribOutside, true);
+    // Only when the native control exists (nativeAttribution). A consolidated section
+    // has no .maplibregl-ctrl-attrib, so this whole block is skipped.
+    let collapseAttribOutside = null;
+    if (nativeAttribution) {
+      const attribEl = map.getContainer().querySelector(".maplibregl-ctrl-attrib");
+      attribEl?.classList.remove("maplibregl-compact-show");
+      collapseAttribOutside = (e) => {
+        if (attribEl?.classList.contains("maplibregl-compact-show") && !attribEl.contains(e.target)) {
+          attribEl.classList.remove("maplibregl-compact-show");
+        }
+      };
+      document.addEventListener("pointerdown", collapseAttribOutside, true);
+    }
 
     map.on("error", (e) => {
       // Surface map errors honestly instead of swallowing them — CLAUDE.md §6.
@@ -225,7 +241,7 @@ export default function MapView({
       // Stop any in-flight cross-fade (timers, listeners, ghost) BEFORE destroying the
       // map, so nothing fires against a removed map.
       abortCrossFade(map, crossFadeRef, layers);
-      document.removeEventListener("pointerdown", collapseAttribOutside, true);
+      if (collapseAttribOutside) document.removeEventListener("pointerdown", collapseAttribOutside, true);
       mapRef.current = null;
       map.remove();
     };
@@ -275,7 +291,14 @@ export default function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geojsonUrl, sourceId]);
 
-  return <div ref={containerRef} className={`mapview ${className}`} />;
+  // The `map-consolidated-attrib` marker (only when the native bar is gone) lets the
+  // corner CSS order the bottom-right as ⓘ-above-scale-bar; a no-op for native maps.
+  return (
+    <div
+      ref={containerRef}
+      className={`mapview ${className}${nativeAttribution ? "" : " map-consolidated-attrib"}`}
+    />
+  );
 }
 
 // Exported so a section can anchor its OWN symbol layers into the basemap's collision

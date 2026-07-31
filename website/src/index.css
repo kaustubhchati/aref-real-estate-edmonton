@@ -4092,6 +4092,18 @@ p  { margin: 0 0 0.75rem; }
   display: flex; flex-direction: column; align-items: flex-end; gap: 4px; margin: 0 4px 4px 0;
 }
 
+/* ── Standardized bottom-right corner — attribution-consolidation §3 ─────────────────
+   Once a section drops the native ⓘ (MapView adds .map-consolidated-attrib when
+   nativeAttribution=false), the corner holds only the custom Data & Attribution button
+   and the scale bar. FIXED ORDER: ⓘ button ABOVE the scale bar. DOM add-order is
+   [scale, then database button], so column-reverse renders the button on top; the gap is
+   the named constant --map-corner-gap. No-op for native maps (marker absent). */
+:root { --map-corner-gap: 6px; }   /* the standardized ⓘ↔scale-bar spacing */
+.mapview.map-consolidated-attrib .maplibregl-ctrl-bottom-right {
+  flex-direction: column-reverse;   /* [scale, button] DOM → [button, scale] visual */
+  gap: var(--map-corner-gap);
+}
+
 /* Scale bar — dark glass to match (was a light pill). Light text + muted ruler border. */
 .maplibregl-ctrl-scale {
   background: var(--glass-panel-fill) !important;
