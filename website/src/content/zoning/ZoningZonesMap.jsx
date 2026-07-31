@@ -28,7 +28,8 @@ import ZoningLegendStrip from "./ZoningLegendStrip.jsx";
 import ZoningRail from "./ZoningRail.jsx";
 import { applyCameraPreset, ZONING_HOME_VIEW } from "../../components/mapCamera.js";
 import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
-import { ICON_RECENTRE } from "../../components/mapIcons.js";
+import { ICON_RECENTRE, ICON_DATABASE } from "../../components/mapIcons.js";
+import AttributionPanel from "../../components/AttributionPanel.jsx";
 import { siteConfig } from "../../config/siteConfig.js";
 import { assetUrl } from "../../utils/assetUrl.js";
 import {
@@ -52,6 +53,7 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
   const [hovered, setHovered] = useState(null);    // props — hover preview
   const [isolated, setIsolated] = useState(null);  // family key ISOLATED via the strip, or null
   const [chipPreview, setChipPreview] = useState(null);  // family under the strip cursor (§2)
+  const [attribOpen, setAttribOpen] = useState(false);   // Data & Attribution panel (bottom-right)
   const [searchParams, setSearchParams] = useSearchParams();
   const restoredRef = useRef(false);               // ?zone= permalink restored once
 
@@ -88,6 +90,9 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
 
   // ── Map load: bounds source + family lines, ground treatment, camera ─────────
   const recentreAddedRef = useRef(false);
+  // The bottom-right Data & Attribution control glows while its panel is open.
+  const attribCtrlRef = useRef(null);
+  useEffect(() => { attribCtrlRef.current?.setActive(attribOpen); }, [attribOpen]);
   function handleMapLoad(m) {
     setMap(m);
     if (import.meta.env.DEV) window.__zoningMap = m;
@@ -121,6 +126,16 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
         label: "Return to home view",
         onClick: () => applyCameraPreset(m, ZONING_HOME, { ease: true }),
       }), "top-right");
+      // Data & Attribution — the single attribution surface (bottom-right), now the
+      // native MapLibre bar is removed. Carries City / OGL / CARTO / OSM / disclaimer.
+      const attrib = makeIconButtonControl({
+        svg: railGlyph(ICON_DATABASE),
+        label: "Data & attribution",
+        onClick: () => setAttribOpen((o) => !o),
+      });
+      m.addControl(attrib, "bottom-right");
+      attribCtrlRef.current = attrib;
+      attrib.setActive(attribOpen);
       recentreAddedRef.current = true;
     }
   }
@@ -383,7 +398,10 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
                     layers={layers}
                     onLoad={handleMapLoad}
                     cooperativeGestures={false}
+                    // Attribution consolidated into the Data & Attribution panel (below);
+                    // the duplicate native MapLibre bar is removed.
                     mapAttribution={siteConfig.mapAttributionStrip}
+                    nativeAttribution={false}
                   />
                 </MapErrorBoundary>
               )}
@@ -416,6 +434,10 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
             onClear={() => setSelected(null)}
           />
         )}
+
+        {/* DATA & ATTRIBUTION — the single attribution surface (bottom-right database
+            control). Adds the disclaimer that zoning previously showed nowhere. */}
+        <AttributionPanel open={attribOpen} onClose={() => setAttribOpen(false)} />
       </div>
     </article>
   );
