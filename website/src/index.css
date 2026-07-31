@@ -1454,23 +1454,43 @@ p  { margin: 0 0 0.75rem; }
   align-items: center;    /* centre the pill handle AND the bounded panel */
   pointer-events: none;   /* only the pill + panel are interactive; corners pass through */
 }
+/* The bottom console toggle — the §6 UNCONDITIONAL button form (2026-07-31; the tab
+   handle is RETIRED). Same chassis + teal-active as the zoning Legend button
+   (.zlr-toggle) and the city-switcher pill: muted panel-dark at REST, --pa-ink on
+   HOVER, and the shared --accent-int-* teal when OPEN (aria-expanded). It stays a
+   centred, bottom-docked pill whose square bottom (border-bottom:0) connects DOWN to
+   the panel it controls — GEOMETRY UNCHANGED; only the affordance form migrated. The
+   keyboard binding (T) moved off-screen into the button tooltip (§6 KEYBOARD). */
 .dt-handle {
-  align-self: center;          /* centred pill, not a full-width bar */
+  align-self: center;          /* centred on the bottom edge (§6 ALIGNMENT) */
   pointer-events: auto;
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 8px;
   padding: 6px 16px;
-  font-family: inherit; font-size: 12px; color: var(--pa-ink);
+  font-family: inherit; font-size: 12px; font-weight: 500; color: var(--pa-mut);
   background: var(--pa-shell);
   border: 1px solid var(--pa-hair); border-bottom: 0;
   border-radius: 10px 10px 0 0;
   box-shadow: 0 -3px 12px rgba(0,0,0,0.4);
   cursor: pointer; text-align: left;
 }
-.dt-handle:hover { background: var(--pa-card); }
+.dt-handle-icon { flex: 0 0 auto; }
+.dt-handle:hover:not([aria-expanded="true"]) { color: var(--pa-ink); background: var(--pa-card); }
+.dt-handle[aria-expanded="true"] {   /* ACTIVE — reuse the shared §6 teal, do NOT redefine */
+  color: var(--accent-int-text); background: var(--accent-int-fill);
+  border-color: var(--accent-int-border);
+  box-shadow: var(--accent-int-specular), var(--accent-int-glow);
+  text-shadow: var(--accent-int-text-glow);
+}
 .dt-handle-title { font-weight: 600; }
 .dt-handle-meta { color: var(--pa-mut); font-size: 10.5px; }
+.dt-handle[aria-expanded="true"] .dt-handle-meta:not(.dt-handle-sel) { color: inherit; }
 .dt-handle-caret { margin-left: auto; color: var(--pa-mut); }
-.dt-handle-sel { color: var(--pa-sel); font-weight: 600; }   /* "N selected" in b₂ (§3.1) */
+.dt-handle[aria-expanded="true"] .dt-handle-caret { color: inherit; }   /* teal-white on the active fill */
+.dt-handle-sel { color: var(--pa-sel); font-weight: 600; }   /* "N selected" — live selection feedback */
+/* On the teal ACTIVE fill the rest-coral drops below AA (~3.8:1 on --accent-int-fill);
+   a lighter coral on the OPEN handle keeps the selection semantics and clears 4.5:1
+   on the petrol fill (~5.2:1 at the fill's lightest stop). Only the open state is retinted. */
+.dt-handle[aria-expanded="true"] .dt-handle-sel { color: #ff9d78; }
 
 /* The animating SHELL — a TRUE height transition via the grid-rows 0fr↔1fr trick,
    so the console rises/collapses smoothly and the handle + tuning rack above it

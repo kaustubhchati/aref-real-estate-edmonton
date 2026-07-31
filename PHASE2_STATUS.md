@@ -172,28 +172,25 @@ sections, agent pipeline, and infrastructure.
       the PA manifest (refresh-by-design). (Was "parked" — superseded.)
 
 ### Frontend — polish deferred from Phase 1
-- [ ] **Panel toggle retrofit — migrate every tab-form panel to the button form (DEFERRED campaign, 2026-07-31).**
-      DESIGN_SYSTEM's panel-toggle rule is now UNCONDITIONAL: every collapsible panel uses the
+- [x] **Panel toggle retrofit — DONE (2026-07-31, KC ruling "migrate as one, build").**
+      DESIGN_SYSTEM's panel-toggle rule is UNCONDITIONAL: every collapsible panel uses the
       **button** form (labelled + icon, panel-dark rest, shared `--accent-int-*` teal active, the
       shortcut in the tooltip; alignment tracks the dock — bottom centres, side aligns to its card
-      edges); the **tab form is retired**. Zoning's legend rail already conforms (built to it).
-      **RECON DONE (2026-07-31, 5 read-only agents) — the retrofit is HELD on the §3 stop-and-report
-      gate, NOT executed:** the only tab-form panels are the THREE Data Consoles — PA
-      (`DataTable.jsx`), DU (`PermitDataConsole.jsx`), BC-census (`BusinessCensusConsole.jsx`) —
-      which SHARE the `.dt-handle` component/CSS (so a per-section-separable migration, which this
-      campaign requires, isn't possible without duplicating the shared handle 3×, itself a bigger
-      change than a chrome swap) AND are each LOAD-BEARING (the handle carries a live "N selected" /
-      drilled-sector readout, anchors the tuning strip, encodes open/closed in its caret, auto-opens
-      on box-select — the stop-and-report case). The "neither tab nor button" cases — the
-      **i / attribution / search icon-rail popovers** (PA, DU, BC-counts, BP) — are §6-governed
-      MapLibre rail controls whose GLOW is the sole close cue (no ×, no click-outside); migrating them
-      to labelled buttons contradicts the §6 icon-only rail chassis + the popover-as-documentation
-      law. **BP point map + amenities have NO tab-form panel** — nothing to migrate. **KC ruling owed
-      before proceeding:** (a) may the three Data Consoles migrate as a SINGLE shared-handle commit
-      (relaxing the per-section-separable rule, since they are one component), and (b) are the §6
-      icon-rail popovers in scope at all. Detail in `ZONING_SESSION_RECORD_20260731.md` §8. Deliberately
-      NOT folded into the zoning commit (a five-section chrome migration inside a zoning console diff
-      is scope creep).
+      edges); the **tab form is retired**. Recon (5 read-only agents) found the only tab-form panels
+      were the THREE Data Consoles — PA (`DataTable.jsx`), DU (`PermitDataConsole.jsx`), BC-census
+      (`BusinessCensusConsole.jsx`) — which SHARE the one `.dt-handle` component/CSS. KC ruled they
+      migrate as a **single shared-handle commit** (per-section separation is not meaningful for one
+      component). **Executed:** the shared `.dt-handle` CSS became the §6 button chassis (muted rest,
+      `--pa-ink` hover, `--accent-int-*` teal when `aria-expanded`) + a table `.dt-handle-icon`; each
+      of the three console JSX gained the icon + a `title="Data console — press T to toggle"` and
+      **dropped the on-screen "Press T"** (moved into the tooltip). Only the affordance changed — the
+      load-bearing readout is preserved (PA/DU "{N} selected", BC drilled-sector name), and the
+      geometry (centred, bottom-docked, connects DOWN to the panel), defaults, panel contents, tuning
+      strip, T-key, and auto-open are byte-identical. Verified headless on all three (open/close by
+      click + T, teal when open, default closed, map renders, no new console errors). The i /
+      attribution / search **icon-rail popovers stay** — they are §6-governed map-rail controls
+      (icon-only + glow-close), OUT OF SCOPE of the panel-toggle rule. **BP point map + amenities have
+      no tab-form panel.** Detail in `ZONING_SESSION_RECORD_20260731.md` §8.
 - [x] **Neighbourhood search — custom combobox: RESOLVED (was already done).**
       `SearchInput.jsx` already renders a custom `<ul role="listbox">`, NOT a
       native `<datalist>` (its header comment says so), so the cross-browser

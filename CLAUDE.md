@@ -508,9 +508,9 @@ Revise when: a locked decision changes (§2), a new section is wired (§3), a ne
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
 - **v1.21 (2026-07-31)** — **Zoning console directive (PA-matched header + column legend table +
-  strip chip floor); the panel-toggle standard ruled UNCONDITIONAL; the five-section tab→button
-  retrofit reconned and HELD. On a feature branch (`feature/zoning-console-panel-retrofit`), NOT
-  merged.** Frontend-only. **(1) Zoning console fixes** (`c7f6ec2`): the legend rail gained a
+  strip chip floor); the panel-toggle standard ruled UNCONDITIONAL; the Data Console tab→button
+  retrofit reconned then EXECUTED as one shared-handle commit (KC "migrate as one"). On a feature
+  branch (`feature/zoning-console-panel-retrofit`), NOT merged.** Frontend-only. **(1) Zoning console fixes** (`c7f6ec2`): the legend rail gained a
   PA-matched header card (`IdentityCard`, Edmonton/Calgary switcher), a column-standardized legend
   TABLE (`ZoningLegendRail.jsx` — swatch · family · zones · area, Total row, area-descending, the
   new DESIGN_SYSTEM legend-table colour-tier rule: name + area PRIMARY, count SECONDARY, headers +
@@ -520,14 +520,16 @@ Revise when: a locked decision changes (§2), a new section is wired (§3), a ne
   amendments** (§1.4 in-fill label rule — one WCAG-luminance threshold 0.42, two tokens; §5 legend
   strip proportional-floor tradeoff + the categorical legend-TABLE colour-tier rule; §6 the
   UNCONDITIONAL panel-toggle rule — button form, tab form retired, 4 parts Form/Placement/Alignment/
-  Keyboard). **(3) The panel-toggle RETROFIT is reconned + HELD** (5 read-only agents): the only
-  tab-form panels are the three Data Consoles (PA/DU/BC-census), which SHARE the `.dt-handle`
-  component and are each LOAD-BEARING (N-selected readout, tuning-strip anchor, auto-open) → the §3
-  stop-and-report gate applies; the "neither tab nor button" cases (the i / attribution / search
-  icon-rail popovers) are §6-governed map-rail controls whose glow is the sole close cue → migrating
-  them contradicts §6; BP-point + amenities have NO tab-form panel. The retrofit needs a KC ruling
-  (shared-handle separability + whether §6 icon-rail popovers are in scope) and stays the DEFERRED
-  campaign in PHASE2_STATUS. **(4) METHODOLOGY D8** expanded with the five-field emit skeleton
+  Keyboard). **(3) The panel-toggle RETROFIT — reconned (5 agents) then EXECUTED** (KC ruling
+  "migrate as one, build"): the only tab-form panels were the three Data Consoles (PA/DU/BC-census),
+  which SHARE the ONE `.dt-handle` component → migrated as a SINGLE shared-handle commit (the shared
+  `.dt-handle` CSS became the §6 button chassis — muted rest, `--pa-ink` hover, `--accent-int-*` teal
+  when `aria-expanded`, a table `.dt-handle-icon`; each console JSX gained the icon + a `title` and
+  dropped the on-screen "Press T"). Only the affordance changed — the load-bearing readout ("N
+  selected" / drilled-sector), geometry, defaults, contents, tuning strip, T-key, and auto-open are
+  byte-identical; verified headless on all three. The i / attribution / search icon-rail popovers
+  STAY — §6-governed map-rail controls (icon-only + glow-close), out of scope of this rule.
+  BP-point + amenities have NO tab-form panel. **(4) METHODOLOGY D8** expanded with the five-field emit skeleton
   (family-boundary dissolve + no-year manifest). Records: `ZONING_SESSION_RECORD_20260731.md` (the
   reversals — LBCS-as-hue retired, QUALITATIVE_12 ruled inapplicable to fills, non-hue governance
   tried twice + abandoned, buildings removed then reinstated, bottom console built then reverted,

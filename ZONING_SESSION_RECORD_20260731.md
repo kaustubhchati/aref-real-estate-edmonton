@@ -184,26 +184,33 @@ built. Before it is, three recon questions are open:
 
 ---
 
-## 8. The panel-toggle retrofit — recon outcome (2026-07-31)
+## 8. The panel-toggle retrofit — recon + execution (2026-07-31)
 
 The unconditional button-toggle rule (DESIGN_SYSTEM §6) implies a retrofit of PA / DU / BC / BP /
-amenities. The recon (5 read-only agents) found the retrofit is NOT the clean per-section chrome
-swap the rule assumed, and per the "stop and report on load-bearing" gate it is HELD, not executed:
+amenities. The recon (5 read-only agents) found:
 
 - **The only tab-form panels are the three Data Consoles** (PA `DataTable.jsx`, DU
-  `PermitDataConsole.jsx`, BC-census `BusinessCensusConsole.jsx`). They SHARE the `.dt-handle`
-  component/CSS, so a migration cannot be per-section-separable (which the retrofit requires)
-  without duplicating the shared handle three times — itself a larger change than a chrome swap.
-- **All three console handles are LOAD-BEARING** (the handle carries a live "N selected" / drilled
-  state readout, anchors the tuning strip, encodes open/closed in its caret, auto-opens on
-  box-select). The stop-and-report gate names exactly this case.
+  `PermitDataConsole.jsx`, BC-census `BusinessCensusConsole.jsx`). They SHARE the ONE `.dt-handle`
+  component/CSS, so a per-section-separable migration (which the campaign first assumed) would have
+  meant duplicating the shared handle three times.
+- All three handles carry a load-bearing readout (a live "N selected" / drilled-sector name) and
+  anchor the tuning strip / auto-open — but that state is a dynamic LABEL, which the button form
+  keeps; it does not resist the button form.
 - **The icon-button popovers (i / attribution / search)** are the "neither tab nor button" cases —
-  but they are §6-governed map-rail controls whose GLOW is the sole close affordance (no ×, no
-  click-outside). Migrating them to labelled buttons contradicts the §6 map-rail icon-only chassis
-  and the popover-as-documentation law. Held.
-- **BP point map + amenities have NO tab-form panel** — nothing to migrate.
+  §6-governed map-rail controls whose GLOW is the sole close affordance (no ×, no click-outside).
+  Migrating them to labelled buttons would contradict the §6 map-rail icon-only chassis and the
+  popover-as-documentation law.
+- **BP point map + amenities have NO tab-form panel.**
 
-**Ruling owed from KC** before the retrofit proceeds: (a) may the three Data Consoles migrate as a
-SINGLE shared-handle commit (relaxing per-section separability, since they are one component), and
-(b) are the §6 icon-rail popovers in scope at all (they are governed by §6, not the panel-toggle
-rule). Until ruled, the retrofit stays the DEFERRED campaign PHASE2_STATUS records.
+**KC ruling (2026-07-31): "migrate as one, build."** So:
+- The three Data Consoles migrated as a **SINGLE shared-handle commit** (they are one component —
+  per-section separation is not meaningful): the shared `.dt-handle` CSS became the §6 button
+  chassis (muted rest, `--pa-ink` hover, `--accent-int-*` teal when `aria-expanded`) + a table
+  `.dt-handle-icon`; each console JSX gained the icon + a `title="Data console — press T to toggle"`
+  and dropped the on-screen "Press T" (moved into the tooltip). Only the affordance changed — the
+  readout, geometry (centred, bottom-docked, connects DOWN to the panel), defaults, contents,
+  tuning strip, T-key, and auto-open are byte-identical. Verified headless on all three (open/close
+  by click + T, teal when open, default closed, map renders, no new console errors).
+- The **icon-rail popovers stay** — the ruling authorized the shared-handle tab→button, not a §6
+  override; they remain governed by the §6 map-rail popover law. Changing them later would need a
+  §6 amendment, not this rule.
