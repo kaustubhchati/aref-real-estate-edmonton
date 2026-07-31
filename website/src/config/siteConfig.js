@@ -55,10 +55,15 @@ export const BASEMAP_SOURCES = [
 // The two City links, composed once (shared by the strip + the full record below).
 const CITY_LINK  = `<a href="${EDMONTON_OPEN_DATA.url}" target="_blank" rel="noopener noreferrer">City of Edmonton Open Data</a>`;
 const TERMS_LINK = `<a href="${EDMONTON_OPEN_DATA.termsUrl}" target="_blank" rel="noopener noreferrer">Open Government Licence (Terms of Use v2.1)</a>`;
-// The specific SOURCE DATASET's about-page (Business Census, 8c4b-u4a4). PA links the portal
-// generically (no per-dataset link), so this is a proposed BC slot: alongside the portal +
-// licence in the strip (see the CC report + DESIGN_SYSTEM §6 attribution standard).
-const BC_DATASET_LINK = `<a href="https://data.edmonton.ca/Urban-Planning-Economy/Edmonton-Business-Census/8c4b-u4a4/about_data" target="_blank" rel="noopener noreferrer">Edmonton Business Census</a>`;
+// The specific SOURCE DATASET's about-page (Business Census, 8c4b-u4a4). Structured so BOTH
+// the map-attribution HTML string AND the AttributionPanel `dataset` prop read ONE source —
+// so this per-section link survives the native-bar removal (attribution-consolidation §5:
+// a unique per-section attribution string is kept, never normalised away).
+export const BC_DATASET = {
+  label: "Edmonton Business Census",
+  url: "https://data.edmonton.ca/Urban-Planning-Economy/Edmonton-Business-Census/8c4b-u4a4/about_data",
+};
+const BC_DATASET_LINK = `<a href="${BC_DATASET.url}" target="_blank" rel="noopener noreferrer">${BC_DATASET.label}</a>`;
 
 export const siteConfig = {
   // ---- Identity ----------------------------------------------------------

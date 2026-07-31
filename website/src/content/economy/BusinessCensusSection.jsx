@@ -40,8 +40,9 @@ import { HOME_VIEW, applyCameraPreset } from "../../components/mapCamera.js";
 import { Link } from "react-router-dom";
 import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
 import { Glyph } from "../../components/MapTipsPopover.jsx";
-import { ICON_RECENTRE, ICON_INFO } from "../../components/mapIcons.js";
-import { siteConfig } from "../../config/siteConfig.js";
+import { ICON_RECENTRE, ICON_INFO, ICON_DATABASE } from "../../components/mapIcons.js";
+import { siteConfig, BC_DATASET } from "../../config/siteConfig.js";
+import AttributionPanel from "../../components/AttributionPanel.jsx";
 import { assetUrl } from "../../utils/assetUrl.js";
 import { parseCsvAsObjects } from "../report-card/parseCsv.js";
 import {
@@ -363,6 +364,7 @@ export default function BusinessCensusSection() {
   const [fetchError, setFetchError] = useState(null);
   const [nbhdGj, setNbhdGj] = useState(null);      // neighbourhood reference geometry
   const [consoleOpen, setConsoleOpen] = useState(false);   // bottom data console (pull-up, PA pattern)
+  const [attribOpen, setAttribOpen] = useState(false);     // Data & Attribution panel (bottom-right)
   const [selectedFeature, setSelectedFeature] = useState(null); // InfoRail PINNED detail + map ring
   const [hoveredFeature, setHoveredFeature] = useState(null);   // InfoRail hover PREVIEW (reverts to pin on exit)
   // Legend/console MUTE state (kept separate from the InfoRail pin — they coexist, §Phase 4):
@@ -654,6 +656,9 @@ export default function BusinessCensusSection() {
   // ── Map ────────────────────────────────────────────────────────────────────
   const firstHomeRef = useRef(true);
   const recentreAddedRef = useRef(false);   // add the recentre control exactly once
+  // The bottom-right Data & Attribution control glows while its panel is open.
+  const attribCtrlRef = useRef(null);
+  useEffect(() => { attribCtrlRef.current?.setActive(attribOpen); }, [attribOpen]);
   function handleMapLoad(m) {
     setMap(m);
     if (import.meta.env.DEV) window.__bcMap = m;
@@ -683,6 +688,16 @@ export default function BusinessCensusSection() {
         label: "Return to home view",
         onClick: () => applyCameraPreset(m, HOME_VIEW.Edmonton, { ease: true }),
       }), "top-right");
+      // Data & Attribution — the single attribution surface (bottom-right), now the native
+      // MapLibre bar is removed. Its panel carries the BC dataset link (§5 unique string).
+      const attrib = makeIconButtonControl({
+        svg: railGlyph(ICON_DATABASE),
+        label: "Data & attribution",
+        onClick: () => setAttribOpen((o) => !o),
+      });
+      m.addControl(attrib, "bottom-right");
+      attribCtrlRef.current = attrib;
+      attrib.setActive(attribOpen);
       recentreAddedRef.current = true;
     }
   }
@@ -916,7 +931,10 @@ export default function BusinessCensusSection() {
                     layers={layers}
                     onLoad={handleMapLoad}
                     cooperativeGestures={false}
+                    // Attribution consolidated into the Data & Attribution panel (below), which
+                    // carries the BC dataset link; the duplicate native MapLibre bar is removed.
                     mapAttribution={siteConfig.bcMapAttribution}
+                    nativeAttribution={false}
                   />
                 </MapErrorBoundary>
               )}
@@ -937,6 +955,11 @@ export default function BusinessCensusSection() {
             onClear={() => setSelectedFeature(null)}
           />
         )}
+
+        {/* DATA & ATTRIBUTION — the single attribution surface (both views), bottom-right
+            database control. `dataset` keeps the "Edmonton Business Census" source link the
+            native strip carried (§5); the panel also adds City / OGL / CARTO / OSM / disclaimer. */}
+        <AttributionPanel open={attribOpen} onClose={() => setAttribOpen(false)} dataset={BC_DATASET} />
 
         {/* INSTRUMENT COLUMN — CENSUS keeps the left sidebar (identity + view-switch + sector
             legend). SPECIALISATIONS has NO sidebar: the LCLQ method box was REMOVED (§1 — deleted,
