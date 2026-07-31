@@ -1467,10 +1467,13 @@ export default function PropertyAssessmentMap() {
                     boxSelect={boxSelect}
                     preserveDrawingBuffer
                     cooperativeGestures={false}
-                    // Always-visible LINKS-ONLY strip (§6). The disclaimer moves to the
-                    // attribution panel (the database control) — keeping the strip narrow
-                    // so it clears the tuning bay + Data Console handle.
+                    // Attribution is the custom Data & Attribution panel ONLY (the
+                    // database control, bottom-right) — it carries every licence string
+                    // (City / OGL / CARTO / OSM / disclaimer), so the duplicate native
+                    // MapLibre bar is removed. mapAttribution is now unused by the map but
+                    // kept as the single source the panel/exports read.
                     mapAttribution={siteConfig.mapAttributionStrip}
+                    nativeAttribution={false}
                   />
                 </MapErrorBoundary>
               </>

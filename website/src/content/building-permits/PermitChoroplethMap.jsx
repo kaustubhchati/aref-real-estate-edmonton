@@ -663,7 +663,10 @@ export default function PermitChoroplethMap() {
                   boxSelect={boxSelect}
                   preserveDrawingBuffer
                   cooperativeGestures={false}
+                  // Attribution consolidated into the Data & Attribution panel (database
+                  // control) — the native MapLibre bar is the removed duplicate.
                   mapAttribution={siteConfig.mapAttributionStrip}
+                  nativeAttribution={false}
                 />
               </MapErrorBoundary>
             </>

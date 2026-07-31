@@ -30,8 +30,9 @@ import EmptyState from "../../components/EmptyState.jsx";
 import IdentityCard from "../../components/IdentityCard.jsx";
 import { HOME_VIEW, applyCameraPreset } from "../../components/mapCamera.js";
 import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
-import { ICON_RECENTRE } from "../../components/mapIcons.js";
+import { ICON_RECENTRE, ICON_DATABASE } from "../../components/mapIcons.js";
 import { siteConfig } from "../../config/siteConfig.js";
+import AttributionPanel from "../../components/AttributionPanel.jsx";
 import { assetUrl } from "../../utils/assetUrl.js";
 import AmenityInfoRail from "./AmenityInfoRail.jsx";
 import AmenityLegend from "./AmenityLegend.jsx";
@@ -53,6 +54,7 @@ export default function AmenityPointMap({ layerId, title, selectorNode }) {
   const [hovered, setHovered] = useState(null);   // { id, props } — hover preview
   const [active, setActive] = useState(null);     // Set of shown categories (legend filter)
   const [glyphReady, setGlyphReady] = useState(false); // flips once the glyph layer is on the map
+  const [attribOpen, setAttribOpen] = useState(false); // Data & Attribution panel (bottom-right)
 
   // ── Manifest: find THIS layer's record (label, file, category field + domain,
   //    coverage, currency). No data literal — everything is read from the manifest. ──
@@ -122,6 +124,9 @@ export default function AmenityPointMap({ layerId, title, selectorNode }) {
   // ── Map load: lift the points above the basemap, land the home camera, add recentre ──
   const firstHomeRef = useRef(true);
   const recentreAddedRef = useRef(false);
+  // The bottom-right Data & Attribution control glows while its panel is open.
+  const attribCtrlRef = useRef(null);
+  useEffect(() => { attribCtrlRef.current?.setActive(attribOpen); }, [attribOpen]);
   function handleMapLoad(m) {
     setMap(m);
     if (import.meta.env.DEV) window.__amenityMap = m;
@@ -147,6 +152,16 @@ export default function AmenityPointMap({ layerId, title, selectorNode }) {
         label: "Return to home view",
         onClick: () => applyCameraPreset(m, HOME_VIEW.Edmonton, { ease: true }),
       }), "top-right");
+      // Data & Attribution — the single attribution surface (bottom-right), now the native
+      // MapLibre bar is removed. Adds the disclaimer amenities previously showed nowhere.
+      const attrib = makeIconButtonControl({
+        svg: railGlyph(ICON_DATABASE),
+        label: "Data & attribution",
+        onClick: () => setAttribOpen((o) => !o),
+      });
+      m.addControl(attrib, "bottom-right");
+      attribCtrlRef.current = attrib;
+      attrib.setActive(attribOpen);
       recentreAddedRef.current = true;
     }
   }
@@ -293,7 +308,10 @@ export default function AmenityPointMap({ layerId, title, selectorNode }) {
                     layers={layers}
                     onLoad={handleMapLoad}
                     cooperativeGestures={false}
+                    // Attribution consolidated into the Data & Attribution panel (below);
+                    // the duplicate native MapLibre bar is removed.
                     mapAttribution={siteConfig.mapAttributionStrip}
+                    nativeAttribution={false}
                   />
                 </MapErrorBoundary>
               )}
@@ -311,6 +329,9 @@ export default function AmenityPointMap({ layerId, title, selectorNode }) {
             categoryLabels={entry?.categoryLabels}
           />
         )}
+
+        {/* DATA & ATTRIBUTION — the single attribution surface (bottom-right database control). */}
+        <AttributionPanel open={attribOpen} onClose={() => setAttribOpen(false)} />
 
         {entry && (
           <div className="pa-float pa-column pa-column-lean">

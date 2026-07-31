@@ -161,6 +161,16 @@ sections, agent pipeline, and infrastructure.
       the PA manifest (refresh-by-design). (Was "parked" — superseded.)
 
 ### Frontend — polish deferred from Phase 1
+- [x] **Attribution consolidation + corner standardization — DONE (2026-07-31, §12 v1.22, merged).**
+      The duplicate native MapLibre attribution bar is removed from all six sections; the custom
+      `AttributionPanel` (bottom-right database control) is the SINGLE attribution surface, carrying
+      every licence string (City / OGL / CARTO / OSM / disclaimer) — licence-safe because the strings
+      survive the bar's removal, not because the bar was kept. Four sections that had no panel
+      (BC-census / BP-point / amenities / zoning) gained it (and the disclaimer they previously showed
+      nowhere); BC-census's "Edmonton Business Census" dataset link preserved via the panel's new
+      `dataset` prop (§5). Corner standardized (ⓘ above scale bar, `--map-corner-gap`); panel closes
+      three ways (toggle · Esc · click-outside). About&tips HELP ⓘ left in place (§5, not attribution).
+      Verified headless on all nine map surfaces at 1280/1440/1920. One commit per section.
 - [x] **Neighbourhood search — custom combobox: RESOLVED (was already done).**
       `SearchInput.jsx` already renders a custom `<ul role="listbox">`, NOT a
       native `<datalist>` (its header comment says so), so the cross-browser

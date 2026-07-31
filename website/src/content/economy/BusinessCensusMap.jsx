@@ -491,7 +491,10 @@ export default function BusinessCensusMap() {
                   images={[]}
                   onLoad={handleMapLoad}
                   cooperativeGestures={false}
+                  // Attribution consolidated into the Data & Attribution panel (database
+                  // control) — the native MapLibre bar is the removed duplicate.
                   mapAttribution={siteConfig.mapAttributionStrip}
+                  nativeAttribution={false}
                 />
               </MapErrorBoundary>
             </>

@@ -27,8 +27,9 @@ import EmptyState from "../../components/EmptyState.jsx";
 import IdentityCard from "../../components/IdentityCard.jsx";
 import { HOME_VIEW, applyCameraPreset } from "../../components/mapCamera.js";
 import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
-import { ICON_RECENTRE } from "../../components/mapIcons.js";
+import { ICON_RECENTRE, ICON_DATABASE } from "../../components/mapIcons.js";
 import { siteConfig } from "../../config/siteConfig.js";
+import AttributionPanel from "../../components/AttributionPanel.jsx";
 import { assetUrl } from "../../utils/assetUrl.js";
 import AmenityInfoRail from "./AmenityInfoRail.jsx";
 import { BASEMAP_STYLE, MAP_VIEW } from "./amenityPointStyle.js";
@@ -51,6 +52,7 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id", title,
   const [selected, setSelected] = useState(null);   // { id, props } — pinned stop
   const [hovered, setHovered] = useState(null);      // { id, props } — hover preview
   const [clusterTip, setClusterTip] = useState(null); // { label, count, x, y } — cluster hover readout (§D2)
+  const [attribOpen, setAttribOpen] = useState(false); // Data & Attribution panel (bottom-right)
 
   useEffect(() => {
     let cancelled = false;
@@ -84,6 +86,9 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id", title,
 
   const firstHomeRef = useRef(true);
   const recentreAddedRef = useRef(false);
+  // The bottom-right Data & Attribution control glows while its panel is open.
+  const attribCtrlRef = useRef(null);
+  useEffect(() => { attribCtrlRef.current?.setActive(attribOpen); }, [attribOpen]);
   function handleMapLoad(m) {
     setMap(m);
     if (import.meta.env.DEV) window.__amenityMap = m;
@@ -100,6 +105,15 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id", title,
         svg: railGlyph(ICON_RECENTRE), label: "Return to home view",
         onClick: () => applyCameraPreset(m, HOME_VIEW.Edmonton, { ease: true }),
       }), "top-right");
+      // Data & Attribution — the single attribution surface (bottom-right), native bar removed.
+      const attrib = makeIconButtonControl({
+        svg: railGlyph(ICON_DATABASE),
+        label: "Data & attribution",
+        onClick: () => setAttribOpen((o) => !o),
+      });
+      m.addControl(attrib, "bottom-right");
+      attribCtrlRef.current = attrib;
+      attrib.setActive(attribOpen);
       recentreAddedRef.current = true;
     }
   }
@@ -207,6 +221,7 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id", title,
                     onLoad={handleMapLoad}
                     cooperativeGestures={false}
                     mapAttribution={siteConfig.mapAttributionStrip}
+                    nativeAttribution={false}
                   />
                 </MapErrorBoundary>
               )}
@@ -237,6 +252,9 @@ export default function AmenityDensityMap({ layerId, idField = "stop_id", title,
             categoryLabels={BUS_ZONE_OPERATOR}
           />
         )}
+
+        {/* DATA & ATTRIBUTION — the single attribution surface (bottom-right database control). */}
+        <AttributionPanel open={attribOpen} onClose={() => setAttribOpen(false)} />
 
         {entry && (
           <div className="pa-float pa-column pa-column-lean">
