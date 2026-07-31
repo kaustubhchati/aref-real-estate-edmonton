@@ -1,12 +1,12 @@
 # CLAUDE.md
 
-> **Version: v1.19 — authoritative. Supersedes all prior versions (v0.1–v1.18).**
+> **Version: v1.21 — authoritative. Supersedes all prior versions (v0.1–v1.20).**
 > This is the single source of project context for every Claude Code session — read it first.
 > If any other note, comment, or older doc frames *the website* as an "agent-driven platform,"
 > that framing is **retired** — see §1.
 > Owner / **builder**: KC (Research Assistant, UAlberta) — direct-push authority to `main` (§7).
 > Verifier: Olivia (post-hoc review, §7). Supervisor: Prof. Haifang Huang.
-> Last updated: 2026-07-30. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
+> Last updated: 2026-07-31. Phase 1 is **CLOSED** (see PHASE1_STATUS.md, now archive);
 > current open work tracked in **PHASE2_STATUS.md**. Tier 2 (container-universe reconciliation)
 > is **CLOSED** end-to-end (§12 v1.11). The frontend matured substantially since v1.15
 > (§12 v1.16–v1.20): navigation moved to an **off-canvas drawer** and displayed identity is now
@@ -507,6 +507,31 @@ When in doubt, load §2 (locked architecture) and §9 (negative rules) — the l
 Revise when: a locked decision changes (§2), a new section is wired (§3), a new rule is validated
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
+- **v1.21 (2026-07-31)** — **Zoning console directive (PA-matched header + column legend table +
+  strip chip floor); the panel-toggle standard ruled UNCONDITIONAL; the five-section tab→button
+  retrofit reconned and HELD. On a feature branch (`feature/zoning-console-panel-retrofit`), NOT
+  merged.** Frontend-only. **(1) Zoning console fixes** (`c7f6ec2`): the legend rail gained a
+  PA-matched header card (`IdentityCard`, Edmonton/Calgary switcher), a column-standardized legend
+  TABLE (`ZoningLegendRail.jsx` — swatch · family · zones · area, Total row, area-descending, the
+  new DESIGN_SYSTEM legend-table colour-tier rule: name + area PRIMARY, count SECONDARY, headers +
+  total MUTED), a strip chip TEXT FLOOR (`ZoningLegendStrip.jsx` — chips sized MIN + share×remaining,
+  proportional ABOVE a 48 px floor so the smallest family clears its own printed number; the number
+  corrects the pixel), session-persisted rail state, and an `L` keyboard toggle. **(2) DESIGN_SYSTEM
+  amendments** (§1.4 in-fill label rule — one WCAG-luminance threshold 0.42, two tokens; §5 legend
+  strip proportional-floor tradeoff + the categorical legend-TABLE colour-tier rule; §6 the
+  UNCONDITIONAL panel-toggle rule — button form, tab form retired, 4 parts Form/Placement/Alignment/
+  Keyboard). **(3) The panel-toggle RETROFIT is reconned + HELD** (5 read-only agents): the only
+  tab-form panels are the three Data Consoles (PA/DU/BC-census), which SHARE the `.dt-handle`
+  component and are each LOAD-BEARING (N-selected readout, tuning-strip anchor, auto-open) → the §3
+  stop-and-report gate applies; the "neither tab nor button" cases (the i / attribution / search
+  icon-rail popovers) are §6-governed map-rail controls whose glow is the sole close cue → migrating
+  them contradicts §6; BP-point + amenities have NO tab-form panel. The retrofit needs a KC ruling
+  (shared-handle separability + whether §6 icon-rail popovers are in scope) and stays the DEFERRED
+  campaign in PHASE2_STATUS. **(4) METHODOLOGY D8** expanded with the five-field emit skeleton
+  (family-boundary dissolve + no-year manifest). Records: `ZONING_SESSION_RECORD_20260731.md` (the
+  reversals — LBCS-as-hue retired, QUALITATIVE_12 ruled inapplicable to fills, non-hue governance
+  tried twice + abandoned, buildings removed then reinstated, bottom console built then reverted,
+  tab form retired, deep-link flies→lands-on-city-frame).
 - **v1.20 (2026-07-30)** — **Zoning View 1 matured across six directive passes; the attribution
   went compact site-wide; DESIGN_SYSTEM §5/§6 amended. Shipped + PUSHED (`71abd88`→`5dd2d9d`).**
   Frontend-only (no pipeline data logic changed). **(1) Home camera** — a whole-city KC-ratified

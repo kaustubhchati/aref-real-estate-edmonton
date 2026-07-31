@@ -286,6 +286,15 @@ any blank code; the zone code `NA` (Natural Areas) is handled as a **literal joi
 both sides of the join, so readr's NA-coercion can never route a blank onto its family.
 Families are a categorical fill; the exact code + description surface on hover/select.
 
+The section emits on a **five-field skeleton** (the amenities no-year pattern): the zone
+polygons (`zoning_bylaw.geojson`, carrying `zone_family`), a **family-boundary dissolve**
+(`zoning_family_boundaries.geojson` — the 10 families unioned in planar UTM-12N to
+MULTILINESTRINGs, rendered as the mid-zoom reference boundary the family fill reads against;
+pipeline-emitted, never client-derived), and a no-year currency `manifest.json`
+(`sourceUpdatedAt` / `fetchedAt` / `featureCount` / per-family counts). The per-family counts
+appear in both the build log and the manifest so a mis-mapped (as opposed to unmapped) code is
+caught by a count that moved, not by the fail-closed guard.
+
 ### Why
 A 156-class fill is unreadable — no categorical palette survives it — and the class list
 changes whenever Council amends the bylaw. Curation (with a fail-closed guard) turns both

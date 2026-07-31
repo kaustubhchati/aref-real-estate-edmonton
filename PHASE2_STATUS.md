@@ -136,8 +136,19 @@ sections, agent pipeline, and infrastructure.
       attribution site-wide, a hardened hover chain (loop / seam / pinned-interplay / preview-
       debounce fixes), and full DESIGN_SYSTEM compliance (§5 building-fill carve-out + §6 attribution
       amended). Generic `categoricalPolygon`/legend proven on schools first
-      (`/dev/categorical-polygon-proof`). Whole zoning build pushed (`71abd88`→`5dd2d9d`). Remaining:
-      Olivia QA; V2 Overlays (v1.1) when `6w3s-58pv` is wired.
+      (`/dev/categorical-polygon-proof`). Whole zoning build pushed (`71abd88`→`5dd2d9d`).
+      **Console pass (2026-07-31, §12 v1.21, on branch `feature/zoning-console-panel-retrofit`):**
+      PA-matched legend header card + column legend TABLE + strip chip text floor + `L` toggle
+      (`c7f6ec2`); the panel-toggle standard ruled unconditional; reversals recorded in
+      `ZONING_SESSION_RECORD_20260731.md`. Remaining: Olivia QA.
+      **V2 Overlays (v1.1) — DEFERRED with three open recon questions** (before it is built):
+      (1) which overlay dataset(s) — `6w3s-58pv` is UNFETCHED; confirm it is the intended source,
+      its geometry type, and whether one dataset or several feed the view; (2) how overlays COMPOSE
+      with the family fill — render order / opacity / whether the fill mutes under an active overlay
+      (the amenity `modifyingViewUid` parent precedent may apply); (3) the overlay's reading surface —
+      the strip + table encode family AREA and an overlay is not an area partition, so decide whether
+      Overlays reuses the strip/table, gets its own legend, or is a simple on/off layer with only the
+      rail for detail. The section shell already reserves the second selector row + component.
 - [x] **Business Counts** — BUILT / live (Edmonton Business Census
       choropleth at `/economy/business-counts`; provenance note shipped).
       Refresh-by-design parity **PARKED**: its year is baked into the GeoJSON
@@ -161,6 +172,28 @@ sections, agent pipeline, and infrastructure.
       the PA manifest (refresh-by-design). (Was "parked" — superseded.)
 
 ### Frontend — polish deferred from Phase 1
+- [ ] **Panel toggle retrofit — migrate every tab-form panel to the button form (DEFERRED campaign, 2026-07-31).**
+      DESIGN_SYSTEM's panel-toggle rule is now UNCONDITIONAL: every collapsible panel uses the
+      **button** form (labelled + icon, panel-dark rest, shared `--accent-int-*` teal active, the
+      shortcut in the tooltip; alignment tracks the dock — bottom centres, side aligns to its card
+      edges); the **tab form is retired**. Zoning's legend rail already conforms (built to it).
+      **RECON DONE (2026-07-31, 5 read-only agents) — the retrofit is HELD on the §3 stop-and-report
+      gate, NOT executed:** the only tab-form panels are the THREE Data Consoles — PA
+      (`DataTable.jsx`), DU (`PermitDataConsole.jsx`), BC-census (`BusinessCensusConsole.jsx`) —
+      which SHARE the `.dt-handle` component/CSS (so a per-section-separable migration, which this
+      campaign requires, isn't possible without duplicating the shared handle 3×, itself a bigger
+      change than a chrome swap) AND are each LOAD-BEARING (the handle carries a live "N selected" /
+      drilled-sector readout, anchors the tuning strip, encodes open/closed in its caret, auto-opens
+      on box-select — the stop-and-report case). The "neither tab nor button" cases — the
+      **i / attribution / search icon-rail popovers** (PA, DU, BC-counts, BP) — are §6-governed
+      MapLibre rail controls whose GLOW is the sole close cue (no ×, no click-outside); migrating them
+      to labelled buttons contradicts the §6 icon-only rail chassis + the popover-as-documentation
+      law. **BP point map + amenities have NO tab-form panel** — nothing to migrate. **KC ruling owed
+      before proceeding:** (a) may the three Data Consoles migrate as a SINGLE shared-handle commit
+      (relaxing the per-section-separable rule, since they are one component), and (b) are the §6
+      icon-rail popovers in scope at all. Detail in `ZONING_SESSION_RECORD_20260731.md` §8. Deliberately
+      NOT folded into the zoning commit (a five-section chrome migration inside a zoning console diff
+      is scope creep).
 - [x] **Neighbourhood search — custom combobox: RESOLVED (was already done).**
       `SearchInput.jsx` already renders a custom `<ul role="listbox">`, NOT a
       native `<datalist>` (its header comment says so), so the cross-browser
