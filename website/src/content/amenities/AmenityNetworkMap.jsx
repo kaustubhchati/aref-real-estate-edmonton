@@ -22,8 +22,9 @@ import EmptyState from "../../components/EmptyState.jsx";
 import IdentityCard from "../../components/IdentityCard.jsx";
 import { HOME_VIEW, applyCameraPreset } from "../../components/mapCamera.js";
 import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
-import { ICON_RECENTRE } from "../../components/mapIcons.js";
+import { ICON_RECENTRE, ICON_DATABASE } from "../../components/mapIcons.js";
 import { siteConfig } from "../../config/siteConfig.js";
+import AttributionPanel from "../../components/AttributionPanel.jsx";
 import { assetUrl } from "../../utils/assetUrl.js";
 import AmenityInfoRail from "./AmenityInfoRail.jsx";
 import { BASEMAP_STYLE, MAP_VIEW } from "./amenityPointStyle.js";
@@ -40,6 +41,7 @@ export default function AmenityNetworkMap({ layerId, idField = "lrt_stop_number"
   const [entry, setEntry] = useState(null);       // the STATION layer's manifest record
   const [fetchError, setFetchError] = useState(null);
   const [linesGj, setLinesGj] = useState(null);   // the route lines (legend)
+  const [attribOpen, setAttribOpen] = useState(false); // Data & Attribution panel (bottom-right)
   const [stationsGj, setStationsGj] = useState(null);
   const [map, setMap] = useState(null);
   const [selected, setSelected] = useState(null);
@@ -71,6 +73,9 @@ export default function AmenityNetworkMap({ layerId, idField = "lrt_stop_number"
 
   const firstHomeRef = useRef(true);
   const recentreAddedRef = useRef(false);
+  // The bottom-right Data & Attribution control glows while its panel is open.
+  const attribCtrlRef = useRef(null);
+  useEffect(() => { attribCtrlRef.current?.setActive(attribOpen); }, [attribOpen]);
   function handleMapLoad(m) {
     setMap(m);
     if (import.meta.env.DEV) window.__amenityMap = m;
@@ -82,6 +87,15 @@ export default function AmenityNetworkMap({ layerId, idField = "lrt_stop_number"
         svg: railGlyph(ICON_RECENTRE), label: "Return to home view",
         onClick: () => applyCameraPreset(m, HOME_VIEW.Edmonton, { ease: true }),
       }), "top-right");
+      // Data & Attribution — the single attribution surface (bottom-right), native bar removed.
+      const attrib = makeIconButtonControl({
+        svg: railGlyph(ICON_DATABASE),
+        label: "Data & attribution",
+        onClick: () => setAttribOpen((o) => !o),
+      });
+      m.addControl(attrib, "bottom-right");
+      attribCtrlRef.current = attrib;
+      attrib.setActive(attribOpen);
       recentreAddedRef.current = true;
     }
   }
@@ -169,6 +183,7 @@ export default function AmenityNetworkMap({ layerId, idField = "lrt_stop_number"
                     onLoad={handleMapLoad}
                     cooperativeGestures={false}
                     mapAttribution={siteConfig.mapAttributionStrip}
+                    nativeAttribution={false}
                   />
                 </MapErrorBoundary>
               )}
@@ -184,6 +199,9 @@ export default function AmenityNetworkMap({ layerId, idField = "lrt_stop_number"
             categoryField=""
           />
         )}
+
+        {/* DATA & ATTRIBUTION — the single attribution surface (bottom-right database control). */}
+        <AttributionPanel open={attribOpen} onClose={() => setAttribOpen(false)} />
 
         {entry && (
           <div className="pa-float pa-column pa-column-lean">
