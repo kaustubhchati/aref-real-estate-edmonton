@@ -508,9 +508,8 @@ Revise when: a locked decision changes (§2), a new section is wired (§3), a ne
 (§5), a negative rule changes (§9), or an `[OPEN]` resolves (§10).
 
 - **v1.22 (2026-07-31)** — **Attribution consolidation + corner standardization across ALL six
-  sections. Merged to `main`.** (v1.21 is the parallel zoning-console/panel-toggle retrofit on branch
-  `feature/zoning-console-panel-retrofit`, PR #10 — not yet merged; these two campaigns are
-  independent.) Frontend-only. **The duplicate native MapLibre attribution bar is REMOVED from every
+  sections. Merged to `main`.** (v1.21 below is the parallel zoning-console/panel-toggle retrofit,
+  PR #10, merged to `main` alongside this — the two campaigns are independent.) Frontend-only. **The duplicate native MapLibre attribution bar is REMOVED from every
   map; the custom `AttributionPanel` (bottom-right `database` control) is the SINGLE attribution
   surface.** Licence-safe because deleting attribution is not — every string the native bar carried
   survives in the panel (data-driven from `siteConfig`): City of Edmonton Open Data · OGL Terms v2.1 ·
@@ -532,6 +531,33 @@ Revise when: a locked decision changes (§2), a new section is wired (§3), a ne
   fullscreen / reset / locate / attribution — stay icon-only) and the corner slot rule. Verified
   headless on all nine map surfaces (every string present, links live, three close routes, geometry at
   three widths, no console errors). One commit per section (prep + shared fix + 6 sections).
+- **v1.21 (2026-07-31)** — **Zoning console directive (PA-matched header + column legend table +
+  strip chip floor); the panel-toggle standard ruled UNCONDITIONAL; the Data Console tab→button
+  retrofit reconned then EXECUTED as one shared-handle commit (KC "migrate as one"). Merged to `main`
+  (PR #10, alongside v1.22).** Frontend-only. **(1) Zoning console fixes** (`c7f6ec2`): the legend rail gained a
+  PA-matched header card (`IdentityCard`, Edmonton/Calgary switcher), a column-standardized legend
+  TABLE (`ZoningLegendRail.jsx` — swatch · family · zones · area, Total row, area-descending, the
+  new DESIGN_SYSTEM legend-table colour-tier rule: name + area PRIMARY, count SECONDARY, headers +
+  total MUTED), a strip chip TEXT FLOOR (`ZoningLegendStrip.jsx` — chips sized MIN + share×remaining,
+  proportional ABOVE a 48 px floor so the smallest family clears its own printed number; the number
+  corrects the pixel), session-persisted rail state, and an `L` keyboard toggle. **(2) DESIGN_SYSTEM
+  amendments** (§1.4 in-fill label rule — one WCAG-luminance threshold 0.42, two tokens; §5 legend
+  strip proportional-floor tradeoff + the categorical legend-TABLE colour-tier rule; §6 the
+  UNCONDITIONAL panel-toggle rule — button form, tab form retired, 4 parts Form/Placement/Alignment/
+  Keyboard). **(3) The panel-toggle RETROFIT — reconned (5 agents) then EXECUTED** (KC ruling
+  "migrate as one, build"): the only tab-form panels were the three Data Consoles (PA/DU/BC-census),
+  which SHARE the ONE `.dt-handle` component → migrated as a SINGLE shared-handle commit (the shared
+  `.dt-handle` CSS became the §6 button chassis — muted rest, `--pa-ink` hover, `--accent-int-*` teal
+  when `aria-expanded`, a table `.dt-handle-icon`; each console JSX gained the icon + a `title` and
+  dropped the on-screen "Press T"). Only the affordance changed — the load-bearing readout ("N
+  selected" / drilled-sector), geometry, defaults, contents, tuning strip, T-key, and auto-open are
+  byte-identical; verified headless on all three. The i / attribution / search icon-rail popovers
+  STAY — §6-governed map-rail controls (icon-only + glow-close), out of scope of this rule.
+  BP-point + amenities have NO tab-form panel. **(4) METHODOLOGY D8** expanded with the five-field emit skeleton
+  (family-boundary dissolve + no-year manifest). Records: `ZONING_SESSION_RECORD_20260731.md` (the
+  reversals — LBCS-as-hue retired, QUALITATIVE_12 ruled inapplicable to fills, non-hue governance
+  tried twice + abandoned, buildings removed then reinstated, bottom console built then reverted,
+  tab form retired, deep-link flies→lands-on-city-frame).
 - **v1.20 (2026-07-30)** — **Zoning View 1 matured across six directive passes; the attribution
   went compact site-wide; DESIGN_SYSTEM §5/§6 amended. Shipped + PUSHED (`71abd88`→`5dd2d9d`).**
   Frontend-only (no pipeline data logic changed). **(1) Home camera** — a whole-city KC-ratified

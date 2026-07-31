@@ -3,17 +3,19 @@
 // removed the count band). The legend panel is gone; this bottom-docked object
 // on the map carries the palette AND the area encoding.
 //
-//   • THE BAND — ten chips, widths proportional to AREA SHARE, ordered
-//     area-descending. Each wide-enough chip prints its share INSIDE itself,
-//     battery-indicator style; the ink is derived per chip from the fill's
-//     lightness (dark on the pale Band-A families, light on the saturated
-//     rest — a single fixed colour fails at one end). Narrow chips print no
-//     number (measured, never shrunk — hide-not-drift, the building-number
-//     principle); the hover readout supplies it.
-//   • LABEL row — family names beneath chips wide enough to hold them, same
-//     measured fit; a quiet trailing hint covers the unlabelled tail. On
-//     hover/isolate/selection it is REPLACED by a readout stating the true
-//     numbers (name · area share · zone count).
+//   • THE BAND — ten chips, width = MIN_CHIP_PX + (area share × remaining), so
+//     every chip clears its own printed percentage. This is PROPORTIONAL ABOVE
+//     A FLOOR, not strictly proportional (pass 17 §1): strict proportionality
+//     can't hold Mixed Use at 0.8% (a few pixels), so each chip reserves a text
+//     floor and the remaining width is distributed by share. The distortion is
+//     acceptable ONLY because the true value is printed inside every chip — the
+//     number corrects the pixel. If the number were ever removed, the floor
+//     goes with it. The share ink is derived per fill's lightness (§3, the
+//     DESIGN_SYSTEM in-fill label rule): dark on the pale families, light on the
+//     saturated rest.
+//   • LABEL row — family names beneath chips wide enough to hold them, MEASURED
+//     (hide-not-drift, never shrunk); the readout replaces them on hover/isolate/
+//     selection with the true numbers (name · area share · zone count).
 //
 // INTERACTION: the hit layer is a row of transparent BUTTONS spanning the
 // strip's FULL height (narrow chips stay usable — the hit is the whole band),
@@ -30,19 +32,24 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-const MIN_AREA_PX = 10;   // chip floor — nothing renders as a hairline
+// The chip TEXT FLOOR (pass 17 §1): the widest percentage string ("32.6%")
+// renders 35.4 px at the chip's 11 px/600/tabular-nums; + 7 px left pad + a
+// ~6 px right breath = 48. Reserved as each chip's flex-basis; the remaining
+// strip width is distributed by area share. width = 48 + (share × remaining).
+const MIN_CHIP_PX = 48;
 
-// One proportional cell: flex-grow carries the share, min-width the floor.
-// Used by the band, the hit layer and the label row so all three divide
-// the strip identically.
+// One cell: flex-basis = the text floor (reserved for all ten), flex-grow =
+// the area share (distributes the remainder). Used by the band, the hit layer
+// AND the label row so all three divide the strip identically.
 const cellStyle = (share) => ({
-  flex: `${Math.max(share, 0.0001)} 1 0px`, minWidth: MIN_AREA_PX, minHeight: 0,
+  flex: `${Math.max(share, 0.0001)} 1 ${MIN_CHIP_PX}px`, minHeight: 0,
 });
 
-// Per-chip ink from fill lightness (§2): dark on the pale families, light on
-// the saturated rest — the map's own polarity inks (#2a2621 / #faf6ec). WCAG
-// relative luminance, threshold 0.42 cleanly splits sage/gold (dark) from the
-// rest (light). Derived, never a single hardcoded colour that fails at one end.
+// In-fill label ink — the DESIGN_SYSTEM in-fill label rule (§1.4 categorical
+// polygon fill law): ONE measured threshold (WCAG relative luminance 0.42),
+// EXACTLY two tokens — dark-on-light #2a2621, light-on-dark #faf6ec — applied
+// uniformly, no third case, no per-family override. Every zoning fill clears it
+// with margin (nearest is Industrial/DC/Civic at L≈0.304, 0.116 below → light).
 function inkForFill(hex) {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
   const lin = (c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
@@ -71,30 +78,26 @@ export default function ZoningLegendStrip({
   const mode = chipHover ? "hover" : emphasis ? "selected" : isolated ? "isolated" : "rest";
   const focusItem = focus ? domain.find((d) => d.key === focus) : null;
 
-  // Fit measurement — the in-chip percentage AND the family name each render
-  // only when their cell holds them whole (hide-not-drift). Both re-measured
+  // Fit measurement — only the family NAMES need it now (the chip floor §1
+  // guarantees every percentage fits its chip, so the in-chip % always shows).
+  // A name renders only when its cell holds it whole (hide-not-drift); measured
   // on any strip resize.
-  const bandRef = useRef(null);
   const labelRowRef = useRef(null);
-  const [pctFits, setPctFits] = useState({});
   const [labelFits, setLabelFits] = useState({});
   useLayoutEffect(() => {
-    const measureRow = (row, setter, slack) => {
-      if (!row) return;
+    const row = labelRowRef.current;
+    if (!row) return undefined;
+    const measure = () => {
       const next = {};
       for (const cell of row.querySelectorAll("[data-family]")) {
         const span = cell.querySelector("span");
-        next[cell.dataset.family] = span ? span.scrollWidth <= cell.clientWidth - slack : false;
+        next[cell.dataset.family] = span ? span.scrollWidth <= cell.clientWidth - 2 : false;
       }
-      setter(next);
-    };
-    const measure = () => {
-      measureRow(bandRef.current, setPctFits, 12);   // chip padding 7L + a right breath
-      measureRow(labelRowRef.current, setLabelFits, 2);
+      setLabelFits(next);
     };
     measure();
     const ro = new ResizeObserver(measure);
-    if (bandRef.current) ro.observe(bandRef.current);
+    ro.observe(row);
     return () => ro.disconnect();
   }, [domain]);
 
@@ -128,15 +131,12 @@ export default function ZoningLegendStrip({
           fits. Passive visual; the hit layer below carries every interaction.
           The focused chip takes the ABSOLUTE two-tone emphasis (is-emph, §2);
           the rest dim (secondary). */}
-      <div ref={bandRef} className="zls-band zls-area" aria-hidden="true">
+      <div className="zls-band zls-area" aria-hidden="true">
         {domain.map((it) => (
           <div key={it.key}
                className={`zls-chip${it.key === focus ? " is-emph" : dimmed(it.key) ? " is-dim" : ""}`}
                data-family={it.key} style={{ ...cellStyle(it.share), background: it.colour }}>
-            <span className="zls-pct"
-                  style={{ color: inkForFill(it.colour), visibility: pctFits[it.key] ? "visible" : "hidden" }}>
-              {it.shareDisplay}%
-            </span>
+            <span className="zls-pct" style={{ color: inkForFill(it.colour) }}>{it.shareDisplay}%</span>
           </div>
         ))}
       </div>
@@ -152,7 +152,6 @@ export default function ZoningLegendStrip({
               <span style={{ visibility: labelFits[it.key] ? "visible" : "hidden" }}>{it.label}</span>
             </div>
           ))}
-          <span className="zls-hint">Hover a segment to read its family</span>
         </div>
         {mode !== "rest" && focusItem && (
           // Readout sentence (§1) — no em dash, no interpunct, one sentence.

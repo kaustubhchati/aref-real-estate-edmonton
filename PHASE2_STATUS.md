@@ -136,8 +136,19 @@ sections, agent pipeline, and infrastructure.
       attribution site-wide, a hardened hover chain (loop / seam / pinned-interplay / preview-
       debounce fixes), and full DESIGN_SYSTEM compliance (§5 building-fill carve-out + §6 attribution
       amended). Generic `categoricalPolygon`/legend proven on schools first
-      (`/dev/categorical-polygon-proof`). Whole zoning build pushed (`71abd88`→`5dd2d9d`). Remaining:
-      Olivia QA; V2 Overlays (v1.1) when `6w3s-58pv` is wired.
+      (`/dev/categorical-polygon-proof`). Whole zoning build pushed (`71abd88`→`5dd2d9d`).
+      **Console pass (2026-07-31, §12 v1.21, on branch `feature/zoning-console-panel-retrofit`):**
+      PA-matched legend header card + column legend TABLE + strip chip text floor + `L` toggle
+      (`c7f6ec2`); the panel-toggle standard ruled unconditional; reversals recorded in
+      `ZONING_SESSION_RECORD_20260731.md`. Remaining: Olivia QA.
+      **V2 Overlays (v1.1) — DEFERRED with three open recon questions** (before it is built):
+      (1) which overlay dataset(s) — `6w3s-58pv` is UNFETCHED; confirm it is the intended source,
+      its geometry type, and whether one dataset or several feed the view; (2) how overlays COMPOSE
+      with the family fill — render order / opacity / whether the fill mutes under an active overlay
+      (the amenity `modifyingViewUid` parent precedent may apply); (3) the overlay's reading surface —
+      the strip + table encode family AREA and an overlay is not an area partition, so decide whether
+      Overlays reuses the strip/table, gets its own legend, or is a simple on/off layer with only the
+      rail for detail. The section shell already reserves the second selector row + component.
 - [x] **Business Counts** — BUILT / live (Edmonton Business Census
       choropleth at `/economy/business-counts`; provenance note shipped).
       Refresh-by-design parity **PARKED**: its year is baked into the GeoJSON
@@ -171,6 +182,25 @@ sections, agent pipeline, and infrastructure.
       `dataset` prop (§5). Corner standardized (ⓘ above scale bar, `--map-corner-gap`); panel closes
       three ways (toggle · Esc · click-outside). About&tips HELP ⓘ left in place (§5, not attribution).
       Verified headless on all nine map surfaces at 1280/1440/1920. One commit per section.
+- [x] **Panel toggle retrofit — DONE (2026-07-31, KC ruling "migrate as one, build").**
+      DESIGN_SYSTEM's panel-toggle rule is UNCONDITIONAL: every collapsible panel uses the
+      **button** form (labelled + icon, panel-dark rest, shared `--accent-int-*` teal active, the
+      shortcut in the tooltip; alignment tracks the dock — bottom centres, side aligns to its card
+      edges); the **tab form is retired**. Recon (5 read-only agents) found the only tab-form panels
+      were the THREE Data Consoles — PA (`DataTable.jsx`), DU (`PermitDataConsole.jsx`), BC-census
+      (`BusinessCensusConsole.jsx`) — which SHARE the one `.dt-handle` component/CSS. KC ruled they
+      migrate as a **single shared-handle commit** (per-section separation is not meaningful for one
+      component). **Executed:** the shared `.dt-handle` CSS became the §6 button chassis (muted rest,
+      `--pa-ink` hover, `--accent-int-*` teal when `aria-expanded`) + a table `.dt-handle-icon`; each
+      of the three console JSX gained the icon + a `title="Data console — press T to toggle"` and
+      **dropped the on-screen "Press T"** (moved into the tooltip). Only the affordance changed — the
+      load-bearing readout is preserved (PA/DU "{N} selected", BC drilled-sector name), and the
+      geometry (centred, bottom-docked, connects DOWN to the panel), defaults, panel contents, tuning
+      strip, T-key, and auto-open are byte-identical. Verified headless on all three (open/close by
+      click + T, teal when open, default closed, map renders, no new console errors). The i /
+      attribution / search **icon-rail popovers stay** — they are §6-governed map-rail controls
+      (icon-only + glow-close), OUT OF SCOPE of the panel-toggle rule. **BP point map + amenities have
+      no tab-form panel.** Detail in `ZONING_SESSION_RECORD_20260731.md` §8.
 - [x] **Neighbourhood search — custom combobox: RESOLVED (was already done).**
       `SearchInput.jsx` already renders a custom `<ul role="listbox">`, NOT a
       native `<datalist>` (its header comment says so), so the cross-browser

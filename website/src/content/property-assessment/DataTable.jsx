@@ -839,22 +839,27 @@ export default function DataTable({
           handle when the console is DOWN. In Analysis it relocates into the console
           header (below), so it renders here only while collapsed. */}
       {!open && <div className="pa-tune-dock pa-tune-dock-strip">{tuningInstrument}</div>}
+      {/* §6 button form (2026-07-31; the tab handle is retired) — icon + label, teal when
+          open, T in the tooltip. The universe count (·407) and "Analyst View" chip were
+          already dropped; the SELECTION count stays (live state feedback, contract §3.1);
+          the "Press T" hint moved off-screen into the button tooltip (§6 KEYBOARD). */}
       <button
         type="button"
         className="dt-handle"
         onClick={onToggle}
         aria-expanded={open}
+        title="Data Console (T)"
       >
+        <svg className="dt-handle-icon" width="15" height="15" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+             strokeLinejoin="round" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="16" rx="2" />
+          <line x1="3" y1="9.5" x2="21" y2="9.5" />
+          <line x1="9" y1="9.5" x2="9" y2="20" />
+        </svg>
         <span className="dt-handle-title">Data Console</span>
-        {/* Fix A2 — "Data Console" + its pull-up affordance only. The universe count (·407)
-            and the "Analyst View" chip are removed (dropping the count also retires the
-            stale-403/407 maintenance — no literal to keep in sync). The SELECTION count
-            stays (live state feedback, contract §3.1); a light "Press T" discoverability
-            hint stays while collapsed. */}
-        {selectionMode ? (
+        {selectionMode && (
           <span className="dt-handle-meta dt-handle-sel">{aggregate.nSelected} selected</span>
-        ) : (
-          !open && <span className="dt-handle-meta">Press T</span>
         )}
         <span className="dt-handle-caret" aria-hidden="true">{open ? "▾" : "▴"}</span>
       </button>

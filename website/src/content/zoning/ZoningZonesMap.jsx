@@ -24,7 +24,9 @@ import MapView, { findFirstSymbolLayerId } from "../../components/MapView.jsx";
 import MapSkeleton from "../../components/MapSkeleton.jsx";
 import MapErrorBoundary from "../../components/MapErrorBoundary.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
+import IdentityCard from "../../components/IdentityCard.jsx";
 import ZoningLegendStrip from "./ZoningLegendStrip.jsx";
+import ZoningLegendRail from "./ZoningLegendRail.jsx";
 import ZoningRail from "./ZoningRail.jsx";
 import { applyCameraPreset, ZONING_HOME_VIEW } from "../../components/mapCamera.js";
 import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
@@ -44,6 +46,10 @@ const ZONING_HOME = ZONING_HOME_VIEW.Edmonton;
 
 const MANIFEST_URL = assetUrl("/data/zoning/manifest.json");
 
+// City switcher options (pass 17 §4) — Calgary is chrome-only "soon" (§10:
+// city prefixes + Calgary data stay deferred until Calgary is committed).
+const ZONING_CITIES = ["Edmonton", "Calgary"];
+
 export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
   const [entry, setEntry] = useState(null);        // the zoning_bylaw manifest record
   const [boundsFile, setBoundsFile] = useState(null);
@@ -51,9 +57,15 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
   const [map, setMap] = useState(null);
   const [selected, setSelected] = useState(null);  // { id, props } — pinned zone
   const [hovered, setHovered] = useState(null);    // props — hover preview
-  const [isolated, setIsolated] = useState(null);  // family key ISOLATED via the strip, or null
+  const [isolated, setIsolated] = useState(null);  // family key ISOLATED via the strip OR the rail
   const [chipPreview, setChipPreview] = useState(null);  // family under the strip cursor (§2)
   const [attribOpen, setAttribOpen] = useState(false);   // Data & Attribution panel (bottom-right)
+  // The side legend rail — COLLAPSED by default at home, choice persisted for the
+  // session (pass 18 §3). The bottom strip is always present; the rail is the
+  // opt-in column-standardized table, synced on isolate via `isolated`.
+  const [railOpen, setRailOpen] = useState(() => {
+    try { return sessionStorage.getItem("zoning-legend-rail") === "1"; } catch { return false; }
+  });
   const [searchParams, setSearchParams] = useSearchParams();
   const restoredRef = useRef(false);               // ?zone= permalink restored once
 
@@ -368,10 +380,34 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
     setIsolated((cur) => (cur === key ? null : key));
   }
 
-  // (The manifest currency line lost its home with the console reversal —
-  // flagged in the pass-12 report; the About page still carries provenance.
-  // `selectorNode` has no mount point either until Overlays lands — the v1.1
-  // seam will need a small floating pill for it, decided then.)
+  // Persist the rail's open/closed choice for the session (§3).
+  useEffect(() => {
+    try { sessionStorage.setItem("zoning-legend-rail", railOpen ? "1" : "0"); } catch { /* private mode */ }
+  }, [railOpen]);
+
+  // Keyboard: L toggles the legend rail (chrome shortcut, surfaced in the button
+  // tooltip; §5). Guarded against typing and browser modifiers; "L" collides with
+  // nothing else bound here (map interaction is Escape; the console tab is T on
+  // PA/BC/BP and absent on zoning).
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key !== "l" && e.key !== "L") return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;   // leave ⌘L / Ctrl-L (address bar) alone
+      const el = e.target;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
+      e.preventDefault();
+      setRailOpen((o) => !o);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Escape closes the rail when focus is INSIDE it (§5) — and STOPS the native
+  // event there, so it does not also reach the map's window keydown and clear a
+  // pinned selection (React's synthetic stopPropagation would not stop window).
+  function onRailKey(e) {
+    if (e.key === "Escape") { e.nativeEvent.stopImmediatePropagation(); setRailOpen(false); }
+  }
 
   return (
     <article className="content-map pa-map zoning-map">
@@ -408,6 +444,62 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
             </>
           )}
         </div>
+
+        {/* LEFT COLUMN (pass 18) — the single stack: header card, the Legend
+            toggle button, and the column-standardized legend rail beneath it.
+            HEADER CARD matches PA EXACTLY (§1): title + city switcher only, no
+            descriptor, no Soon badge — same .pa-float › .pa-card-identity ›
+            IdentityCard chassis and PA's 268px width. Calgary is a plain
+            inactive pill (chrome only — no Calgary data, §10; clicking it is a
+            no-op so the section stays on Edmonton). */}
+        {entry && (
+          <div className="pa-float pa-column zoning-left">
+            <section className="pa-card pa-card-identity">
+              <IdentityCard
+                title="Zoning"
+                cities={ZONING_CITIES}
+                city="Edmonton"
+                onCityChange={() => {}}
+              />
+            </section>
+
+            {domain && (
+              // LEGEND TOGGLE (§2, variant B) + RAIL (§3) as one unit — the button
+              // is the rail's header when open (connected radii, no gap).
+              <div className={`zlr-unit${railOpen ? " is-open" : ""}`}>
+                <button
+                  type="button"
+                  className={`zlr-toggle${railOpen ? " is-open" : ""}`}
+                  aria-expanded={railOpen}
+                  aria-controls="zoning-legend-rail"
+                  title="Legend (L)"
+                  onClick={() => setRailOpen((o) => !o)}
+                >
+                  <svg className="zlr-toggle-icon" width="15" height="15" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                       strokeLinejoin="round" aria-hidden="true">
+                    <rect x="3" y="4" width="7" height="7" rx="1.5" />
+                    <rect x="3" y="14" width="7" height="6" rx="1.5" />
+                    <line x1="13" y1="6" x2="21" y2="6" />
+                    <line x1="13" y1="10" x2="21" y2="10" />
+                    <line x1="13" y1="16" x2="21" y2="16" />
+                  </svg>
+                  <span>Legend</span>
+                </button>
+                {railOpen && (
+                  <div id="zoning-legend-rail" onKeyDown={onRailKey}>
+                    <ZoningLegendRail
+                      domain={domain}
+                      isolated={isolated}
+                      total={entry.featureCount}
+                      onToggleFamily={toggleFamily}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* PROPORTIONAL LEGEND STRIP (pass 12 §2) — the only chrome at rest:
             two share encodings + labels, hover-preview + click-to-isolate.
