@@ -33,8 +33,9 @@ import { wirePermitInteractions } from "./permitInteractions.js";
 import PermitInforail from "./PermitInforail.jsx";
 import { HOME_VIEW, applyCameraPreset } from "../../components/mapCamera.js";
 import { makeIconButtonControl, railGlyph } from "../../components/mapControls.js";
-import { ICON_RECENTRE, ICON_INFO, ICON_MOUSE, ICON_MOUSE_CLICK, ICON_CLICK, ICON_SLIDERS } from "../../components/mapIcons.js";
+import { ICON_RECENTRE, ICON_INFO, ICON_DATABASE, ICON_MOUSE, ICON_MOUSE_CLICK, ICON_CLICK, ICON_SLIDERS } from "../../components/mapIcons.js";
 import MapTipsPopover, { Glyph } from "../../components/MapTipsPopover.jsx";
+import AttributionPanel from "../../components/AttributionPanel.jsx";
 import { YearSliderRow, CalibTicks } from "../../components/consoleControls.jsx";
 import {
   LAYER_ID,
@@ -297,6 +298,9 @@ export default function BuildingPermitsMap() {
   );
   // The "i" (About & tips) popover open state — the coverage/honesty caveat lives inside it.
   const [infoOpen, setInfoOpen] = useState(false);
+  // The bottom-right Data & Attribution panel — the single attribution surface (the native
+  // MapLibre bar was removed; this panel carries every licence string).
+  const [attribOpen, setAttribOpen] = useState(false);
 
   // City axis — mirrors PA's LOCAL city state + its S-E gating. BP's permit data is Edmonton-only,
   // so `cityHasData` is BP's equivalent of PA's `url` presence check (PA: years.length ? url : null):
@@ -311,6 +315,7 @@ export default function BuildingPermitsMap() {
     setSelectedFeature(null);  // clear the inforail + "i" on a city switch (no stale selection)
     setHoveredFeature(null);
     setInfoOpen(false);
+    setAttribOpen(false);
   }
 
   // Toggle one value tier on/off (immutably — clone, mutate, return a new Set so
@@ -473,6 +478,10 @@ export default function BuildingPermitsMap() {
   // order: info lands at the bottom, below zoom / fullscreen / recentre.
   const infoCtrlRef = useRef(null);
   useEffect(() => { infoCtrlRef.current?.setActive(infoOpen); }, [infoOpen]);
+  // The database control (bottom-right) glows while the attribution panel is open —
+  // the same load-bearing cue as the "i" (no × on either popover).
+  const attribCtrlRef = useRef(null);
+  useEffect(() => { attribCtrlRef.current?.setActive(attribOpen); }, [attribOpen]);
   useEffect(() => {
     if (!map) return undefined;
     const reset = makeIconButtonControl({
@@ -485,13 +494,24 @@ export default function BuildingPermitsMap() {
       label: "About & tips",
       onClick: () => setInfoOpen((o) => !o),
     });
+    // Data & Attribution — the bottom-right database control (distinct from the top-right
+    // "i"), the single attribution surface now the native bar is gone.
+    const attrib = makeIconButtonControl({
+      svg: railGlyph(ICON_DATABASE),
+      label: "Data & attribution",
+      onClick: () => setAttribOpen((o) => !o),
+    });
     map.addControl(reset, "top-right");
     map.addControl(info, "top-right");
+    map.addControl(attrib, "bottom-right");
     infoCtrlRef.current = info;
+    attribCtrlRef.current = attrib;
     info.setActive(infoOpen);
+    attrib.setActive(attribOpen);
     return () => {
       infoCtrlRef.current = null;
-      for (const c of [reset, info]) { try { map.removeControl(c); } catch { /* map already gone */ } }
+      attribCtrlRef.current = null;
+      for (const c of [reset, info, attrib]) { try { map.removeControl(c); } catch { /* map already gone */ } }
     };
     // Controls mount once; the glow rides the setActive effect above. map is the only dep.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -563,9 +583,11 @@ export default function BuildingPermitsMap() {
               // Every other handler (drag-pan, double-click-zoom, rotate, pitch, keyboard) is
               // MapLibre-default on the shared MapView, so it already matches PA.
               cooperativeGestures={false}
-              // Attribution = LINKS ONLY, no disclaimer prose (KC 2026-07-24, site-wide
-              // standard). Was MapView's default (which carries the §6 disclaimer inline).
+              // Attribution consolidated into the Data & Attribution panel (bottom-right
+              // database control); the native MapLibre bar is removed. mapAttribution kept
+              // as the single string source the panel/exports read.
               mapAttribution={siteConfig.mapAttributionStrip}
+              nativeAttribution={false}
               onLoad={(m) => {
                 // MapView is section-agnostic, so the BP-specific wiring lives here:
                 // hover/click → the right inforail (NO floating popups — map centre sacred).
@@ -636,8 +658,7 @@ export default function BuildingPermitsMap() {
         {/* ABOUT & TIPS — opened by the "i" in the nav stack. Holds the BP interaction index,
             the coverage caveat (§6 honesty, re-homed from the column), and the source citation
             (dataset id + derived point total, re-homed from the column footer; §6 carve-out,
-            primary tier). The bottom-right compact attribution keeps the licence/© (the single
-            control KC ratified for non-console sections, DESIGN_SYSTEM §6). */}
+            primary tier). The licence/© record lives in the Data & Attribution panel below. */}
         <MapTipsPopover
           open={infoOpen}
           onClose={() => setInfoOpen(false)}
@@ -650,6 +671,11 @@ export default function BuildingPermitsMap() {
             </p>
           }
         />
+
+        {/* DATA & ATTRIBUTION — the single attribution surface (bottom-right database
+            control). Carries City / OGL / CARTO / OSM / disclaimer; replaces the removed
+            native MapLibre bar. */}
+        <AttributionPanel open={attribOpen} onClose={() => setAttribOpen(false)} />
 
         {/* ===== TUNING BAY (standalone, bottom-centre) — Year + Month single sliders in
              the PA Data-Console spine SHAPE (.pa-tune-instrument), but BP has no pull-up
