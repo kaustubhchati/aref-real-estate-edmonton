@@ -19,6 +19,20 @@
 // as the bottom strip chips, so isolating from either surface updates both.
 // =============================================================================
 
+// Break the family name after "and" so it WRAPS instead of truncating (§1). The
+// wrapped form is DERIVED at render — the crosswalk label stays the single source
+// of truth; storing a second wrapped label would drift on the next amendment.
+//   "Industrial and Employment" → ["Industrial and", "Employment"]
+//   "Alternative Jurisdiction"  → ["Alternative Jurisdiction"] (no "and" → wraps
+//                                  naturally in CSS)
+// The break is after the FIRST " and " (the set has one each); the remainder,
+// however long, is the second line.
+function familyNameLines(label) {
+  const parts = label.split(/ and (.+)/);   // [before, after, ""] when " and " is present
+  if (parts.length >= 2 && parts[1]) return [`${parts[0]} and`, parts[1]];
+  return [label];
+}
+
 export default function ZoningLegendRail({ domain, isolated, total, onToggleFamily, separators = true }) {
   const fmtCount = (n) => (n == null ? "—" : separators ? n.toLocaleString() : String(n));
   return (
@@ -30,22 +44,29 @@ export default function ZoningLegendRail({ domain, isolated, total, onToggleFami
         <span className="zlr-num">Area</span>
       </div>
       <ul className="zlr-rows">
-        {domain.map((it) => (
-          <li key={it.key}>
-            <button
-              type="button"
-              className={`zlr-row${isolated === it.key ? " is-active" : ""}${isolated && isolated !== it.key ? " is-dim" : ""}`}
-              aria-pressed={isolated === it.key}
-              aria-label={`${it.label}, ${fmtCount(it.count)} zones, ${it.shareDisplay}% of area. ${isolated === it.key ? "Isolated. Press to show all." : "Press to isolate."}`}
-              onClick={() => onToggleFamily(it.key)}
-            >
-              <span className="zlr-swatch" style={{ background: it.colour }} aria-hidden="true" />
-              <span className="zlr-name" title={it.label}>{it.label}</span>
-              <span className="zlr-num zlr-zones">{fmtCount(it.count)}</span>
-              <span className="zlr-num zlr-area">{it.shareDisplay}%</span>
-            </button>
-          </li>
-        ))}
+        {domain.map((it) => {
+          const nameLines = familyNameLines(it.label);
+          return (
+            <li key={it.key}>
+              <button
+                type="button"
+                className={`zlr-row${isolated === it.key ? " is-active" : ""}${isolated && isolated !== it.key ? " is-dim" : ""}`}
+                aria-pressed={isolated === it.key}
+                aria-label={`${it.label}, ${fmtCount(it.count)} zones, ${it.shareDisplay}% of area. ${isolated === it.key ? "Isolated. Press to show all." : "Press to isolate."}`}
+                onClick={() => onToggleFamily(it.key)}
+              >
+                <span className="zlr-swatch" style={{ background: it.colour }} aria-hidden="true" />
+                {/* Name WRAPS, never truncates (§1): a hard break after "and", else
+                    natural word wrap. Derived from the crosswalk label at render. */}
+                <span className="zlr-name">
+                  {nameLines.length === 2 ? <>{nameLines[0]}<br />{nameLines[1]}</> : nameLines[0]}
+                </span>
+                <span className="zlr-num zlr-zones">{fmtCount(it.count)}</span>
+                <span className="zlr-num zlr-area">{it.shareDisplay}%</span>
+              </button>
+            </li>
+          );
+        })}
       </ul>
       {/* Total row under a foot rule — the completeness check. */}
       <div className="zlr-total">

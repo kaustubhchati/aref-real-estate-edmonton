@@ -472,7 +472,8 @@ export default function ZoningZonesMap({ title, selectorNode, cameraRef }) {
                   className={`zlr-toggle${railOpen ? " is-open" : ""}`}
                   aria-expanded={railOpen}
                   aria-controls="zoning-legend-rail"
-                  title="Legend (L)"
+                  data-tip="Legend (L)"
+                  aria-keyshortcuts="l"
                   onClick={() => setRailOpen((o) => !o)}
                 >
                   <svg className="zlr-toggle-icon" width="15" height="15" viewBox="0 0 24 24"

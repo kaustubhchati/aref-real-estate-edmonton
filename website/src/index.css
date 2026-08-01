@@ -4445,6 +4445,7 @@ p  { margin: 0 0 0.75rem; }
    Edmonton pill (--accent-int-*). When open it squares its bottom + connects to
    the rail below, reading as the rail's header. */
 .zlr-toggle {
+  position: relative;
   display: flex; align-items: center; gap: 7px; width: 100%;
   font-family: inherit; font-size: var(--t-sm); font-weight: 500; color: var(--pa-mut);
   background: var(--pa-shell); border: 1px solid var(--glass-panel-rim);
@@ -4459,6 +4460,18 @@ p  { margin: 0 0 0.75rem; }
   border-bottom-left-radius: 0; border-bottom-right-radius: 0;   /* connect to the rail below */
 }
 .zlr-toggle:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }
+/* Legend (L) tooltip — ABOVE the toggle so it CLEARS the rail content below (was a
+   native title overlaying the Zones/Area header, §4a). data-tip carries the text;
+   aria-keyshortcuts announces the key to assistive tech. */
+.zlr-toggle[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute; left: 11px; bottom: calc(100% + 7px);
+  padding: 3px 8px; border-radius: 6px; white-space: nowrap;
+  background: var(--pa-card); color: var(--pa-ink); border: 1px solid var(--pa-hair);
+  font-size: var(--t-2xs); font-weight: 500; box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+  opacity: 0; pointer-events: none; transition: opacity 120ms var(--ease); z-index: 30;
+}
+.zlr-toggle[data-tip]:hover::after, .zlr-toggle[data-tip]:focus-visible::after { opacity: 1; }
 
 /* LEGEND RAIL TABLE (§3) — connects directly under the open toggle. Four fixed
    columns share ONE grid template (header, rows, total) so they align. Numeric
@@ -4469,8 +4482,9 @@ p  { margin: 0 0 0.75rem; }
   box-shadow: 0 6px 20px rgba(0,0,0,0.32);
 }
 .zlr-head, .zlr-row, .zlr-total {
-  display: grid; grid-template-columns: 12px minmax(0, 1fr) 42px 36px; align-items: center;
-  column-gap: 5px; padding: 0 6px;   /* numerics as tight as legible → the name column takes the rest */
+  display: grid; grid-template-columns: 12px minmax(0, 1fr) 50px 46px; align-items: center;
+  column-gap: 14px; padding: 0 6px;   /* name ~16ch now it WRAPS (§1); the freed width is gutter
+                                         for Zones/Area — numbers keep tabular right edges (§3) */
 }
 .zlr-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* Header rule — Zones / Area, muted, on a bottom hairline. */
@@ -4478,8 +4492,10 @@ p  { margin: 0 0 0.75rem; }
 .zlr-rows { list-style: none; margin: 0; padding: 2px 0; display: flex; flex-direction: column; }
 /* A row = a click-to-isolate button; NAME + AREA primary (--pa-ink), COUNT
    secondary (--pa-mut) — area is what the map encodes, count supports it. */
+/* Rows GROW to fit a wrapped (two-line) name (§2); align-items:center on the shared
+   grid keeps the swatch, count and % vertically centred against the name block. */
 .zlr-row {
-  width: 100%; height: 24px; background: none; border: 0; border-radius: var(--r-sm);
+  width: 100%; min-height: 26px; padding: 3px 6px; background: none; border: 0; border-radius: var(--r-sm);
   cursor: pointer; font-family: inherit; font-size: var(--t-xs);
   transition: background 120ms var(--ease), opacity 120ms var(--ease);
 }
@@ -4488,7 +4504,9 @@ p  { margin: 0 0 0.75rem; }
 .zlr-row.is-dim { opacity: 0.42; }
 .zlr-row:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: -2px; }
 .zlr-swatch { width: 12px; height: 12px; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(20,16,24,0.35); }
-.zlr-name { color: var(--pa-ink); text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Name WRAPS, never truncates (§1): normal wrapping + break-word; the JSX inserts a
+   hard break after "and". line-height tightened so two lines stay compact. */
+.zlr-name { color: var(--pa-ink); text-align: left; white-space: normal; overflow-wrap: break-word; line-height: 1.2; }
 .zlr-zones { color: var(--pa-mut); }                 /* count = secondary */
 .zlr-area  { color: var(--pa-ink); font-weight: 600; }   /* area = primary (map-encoded) */
 /* Total row — muted, under a foot rule; the completeness check. */
