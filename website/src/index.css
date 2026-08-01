@@ -436,8 +436,10 @@ p  { margin: 0 0 0.75rem; }
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  /* Header band height — the ONE knob for the fixed header band (.shell-header). */
-  --header-h: 90px;
+  /* Header band height — the ONE knob for the fixed header band (.shell-header).
+     Trimmed 90→72px (KC 2026-07-31): the content is vertically centred, so this
+     takes ~9px of whitespace off the top AND bottom evenly. */
+  --header-h: 72px;
 }
 
 .shell-main {
