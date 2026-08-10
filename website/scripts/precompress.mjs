@@ -44,6 +44,16 @@ const COMPRESSIBLE = new Set([
 // compressed copy plus nginx's extra per-file stat on every request.
 const MIN_BYTES = 1024;
 
+// ...with one exception. Everything under dist/<ALWAYS_DIR>/ is a file a user
+// asked for by name, by clicking a Download link. The floor above is a
+// build-cost heuristic tuned for the bulk payload nobody waits on, and it should
+// not be the reason one of the three published CSVs is the only download that
+// ships uncompressed. Files here are compressed at ANY size.
+//
+// Scoped to this ONE directory on purpose: the floor still applies everywhere
+// else, so nothing outside the downloads surface changes.
+const ALWAYS_DIR = "downloads";
+
 // Log each file at or above this as it compresses, so a multi-minute run over
 // the big GeoJSON shows progress instead of looking hung.
 const LOUD_BYTES = 2 * 1024 * 1024;
@@ -63,6 +73,15 @@ const brotli = (buf) =>
 const gzip = (buf) => zlib.gzipSync(buf, { level: 9 });
 
 // === Walk ====================================================================
+
+// True when `file` sits anywhere under DIST/<ALWAYS_DIR>/. We compare the FIRST
+// path segment rather than searching the whole path, so a folder called
+// "downloads" nested somewhere deeper can never match by accident.
+function isAlwaysCompressed(file) {
+  const [firstSegment] = path.relative(DIST, file).split(path.sep);
+  return firstSegment === ALWAYS_DIR;
+}
+
 async function* walk(dir) {
   for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
@@ -93,7 +112,7 @@ async function main() {
     if (!COMPRESSIBLE.has(ext)) { skipped++; continue; }
 
     const buf = await fs.readFile(file);
-    if (buf.length < MIN_BYTES) { skipped++; continue; }
+    if (buf.length < MIN_BYTES && !isAlwaysCompressed(file)) { skipped++; continue; }
 
     const b = brotli(buf);
     const g = gzip(buf);
