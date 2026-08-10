@@ -72,6 +72,22 @@ const brotli = (buf) =>
   });
 const gzip = (buf) => zlib.gzipSync(buf, { level: 9 });
 
+// === Writing =================================================================
+
+// Write one sibling, then stamp it with its SOURCE's timestamps.
+//
+// Why the stamp matters: nginx's gzip_static/brotli_static compare the sibling
+// against the original when deciding whether the pre-made copy is safe to serve.
+// A sibling that looks older than the file it came from is exactly what a stale
+// copy looks like, and a quarterly refresh rewrites originals in place — same
+// filename, new bytes — so the two can drift apart on a real deploy. Writing the
+// stamp here, in the ONE function that writes a sibling, means a future edit
+// cannot add a write that forgets it.
+async function writeSibling(siblingPath, bytes, atime, mtime) {
+  await fs.writeFile(siblingPath, bytes);
+  await fs.utimes(siblingPath, atime, mtime);
+}
+
 // === Walk ====================================================================
 
 // True when `file` sits anywhere under DIST/<ALWAYS_DIR>/. We compare the FIRST
@@ -117,10 +133,23 @@ async function main() {
     const b = brotli(buf);
     const g = gzip(buf);
 
+    // Read the source's timestamps BEFORE writing, so both siblings carry the
+    // original's mtime rather than the moment the compressor happened to run.
+    //
+    // `bigint: true` asks for the raw NANOSECOND fields. The default stat hands
+    // back JS Date objects, which are millisecond-only — stamping from those
+    // leaves the sibling up to a millisecond off the source, which still reads as
+    // a mismatch to anything comparing the two. Converting ns -> float seconds
+    // for fs.utimes (which takes a Number) is accurate to ~16 ns in practice;
+    // that is the floor, since fs.utimes has no nanosecond form.
+    const st = await fs.stat(file, { bigint: true });
+    const atime = Number(st.atimeNs) / 1e9;
+    const mtime = Number(st.mtimeNs) / 1e9;
+
     // Keep a sibling only if it actually beats the original — an
     // already-dense file can compress LARGER, and serving that is a loss.
-    if (b.length < buf.length) { await fs.writeFile(file + ".br", b); br += b.length; }
-    if (g.length < buf.length) { await fs.writeFile(file + ".gz", g); gz += g.length; }
+    if (b.length < buf.length) { await writeSibling(file + ".br", b, atime, mtime); br += b.length; }
+    if (g.length < buf.length) { await writeSibling(file + ".gz", g, atime, mtime); gz += g.length; }
 
     files++;
     raw += buf.length;
