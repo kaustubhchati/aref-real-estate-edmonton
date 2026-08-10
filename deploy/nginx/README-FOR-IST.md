@@ -84,7 +84,10 @@ machine — **delete that one file and carry on**. Nothing else needs changing.
   `nginx -V 2>&1 | tr ' ' '\n' | grep http_gzip_static_module`. Most
   distribution packages include it.
 - **Brotli** needs the third-party `ngx_brotli` module, e.g.
-  `apt install libnginx-mod-brotli` on Debian/Ubuntu. **If it is not packaged
+  `apt install libnginx-mod-http-brotli-static` on Debian/Ubuntu. (The package
+  name carries `http` and `static`. Its companion `…-brotli-filter` compresses
+  on the fly and is not needed here, since the build already wrote the `.br`
+  files.) **If it is not packaged
   for your platform, please skip it.** We would much rather do without Brotli
   than have you build nginx from source, which would cut this machine off from
   your normal security updates. That is a poor trade for a file-size gain.
