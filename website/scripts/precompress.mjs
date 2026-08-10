@@ -44,15 +44,17 @@ const COMPRESSIBLE = new Set([
 // compressed copy plus nginx's extra per-file stat on every request.
 const MIN_BYTES = 1024;
 
-// ...with one exception. Everything under dist/<ALWAYS_DIR>/ is a file a user
-// asked for by name, by clicking a Download link. The floor above is a
-// build-cost heuristic tuned for the bulk payload nobody waits on, and it should
-// not be the reason one of the three published CSVs is the only download that
-// ships uncompressed. Files here are compressed at ANY size.
+// ...with one exception, by top-level directory. These two hold the payload the
+// R pipeline publishes, and something always fetches it BY NAME: `downloads/` is
+// what a user clicks, `data/` is what the maps, tables and manifests load. The
+// floor above is a build-cost heuristic tuned for the bulk map payload, and it
+// should not be the reason a served file is the one that ships uncompressed.
+// Files under these directories are compressed at ANY size.
 //
-// Scoped to this ONE directory on purpose: the floor still applies everywhere
-// else, so nothing outside the downloads surface changes.
-const ALWAYS_DIR = "downloads";
+// `assets/` is deliberately NOT here. It is content-hashed bundler output — a
+// changed file gets a new filename and is cached forever — and its sub-1 KB
+// entries are exactly the boot chunks the floor was written for.
+const ALWAYS_DIRS = new Set(["downloads", "data"]);
 
 // Log each file at or above this as it compresses, so a multi-minute run over
 // the big GeoJSON shows progress instead of looking hung.
@@ -90,12 +92,12 @@ async function writeSibling(siblingPath, bytes, atime, mtime) {
 
 // === Walk ====================================================================
 
-// True when `file` sits anywhere under DIST/<ALWAYS_DIR>/. We compare the FIRST
-// path segment rather than searching the whole path, so a folder called
-// "downloads" nested somewhere deeper can never match by accident.
+// True when `file` sits anywhere under one of the ALWAYS_DIRS. We compare the
+// FIRST path segment rather than searching the whole path, so a folder called
+// "downloads" or "data" nested somewhere deeper can never match by accident.
 function isAlwaysCompressed(file) {
   const [firstSegment] = path.relative(DIST, file).split(path.sep);
-  return firstSegment === ALWAYS_DIR;
+  return ALWAYS_DIRS.has(firstSegment);
 }
 
 async function* walk(dir) {
