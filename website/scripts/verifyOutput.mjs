@@ -129,6 +129,37 @@ function describeFailure(offenders, counts) {
  * @param {string}   publicDir  absolute path to website/public
  * @param {string[]} emitted    exact filenames Rollup emitted, relative to distDir
  */
+// WHAT THIS ACTUALLY COVERS, and the one case it does not.
+//
+// There are four ways unwanted files reach dist/, and only three of them end
+// here. Knowing which is which matters, because a clean dist/ after a build is
+// NOT by itself evidence that this check did anything.
+//
+//   1. Junk arrives via public/ (Finder leaves .DS_Store there; Vite copies
+//      public/ verbatim).                                 -> THIS CHECK CATCHES IT.
+//
+//   2. Junk is already sitting in dist/ when this runs and survived the start of
+//      the build.                                         -> THIS CHECK CATCHES IT.
+//
+//   3. Junk appears during precompress's pass, which takes ~13 minutes over the
+//      full map data — a wide window.                     -> precompress.mjs
+//      catches it, by comparing the tree against what it wrote itself. Not here.
+//
+//   4. Junk is sitting in dist/ BEFORE the build starts.  -> vite empties dist/
+//      first, so it is gone before this check looks. Removed, but NOT by this
+//      check. A passing build here says nothing about case 4.
+//
+// WHY CASE 2 IS LOAD-BEARING AND MUST NOT BE TRIMMED
+//   It is tempting to reason that vite empties dist/ at the start of every
+//   build, so nothing can survive into this check, so the dist/-resident path is
+//   dead code. That reasoning is wrong on this machine. On 2026-08-10 TWELVE
+//   iCloud conflict copies were observed still present in dist/ after a
+//   subsequent `vite build` — emptyOutDir did not clear them. The repository
+//   lives under an iCloud-synced ~/Desktop, and a sync writing into the
+//   directory while vite empties it is enough to leave files behind.
+//
+//   So do not remove or narrow the check on the grounds that vite already
+//   cleared the directory. It usually has. It has been observed not to.
 export async function verifyOutputTree({ distDir, publicDir, emitted }) {
   const tracked = gitTrackedFiles(publicDir);
   const fromBundler = new Set(emitted);
