@@ -162,7 +162,30 @@
       "rows": 344,
       "columns": 12,
       "builtAt": "2026-08-11",
-      "fetchedAt": "2026-07-15"
+      "fetchedAt": "2026-07-15",
+      "rowUniverse": {
+        "universeSize": 407,
+        "rowsPresent": 344,
+        "rowsAbsent": 63,
+        "absenceBreakdown": [
+          {
+            "reason_code": "absent_from_source_snapshot",
+            "count": 3
+          },
+          {
+            "reason_code": "no_residential_class_row",
+            "count": 58
+          },
+          {
+            "reason_code": "no_lot_size_after_join",
+            "count": 1
+          },
+          {
+            "reason_code": "merged_into_canonical_neighbourhood",
+            "count": 1
+          }
+        ]
+      }
     }
   ]
 }
