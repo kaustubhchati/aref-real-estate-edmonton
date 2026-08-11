@@ -1451,6 +1451,29 @@ export default function PropertyAssessmentMap() {
                 {url && (!mapReady || swapLoading) && <MapSkeleton />}
                 {/* resetKey (not key) so a YEAR swap clears a caught error WITHOUT
                     remounting MapView — the map persists and dips-and-swaps in place. */}
+
+                {/* WHY THERE IS NO `url &&` GUARD ON THIS MOUNT, AND WHY THAT IS SAFE.
+                    MapView hands geojsonUrl straight to MapLibre, which rejects a null
+                    source and leaves a blank map (see the contract at the addSource call
+                    in components/MapView.jsx). `url` IS null here on first render — it is
+                    `years.length ? resolveCombinedUrl(city) : null`, so it stays null until
+                    the manifest resolves.
+
+                    This mount is nonetheless safe, because it renders only inside the
+                    third branch of the conditional chain that opens ~25 lines above and
+                    reads:
+
+                        ) : url ? (
+
+                    That branch IS the guard. It is doing real work and is easy to miss
+                    from here — the mount line looks ungated, and a reader checking whether
+                    this component is exposed to the null-source bug can reasonably
+                    conclude it is.
+
+                    So: if you refactor that chain, keep a `url`-truthy condition between
+                    it and this mount. Removing it does not fail a test — it produces a
+                    blank map and one console line. Search for `) : url ? (` rather than
+                    trusting the line number; the branch has moved before. */}
                 <MapErrorBoundary resetKey={url}>
                   <MapView
                     className="canvas"
