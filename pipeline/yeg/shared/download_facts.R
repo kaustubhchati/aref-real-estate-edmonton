@@ -93,6 +93,50 @@ coverage_span_of <- function(frame) {
   list(from = min(years), to = max(years))
 }
 
+# Assemble the row-universe block: how many rows the artefact COULD have held,
+# how many it does, and why the rest are missing.
+#
+# WHY THIS EXISTS: the download page said the assessment file covered "407
+# neighbourhoods" when it holds 344. The gap was real, but nothing anywhere
+# stated a cause, so a reader could not tell a deliberate exclusion from a
+# defect. This block makes the artefact account for its own row count.
+#
+# WHY THE CALLER SUPPLIES THE BREAKDOWN: the mechanisms are not shared. A
+# neighbourhood is absent from the assessment aggregate for reasons that have no
+# analogue in a permit-category grid. A common vocabulary imposed across both
+# would name things that are not the same thing, so each section classifies its
+# own absences and passes the counts in.
+#
+# The arithmetic is CHECKED, not asserted: if the breakdown does not account for
+# every absent row, this stops rather than publishing a total that does not add
+# up. A number on a public page that fails its own sum is worse than no number.
+row_universe_block <- function(universe_size, rows_present, breakdown) {
+  if (!is.numeric(universe_size) || length(universe_size) != 1 || is.na(universe_size)) {
+    stop("row_universe_block: universe_size must be a single number, read at ",
+         "runtime from its canonical source — never a constant.")
+  }
+  rows_absent <- as.integer(universe_size) - as.integer(rows_present)
+  if (rows_absent < 0) {
+    stop("row_universe_block: the artefact holds more rows (", rows_present,
+         ") than its universe (", universe_size, "). The universe is wrong.")
+  }
+  if (sum(unlist(breakdown)) != rows_absent) {
+    stop("row_universe_block: absence breakdown sums to ", sum(unlist(breakdown)),
+         " but ", rows_absent, " rows are absent. Every absent row must be ",
+         "assigned to a mechanism.")
+  }
+  list(
+    universeSize     = as.integer(universe_size),
+    rowsPresent      = as.integer(rows_present),
+    rowsAbsent       = rows_absent,
+    # An array of objects, not a named map: reason codes are data, and a JSON
+    # object would invite the frontend to hardcode one of them as a key.
+    absenceBreakdown = unname(lapply(names(breakdown), function(code) {
+      list(reason_code = code, count = as.integer(breakdown[[code]]))
+    }))
+  )
+}
+
 # Assemble the block for one artefact. `output_rel` is the path the producing
 # script wrote, relative to the section root.
 describe_download_artefact <- function(section, output_rel, raw_dir, snapshot_stems) {

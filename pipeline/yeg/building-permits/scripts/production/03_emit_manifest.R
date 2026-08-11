@@ -58,6 +58,46 @@ manifest$downloads <- lapply(
   )
 )
 
+# --- Row universe, per artefact (see shared/download_facts.R) -----------------
+# Each artefact gets its OWN denominator; they are not the same question.
+#
+# coverage.csv is one row per year the permit data covers. Its denominator is the
+# year set, taken from `years` above — which comes from the per-year GeoJSONs 02
+# built, NOT from the CSV being described. Two scripts reading the same snapshot
+# by different paths have to agree on how many years there are; if they ever
+# stop agreeing, the arithmetic check in row_universe_block stops the run.
+#
+# category_counts.csv is one row per (year, category) pair that OCCURRED. Its
+# denominator is the full grid: every year times every category in the committed
+# grouping table. Pairs with no permits are absent by construction — 01 builds
+# this with count(), which emits only pairs where n > 0 (01_build_permits.R:276,
+# and the comment above it says so). That is the whole point of the table: the
+# frontend uses it to tell "no permits that year" apart from a broken filter. So
+# the absences are the signal, not a shortfall.
+grouping_path <- sort(list.files(
+  "data/reference", pattern = "^job_category_grouping_[0-9]{8}\\.csv$",
+  full.names = TRUE
+), decreasing = TRUE)[1]
+if (is.na(grouping_path)) {
+  stop("No job_category_grouping_<YYYYMMDD>.csv in data/reference/ — the ",
+       "category universe cannot be read, and must never be assumed.")
+}
+n_categories <- nrow(readr::read_csv(grouping_path, show_col_types = FALSE))
+
+coverage_rows <- manifest$downloads[[1]]$rows
+category_rows <- manifest$downloads[[2]]$rows
+
+manifest$downloads[[1]]$rowUniverse <- row_universe_block(
+  universe_size = length(years),
+  rows_present  = coverage_rows,
+  breakdown     = list()          # a year with permits always gets a row
+)
+manifest$downloads[[2]]$rowUniverse <- row_universe_block(
+  universe_size = length(years) * n_categories,
+  rows_present  = category_rows,
+  breakdown     = list(no_permits_in_period = length(years) * n_categories - category_rows)
+)
+
 writeLines(
   toJSON(manifest, auto_unbox = TRUE, pretty = TRUE),
   "output/manifest.json"
