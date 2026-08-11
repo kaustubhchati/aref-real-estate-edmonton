@@ -171,6 +171,50 @@ manifest <- list(
   )
 )
 
+# ============================================================
+# 3b. Download artefact facts (additive; see shared/download_facts.R)
+# ============================================================
+# The neighbourhood aggregate this section publishes for direct download
+# describes itself here: size, rows, columns, and the snapshot date it was built
+# from. Every field is MEASURED from the written file rather than asserted, so it
+# cannot drift away from the data — the live page currently states "407
+# neighbourhoods" for a file holding 344, which is exactly that drift.
+#
+# NO coverageSpan is emitted for this artefact, deliberately. It carries no year
+# column; its year lives only in the filename. A span read from a filename would
+# be a guess wearing the same clothes as a measured fact, so the key is omitted.
+#
+# The aggregate is found by PATTERN, not by name: its filename carries the data
+# year, and a literal here would need editing every rollover.
+source(shared_path("download_facts.R"))
+
+aggregate_files <- list.files(
+  "output",
+  pattern = "^neighbourhood_aggregates_[0-9]{4}\\.csv$",
+  full.names = FALSE
+)
+if (length(aggregate_files) == 0) {
+  stop("No neighbourhood_aggregates_<YYYY>.csv in output/ — run 05 first.")
+}
+# Newest by the year in the name; the current-year aggregate is what is published.
+current_aggregate <- aggregate_files[which.max(as.integer(
+  sub("^neighbourhood_aggregates_([0-9]{4})\\.csv$", "\\1", aggregate_files)
+))]
+
+# This section reads TWO live source snapshots (the assessment roll and the
+# property-information extract), so both stems are named. Per KC's ruling the
+# recorded vintage is the NEWEST of them.
+PA_SNAPSHOT_STEMS <- c("Property_Assessment_Current", "Property_Information_Current")
+
+manifest$downloads <- list(
+  describe_download_artefact(
+    section        = "property-assessment",
+    output_rel     = file.path("output", current_aggregate),
+    raw_dir        = "data/raw",
+    snapshot_stems = PA_SNAPSHOT_STEMS
+  )
+)
+
 # --- Run metrics (Tier 0: durable per-run counts the runner persists to JSONL) ---
 # RUN_METRICS is the runner-provided sink; the guard keeps standalone runs working.
 if (!exists("RUN_METRICS")) RUN_METRICS <- list()
