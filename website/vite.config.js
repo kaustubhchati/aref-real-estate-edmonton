@@ -1,5 +1,56 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { verifyOutputTreeOrExit } from './scripts/verifyOutput.mjs'
+
+const HERE = path.dirname(fileURLToPath(import.meta.url))
+
+// Guard the built tree against files nothing in the build meant to create — see
+// scripts/verifyOutput.mjs for what it checks and why it fails closed.
+//
+// It lives here, as a plugin, rather than in a separate script, so that it runs
+// on EVERY build and cannot be forgotten. `generateBundle` is where Rollup hands
+// us the exact list of files it emitted; that list is what makes the check able
+// to tell a real bundle file from a look-alike sitting next to it in assets/.
+function verifyOutputPlugin() {
+  let emitted = []
+  let htmlEntries = []
+  return {
+    name: 'aref-verify-output',
+    apply: 'build',
+
+    // Vite writes the entry HTML itself; it does NOT pass through Rollup's bundle
+    // (verified — `generateBundle` reports 32 chunks and zero .html keys). So take
+    // the HTML entries from Vite's own resolved config rather than assuming a name.
+    // With `rollupOptions.input` unset — our case — Vite's documented default entry
+    // is index.html at the project root.
+    configResolved(config) {
+      const input = config.build?.rollupOptions?.input
+      const entries =
+        input == null ? ['index.html']
+          : typeof input === 'string' ? [input]
+            : Array.isArray(input) ? input
+              : Object.values(input)
+      htmlEntries = entries
+        .filter((entry) => entry.endsWith('.html'))
+        .map((entry) => path.relative(config.root, path.resolve(config.root, entry))
+          .split(path.sep).join('/'))
+    },
+
+    generateBundle(_options, bundle) {
+      emitted = Object.keys(bundle)
+    },
+
+    async closeBundle() {
+      await verifyOutputTreeOrExit({
+        distDir: path.join(HERE, 'dist'),
+        publicDir: path.join(HERE, 'public'),
+        emitted: [...emitted, ...htmlEntries],
+      })
+    },
+  }
+}
 
 // https://vite.dev/config/
 //
@@ -19,7 +70,7 @@ import react from '@vitejs/plugin-react'
 // base is not yet a complete subpath deploy — see README "Environment variables".
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || '/',
-  plugins: [react()],
+  plugins: [react(), verifyOutputPlugin()],
   build: {
     rollupOptions: {
       output: {

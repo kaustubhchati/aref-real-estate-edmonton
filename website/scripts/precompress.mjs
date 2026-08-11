@@ -26,6 +26,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 import { fileURLToPath } from "node:url";
+import { listFilesRelative } from "./verifyOutput.mjs";
 
 // dist/ sits beside this script's parent (website/). Resolve from the script's
 // own location so it works no matter which cwd the npm script runs from.
@@ -124,6 +125,15 @@ async function main() {
   const started = Date.now();
   let files = 0, skipped = 0, raw = 0, br = 0, gz = 0;
 
+  // `vite build` already checked this tree (scripts/verifyOutput.mjs). Our only
+  // job from here is to ADD .gz/.br siblings — so note what is here now, and
+  // confirm at the end that nothing else appeared. This pass takes ~13 minutes
+  // over the full map data, which is a wide window for a sync tool to drop a
+  // conflict copy into dist/ behind us; that is exactly how it happened before.
+  const presentBefore = new Set(await listFilesRelative(DIST));
+  const weWrote = new Set();
+  const relative = (abs) => path.relative(DIST, abs).split(path.sep).join("/");
+
   for await (const file of walk(DIST)) {
     const ext = path.extname(file).toLowerCase();
     if (ext === ".br" || ext === ".gz") continue;         // never re-compress our own output
@@ -150,8 +160,8 @@ async function main() {
 
     // Keep a sibling only if it actually beats the original — an
     // already-dense file can compress LARGER, and serving that is a loss.
-    if (b.length < buf.length) { await writeSibling(file + ".br", b, atime, mtime); br += b.length; }
-    if (g.length < buf.length) { await writeSibling(file + ".gz", g, atime, mtime); gz += g.length; }
+    if (b.length < buf.length) { await writeSibling(file + ".br", b, atime, mtime); br += b.length; weWrote.add(relative(file + ".br")); }
+    if (g.length < buf.length) { await writeSibling(file + ".gz", g, atime, mtime); gz += g.length; weWrote.add(relative(file + ".gz")); }
 
     files++;
     raw += buf.length;
@@ -159,6 +169,23 @@ async function main() {
       const rel = path.relative(DIST, file);
       console.log(`  ${rel}  ${mib(buf.length)} MB → br ${kib(b.length)} KB (−${((1 - b.length / buf.length) * 100).toFixed(0)}%)`);
     }
+  }
+
+  // Nothing may have appeared while we were busy except the siblings we wrote.
+  const intruders = (await listFilesRelative(DIST))
+    .filter((f) => !presentBefore.has(f) && !weWrote.has(f))
+    .sort();
+  if (intruders.length > 0) {
+    console.error(
+      `\nBuild stopped: ${intruders.length} file(s) appeared in dist/ while compressing.\n\n` +
+      intruders.map((f) => `    ${f}`).join("\n") +
+      "\n\nThe build verified this folder before compression started, and this step\n" +
+      "only adds .gz/.br copies. Anything else means another program wrote here\n" +
+      "while the build was running — iCloud and Dropbox do this, leaving names\n" +
+      'like "index-abc 2.css".\n\n' +
+      "Delete those files and run the build again.\n"
+    );
+    process.exit(1);
   }
 
   const pct = (n) => (raw ? ((1 - n / raw) * 100).toFixed(1) : "0.0");
