@@ -215,6 +215,108 @@ manifest$downloads <- list(
   )
 )
 
+# --- Row universe: why the aggregate holds the neighbourhoods it holds --------
+# The denominator is the CITY BOUNDARY, read through the guarded loader so the
+# accepted-snapshot contract applies here too. Never a constant: the whole reason
+# this block exists is that a hardcoded "407" was published against a 344-row
+# file, and nothing caught it.
+#
+# Each absent neighbourhood is assigned to exactly ONE mechanism, decided by
+# where in the chain it disappears. The classification is positional, not
+# guessed — a neighbourhood is put in a class because it IS or IS NOT in a frame
+# we can read, and row_universe_block refuses to publish unless the classes
+# account for every absent row.
+#
+#   absent_from_source_snapshot          the City's assessment roll has no row
+#                                        for it at all this vintage
+#   no_residential_class_row             it has rows, none Assessment Class 1 ==
+#                                        RESIDENTIAL (02_clean_current.R:71)
+#   no_lot_size_after_join               it has residential rows, but every one
+#                                        lost its lot_size in the Property
+#                                        Information join, so R3 dropped them
+#                                        (02_clean_current.R:181-182)
+#   merged_into_canonical_neighbourhood  it survives cleaning, then the crosswalk
+#                                        folds it into another neighbourhood
+#                                        (05_aggregate_current.R:96)
+#
+# Paths are found by PATTERN. The intermediate frames carry the data year in
+# their names, and a literal here would need editing every rollover.
+newest_matching <- function(dir, pattern) {
+  hits <- list.files(dir, pattern = pattern, full.names = TRUE)
+  if (length(hits) == 0) {
+    stop("08: no file matching ", pattern, " in ", dir,
+         " — the row universe cannot be derived, and must not be assumed.")
+  }
+  sort(hits, decreasing = TRUE)[1]
+}
+
+# Distinct numeric neighbourhood ids in a CSV, optionally restricted to the
+# residential class. Reads only the columns it needs; these frames are ~100 MB.
+neighbourhood_ids <- function(path, residential_only = FALSE) {
+  cols <- if (residential_only) c("Neighbourhood ID", "Assessment Class 1") else "Neighbourhood ID"
+  frame <- readr::read_csv(path, col_select = all_of(cols),
+                           col_types = readr::cols(.default = readr::col_character()),
+                           progress = FALSE)
+  if (residential_only) {
+    frame <- frame[!is.na(frame[["Assessment Class 1"]]) &
+                     toupper(frame[["Assessment Class 1"]]) == "RESIDENTIAL", ]
+  }
+  ids <- suppressWarnings(as.integer(frame[["Neighbourhood ID"]]))
+  sort(unique(ids[!is.na(ids)]))
+}
+
+source(shared_path("boundary_helpers.R"))
+universe_ids <- {
+  b <- load_boundary()
+  ids <- suppressWarnings(as.integer(b[["Neighbourhood Number"]]))
+  sort(unique(ids[!is.na(ids)]))
+}
+
+raw_snapshot <- newest_matching("data/raw", "^Property_Assessment_Current_[0-9]{8}\\.csv$")
+clean_frame  <- newest_matching("data/processed", "^assess_[0-9]{4}_clean\\.csv$")
+
+artefact_ids <- neighbourhood_ids(file.path("output", current_aggregate))
+raw_ids      <- neighbourhood_ids(raw_snapshot)
+raw_res_ids  <- neighbourhood_ids(raw_snapshot, residential_only = TRUE)
+clean_ids    <- neighbourhood_ids(clean_frame)
+
+# The arithmetic below only means anything if the artefact is a SUBSET of the
+# universe: rowsPresent counts what the file holds, rowsAbsent is a set
+# difference, and the two only reconcile when nothing in the file sits outside
+# the boundary. That is true today, but it is a property of the data, not a
+# guarantee — so assert it rather than assume it. A neighbourhood in the
+# aggregate that the City's boundary does not contain is a reconciliation
+# failure worth stopping for, not a rounding error to absorb.
+outside_universe <- setdiff(artefact_ids, universe_ids)
+if (length(outside_universe) > 0) {
+  stop("08: the aggregate holds ", length(outside_universe),
+       " neighbourhood id(s) absent from the boundary universe (",
+       paste(utils::head(outside_universe, 10), collapse = ", "),
+       "). The artefact and its denominator disagree; publishing a total that ",
+       "does not add up would hide that.")
+}
+
+absent <- setdiff(universe_ids, artefact_ids)
+absence_counts <- list(
+  absent_from_source_snapshot         = length(setdiff(absent, raw_ids)),
+  no_residential_class_row            = length(setdiff(intersect(absent, raw_ids), raw_res_ids)),
+  no_lot_size_after_join              = length(setdiff(intersect(absent, raw_res_ids), clean_ids)),
+  merged_into_canonical_neighbourhood = length(intersect(absent, clean_ids))
+)
+# Omit a mechanism that accounted for nothing this vintage rather than publishing
+# a zero — a zero reads as "we checked and it happens", which is a different claim.
+absence_counts <- absence_counts[unlist(absence_counts) > 0]
+
+manifest$downloads[[1]]$rowUniverse <- row_universe_block(
+  universe_size = length(universe_ids),
+  rows_present  = length(artefact_ids),
+  breakdown     = absence_counts
+)
+cat(sprintf("Row universe: %d of %d neighbourhoods present; %d absent (%s)\n",
+            length(artefact_ids), length(universe_ids), length(absent),
+            paste(sprintf("%s=%d", names(absence_counts), unlist(absence_counts)),
+                  collapse = ", ")))
+
 # --- Run metrics (Tier 0: durable per-run counts the runner persists to JSONL) ---
 # RUN_METRICS is the runner-provided sink; the guard keeps standalone runs working.
 if (!exists("RUN_METRICS")) RUN_METRICS <- list()
