@@ -19,6 +19,15 @@
 #   e.g. Rscript scripts/production/03_emit_manifest.R
 # ============================================================
 
+# --- Download artefact facts (additive; see shared/download_facts.R) ----------
+# The two CSVs this section publishes for direct download describe themselves
+# here: size, rows, columns, the year span read from their own `year` column, and
+# the date of the snapshot they were built from. Every field is MEASURED from the
+# written file, never asserted, so the numbers cannot drift away from the data
+# the way a hand-typed figure does.
+source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
+source(shared_path("download_facts.R"))
+
 library(jsonlite)
 
 gj <- list.files(
@@ -35,6 +44,19 @@ years <- sort(as.integer(
 ))
 
 manifest <- list(years = years, defaultYear = max(years))
+
+# Additive only: `years` and `defaultYear` above are untouched in name, nesting
+# and type. This section reads ONE source snapshot, so one stem names it.
+BP_SNAPSHOT_STEMS <- "General_Building_Permits"
+manifest$downloads <- lapply(
+  c("output/permits_coverage.csv", "output/permits_category_counts.csv"),
+  function(rel) describe_download_artefact(
+    section        = "building-permits",
+    output_rel     = rel,
+    raw_dir        = "data/raw",
+    snapshot_stems = BP_SNAPSHOT_STEMS
+  )
+)
 
 writeLines(
   toJSON(manifest, auto_unbox = TRUE, pretty = TRUE),
