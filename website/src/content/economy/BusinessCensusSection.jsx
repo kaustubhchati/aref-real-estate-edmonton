@@ -105,7 +105,10 @@ import { deriveAggregates } from "./businessCensusAggregates.js";
 // byte-identical to the unselected state. Two consistent rulings: surface always shows all;
 // points show the selection.
 
-const POINTS_URL = assetUrl("/data/economy/business_census_points_2025.geojson");
+// The points layer's filename carries its survey vintage, and the vintage is a
+// value the pipeline publishes — not something this file may name. The section
+// manifest is the one fixed URL; the points filename is read from it.
+const MANIFEST_URL = assetUrl("/data/economy/manifest.json");
 const LCLQ_URL = assetUrl("/data/economy/bc_lclq_industry_group.csv");
 // The per-group companion (ratified audit E.3): one row per tested group — the group-level
 // (global CLQ) verdict that gates chip eligibility (methodology note §7.3) and the
@@ -358,6 +361,8 @@ export default function BusinessCensusSection() {
   const [view, setView] = useState("census");
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
+  // Points filename from the manifest; null until it loads.
+  const [pointsUrl, setPointsUrl] = useState(null);
   const [lclqRows, setLclqRows] = useState(null);
   const [lclqError, setLclqError] = useState(null);        // View 2's finding failed to load (user-facing, T2-12)
   const [groupSummary, setGroupSummary] = useState(null);  // per-group companion (Map by industry_group; null until loaded)
@@ -405,9 +410,19 @@ export default function BusinessCensusSection() {
   // performance is not a constraint at ~29,894 constant-radius circles.)
   useEffect(() => {
     let cancelled = false;
-    fetch(POINTS_URL)
-      .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`); return r.json(); })
-      .then((data) => { if (!cancelled) setGj(data); })
+    fetch(MANIFEST_URL)
+      .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText} (manifest)`); return r.json(); })
+      .then((m) => {
+        if (cancelled) return;
+        if (!m.points?.file) throw new Error("manifest names no points layer");
+        const url = assetUrl(`/data/economy/${m.points.file}`);
+        setPointsUrl(url);
+        return fetch(url).then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+          return r.json();
+        });
+      })
+      .then((data) => { if (!cancelled && data) setGj(data); })
       .catch((err) => { if (!cancelled) setFetchError(err.message); });
     return () => { cancelled = true; };
   }, []);
@@ -920,12 +935,14 @@ export default function BusinessCensusSection() {
           ) : (
             <>
               {!layers && <MapSkeleton />}
-              {layers && (
+              {/* pointsUrl joins the existing gate: MapView takes a URL, not a
+                  promise, and MapLibre rejects a null source. */}
+              {layers && pointsUrl && (
                 <MapErrorBoundary>
                   <MapView
                     className="canvas"
                     basemapStyle={BASEMAP_STYLE}
-                    geojsonUrl={POINTS_URL}
+                    geojsonUrl={pointsUrl}
                     view={MAP_VIEW}
                     sourceId={SOURCE_ID}
                     layers={layers}

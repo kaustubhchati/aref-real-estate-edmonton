@@ -76,6 +76,29 @@ if (length(snapshots) > 0) {
   if (length(yrs) > 1) prior_year <- yrs[2]
 }
 
+# The POINTS layer is a second published artefact of this section, on its own
+# vintage. 02 already derives its year and names the file accordingly, and the
+# runner publishes it by year glob — but the frontend still had to name it,
+# which is the same defect the choropleth had. Describe it here so the section
+# reads BOTH filenames from one place.
+#
+# Found by pattern, newest wins, for the same reason as the choropleth. Its
+# vintage is read back from the filename rather than assumed equal to the
+# choropleth's: they come from DIFFERENT source datasets (the aggregate
+# wh44-4bkz and the business-level 8c4b-u4a4), and nothing guarantees the City
+# advances both in the same cycle.
+points <- list.files("output", pattern = "^business_census_points_[0-9]{4}\\.geojson$")
+points_block <- NULL
+if (length(points) > 0) {
+  newest_points <- max(points)
+  points_block <- list(
+    file = newest_points,
+    surveyYear = as.integer(
+      sub("^business_census_points_([0-9]{4})\\.geojson$", "\\1", newest_points)
+    )
+  )
+}
+
 manifest <- list(
   section      = "business-census",
   file         = choropleth,
@@ -83,6 +106,9 @@ manifest <- list(
   featureCount = length(gj$features),
   polygonsWithPriorYear = n_with_prior
 )
+# Omitted, never nulled, when 02 has not run — the section renders the points
+# view only when it has a file to name.
+if (!is.null(points_block)) manifest$points <- points_block
 if (!is.null(prior_year)) manifest$priorYear <- prior_year
 if (!is.null(fetched_at)) manifest$fetchedAt <- fetched_at
 

@@ -4,6 +4,10 @@
   "surveyYear": 2025,
   "featureCount": 407,
   "polygonsWithPriorYear": 167,
+  "points": {
+    "file": "business_census_points_2025.geojson",
+    "surveyYear": 2025
+  },
   "priorYear": 2024,
   "fetchedAt": "2026-07-13"
 }
