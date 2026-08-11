@@ -377,6 +377,47 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
       ok
     }
 
+    # Resolve a {year} token in a files: entry against what is ON DISK.
+    #
+    # WHY: an artefact whose published name carries the data year (property
+    # assessment's aggregate) cannot name that year literally here. The literal
+    # has to be edited every rollover, and until someone does, the handoff looks
+    # for last year's file, finds nothing, and publishes nothing — silently, on
+    # the one artefact a reader downloads by hand.
+    #
+    # The token is resolved from the files that exist, taking the newest year
+    # present, and the SAME year is substituted into the destination so the
+    # published name keeps its locked yeg_<section>_<dataYear> form. Way A is
+    # preserved: this still copies a file that physically exists and still never
+    # reads a manifest to decide what to copy.
+    #
+    # An entry without the token is returned untouched, so every other section's
+    # handoff behaves exactly as before.
+    resolve_year_token <- function(cp) {
+      if (!grepl("{year}", cp$from, fixed = TRUE)) return(cp)
+
+      # `????` is this file's existing convention for a 4-digit year (see the BP
+      # glob); glob2rx escapes the rest of the name for us.
+      glob_name <- gsub("{year}", "????", basename(cp$from), fixed = TRUE)
+      dir_abs   <- file.path(cwd_abs, dirname(cp$from))
+      hits      <- list.files(dir_abs, pattern = utils::glob2rx(glob_name))
+      if (length(hits) == 0) {
+        stop("handoff: {year} in '", cp$from, "' matched no file in ", dirname(cp$from),
+             ". The producing script must write it before the handoff runs.")
+      }
+
+      # Zero-padded years sort lexically, so the newest name carries the newest year.
+      newest <- max(hits)
+      found  <- regmatches(newest, gregexpr("[0-9]{4}", newest))[[1]]
+      if (length(found) != 1L) {
+        stop("handoff: cannot tell which 4-digit run is the year in '", newest,
+             "' (found ", length(found), "). Rename the artefact or publish it ",
+             "with a literal from/to entry.")
+      }
+      list(from = gsub("{year}", found, cp$from, fixed = TRUE),
+           to   = gsub("{year}", found, cp$to,   fixed = TRUE))
+    }
+
     # --- Way A: glob (directory copy, optional remap) ---------------------------
     if (!is.null(hf$glob)) {
       for (g in hf$glob) {
@@ -393,6 +434,7 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
     # --- Way A: files (specific from -> to: CSVs, the manifest file) -----------
     if (!is.null(hf$files)) {
       for (cp in hf$files) {
+        cp <- resolve_year_token(cp)
         if (!copy_one(file.path(cwd_abs, cp$from),
                       file.path(REPO_ROOT, cp$to))) hf_failed <- TRUE
       }

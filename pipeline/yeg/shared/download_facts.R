@@ -43,8 +43,22 @@ published_download_name <- function(section, output_rel) {
     stop("No handoff `files:` for section '", section, "' in _whirl.yaml")
   }
   for (entry in entries) {
-    if (identical(entry$from, output_rel) &&
-        grepl("^website/public/downloads/", entry$to)) {
+    if (!grepl("^website/public/downloads/", entry$to)) next
+
+    # A handoff entry may carry a {year} token, which the runner resolves against
+    # the files on disk (see _run_engine.R, resolve_year_token). Match it the same
+    # way here — as a 4-digit wildcard — and carry the year we matched into the
+    # published name. Both places must understand the token, because the runner
+    # decides where the file lands and this decides what we call it; they have to
+    # agree, and a rollover must not need an edit in either.
+    if (grepl("{year}", entry$from, fixed = TRUE)) {
+      glob_from <- gsub("{year}", "????", entry$from, fixed = TRUE)
+      if (grepl(utils::glob2rx(glob_from), output_rel)) {
+        year <- regmatches(basename(output_rel),
+                           regexpr("[0-9]{4}", basename(output_rel)))
+        return(basename(gsub("{year}", year, entry$to, fixed = TRUE)))
+      }
+    } else if (identical(entry$from, output_rel)) {
       return(basename(entry$to))
     }
   }

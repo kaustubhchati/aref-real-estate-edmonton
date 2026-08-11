@@ -93,8 +93,14 @@ sections:
       # artifact carries the yeg_ city prefix + section + _per_nbhd + data year:
       #   yeg_<section>[_per_nbhd]_<dataYear>.csv
       files:
-        - { from: output/neighbourhood_aggregates_2026.csv, to: website/public/data/yeg_property-assessment_per_nbhd_2026.csv }
-        - { from: output/neighbourhood_aggregates_2026.csv, to: website/public/downloads/yeg_property-assessment_per_nbhd_2026.csv }
+        # {year} is resolved by the runner from the file that EXISTS in output/,
+        # newest wins, and the same year lands in the published name. Without it
+        # a rollover would leave these pointing at last year's file and publish
+        # nothing at all.
+        # NOTE the quotes: unquoted, YAML reads a leading `{` inside a flow
+        # mapping as a nested mapping and the file stops parsing.
+        - { from: "output/neighbourhood_aggregates_{year}.csv", to: "website/public/data/yeg_property-assessment_per_nbhd_{year}.csv" }
+        - { from: "output/neighbourhood_aggregates_{year}.csv", to: "website/public/downloads/yeg_property-assessment_per_nbhd_{year}.csv" }
         # Combined all-years choropleth (07b) — published alongside the per-year
         # GeoJSONs (above, via the manifest-year loop) for the year-slider
         # paint-swap. Name carries no year/span (literal-free, frontend-stable).
