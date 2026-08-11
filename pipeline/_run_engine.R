@@ -54,6 +54,38 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
 
   REPO_ROOT <- repo_root   # the moved handoff paths are written against REPO_ROOT
 
+  # Resolve a year token in an expected_outputs declaration against the files on
+  # disk. Two tokens, because the two ends of a year range mean different things:
+  #
+  #   {year}        the NEWEST match. For a script that writes the current year
+  #                 (05's aggregate, 06's choropleth), this is its own product.
+  #   {oldestYear}  the OLDEST match. 07 builds the historical range, and 06 has
+  #                 already written the current year into the SAME filename
+  #                 pattern by the time 07's guard runs — so "newest" there would
+  #                 check 06's file, not 07's. The oldest year is unambiguously
+  #                 07's, and it is data-derived (nothing hardcodes the start).
+  #
+  # WHY THIS MATTERS: a literal year here does not fail at rollover, it goes
+  # QUIET. The declared file still exists from last year, so the guard passes
+  # while checking a file this run never wrote. A guard that silently stops
+  # guarding is worse than one that breaks loudly.
+  #
+  # No match leaves the token in the path, so the guard reports it missing —
+  # which is the correct answer when a script produced nothing.
+  resolve_declared_year <- function(cwd_abs, p) {
+    token <- if (grepl("{oldestYear}", p, fixed = TRUE)) "{oldestYear}"
+             else if (grepl("{year}", p, fixed = TRUE)) "{year}"
+             else return(p)
+    glob_name <- gsub(token, "????", basename(p), fixed = TRUE)
+    hits <- list.files(file.path(cwd_abs, dirname(p)),
+                       pattern = utils::glob2rx(glob_name))
+    if (length(hits) == 0) return(p)
+    chosen <- if (identical(token, "{oldestYear}")) min(hits) else max(hits)
+    year   <- regmatches(chosen, regexpr("[0-9]{4}", chosen))
+    if (length(year) != 1L) return(p)
+    gsub(token, year, p, fixed = TRUE)
+  }
+
   # --- Dry run: prove cwd + path existence + order, NO side effects -----------
   if (dry_run) {
     cat(sprintf("=== DRY RUN: section '%s' ===\n", section))
@@ -253,6 +285,7 @@ run_one_section <- function(section, sec, cwd_abs, scripts, dry_run,
       decl <- sec$expected_outputs[[script_rel]]
       if (!is.null(decl)) {
         for (p in unlist(decl)) {
+          p  <- resolve_declared_year(cwd_abs, p)
           ap <- file.path(cwd_abs, p)
           if (!file.exists(ap) || file.size(ap) == 0) empties_here <- c(empties_here, p)
         }

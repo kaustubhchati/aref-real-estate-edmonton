@@ -58,16 +58,23 @@ sections:
     # ok_empty_output (the chain continues) and the handoff refuses to publish it.
     # The handoff's own zero-byte check backstops EVERY published file regardless;
     # this map is the earlier, script-level signal for the key products.
-    # (07_geojson_historical builds 2012-2025; the two endpoints below are a
-    # representative guard — the handoff size check covers the in-between years.)
+    # Year tokens, resolved by the runner against the files on disk:
+    #   {year}       newest match — a script's own current-year product
+    #   {oldestYear} oldest match — used for 07 because 06 has ALREADY written the
+    #                current year into the SAME filename pattern by the time 07's
+    #                guard runs, so "newest" there would check 06's file, not 07's
+    # A literal year here does not break at rollover, it goes QUIET: last year's
+    # file still exists, so the guard passes while checking a file this run never
+    # wrote. 07's upper endpoint is dropped for that reason — it cannot be named
+    # without colliding with 06. The handoff's zero-byte check still backstops
+    # every published year.
     expected_outputs:
       scripts/production/05_aggregate_current.R:
-        - output/neighbourhood_aggregates_2026.csv
+        - "output/neighbourhood_aggregates_{year}.csv"
       scripts/production/06_geojson_current.R:
-        - output/neighbourhoods_2026_recovered.geojson
+        - "output/neighbourhoods_{year}_recovered.geojson"
       scripts/production/07_geojson_historical.R:
-        - output/neighbourhoods_2012_recovered.geojson
-        - output/neighbourhoods_2025_recovered.geojson
+        - "output/neighbourhoods_{oldestYear}_recovered.geojson"
       scripts/production/07b_combine_geojson.R:
         - output/neighbourhoods_all_years.geojson
 
