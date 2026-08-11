@@ -210,6 +210,34 @@ export default function MapView({
         }
       }
 
+      // THE URL IS HANDED TO MAPLIBRE UNGUARDED. Whatever the caller passed as
+      // geojsonUrl goes straight in, and MapLibre will not accept a null or
+      // half-resolved value: it rejects the source, the layers that reference it
+      // never get data, and the map renders as an empty basemap. It does NOT
+      // throw, so nothing crashes and no test fails — you get a blank map and one
+      // line in the console. That is the whole failure mode, and it is quiet.
+      //
+      // The error text MapLibre produces, so a future reader can match it:
+      //
+      //     [MapView] Input data given to 'amenity-points' is not a valid GeoJSON object.
+      //
+      // (the source id varies; the "[MapView]" prefix comes from the error
+      // handler above, which surfaces MapLibre's own message rather than
+      // swallowing it.)
+      //
+      // SO: EVERY CALLER MUST RESOLVE ITS SOURCE URLS BEFORE MOUNTING <MapView>.
+      // Not "handle the null" — do not mount at all until the URL exists. The
+      // established way is to gate the JSX on it, e.g. {dataUrl && (<MapView …>)}.
+      //
+      // WHAT TRIGGERS THIS, because it is not obvious and it has now caused the
+      // bug twice: a mount that passes a module-level constant URL is safe
+      // forever without any gate — the constant is never null. The moment
+      // someone converts that constant into a value fetched at runtime (reading
+      // the filename from a manifest, say, so the year stops being hardcoded),
+      // the URL becomes null on the first render and the mount that was correct
+      // yesterday is broken today. The change is in the data-loading code; the
+      // breakage is in the JSX, which nobody edited. If you are making that
+      // conversion, add the gate in the same commit.
       const sourceSpec = { type: "geojson", data: geojsonUrl };
       if (promoteId) sourceSpec.promoteId = promoteId;
       if (sourceOptions) Object.assign(sourceSpec, sourceOptions);
