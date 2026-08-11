@@ -10,10 +10,10 @@
 //
 // GeoJSON fields (from the economy business-census aggregation):
 //   neighbourhood_id, display_name, civic_ward, planning_district,
-//   census_state, n_businesses_2025, n_employees_2025,
-//   n_businesses_2024, n_employees_2024, yoy_businesses_change,
+//   census_state, n_businesses, n_employees,
+//   prior_n_businesses, prior_n_employees, yoy_businesses_change,
 //   yoy_employees_change, yoy_businesses_pct, yoy_employees_pct
-//   (the *_2024 + yoy_* fields are still emitted but NO LONGER SURFACED — a backend-derived
+//   (the prior_* + yoy_* fields are still emitted but NO LONGER SURFACED — a backend-derived
 //    YoY, not a source figure; removed from the UI 2026-07. Single survey year is shown.)
 //
 // NOTE: the state field is `census_state` (values "data" / "no_data"),
@@ -95,14 +95,22 @@ const fmtInt = (v) =>
 
 // Each metric = one GeoJSON field + label + value formatter + glyph (icon `d` path for
 // the PA SegmentedControl chip, mirroring PA/DU's METRICS shape {key,label,fmt,icon}).
-// The "(2025)" stays in the label — it is the survey year and BC has no year axis to
-// carry it (single-survey-year product; the year is a parked literal, bc-parity-parked).
-export const METRICS = [
-  { key: "n_businesses_2025", label: "Businesses (2025)", fmt: fmtInt,
+// The survey year stays in the label — BC has no year axis to carry it. It is
+// supplied by the caller from the section manifest, so it is a value, not a literal.
+// The metric KEYS carry no year — the pipeline emits n_businesses / n_employees
+// whatever the vintage. The LABEL does show the year, because a reader needs to
+// know which survey they are looking at; it is built from the surveyYear the
+// section manifest publishes, never from a constant here.
+export const DEFAULT_METRIC_KEY = "n_businesses";
+
+export function metricsFor(surveyYear) {
+  return [
+  { key: "n_businesses", label: `Businesses (${surveyYear})`, fmt: fmtInt,
     icon: "M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z M6 12H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2 M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2 M10 6h4 M10 10h4 M10 14h4 M10 18h4" },
-  { key: "n_employees_2025",  label: "Employees (2025)",  fmt: fmtInt,
+  { key: "n_employees",  label: `Employees (${surveyYear})`,  fmt: fmtInt,
     icon: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 0 0 0-8 4 4 0 0 0 0 8Z M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75" },
-];
+  ];
+}
 
 // ---- Colour ramp — soft-yellow floor → Ferrari red (shared $-value family) --------
 // The SAME anchors as property-assessment's RAMP_ASSESSED so $-and-count choropleths read the
@@ -126,8 +134,8 @@ const RAMP_ORRD = [
 ];
 
 const METRIC_RAMP = {
-  n_businesses_2025: RAMP_ORRD,
-  n_employees_2025:  RAMP_ORRD,
+  n_businesses: RAMP_ORRD,
+  n_employees:  RAMP_ORRD,
 };
 const RAMP_DEFAULT = RAMP_ORRD;
 
@@ -278,7 +286,7 @@ const dataFillOpacity = (k) => [
 
 // ---- Layer stack — bcensus-* ids (no collision with nbhd-* / pnbhd-*) -
 // Source-agnostic (source filled in by MapView via `source` prop).
-export function bcensusLayers(stops, metricKey = "n_businesses_2025") {
+export function bcensusLayers(stops, metricKey = DEFAULT_METRIC_KEY) {
   return [
     // 1. Fill — data: ramp colour; no_data: glass
     {
@@ -391,7 +399,7 @@ const PROVENANCE =
 //   detail=false → Tier 2 (slim hover): name + district + businesses + employees.
 //   detail=true  → Tier 3 (pinned click): name + district + state badge +
 //                  businesses + employees + provenance.
-export function buildBusinessCensusPopupHtml(p, detail) {
+export function buildBusinessCensusPopupHtml(p, detail, surveyYear) {
   const name     = p.display_name ?? "—";
   // planning_district is the primary geography label; fall back to civic_ward.
   const district = p.planning_district ?? p.civic_ward ?? null;
@@ -408,12 +416,12 @@ export function buildBusinessCensusPopupHtml(p, detail) {
     if (p.census_state === "data") {
       parts.push(
         `<div class="pop-row headline">` +
-          `<span class="pop-k">Businesses (2025)</span>` +
-          `<span class="pop-v">${fmtIntPopup(p.n_businesses_2025)}</span>` +
+          `<span class="pop-k">Businesses (${surveyYear})</span>` +
+          `<span class="pop-v">${fmtIntPopup(p.n_businesses)}</span>` +
         `</div>`,
         `<div class="pop-row">` +
-          `<span class="pop-k">Employees (2025)</span>` +
-          `<span class="pop-v">${fmtIntPopup(p.n_employees_2025)}</span>` +
+          `<span class="pop-k">Employees (${surveyYear})</span>` +
+          `<span class="pop-v">${fmtIntPopup(p.n_employees)}</span>` +
         `</div>`
       );
     } else {
@@ -438,12 +446,12 @@ export function buildBusinessCensusPopupHtml(p, detail) {
   if (p.census_state === "data") {
     parts.push(
       `<div class="pop-row headline">` +
-        `<span class="pop-k">Businesses (2025)</span>` +
-        `<span class="pop-v">${fmtIntPopup(p.n_businesses_2025)}</span>` +
+        `<span class="pop-k">Businesses (${surveyYear})</span>` +
+        `<span class="pop-v">${fmtIntPopup(p.n_businesses)}</span>` +
       `</div>`,
       `<div class="pop-row">` +
-        `<span class="pop-k">Employees (2025)</span>` +
-        `<span class="pop-v">${fmtIntPopup(p.n_employees_2025)}</span>` +
+        `<span class="pop-k">Employees (${surveyYear})</span>` +
+        `<span class="pop-v">${fmtIntPopup(p.n_employees)}</span>` +
       `</div>`
     );
   } else {

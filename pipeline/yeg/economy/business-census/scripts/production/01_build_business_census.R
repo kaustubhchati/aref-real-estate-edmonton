@@ -21,10 +21,12 @@
 #   Columns (export endpoint, Title Case): Neighbourhood Name, Neighbourhood Number,
 #             Geometry (Polygon WKT), Survey Year, Number of Businesses, Number of Employees
 #
-# Year coverage in downloaded file:
-#   2023 — 14 rows  (sparse pilot; excluded)
-#   2024 — 167 rows (YoY comparison layer)
-#   2025 — 364 rows (production year — best coverage)
+# Year coverage: the source is a ROLLING census. The City adds a new Survey Year
+#   to the SAME dataset each cycle over a growing set of neighbourhoods (at the
+#   20260713 snapshot: 2023 = 14 rows, 2024 = 167, 2025 = 364). The production
+#   vintage is therefore DERIVED as max(Survey Year) and the comparison vintage
+#   as the second-highest present — never named here, because a literal would
+#   keep publishing an old vintage after the City adds a new one.
 #
 # WHY we drop the source `geom` column:
 #   The API-supplied polygon geometry does not match the canonical
@@ -37,8 +39,8 @@
 #           Both normalised to character() before joining.
 #
 # Polygon states (column `census_state`):
-#   data    — 2025 businesses + employees present
-#   no_data — polygon in boundary but absent from 2025 census
+#   data    — production-year businesses + employees present
+#   no_data — polygon in boundary but absent from the production-year census
 #
 # Annexation-area flag (column `is_annexation_area`, ORTHOGONAL to census_state):
 #   TRUE on the City's four annexation-area tiles 8885-8888 (kept + labelled, not
@@ -56,17 +58,23 @@
 #   Open Data). Old CT-level business counts do NOT reconcile with
 #   this dataset.
 #
-# Outputs (all under this section's output/):
-#   business_census_2025.geojson   — choropleth source for MapLibre
-#   business_census_2025.csv       — flat CSV for Download page
-#   business_census_build_log.txt  — coverage + sanity summary
+# Outputs (all under this section's output/), <YYYY> = the DERIVED production year:
+#   business_census_<YYYY>.geojson  — choropleth source for MapLibre
+#   business_census_<YYYY>.csv      — flat CSV (not currently published)
+#   business_census_build_log.txt   — coverage + sanity summary
+#
+# COLUMN NAMES CARRY NO YEAR. n_businesses / n_employees are the production
+#   vintage; prior_n_businesses / prior_n_employees are the comparison vintage.
+#   The vintage itself is published in the section manifest (03_emit_manifest.R)
+#   and read from there by the frontend, so a rollover renames nothing.
 #
 # HANDOFF (runner-published — this script never writes website/public):
-#   The runner publishes output/business_census_2025.geojson ->
-#   website/public/data/economy/business_census_2025.geojson via the
-#   business-census handoff in _whirl.yaml (the sole publisher). The live
-#   frontend (website/src/content/economy/BusinessCensusMap.jsx) fetches it
-#   from /data/economy/business_census_2025.geojson. Refresh through the runner:
+#   The runner publishes output/business_census_<YYYY>.geojson ->
+#   website/public/data/economy/business_census_<YYYY>.geojson via the
+#   business-census handoff in _whirl.yaml, whose {year} token resolves against
+#   the file that exists. The live frontend
+#   (website/src/content/economy/BusinessCensusMap.jsx) discovers the filename
+#   from the section manifest, not a literal. Refresh through the runner:
 #   Rscript run_section.R business-census  (not a standalone script run).
 #
 # Author: KC (kaustubhchati@ualberta.ca)
@@ -110,7 +118,7 @@ CENSUS_CSV <- fetch_socrata_snapshot(
 # Fetch-routed through fetch_socrata_snapshot (finding 5) + the "follow the City"
 # integrity contract (dup ids, geometry, +/-10% row tolerance vs the accepted
 # snapshot, Effective End Date tripwire, staleness). Returns the raw frame.
-cat("Loading 2026 neighbourhood boundary...\n")
+cat("Loading neighbourhood boundary...\n")
 boundary_raw <- load_boundary()
 cat("  Rows loaded:", nrow(boundary_raw), "\n")
 
@@ -141,25 +149,48 @@ cat("  Years present:", paste(sort(unique(census_raw$survey_year)), collapse = "
 # string; boundary uses integer-valued character. Explicit cast on
 # both sides prevents silent NA from type mismatch.
 
-census_2025 <- census_raw |>
-  filter(`Survey Year` == 2025) |>
+# The two vintages are DERIVED from the data, not named. This is a rolling
+# census: the City surveys a growing set of neighbourhoods and adds a new Survey
+# Year to the SAME dataset (2023: 14 rows, 2024: 167, 2025: 364). A literal year
+# here means the section silently keeps publishing an old vintage after the City
+# adds a new one, which is the failure this removes.
+#
+# The comparison year is the SECOND-HIGHEST present, not production minus one:
+# with a rolling census there is no guarantee the years are contiguous, and
+# subtracting would invent a vintage that may not exist.
+survey_years <- sort(unique(as.integer(census_raw$`Survey Year`)), decreasing = TRUE)
+if (length(survey_years) == 0) {
+  stop("No Survey Year values in the census export — the production vintage ",
+       "cannot be derived, and must never be assumed.")
+}
+PRODUCTION_YEAR <- survey_years[1]
+COMPARISON_YEAR <- if (length(survey_years) > 1) survey_years[2] else NA_integer_
+
+cat("Survey years present:", paste(rev(survey_years), collapse = ", "), "\n")
+cat("Production year (newest):", PRODUCTION_YEAR, "\n")
+cat("Comparison year (next):  ", COMPARISON_YEAR, "\n\n")
+
+# Column names carry NO year. The vintage is a value, published in the manifest
+# and read by the frontend from there — so a rollover renames nothing.
+census_production <- census_raw |>
+  filter(`Survey Year` == PRODUCTION_YEAR) |>
   transmute(
-    neighbourhood_id  = as.character(`Neighbourhood Number`),
-    source_name_2025  = `Neighbourhood Name`,
-    n_businesses_2025 = as.integer(`Number of Businesses`),
-    n_employees_2025  = as.numeric(`Number of Employees`)
+    neighbourhood_id = as.character(`Neighbourhood Number`),
+    source_name      = `Neighbourhood Name`,
+    n_businesses     = as.integer(`Number of Businesses`),
+    n_employees      = as.numeric(`Number of Employees`)
   )
 
-census_2024 <- census_raw |>
-  filter(`Survey Year` == 2024) |>
+census_comparison <- census_raw |>
+  filter(`Survey Year` == COMPARISON_YEAR) |>
   transmute(
-    neighbourhood_id  = as.character(`Neighbourhood Number`),
-    n_businesses_2024 = as.integer(`Number of Businesses`),
-    n_employees_2024  = as.numeric(`Number of Employees`)
+    neighbourhood_id   = as.character(`Neighbourhood Number`),
+    prior_n_businesses = as.integer(`Number of Businesses`),
+    prior_n_employees  = as.numeric(`Number of Employees`)
   )
 
-cat("2025 rows:", nrow(census_2025), "\n")
-cat("2024 rows:", nrow(census_2024), "\n\n")
+cat("Production rows:", nrow(census_production), "\n")
+cat("Comparison rows:", nrow(census_comparison), "\n\n")
 
 # ── 3b. ID remapping — crosswalk-derived (Tier 2: the ONE canonical table) ──
 #
@@ -200,8 +231,8 @@ remap_ids <- function(df) {
   )
 }
 
-census_2025 <- remap_ids(census_2025)
-census_2024 <- remap_ids(census_2024)
+census_production <- remap_ids(census_production)
+census_comparison <- remap_ids(census_comparison)
 
 cat("ID remaps available from crosswalk (variant -> canonical):\n")
 for (i in seq_len(nrow(remap_rows))) {
@@ -216,25 +247,25 @@ cat("Annexation-area ids (kept + labelled):",
 # Left join: 2025 rows without a 2024 match keep NA yoy fields.
 # Frontend renders those polygons with base metrics but no change indicator.
 
-census_joined <- census_2025 |>
-  left_join(census_2024, by = "neighbourhood_id") |>
+census_joined <- census_production |>
+  left_join(census_comparison, by = "neighbourhood_id") |>
   mutate(
-    yoy_businesses_change = n_businesses_2025 - n_businesses_2024,
-    yoy_employees_change  = n_employees_2025  - n_employees_2024,
+    yoy_businesses_change = n_businesses - prior_n_businesses,
+    yoy_employees_change  = n_employees  - prior_n_employees,
     yoy_businesses_pct = if_else(
-      !is.na(n_businesses_2024) & n_businesses_2024 > 0,
-      round((n_businesses_2025 - n_businesses_2024) / n_businesses_2024 * 100, 1),
+      !is.na(prior_n_businesses) & prior_n_businesses > 0,
+      round((n_businesses - prior_n_businesses) / prior_n_businesses * 100, 1),
       NA_real_
     ),
     yoy_employees_pct = if_else(
-      !is.na(n_employees_2024) & n_employees_2024 > 0,
-      round((n_employees_2025 - n_employees_2024) / n_employees_2024 * 100, 1),
+      !is.na(prior_n_employees) & prior_n_employees > 0,
+      round((n_employees - prior_n_employees) / prior_n_employees * 100, 1),
       NA_real_
     )
   )
 
-cat("YoY coverage:", sum(!is.na(census_joined$n_businesses_2024)),
-    "/", nrow(census_joined), "neighbourhoods have 2024 comparison\n\n")
+cat("YoY coverage:", sum(!is.na(census_joined$prior_n_businesses)),
+    "/", nrow(census_joined), "neighbourhoods have a comparison-year value\n\n")
 
 # ── 5. Duplicate-ID guard ────────────────────────────────────
 # One-feature-per-polygon is required by MapLibre promoteId.
@@ -254,7 +285,7 @@ cat("Duplicate-ID guard: OK\n")
 joined_sf <- boundary_sf |>
   left_join(census_joined, by = "neighbourhood_id") |>
   mutate(
-    census_state = if_else(!is.na(n_businesses_2025), "data", "no_data"),
+    census_state = if_else(!is.na(n_businesses), "data", "no_data"),
     # Orthogonal to census_state: the City's annexation-area tiles (8885-8888),
     # kept + labelled — they keep their natural data/no_data state and carry the
     # flag on top (§6/§9; DECISION_container_universe_20260710.md).
@@ -282,24 +313,24 @@ if (nrow(unmatched) > 0) {
   # old ids (5462/5464) are already remapped upstream via the crosswalk (0 unmatched
   # today); the kept annexation containers 8885-8888 are valid boundary ids and do
   # NOT trip this.
-  print(unmatched |> select(neighbourhood_id, source_name_2025,
-                            n_businesses_2025, n_employees_2025))
+  print(unmatched |> select(neighbourhood_id, source_name,
+                            n_businesses, n_employees))
   stop(nrow(unmatched), " census row(s) matched no boundary polygon (see the dump ",
        "above) — their businesses would be absent from the map. Add a crosswalk ",
        "renumber/rename row (property-assessment/data/reference) or reconcile the ",
        "boundary, then re-run. Unmatched ids: ",
        paste(unmatched$neighbourhood_id, collapse = ", "))
 } else {
-  cat("Sanity check: all 2025 rows matched to a polygon. OK\n\n")
+  cat("Sanity check: all production-year rows matched to a polygon. OK\n\n")
 }
 
 # ── 8. Metric range report ───────────────────────────────────
 
-cat("Metric ranges (2025 data polygons):\n")
-cat("  businesses: min =", min(joined_sf$n_businesses_2025, na.rm = TRUE),
-    " max =", max(joined_sf$n_businesses_2025, na.rm = TRUE), "\n")
-cat("  employees:  min =", min(joined_sf$n_employees_2025,  na.rm = TRUE),
-    " max =", max(joined_sf$n_employees_2025,  na.rm = TRUE), "\n\n")
+cat("Metric ranges (production-year data polygons):\n")
+cat("  businesses: min =", min(joined_sf$n_businesses, na.rm = TRUE),
+    " max =", max(joined_sf$n_businesses, na.rm = TRUE), "\n")
+cat("  employees:  min =", min(joined_sf$n_employees,  na.rm = TRUE),
+    " max =", max(joined_sf$n_employees,  na.rm = TRUE), "\n\n")
 
 # ── 9. Select output columns and write GeoJSON ──────────────
 
@@ -311,10 +342,10 @@ geojson_ready <- joined_sf |>
     planning_district,
     census_state,
     is_annexation_area,
-    n_businesses_2025,
-    n_employees_2025,
-    n_businesses_2024,
-    n_employees_2024,
+    n_businesses,
+    n_employees,
+    prior_n_businesses,
+    prior_n_employees,
     yoy_businesses_change,
     yoy_employees_change,
     yoy_businesses_pct,
@@ -323,7 +354,10 @@ geojson_ready <- joined_sf |>
   st_set_precision(1e6) |>
   st_make_valid()
 
-geojson_path <- file.path(OUT_DIR, "business_census_2025.geojson")
+# Filename carries the production vintage as a VALUE. sprintf from the derived
+# year, so a rollover renames the artefact without an edit here; the runner's
+# {year} handoff token then publishes it under the matching served name.
+geojson_path <- file.path(OUT_DIR, sprintf("business_census_%d.geojson", PRODUCTION_YEAR))
 if (file.exists(geojson_path)) file.remove(geojson_path)
 st_write(geojson_ready, geojson_path, driver = "GeoJSON", quiet = TRUE)
 file_mb <- round(file.info(geojson_path)$size / 1024 / 1024, 3)
@@ -331,7 +365,7 @@ cat("GeoJSON written:", geojson_path, "(", file_mb, "MB)\n")
 
 # ── 10. Flat CSV for Download page ───────────────────────────
 
-csv_path <- file.path(OUT_DIR, "business_census_2025.csv")
+csv_path <- file.path(OUT_DIR, sprintf("business_census_%d.csv", PRODUCTION_YEAR))
 geojson_ready |>
   st_drop_geometry() |>
   write_csv(csv_path)
@@ -341,8 +375,10 @@ cat("CSV written:    ", csv_path, "\n")
 # RUN_METRICS is the runner-provided sink; the guard keeps standalone runs working.
 if (!exists("RUN_METRICS")) RUN_METRICS <- list()
 RUN_METRICS[["boundary_polygons"]] <- nrow(boundary_sf)
-RUN_METRICS[["census_rows_2025"]]  <- nrow(census_2025)
-RUN_METRICS[["census_rows_2024"]]  <- nrow(census_2024)
+RUN_METRICS[["production_year"]]      <- PRODUCTION_YEAR
+RUN_METRICS[["comparison_year"]]      <- COMPARISON_YEAR
+RUN_METRICS[["census_rows_production"]] <- nrow(census_production)
+RUN_METRICS[["census_rows_comparison"]] <- nrow(census_comparison)
 RUN_METRICS[["polygons_data"]]     <- n_data
 RUN_METRICS[["polygons_no_data"]]  <- n_no_data
 RUN_METRICS[["annexation_polygons"]] <- sum(joined_sf$is_annexation_area)
@@ -354,18 +390,19 @@ RUN_METRICS[["geojson_mb"]]        <- file_mb
 
 log_lines <- c(
   paste("Build date:          ", format(Sys.time(), "%Y-%m-%d %H:%M %Z")),
-  paste("Source file:          Edmonton_Business_Census_-_Neighbourhood_Aggregation_20260619.csv"),
-  paste("Boundary file:        City_of_Edmonton_-_Neighbourhoods_20260616.csv (407 polygons)"),
-  paste("Production year:      2025"),
-  paste("Comparison year:      2024"),
+  paste("Source file:         ", basename(CENSUS_CSV)),
+  paste("Boundary file:       ", basename(attr(boundary_raw, "boundary_snapshot_path")),
+        sprintf("(%d polygons)", nrow(boundary_sf))),
+  paste("Production year:     ", PRODUCTION_YEAR),
+  paste("Comparison year:     ", COMPARISON_YEAR),
   "---",
-  paste("2025 census rows:    ", nrow(census_2025)),
-  paste("2024 census rows:    ", nrow(census_2024)),
+  paste("Production rows:     ", nrow(census_production)),
+  paste("Comparison rows:     ", nrow(census_comparison)),
   paste("Polygons — data:     ", n_data),
   paste("Polygons — no_data:  ", n_no_data),
   paste("Annexation-area flag:", sum(joined_sf$is_annexation_area), "polygons (8885-8888, kept + labelled)"),
   paste("YoY coverage:        ", sum(!is.na(joined_sf$yoy_businesses_pct)), "neighbourhoods"),
-  paste("Unmatched 2025 rows: ", nrow(unmatched)),
+  paste("Unmatched rows:      ", nrow(unmatched)),
   paste("GeoJSON size (MB):   ", file_mb),
   "---",
   "PROVENANCE NOTE:",

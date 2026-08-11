@@ -199,21 +199,31 @@ sections:
     scripts:
       - scripts/production/01_build_business_census.R
       - scripts/production/02_build_business_census_points.R
+      # 03 emits the section manifest. It runs LAST because it describes the
+      # choropleth 01 wrote, by reading the file that exists rather than being
+      # told what to expect.
+      - scripts/production/03_emit_manifest.R
 
     # --- Handoff: publish both GeoJSONs the frontend serves ---------------------
-    # The runner is the SOLE publisher (§2). Choropleth -> a fixed-name files: copy
-    # (BusinessCensusMap.jsx fetches /data/economy/business_census_2025.geojson;
-    # year baked in, frontend-coupled, kept verbatim). Points -> a year-only glob
-    # (business_census_points_????.geojson), literal-free + frontend-stable across a
-    # vintage rollover, mirroring BP's per-year points glob. Flat CSV + build log
-    # stay in output/ (not served).
+    # The runner is the SOLE publisher (§2). Choropleth -> a files: copy whose
+    # {year} token the runner resolves against the file that EXISTS, so a vintage
+    # rollover publishes the new artefact under the matching served name with no
+    # edit here; the frontend reads that name from the manifest instead of naming
+    # it. Points -> a year-only glob (business_census_points_????.geojson), the
+    # same intent by the older mechanism. The manifest is a fixed-file copy — it
+    # is what the frontend's vintage discovery reads. Flat CSV + build log stay
+    # in output/ (not served).
+    #
+    # NOTE the quotes on the {year} entry: unquoted, YAML reads a leading `{`
+    # inside a flow mapping as a nested mapping and the whole file stops parsing.
     handoff:
       glob:
         - src_dir:  output
           dest_dir: website/public/data/economy
           pattern:  "business_census_points_????.geojson"
       files:
-        - { from: output/business_census_2025.geojson, to: website/public/data/economy/business_census_2025.geojson }
+        - { from: "output/business_census_{year}.geojson", to: "website/public/data/economy/business_census_{year}.geojson" }
+        - { from: output/manifest.json, to: website/public/data/economy/manifest.json }
 
   amenities:
     cwd: pipeline/yeg/amenities

@@ -1,0 +1,9 @@
+{
+  "section": "business-census",
+  "file": "business_census_2025.geojson",
+  "surveyYear": 2025,
+  "featureCount": 407,
+  "polygonsWithPriorYear": 167,
+  "priorYear": 2024,
+  "fetchedAt": "2026-07-13"
+}

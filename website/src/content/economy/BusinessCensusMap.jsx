@@ -9,18 +9,19 @@
 // panel, and a single-select DetailPanel float.
 //
 // VIEW-ONLY — the leanest of the three (data shortage, "keep BC as view only"):
-//   • NO year axis. ONE survey-year file (2025), so there is no year module at all —
-//     the survey year rides in the metric labels ("Businesses (2025)") and the legend.
+//   • NO year axis. ONE survey-year file per vintage, so there is no year module at
+//     all — the survey year rides in the metric labels and the legend, and is read
+//     from the section manifest rather than named here.
 //   • Two metrics (Businesses / Employees), two states (data / no_data). No console.
 //   • The "geography changed → not comparable" §6 caveat re-homes into the tips
 //     popover's honesty slot (it has no .sb-ref footer any more).
 //
-// Data: /data/economy/business_census_2025.geojson
+// Data: discovered from /data/economy/manifest.json (its `file` + `surveyYear`).
 //   fields: neighbourhood_id, display_name, civic_ward, planning_district,
-//   census_state, is_annexation_area, n_businesses_2025, n_employees_2025,
-//   n_businesses_2024, n_employees_2024, yoy_businesses_change, yoy_employees_change,
+//   census_state, is_annexation_area, n_businesses, n_employees,
+//   prior_n_businesses, prior_n_employees, yoy_businesses_change, yoy_employees_change,
 //   yoy_businesses_pct, yoy_employees_pct
-//   NOTE: the *_2024 and yoy_* fields are a backend-computed cross-year comparison; they
+//   NOTE: the prior_* and yoy_* fields are a backend-computed cross-year comparison; they
 //   are NO LONGER SURFACED (removed 2026-07 — a YoY we derived, not a source figure). The
 //   backend still emits them; the map/detail/popup show 2025 counts only.
 // =============================================================================
@@ -43,7 +44,8 @@ import DetailPanel from "../../components/DetailPanel.jsx";
 import {
   BASEMAP_STYLE,
   MAP_VIEW,
-  METRICS,
+  metricsFor,
+  DEFAULT_METRIC_KEY,
   bcensusQuantileColorStops,
   bcensusFillColor,
   bcensusLayers,
@@ -60,7 +62,10 @@ import { CENTROID_SOURCE, buildCentroidPoints, centroidNameLayer, centroidFocusL
 import { applyChoroplethBasemapHarmony } from "../../components/choroplethBasemap.js";
 
 // Single committed GeoJSON — survey year 2025, no year axis.
-const DATA_URL = assetUrl("/data/economy/business_census_2025.geojson");
+// The choropleth's filename carries the survey vintage, and the vintage is a
+// value the pipeline publishes — not something this file may name. The section
+// manifest is the one fixed URL; everything else about the data is read from it.
+const MANIFEST_URL = assetUrl("/data/economy/manifest.json");
 
 const SOURCE_ID = "bcensus";
 const FILL_LAYER_ID = "bcensus-fill";
@@ -123,7 +128,17 @@ function flyToFeature(map, feat) {
 const INTRO_KEY = "bc.introCard.dismissed";
 
 export default function BusinessCensusMap() {
-  const [metric, setMetric] = useState(METRICS[0].key);
+  const [metric, setMetric] = useState(DEFAULT_METRIC_KEY);
+  // Vintage facts from the manifest; null until it loads.
+  const [census, setCensus] = useState(null);
+  const surveyYear = census?.surveyYear ?? "";
+  const METRICS = useMemo(() => metricsFor(surveyYear), [surveyYear]);
+  // The map's hover handler is bound once and would otherwise close over the
+  // survey year as it was at bind time (empty). A ref keeps the popup honest
+  // without re-binding the handler on every manifest change.
+  const surveyYearRef = useRef(surveyYear);
+  useEffect(() => { surveyYearRef.current = surveyYear; }, [surveyYear]);
+  const dataUrl = census ? assetUrl(`/data/economy/${census.file}`) : null;
   const [map, setMap] = useState(null);
   const [gj, setGj] = useState(null);
   const [fetchError, setFetchError] = useState(null);
@@ -199,12 +214,20 @@ export default function BusinessCensusMap() {
   // into the source; the fetched object is kept for the quantile stops + selection.
   useEffect(() => {
     let cancelled = false;
-    fetch(DATA_URL)
+    fetch(MANIFEST_URL)
       .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+        if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText} (manifest)`);
         return r.json();
       })
-      .then((data) => { if (!cancelled) setGj(data); })
+      .then((m) => {
+        if (cancelled) return;
+        setCensus(m);
+        return fetch(assetUrl(`/data/economy/${m.file}`)).then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+          return r.json();
+        });
+      })
+      .then((data) => { if (!cancelled && data) setGj(data); })
       .catch((err) => { if (!cancelled) setFetchError(err.message); });
     return () => { cancelled = true; };
   }, []);
@@ -280,7 +303,7 @@ export default function BusinessCensusMap() {
           if (hoveredId === f.id) {
             hoverPopup
               .setLngLat(e.lngLat)
-              .setHTML(buildBusinessCensusPopupHtml(f.properties, false))
+              .setHTML(buildBusinessCensusPopupHtml(f.properties, false, surveyYearRef.current))
               .addTo(map);
           }
         }, 900);
@@ -479,11 +502,15 @@ export default function BusinessCensusMap() {
           ) : (
             <>
               {!gj && <MapSkeleton />}
+              {/* The map is not mounted until the manifest has named the file.
+                  MapView takes a URL, not a promise; handing it null makes
+                  MapLibre reject the source ("not a valid GeoJSON object"). */}
+              {dataUrl && (
               <MapErrorBoundary>
                 <MapView
                   className="canvas"
                   basemapStyle={BASEMAP_STYLE}
-                  geojsonUrl={DATA_URL}
+                  geojsonUrl={dataUrl}
                   view={MAP_VIEW}
                   sourceId={SOURCE_ID}
                   promoteId="neighbourhood_id"
@@ -497,12 +524,13 @@ export default function BusinessCensusMap() {
                   nativeAttribution={false}
                 />
               </MapErrorBoundary>
+              )}
             </>
           )}
         </div>
 
         {/* ===== INSTRUMENT COLUMN (PA standard) — identity + metric → legend → count.
-            No year module: Business Counts is a single survey year (2025). ===== */}
+            No year module: Business Counts is a single survey year per vintage. ===== */}
         <div className="pa-float pa-column pa-column-lean">
           <section className="pa-card pa-card-identity">
             <IdentityCard title="Business Counts" />
@@ -545,7 +573,7 @@ export default function BusinessCensusMap() {
         </div>
 
         {/* ===== SINGLE-SELECT DETAIL (PA standard) — the right-side float. Lean vs PA's
-            InfoRail; carries the 2025 counts (single survey year — no cross-year YoY). ===== */}
+            InfoRail; carries the production-vintage counts (no cross-year YoY). ===== */}
         {selectedFeature && (() => {
           const p = selectedFeature;
           const hasData = p.census_state === "data";
@@ -556,8 +584,8 @@ export default function BusinessCensusMap() {
           if (!hasData) notes.push("No business census data recorded for this neighbourhood.");
           const rows = hasData
             ? [
-                { k: "Businesses (2025)", v: fmtNumber(p.n_businesses_2025) },
-                { k: "Employees (2025)", v: fmtNumber(p.n_employees_2025) },
+                { k: `Businesses (${surveyYear})`, v: fmtNumber(p.n_businesses) },
+                { k: `Employees (${surveyYear})`, v: fmtNumber(p.n_employees) },
               ]
             : [];
           return (
