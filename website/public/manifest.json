@@ -165,7 +165,11 @@
       "valueSuppression": {
         "flagColumn": "suppressed",
         "rowsSuppressed": 64,
-        "rowsReported": 280
+        "rowsReported": 280,
+        "threshold": {
+          "column": "n_properties",
+          "minimumToReport": 100
+        }
       },
       "fetchedAt": "2026-07-15",
       "rowUniverse": {

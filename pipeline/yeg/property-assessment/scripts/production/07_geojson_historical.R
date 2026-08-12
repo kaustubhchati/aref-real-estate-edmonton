@@ -37,6 +37,7 @@ library(tidyverse)
 library(sf)
 library(scales)
 source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
+source("scripts/production/_suppression_rule.R")   # SUPPRESSION_MIN_PROPERTIES
 source(shared_path("reconcile_helpers.R"))
 source(shared_path("fetch_helpers.R"))
 source(shared_path("boundary_helpers.R"))
@@ -165,7 +166,7 @@ for (agg_path in sort(agg_candidates)) {
         `Neighbourhood ID` == EVERGREEN_ID        ~ "manufactured_home_community",
         `Neighbourhood ID` %in% non_residential_ids ~ "non_residential",
         !is.na(suppressed) & suppressed            ~ "suppressed_low_n",
-        !is.na(n_properties) & n_properties >= 100 ~ "aggregated",
+        !is.na(n_properties) & n_properties >= SUPPRESSION_MIN_PROPERTIES ~ "aggregated",
         TRUE                                        ~ "no_data"
       ),
       # Orthogonal to polygon_state: the City's annexation-area tiles (kept + labelled).

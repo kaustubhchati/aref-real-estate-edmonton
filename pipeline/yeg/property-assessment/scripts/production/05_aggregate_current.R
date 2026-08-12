@@ -34,7 +34,8 @@
 #   the single reconciliation contract (authored by the reconcile one-shot).
 #
 # Sanity gate (port of Stata3 lines 120–128):
-#   Aggregates suppressed where n_properties < 100. The prev RA's second gate
+#   Aggregates suppressed below SUPPRESSION_MIN_PROPERTIES (see
+#   _suppression_rule.R). The prev RA's second gate
 #   (|diffprop| > 0.10) needs the confidential 2023 aggregates and is NOT
 #   applied here — deferred to the Phase 2 Sanity Agent (one-time oracle read,
 #   never persisted to production; CLAUDE.md §4.1).
@@ -43,6 +44,7 @@
 library(tidyverse)
 library(scales)
 source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
+source("scripts/production/_suppression_rule.R")   # SUPPRESSION_MIN_PROPERTIES
 source(shared_path("reconcile_helpers.R"))
 
 dir.create("output", showWarnings = FALSE, recursive = TRUE)
@@ -90,7 +92,7 @@ cat(sprintf("Loaded clean frame: %s rows\n", comma(nrow(assess_clean))))
 # Only the crosswalk's relation=="merge" rows run here, BEFORE aggregation, so
 # medians/SDs are recomputed from the pooled rows (never averaged from summaries).
 # The 1:1 renames/renumbers/typos/aliases/suffix-drift are applied to the gated
-# aggregate below (in this script, after the N<100 gate) — they do not change
+# aggregate below (in this script, after the threshold gate) — they do not change
 # which rows aggregate together, so they need not run here, before the group_by.
 # Source of truth: data/reference/neighbourhood_crosswalk_<YYYYMMDD>.csv.
 assess_clean <- apply_crosswalk(assess_clean, relations = "merge")
@@ -144,7 +146,7 @@ nbhd_agg <- assess_clean |>
 cat(sprintf("\nAggregated to %s neighbourhoods\n", comma(nrow(nbhd_agg))))
 
 
-# --- Sanity gate: suppress aggregates when N < 100 -----------
+# --- Sanity gate: suppress aggregates below the reporting threshold ---------
 # Port of Stata3 lines 120, 123–129. The prev RA's second gate
 # (|diffprop| > 0.10 vs internal) needs the confidential file and
 # is deferred to Phase 2 Sanity Agent.
@@ -155,11 +157,11 @@ cat(sprintf("\nAggregated to %s neighbourhoods\n", comma(nrow(nbhd_agg))))
 # (the polygon will simply colour as "data suppressed") and is
 # honest about why.
 
-n_suppressed <- sum(nbhd_agg$n_properties < 100, na.rm = TRUE)
+n_suppressed <- sum(nbhd_agg$n_properties < SUPPRESSION_MIN_PROPERTIES, na.rm = TRUE)
 
 nbhd_agg_gated <- nbhd_agg |>
   mutate(
-    suppressed = n_properties < 100,
+    suppressed = n_properties < SUPPRESSION_MIN_PROPERTIES,
     across(
       c(avall_public, median_assessvalue, sd_assessedvalue,
         median_yearbuilt, pct_with_unit,
@@ -168,7 +170,8 @@ nbhd_agg_gated <- nbhd_agg |>
     )
   )
 
-cat(sprintf("Sanity gate (N < 100): %s neighbourhoods suppressed\n",
+cat(sprintf("Sanity gate (N < %d): %s neighbourhoods suppressed\n",
+            SUPPRESSION_MIN_PROPERTIES,
             comma(n_suppressed)))
 
 
@@ -238,12 +241,12 @@ cat(sprintf("Rows: %s neighbourhoods (incl. %s NA-id developing areas)\n",
 # rename year. Both the 2025 historical aggregate (04_aggregate_historical) and the 2026 aggregate
 # (resolved to canonical above, before this block) now carry canonical ids, so the
 # apply_crosswalk() below is idempotent — kept only as a defensive canonical key
-# for the join. yoy still only exists where both years cleared the N<100 gate
+# for the join. yoy still only exists where both years cleared the threshold gate
 # (2025 medians are gated).
 prev_path <- "output/hist_aggregates/neighbourhood_aggregates_2025.csv"
 if (file.exists(prev_path)) {
   # median_2025 per canonical id — kept ONLY for the suppression NA gate below
-  # (yoy exists where both 2025 and 2026 cleared the N<100 gate).
+  # (yoy exists where both years cleared the reporting-threshold gate).
   prev_2025 <- read_csv(prev_path, show_col_types = FALSE) |>
     transmute(.canon_id = as.character(`Neighbourhood ID`),
               median_2025 = median_assessvalue) |>

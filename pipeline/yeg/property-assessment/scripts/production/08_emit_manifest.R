@@ -187,6 +187,10 @@ manifest <- list(
 # The aggregate is found by PATTERN, not by name: its filename carries the data
 # year, and a literal here would need editing every rollover.
 source(shared_path("download_facts.R"))
+# The SAME constant the aggregation step gated on. Sourced rather than retyped:
+# a threshold published from a second copy could drift from the rule that ran,
+# and would look authoritative while doing it.
+source("scripts/production/_suppression_rule.R")
 
 aggregate_files <- list.files(
   "output",
@@ -211,7 +215,11 @@ manifest$downloads <- list(
     section        = "property-assessment",
     output_rel     = file.path("output", current_aggregate),
     raw_dir        = "data/raw",
-    snapshot_stems = PA_SNAPSHOT_STEMS
+    snapshot_stems = PA_SNAPSHOT_STEMS,
+    # What the suppression rule counts, and the minimum it requires. Stated so
+    # the download page can explain masking without typing the number itself.
+    threshold_column  = "n_properties",
+    minimum_to_report = SUPPRESSION_MIN_PROPERTIES
   )
 )
 

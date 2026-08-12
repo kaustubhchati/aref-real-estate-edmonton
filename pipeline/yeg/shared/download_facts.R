@@ -8,7 +8,8 @@
 #     rows        data rows, header excluded
 #     columns     column count
 #     coverageSpan {from, to}  ONLY where the data carries a year column
-#     valueSuppression         ONLY where the data carries a suppression flag
+#     valueSuppression         ONLY where the data carries a suppression flag;
+#                              carries the rule's threshold when the caller supplies it
 #     fetchedAt   date of the newest source snapshot the section built from
 #     builtAt     when this run produced the artefact
 #
@@ -105,13 +106,17 @@ coverage_span_of <- function(frame) {
 # of them are right there carrying a name and a property count, and only their
 # values are withheld. Two different facts about the data, so two blocks.
 #
-# WHY NO THRESHOLD IS EMITTED: the rule that decides suppression lives in the
-# producing script (05_aggregate_current.R), not in the artefact. It could only
-# get here by being typed a second time, and a threshold that disagreed with the
-# one that actually ran would be worse than none. So this block says how much is
-# masked, never why. If the page needs the "why", the rule has to travel from the
-# script that owns it — a different change to this one.
-value_suppression_of <- function(frame) {
+# THE THRESHOLD IS PASSED IN, NOT KNOWN HERE, AND NOT GUESSED FROM THE DATA.
+# The rule that decides suppression belongs to the producing section, so this
+# helper cannot hold it without becoming wrong for the next section. It is also
+# not inferable from the artefact: the highest suppressed count and the lowest
+# reported count only bracket the threshold, and reporting a bracket as if it
+# were the rule would be a fabrication. So the section hands it over, reading it
+# from the SAME constant its aggregation step used — see the caller.
+#
+# Both parts or neither. A threshold value with no column does not say what it
+# counts, and a column with no value says nothing at all.
+value_suppression_of <- function(frame, threshold_column = NULL, minimum_to_report = NULL) {
   flag_col <- names(frame)[tolower(names(frame)) == "suppressed"]
   if (length(flag_col) != 1) return(NULL)   # caller omits the key
   flag <- frame[[flag_col]]
@@ -132,11 +137,32 @@ value_suppression_of <- function(frame) {
   # The two counts are exhaustive by construction (no NA survives the check
   # above), so they sum to the artefact's own `rows` and the page can state a
   # share without a second number arriving from anywhere else.
-  list(
+  block <- list(
     flagColumn     = flag_col,
     rowsSuppressed = as.integer(sum(flag)),
     rowsReported   = as.integer(sum(!flag))
   )
+
+  if (is.null(threshold_column) && is.null(minimum_to_report)) return(block)
+  if (is.null(threshold_column) || is.null(minimum_to_report)) {
+    stop("value_suppression_of: a threshold needs BOTH the column it counts and ",
+         "the minimum to report. Got column=", deparse(threshold_column),
+         ", minimum=", deparse(minimum_to_report), ".")
+  }
+  # Fail closed if the artefact does not actually carry the column the rule
+  # counts. Publishing "fewer than 100 n_properties" for a file with no
+  # n_properties column would be a statement about nothing.
+  if (!threshold_column %in% names(frame)) {
+    stop("value_suppression_of: the threshold counts '", threshold_column,
+         "', which this artefact does not have. Its columns are: ",
+         paste(names(frame), collapse = ", "))
+  }
+
+  block$threshold <- list(
+    column          = threshold_column,
+    minimumToReport = as.integer(minimum_to_report)
+  )
+  block
 }
 
 # Assemble the row-universe block: how many rows the artefact COULD have held,
@@ -185,7 +211,8 @@ row_universe_block <- function(universe_size, rows_present, breakdown) {
 
 # Assemble the block for one artefact. `output_rel` is the path the producing
 # script wrote, relative to the section root.
-describe_download_artefact <- function(section, output_rel, raw_dir, snapshot_stems) {
+describe_download_artefact <- function(section, output_rel, raw_dir, snapshot_stems,
+                                       threshold_column = NULL, minimum_to_report = NULL) {
   if (!file.exists(output_rel)) {
     stop("Cannot describe '", output_rel, "': it does not exist. ",
          "The producing script must run before the manifest emitter.")
@@ -205,7 +232,7 @@ describe_download_artefact <- function(section, output_rel, raw_dir, snapshot_st
   span <- coverage_span_of(frame)
   if (!is.null(span)) facts$coverageSpan <- span
 
-  suppression <- value_suppression_of(frame)
+  suppression <- value_suppression_of(frame, threshold_column, minimum_to_report)
   if (!is.null(suppression)) facts$valueSuppression <- suppression
 
   fetched <- newest_snapshot_date(raw_dir, snapshot_stems)

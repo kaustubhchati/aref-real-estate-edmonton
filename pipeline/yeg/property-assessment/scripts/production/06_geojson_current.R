@@ -40,6 +40,7 @@
 # ============================================================
 
 source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
+source("scripts/production/_suppression_rule.R")   # SUPPRESSION_MIN_PROPERTIES
 source(shared_path("reconcile_helpers.R"))
 source(shared_path("fetch_helpers.R"))
 source(shared_path("boundary_helpers.R"))
@@ -106,7 +107,7 @@ nbhd_polygons <- boundary_raw |>
 # (DECISION_container_universe_20260710.md): they are real standalone tiles over
 # the annexed-but-unsubdivided south, carrying suppressed residential data. The
 # is_annexation_area flag below is ORTHOGONAL to polygon_state — the container
-# keeps its natural state (here suppressed_low_n, N<100) and gains the flag. Any
+# keeps its natural state (here suppressed_low_n, below threshold) and gains the flag. Any
 # genuine future drop still routes through crosswalk_exclude_ids() (empty today).
 annexation_ids <- crosswalk_annexation_ids()
 exclude_ids    <- crosswalk_exclude_ids()   # empty today; reserved for true drops
@@ -142,7 +143,7 @@ joined <- joined |>
       `Neighbourhood ID` == EVERGREEN_ID ~ "manufactured_home_community",
       `Neighbourhood ID` %in% non_residential_ids ~ "non_residential",
       !is.na(suppressed) & suppressed ~ "suppressed_low_n",
-      !is.na(n_properties) & n_properties >= 100 ~ "aggregated",
+      !is.na(n_properties) & n_properties >= SUPPRESSION_MIN_PROPERTIES ~ "aggregated",
       TRUE ~ "no_data"
     ),
     # Orthogonal to polygon_state: the City's annexation-area tiles (kept + labelled).

@@ -33,6 +33,7 @@
 library(tidyverse)
 library(scales)
 source(rprojroot::find_root_file("_bootstrap.R", criterion = rprojroot::has_file(".aref_root")))
+source("scripts/production/_suppression_rule.R")   # SUPPRESSION_MIN_PROPERTIES
 source(shared_path("reconcile_helpers.R"))
 
 dir.create("output/hist_aggregates", showWarnings = FALSE, recursive = TRUE)
@@ -201,10 +202,10 @@ for (yr in years_present) {
       .groups = "drop"
     )
   
-  # --- N<100 suppression gate (Stata3 lines 120-128) --------
+  # --- Reporting-threshold suppression gate (Stata3 lines 120-128) --------
   nbhd_agg <- nbhd_agg |>
     mutate(
-      suppressed = n_properties < 100,
+      suppressed = n_properties < SUPPRESSION_MIN_PROPERTIES,
       across(
         c(avall_public, median_assessvalue, sd_assessedvalue,
           median_yearbuilt, pct_with_unit,
@@ -216,8 +217,8 @@ for (yr in years_present) {
   n_supp <- sum(nbhd_agg$suppressed)
   med_val <- median(nbhd_agg$median_assessvalue, na.rm = TRUE)
   
-  cat(sprintf("  Neighbourhoods: %d  |  Suppressed (N<100): %d  |  Median value: $%s\n",
-              nrow(nbhd_agg), n_supp,
+  cat(sprintf("  Neighbourhoods: %d  |  Suppressed (N<%d): %d  |  Median value: $%s\n",
+              nrow(nbhd_agg), SUPPRESSION_MIN_PROPERTIES, n_supp,
               format(round(med_val), big.mark = ",")))
   
   # --- Write year CSV ---------------------------------------
@@ -319,7 +320,7 @@ all_agg <- map_dfr(years_present, function(yr) {
   arrange(.yoy_key, year) |>
   group_by(.yoy_key) |>
   # Preserve the suppression gate EXACTLY: yoy exists only where this year's and
-  # the prior year's medians are both shown (median is NA when N<100-suppressed or
+  # the prior year's medians are both shown (median is NA when threshold-suppressed or
   # first year), so the NA pattern is identical to the old full-pop yoy. Only the
   # VALUE changes (matched vs full-pop differenced) for non-suppressed years.
   mutate(yoy_log_points = if_else(
