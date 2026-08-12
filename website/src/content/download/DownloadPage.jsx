@@ -216,7 +216,7 @@ function AboutDataset({ editorial, fetchedAt, source }) {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                City of Edmonton Open Data Terms of Use
+                Open Government Licence – City of Edmonton
               </a>
             </td>
           </tr>

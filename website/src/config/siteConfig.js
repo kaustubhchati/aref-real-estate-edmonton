@@ -15,22 +15,49 @@
 
 // ---- Source-data attribution + licence — ONE source of truth ------------
 // City of Edmonton Open Data Portal, under the Open Government Licence – City of
-// Edmonton (Terms of Use v2.1, Jan 2016). Consumed BOTH by the map's attribution
-// control AND by every data export (exportData.js) so the required notice travels
-// with any distribution — see the Terms' distribution clause: "If you distribute or
-// provide access to the datasets … you agree to include … this URL for … these
-// Terms of Use." Attribution itself is REQUESTED, not required, by these Terms; the
-// URL-travels-with-distribution obligation is the hard one, so it is centralised here.
+// Edmonton. Consumed BOTH by the map's attribution panel AND by every data
+// export (exportData.js), so the notice travels with an exported file.
 //
-// NO City of Edmonton LOGO anywhere (deliberate): the Terms licence the DATASETS only
-// ("this licence does not give you a copyright or other proprietary interest") and
-// grant no right to the City's marks; importing the mark would also imply the
-// endorsement the disclaimer exists to disclaim. Text citation + Terms URL is the
-// compliant, more rigorous form.
+// WHAT THE INSTRUMENT IS, AND WHAT THIS BLOCK USED TO SAY.
+// `termsUrl` below serves a document titled "Open Government Licence -
+// Edmonton", Version 1.0, July 2022 — verified by fetching it. This block
+// previously named "Terms of Use v2.1, Jan 2016" instead, and justified itself
+// by quoting a distribution clause ("If you distribute or provide access to the
+// datasets … you agree to include … this URL") and by stating that attribution
+// was "REQUESTED, not required".
+//
+// Neither survives a reading of the document actually served. It contains NO
+// redistribution or pass-through clause at all, and its attribution wording is
+// mandatory, quoted verbatim:
+//
+//     You must, where you do any of the above:
+//     Acknowledge the source of the Information by including any attribution
+//     statement specified by the Information Provider(s) and, where possible,
+//     provide a link to this licence.
+//
+// It also specifies wording to use where a provider states none:
+//
+//     Contains information licensed under the Open Government Licence –
+//     City of Edmonton.
+//
+// [OPEN] Whether that statement is adopted, and where it sits, is KC's ruling
+// and has not been made. Nothing here asserts a legal conclusion either way —
+// this note records what the two texts say, which is all a code comment can do.
+//
+// The version is deliberately NOT in the displayed string: the licence names
+// itself without one in the attribution wording above, and the instrument's own
+// Versioning clause makes the governing version the one in force when the data
+// was accessed, not a number we pin here.
+//
+// NO City of Edmonton LOGO anywhere (deliberate), and the current instrument is
+// explicit about it — its Exemptions clause withholds "the names, crests, logos,
+// or other official symbols of the Information Provider". Importing the mark
+// would also imply the endorsement the disclaimer exists to disclaim. Text
+// citation plus the licence link is the form used instead.
 export const EDMONTON_OPEN_DATA = {
   name:       "City of Edmonton Open Data",
   url:        "https://data.edmonton.ca",
-  licence:    "Open Government Licence – City of Edmonton (Terms of Use v2.1)",
+  licence:    "Open Government Licence – City of Edmonton",
   termsUrl:   "https://data.edmonton.ca/stories/s/City-of-Edmonton-Open-Data-Terms-of-Use/msh8-if28/",
   disclaimer: "These datasets do not represent an official statement of City policy, practice, services, or procedure.",
 };
@@ -54,7 +81,7 @@ export const BASEMAP_SOURCES = [
 
 // The two City links, composed once (shared by the strip + the full record below).
 const CITY_LINK  = `<a href="${EDMONTON_OPEN_DATA.url}" target="_blank" rel="noopener noreferrer">City of Edmonton Open Data</a>`;
-const TERMS_LINK = `<a href="${EDMONTON_OPEN_DATA.termsUrl}" target="_blank" rel="noopener noreferrer">Open Government Licence (Terms of Use v2.1)</a>`;
+const TERMS_LINK = `<a href="${EDMONTON_OPEN_DATA.termsUrl}" target="_blank" rel="noopener noreferrer">Open Government Licence – City of Edmonton</a>`;
 // The specific SOURCE DATASET's about-page (Business Census, 8c4b-u4a4). Structured so BOTH
 // the map-attribution HTML string AND the AttributionPanel `dataset` prop read ONE source —
 // so this per-section link survives the native-bar removal (attribution-consolidation §5:

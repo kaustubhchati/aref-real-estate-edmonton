@@ -7,7 +7,7 @@
 // which is what makes the always-visible bottom strip safe to trim to links only:
 //
 //   • Data source   — City of Edmonton Open Data Portal (linked)
-//   • Licence        — Open Government Licence – City of Edmonton, Terms of Use v2.1 (linked)
+//   • Licence        — Open Government Licence – City of Edmonton (linked)
 //   • Disclaimer     — the §6 honesty label (moved here OUT of the inline strip, never dropped)
 //   • Basemap        — © CARTO, © OpenStreetMap contributors (licence-fixed wording; linked)
 //
