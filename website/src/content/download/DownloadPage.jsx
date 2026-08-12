@@ -122,9 +122,9 @@ export default function DownloadPage() {
           margin: "0 0 2rem",
           maxWidth: 560,
         }}>
-          Cleaned, analysis-ready CSV files derived from Edmonton
-          open data. All files are neighbourhood-level aggregates;
-          no individual property records are included.
+          Cleaned, analysis-ready CSV files derived from City of
+          Edmonton open data. No file contains individual property
+          records.
         </p>
 
         {/* Dataset cards. These ARE a list of datasets, so they are marked up as
@@ -310,10 +310,9 @@ export default function DownloadPage() {
           border: "1px solid var(--border-soft)",
         }}>
           <strong>Data source:</strong> City of Edmonton Open Data.
-          All datasets are derived from public records and processed
-          under the Layer 1a cleaning pipeline (parking + R1 + R3
-          rules). Neighbourhood aggregates suppress values where
-          N&nbsp;&lt;&nbsp;100 to protect privacy.
+          All files are derived from public records. Cleaning rules
+          and suppression thresholds differ by dataset and are stated
+          with each file above.
           Raw source data is available at{" "}
           <a
             href="https://data.edmonton.ca"
