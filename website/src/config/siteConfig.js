@@ -184,6 +184,34 @@ export const siteConfig = {
   // ADDING A FILE to a dataset below needs no code, only an entry here for its
   // title. Adding a NEW dataset needs its manifest wired into DownloadPage's
   // SOURCES table as well; see the note there.
+  // One plain sentence per absence reason_code the backend emits.
+  //
+  // These are keyed by CODE, not by position, so a manifest that stops emitting
+  // a code simply stops rendering its row, and one that starts emitting a new
+  // code renders it the moment a sentence is added here. A code with no sentence
+  // yet renders as the raw code — visibly unfinished, which is right, because
+  // the alternative is dropping a row and breaking the arithmetic silently.
+  //
+  // Each sentence says what is true of the DATA, not what the pipeline did. A
+  // reader deciding whether a file suits them needs to know that an absent row
+  // is out of scope rather than a true zero, and those are not the same thing.
+  downloadAbsenceReasons: {
+    no_residential_class_row:
+      "The neighbourhood has no accounts classed as residential, so it falls " +
+      "outside this file's scope.",
+    absent_from_source_snapshot:
+      "The neighbourhood has no row in the City's assessment roll for this year.",
+    no_lot_size_after_join:
+      "Every residential account in the neighbourhood has a blank lot size in " +
+      "the source data.",
+    merged_into_canonical_neighbourhood:
+      "Combined with another neighbourhood by the boundary crosswalk. Its " +
+      "records appear under that neighbourhood.",
+    no_permits_in_period:
+      "No permits of that category were issued that year, so the combination " +
+      "has no row rather than a row of zero.",
+  },
+
   downloadDatasets: [
     {
       id: "property-assessment",
@@ -201,6 +229,7 @@ export const siteConfig = {
           // The noun for one row. Used for "344 neighbourhoods", and for the
           // completeness sentence, so it has to read naturally in both.
           unit: "neighbourhoods",
+          unitSingular: "neighbourhood",
         },
       },
     },
@@ -217,6 +246,7 @@ export const siteConfig = {
             "One row per year and permit category, counting the permits " +
             "issued in each combination.",
           unit: "combinations",
+          unitSingular: "combination",
         },
         "yeg_building-permits_coverage": {
           title: "Mapping coverage by year",
@@ -224,6 +254,7 @@ export const siteConfig = {
             "One row per year, reporting how complete the building permits " +
             "record is in each year covered.",
           unit: "years",
+          unitSingular: "year",
         },
       },
     },

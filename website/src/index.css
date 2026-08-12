@@ -4599,3 +4599,24 @@ p  { margin: 0 0 0.75rem; }
   .dl-kv       { grid-template-columns: 1fr; gap: 0; }
   .dl-kv dd    { margin-bottom: var(--space-3); }
 }
+
+/* Completeness: what is not in a file, and why. Sits under the key/value block
+   behind a rule, so it reads as a qualification of the numbers above it. */
+.dl-completeness { margin-top: var(--space-5); padding-top: var(--space-5);
+                   border-top: 1px solid var(--border); }
+.dl-bd           { border-collapse: collapse; width: 100%; max-width: 44rem;
+                   font-size: var(--t-sm); }
+.dl-bd th        { padding: 0 var(--space-3) var(--space-2) 0;
+                   border-bottom: 1px solid var(--border); text-align: left;
+                   color: var(--text-muted); font-size: var(--t-2xs); font-weight: 700;
+                   letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.4; }
+.dl-bd td        { padding: var(--space-2) var(--space-3) var(--space-2) 0;
+                   border-bottom: 1px solid var(--border); vertical-align: top;
+                   color: var(--text-muted); line-height: 1.6; }
+.dl-bd tr:last-child td { border-bottom: 0; }
+.dl-bd .dl-n     { padding-right: 0; text-align: right; white-space: nowrap;
+                   color: var(--text-strong); font-weight: 700;
+                   font-variant-numeric: tabular-nums; }
+.dl-complete     { margin: var(--space-5) 0 0; padding-top: var(--space-5);
+                   border-top: 1px solid var(--border);
+                   color: var(--text-muted); font-size: var(--t-sm); font-style: italic; }

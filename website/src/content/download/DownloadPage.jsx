@@ -121,10 +121,66 @@ function plural(n, word) {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
 }
 
+// === Completeness ============================================================
+
+// What is NOT in a file, and why.
+//
+// A row can be missing for reasons that are not interchangeable: out of scope,
+// a true zero, a source gap, a reconciliation. Reporting only a total would let
+// a reader treat all four as the same thing, and the commonest wrong reading —
+// "missing means zero" — is the one that damages an analysis silently.
+//
+// Where nothing is absent this renders a plain sentence and no table. A table
+// of one row reading "0" invites the reader to look for a problem that is not
+// there.
+function Completeness({ artefact, text, reasons }) {
+  const universe = artefact?.rowUniverse;
+  if (!universe) return null;
+
+  const unit = text?.unit ?? "rows";
+  if (!universe.rowsAbsent) {
+    return (
+      <p className="dl-complete">
+        {`Every ${text?.unitSingular ?? "row"} in the covered period is present.`}
+      </p>
+    );
+  }
+
+  // Largest mechanism first: the reader's first question is what accounts for
+  // most of the gap, not which code sorts first.
+  const rows = [...(universe.absenceBreakdown ?? [])].sort((a, b) => b.count - a.count);
+
+  return (
+    <div className="dl-completeness">
+      <h5 className="dl-sub">
+        {`Completeness: ${universe.rowsPresent} of ${universe.universeSize} ${unit}`}
+      </h5>
+      <table className="dl-bd">
+        <thead>
+          <tr>
+            <th>{`Why ${universe.rowsAbsent} ${unit} are not in this file`}</th>
+            <th className="dl-n">Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.reason_code}>
+              {/* An unrecognised code prints as itself rather than being dropped.
+                  Dropping it would break the arithmetic above without saying so. */}
+              <td>{reasons?.[row.reason_code] ?? row.reason_code}</td>
+              <td className="dl-n">{row.count}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // === Page ====================================================================
 
 export default function DownloadPage() {
-  const { org, downloadDatasets } = siteConfig;
+  const { org, downloadDatasets, downloadAbsenceReasons } = siteConfig;
   // null until every manifest has resolved. The page shows nothing half-built:
   // a stat card that counts up as manifests land would be worse than a wait.
   const [datasets, setDatasets] = useState(null);
@@ -289,6 +345,12 @@ export default function DownloadPage() {
                             <><dt>Built</dt><dd>{formatIsoDate(artefact.builtAt)}</dd></>
                           )}
                         </dl>
+
+                        <Completeness
+                          artefact={artefact}
+                          text={text}
+                          reasons={downloadAbsenceReasons}
+                        />
                       </li>
                     );
                   })}
