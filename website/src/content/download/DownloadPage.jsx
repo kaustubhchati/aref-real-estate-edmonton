@@ -127,21 +127,30 @@ export default function DownloadPage() {
           no individual property records are included.
         </p>
 
-        {/* Dataset cards */}
-        <div style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "1rem",
-        }}>
-          {!ctx ? (
-            <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-              {error ? `Could not load the dataset catalogue: ${error}` : "Loading…"}
-            </p>
-          ) : (
-            downloads.map((d) => {
+        {/* Dataset cards. These ARE a list of datasets, so they are marked up as
+            one — a <ul> of <li>s. A screen reader then announces how many there
+            are and which one the reader is on; a stack of <div>s announces
+            nothing. The loading/error message replaces the whole list rather
+            than sitting inside it, because a <p> is not a valid child of <ul>. */}
+        {!ctx ? (
+          <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
+            {error ? `Could not load the dataset catalogue: ${error}` : "Loading…"}
+          </p>
+        ) : (
+          <ul style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+            listStyle: "none",
+            margin: 0,
+            padding: 0,
+          }}>
+            {downloads.map((d) => {
               const v = ctx[d.source];
+              // Resolved once: it names the card AND the download link below it.
+              const title = fill(d.label, v);
               return (
-                <div key={d.id} style={{
+                <li key={d.id} style={{
                   display: "flex",
                   gap: "1.25rem",
                   alignItems: "flex-start",
@@ -159,15 +168,20 @@ export default function DownloadPage() {
 
                   {/* Card body */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{
+                    {/* The card's title is a real heading (h2, one level under
+                        the page h1) so the page has an outline a screen reader
+                        can navigate. The inline sizes below are the ones the
+                        <p> carried, restated so the heading LOOKS unchanged —
+                        an h2's browser defaults would otherwise enlarge it. */}
+                    <h2 style={{
                       fontSize: "1rem",
                       fontWeight: 600,
                       color: "var(--text)",
                       margin: "0 0 0.3rem",
                       lineHeight: 1.3,
                     }}>
-                      {fill(d.label, v)}
-                    </p>
+                      {title}
+                    </h2>
                     <p style={{
                       fontSize: "0.85rem",
                       color: "var(--text-muted)",
@@ -177,20 +191,29 @@ export default function DownloadPage() {
                       {fill(d.description, v)}
                     </p>
 
-                    {/* Metadata pills */}
-                    <div style={{
+                    {/* Metadata pills. Also a list, so also a <ul>.
+                        Each pill shows a bare value ("2026") next to a glyph
+                        that is decorative and hidden from assistive tech — so
+                        on its own a pill announces "2026" and means nothing.
+                        `field` names what the value IS. It rides in aria-label
+                        rather than on screen, because the glyph already tells a
+                        sighted reader which field this is, and printing the word
+                        too would change what the page displays. */}
+                    <ul style={{
                       display: "flex",
                       flexWrap: "wrap",
                       gap: "0.4rem",
-                      marginBottom: "0.875rem",
+                      listStyle: "none",
+                      padding: 0,
+                      margin: "0 0 0.875rem",
                     }}>
                       {[
-                        { icon: "📁", text: d.size },
-                        { icon: "⊞", text: fill(d.rows, v) },
-                        { icon: "◎", text: d.section },
-                        { icon: "◷", text: String(v.year) },
-                      ].map(({ icon, text }) => (
-                        <span key={text} style={{
+                        { icon: "📁", field: "Size", text: d.size },
+                        { icon: "⊞", field: "Rows", text: fill(d.rows, v) },
+                        { icon: "◎", field: "Section", text: d.section },
+                        { icon: "◷", field: "Year", text: String(v.year) },
+                      ].map(({ icon, field, text }) => (
+                        <li key={text} aria-label={`${field}: ${text}`} style={{
                           display: "inline-flex",
                           alignItems: "center",
                           gap: 4,
@@ -206,11 +229,20 @@ export default function DownloadPage() {
                             {icon}
                           </span>
                           {text}
-                        </span>
+                        </li>
                       ))}
-                    </div>
+                    </ul>
 
-                    {/* Download button */}
+                    {/* Download button.
+                        The link TEXT names its own file. Three links all reading
+                        "Download CSV" are indistinguishable to anyone who meets
+                        them out of context — a screen-reader link list, or a
+                        keyboard user tabbing through — and the card heading that
+                        disambiguates them is not part of the link. Title, then
+                        format and size in brackets, is the convention UK
+                        government publishing uses for exactly this. The size is
+                        the one already shown on the card; nothing new is claimed
+                        about the file here. */}
                     <a
                       href={assetUrl(fill(d.file, v))}
                       download
@@ -257,14 +289,14 @@ export default function DownloadPage() {
                           strokeLinecap="round"
                         />
                       </svg>
-                      Download CSV
+                      {`${title} (CSV, ${d.size})`}
                     </a>
                   </div>
-                </div>
+                </li>
               );
-            })
-          )}
-        </div>
+            })}
+          </ul>
+        )}
 
         {/* Footer note */}
         <p style={{
