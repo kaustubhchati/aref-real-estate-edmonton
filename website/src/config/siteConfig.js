@@ -161,56 +161,71 @@ export const siteConfig = {
     copyrightYear: new Date().getFullYear(),
   },
 
-  // ---- Download catalogue -------------------------------------------------
-  // Publicly released CSV datasets, served as static files from
-  // website/public/downloads/. DownloadPage.jsx renders this array — adding a
-  // dataset is one entry here plus dropping the file in public/downloads/.
+  // ---- Download catalogue — EDITORIAL ONLY ---------------------------------
+  // What a person had to decide, and nothing a machine can measure.
   //
-  // Year-bearing bits are TEMPLATES, not literals: {year} / {span} /
-  // {recentSpan} / {yearCount} are filled by DownloadPage from the backend
-  // manifest named by `source` ("assessment" → PA manifest, "permits" → BP
-  // manifest), so labels, filenames, and spans roll forward on the next refresh
-  // with no edit here.
-  downloads: [
+  // THE RULE, and the reason for it: every FACT about a published file — its
+  // name, size, row count, column count, coverage span, build date, and what is
+  // missing from it — is read at render time from the section's manifest. None
+  // of it appears here. The previous version of this block carried "45 KB" and
+  // "407 neighbourhoods" as literals; the file had been 344 rows for some time
+  // and nothing noticed, because a number typed here is checked by nobody.
+  //
+  // So this block holds only what no manifest can know: how the files group
+  // into datasets for a reader, what to call them, and how to describe them.
+  //
+  // HOW A FILE FINDS ITS ENTRY: by `files` key, which is the published filename
+  // with its extension and any trailing year removed. The assessment aggregate
+  // is republished each year under a new name, so keying on the full filename
+  // would silently detach its title at rollover. A file with no entry here still
+  // renders — under its own filename — because a published file that nobody
+  // described is still a published file, and hiding it would be worse.
+  //
+  // ADDING A FILE to a dataset below needs no code, only an entry here for its
+  // title. Adding a NEW dataset needs its manifest wired into DownloadPage's
+  // SOURCES table as well; see the note there.
+  downloadDatasets: [
     {
-      id: "pa-neighbourhood",
-      source: "assessment",
-      label: "Property Assessment: {year} Neighbourhood Aggregates",
+      id: "property-assessment",
+      title: "Property assessment",
       description:
-        "Layer 1a-cleaned residential assessment aggregated to " +
-        "407 Edmonton neighbourhoods. Includes median/mean assessed " +
-        "value, lot size, year built, condo share, and year-over-year " +
-        "change. Suppressed where N < 100.",
-      file: "/downloads/yeg_property-assessment_per_nbhd_{year}.csv",
-      size: "45 KB",
-      rows: "407 neighbourhoods",
-      section: "Properties & Land",
+        "Assessed values and lot characteristics for residential " +
+        "properties, aggregated to neighbourhood level.",
+      sectionLabel: "Properties and land",
+      files: {
+        "yeg_property-assessment_per_nbhd": {
+          title: "Neighbourhood aggregates",
+          description:
+            "Residential property assessments, summarised to one row " +
+            "per neighbourhood.",
+          // The noun for one row. Used for "344 neighbourhoods", and for the
+          // completeness sentence, so it has to read naturally in both.
+          unit: "neighbourhoods",
+        },
+      },
     },
     {
-      id: "permits-category-counts",
-      source: "permits",
-      label: "Building Permits: Counts by Year and Category",
+      id: "building-permits",
+      title: "Building permits",
       description:
-        "Per-year, per-job-category permit counts for Edmonton, " +
-        "{span}. 12 job categories. Useful for trend analysis " +
-        "and sector breakdowns.",
-      file: "/downloads/yeg_building-permits_category_counts.csv",
-      size: "5 KB",
-      rows: "{yearCount} years × 12 categories",
-      section: "Building Activity",
-    },
-    {
-      id: "permits-coverage",
-      source: "permits",
-      label: "Building Permits: Mapping Coverage by Year",
-      description:
-        "Per-year counts of total permits, mapped permits, and " +
-        "permits missing coordinates. Documents geocoding lag " +
-        "for {recentSpan} years.",
-      file: "/downloads/yeg_building-permits_coverage.csv",
-      size: "< 1 KB",
-      rows: "{yearCount} years",
-      section: "Building Activity",
+        "Permits issued by the City, summarised by year and by job category.",
+      sectionLabel: "Building activity",
+      files: {
+        "yeg_building-permits_category_counts": {
+          title: "Counts by year and category",
+          description:
+            "One row per year and permit category, counting the permits " +
+            "issued in each combination.",
+          unit: "combinations",
+        },
+        "yeg_building-permits_coverage": {
+          title: "Mapping coverage by year",
+          description:
+            "One row per year, reporting how complete the building permits " +
+            "record is in each year covered.",
+          unit: "years",
+        },
+      },
     },
   ],
 

@@ -4513,3 +4513,89 @@ p  { margin: 0 0 0.75rem; }
 .zlr-total { height: 24px; margin-top: 2px; border-top: 1px solid var(--pa-hair); color: var(--pa-mut); font-size: var(--t-xs); }
 .zlr-total .zlr-name { color: var(--pa-mut); }
 .zlr-total .zlr-area { color: var(--pa-mut); font-weight: 600; }
+
+/* ---- Download page (Directive 13R) --------------------------------------- */
+/* The page's own blocks: dataset sections, file cards, the key/value table.
+   The hero and the stat card are NOT here — they reuse the home page's
+   .hero__*, PearlBand and .stats/.stat rules verbatim, so the two pages cannot
+   drift apart. Only the hero's height is overridden below.
+
+   Every value here resolves to an existing token. The design mockup carried its
+   own :root block of eyeballed hex and px; none of it was copied. Where the
+   mockup and this stylesheet disagreed, this stylesheet won — most visibly the
+   display face, which the mockup guessed as Georgia and which is really
+   Roboto Slab via --font-display.
+
+   Reading measure is 44rem, the same as .content on About and Research
+   Competition, so prose sets to one width across the site. */
+
+/* Hero: same treatment as home, less vertical room. This page is a utility, and
+   the content below it is the point. */
+.dl-hero__inner { max-width: 760px; padding: var(--space-8) 0 var(--space-7); }
+
+.dl-body      { padding-bottom: 96px; }
+.dl-status    { margin: var(--space-8) 0; color: var(--text-muted); font-size: var(--t-md); }
+
+.dl-dataset   { margin-top: 64px; }
+.dl-ds-title  { margin: 0 0 var(--space-3); font-family: var(--font-display);
+                color: var(--uofa-green); font-size: 26px; font-weight: 700;
+                line-height: 1.15; }
+.dl-ds-desc   { margin: 0 0 var(--space-2); max-width: 44rem;
+                color: var(--text-body); font-size: var(--t-md); line-height: 1.7; }
+.dl-ds-line   { margin: 0 0 var(--space-6); color: var(--text-muted); font-size: var(--t-sm); }
+.dl-ds-line b { color: var(--text-strong); font-weight: 600; }
+
+/* Section label inside a dataset. Small and lettered, so it groups the files
+   below it without competing with the dataset title above. */
+.dl-h3        { margin: var(--space-7) 0 var(--space-4); color: var(--uofa-green);
+                font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.14em;
+                text-transform: uppercase; }
+
+.dl-res       { list-style: none; margin: 0; padding: 0;
+                display: flex; flex-direction: column; gap: var(--space-4); }
+.dl-resource  { background: var(--surface); border: 1px solid var(--border);
+                border-radius: var(--radius-card); padding: var(--space-6) var(--space-7); }
+
+.dl-res-head  { display: flex; gap: var(--space-3); align-items: flex-start;
+                margin-bottom: var(--space-3); }
+.dl-badge     { flex: 0 0 auto; margin-top: 4px; padding: 5px 8px;
+                border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+                background: var(--surface-soft); color: var(--text-muted);
+                font-family: var(--font-mono); font-size: var(--t-2xs); font-weight: 700;
+                letter-spacing: 0.05em; }
+.dl-res-title { margin: 0 0 var(--space-1); font-family: var(--font-display);
+                color: var(--text-strong); font-size: var(--t-lg); font-weight: 700;
+                line-height: 1.25; }
+.dl-res-desc  { margin: 0; max-width: 44rem; color: var(--text-muted);
+                font-size: var(--t-sm); line-height: 1.6; }
+
+/* The download itself. Gold is the site's jewel accent and is reserved for
+   marks, never body text (§1.4b) — a single button per file is exactly that
+   use, and the ink on it is near-black rather than gold-on-cream, which fails
+   contrast. */
+.dl-btn       { display: inline-flex; align-items: center; gap: var(--space-2);
+                margin: var(--space-5) 0 var(--space-6); padding: 12px 18px;
+                border: 1px solid var(--uofa-gold); border-radius: var(--radius);
+                background: var(--gold-ink); color: #2a2103;
+                font-family: var(--font-mono); font-size: var(--t-sm); font-weight: 700;
+                text-decoration: none; word-break: break-all; }
+.dl-btn:hover { background: var(--uofa-gold); }
+.dl-btn-fmt   { font-weight: 400; opacity: 0.78; white-space: nowrap; }
+
+.dl-sub       { margin: 0 0 var(--space-3); color: var(--text-muted);
+                font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em;
+                text-transform: uppercase; }
+
+.dl-kv        { margin: 0; max-width: 44rem; display: grid;
+                grid-template-columns: auto 1fr; gap: 5px var(--space-5);
+                font-size: var(--t-sm); }
+.dl-kv dt     { color: var(--text-muted); }
+.dl-kv dd     { margin: 0; color: var(--text-strong); font-weight: 600;
+                font-variant-numeric: tabular-nums; }
+
+@media (max-width: 760px) {
+  .dl-dataset  { margin-top: 44px; }
+  .dl-resource { padding: var(--space-5); }
+  .dl-kv       { grid-template-columns: 1fr; gap: 0; }
+  .dl-kv dd    { margin-bottom: var(--space-3); }
+}

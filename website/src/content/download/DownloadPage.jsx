@@ -1,377 +1,302 @@
 // =============================================================================
 // DownloadPage.jsx
 //
-// Lists all publicly released CSV datasets for direct download.
-// Data-driven from siteConfig.downloads — adding a new dataset is
-// one entry in siteConfig.js, no JSX change needed.
+// The public download page: every published CSV, grouped into datasets, with
+// enough about each file that a reader can decide before clicking.
 //
-// Year-bearing bits (label year, filename year, coverage spans, year counts)
-// are TEMPLATES in siteConfig with {year}/{span}/{recentSpan}/{yearCount}
-// tokens. We fill them here from the backend manifests the entry's `source`
-// names — "assessment" → PA /manifest.json, "permits" → the BP manifest — so
-// the page rolls forward on the next refresh with no edit to siteConfig.
+// THE ONE RULE THIS FILE EXISTS TO KEEP
+//   Not one fact about a file is written here or in siteConfig. Filename, size,
+//   row count, column count, coverage span and build date are all read from the
+//   producing section's manifest at render. siteConfig carries only editorial
+//   text — titles, descriptions, the noun for a row — because that is the part
+//   no machine can measure.
+//   The reason is on the record: this page told the public the assessment file
+//   held "407 neighbourhoods" while it held 344. The number was a literal, so
+//   nothing checked it and nothing could. Anything measurable now comes from the
+//   thing being measured.
 //
-// Layout: section header + card grid. Each card has a CSV icon,
-// label, description, metadata row (size / rows / section / year),
-// and a Download button anchoring the static file in /public/downloads/.
+// WHERE A DATASET COMES FROM
+//   A dataset is one section's manifest. The files in it are that manifest's
+//   `downloads` array. So adding a file to an existing section needs no change
+//   here at all — it appears when the manifest lists it. Adding a NEW section
+//   means adding a row to SOURCES below, because nothing in a manifest says
+//   which section it belongs to.
+//
+// LAYOUT
+//   Hero (the home page's own treatment, shorter) -> stat card straddling the
+//   hero edge -> one section per dataset -> a list of files inside each.
 // =============================================================================
 
 import { useEffect, useState } from "react";
 
 import { siteConfig } from "../../config/siteConfig.js";
 import { assetUrl } from "../../utils/assetUrl.js";
-import { loadManifest, getDefaultYear } from "../property-assessment/dataSources.js";
-import { loadPermitManifest, permitYears, permitDefaultYear } from "../building-permits/dataSources.js";
+import PearlBand from "../../components/PearlBand.jsx";
+import { loadManifest } from "../property-assessment/dataSources.js";
+import { loadPermitManifest } from "../building-permits/dataSources.js";
 
-// Replace {token}s in a template from a per-source value map. An unknown token
-// is left as-is so a typo is visible rather than silently dropped.
-function fill(template, vars) {
-  return template.replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : `{${k}}`));
+// === Where the facts come from ===============================================
+// One row per dataset. `load` fetches that section's manifest; the two readers
+// pull the published-artefact list and the section's year list out of it.
+//
+// The readers differ because the manifests differ by design: property
+// assessment nests its years under a city (it spans several sources), building
+// permits keeps a flat list (it has one). That shape is the backend's to choose,
+// so it is read here rather than imposed.
+//
+// This table is the ONE thing a new downloadable section needs a code edit for.
+const SOURCES = [
+  {
+    datasetId: "property-assessment",
+    load: loadManifest,
+    artefacts: (m) => m?.downloads ?? [],
+    years: (m) => m?.cities?.Edmonton?.assessment?.years ?? [],
+  },
+  {
+    datasetId: "building-permits",
+    load: loadPermitManifest,
+    artefacts: (m) => m?.downloads ?? [],
+    years: (m) => m?.years ?? [],
+  },
+];
+
+// === Formatting ==============================================================
+
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+// "2026-08-12" -> "12 August 2026".
+//
+// Parsed by hand rather than with `new Date(iso)`. A bare ISO date is read as
+// UTC midnight, which in Edmonton is the evening BEFORE, so a Date-based format
+// renders every build date one day early for half the year. There is no time
+// here to get wrong, so no Date is involved.
+function formatIsoDate(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso ?? ""));
+  if (!m) return String(iso ?? "");
+  return `${Number(m[3])} ${MONTHS[Number(m[2]) - 1]} ${m[1]}`;
 }
 
-// Minimal inline SVG CSV icon — file-table shape with CSV text.
-// No external dependency; renders at 32×40px.
-function CsvIcon({ colour = "var(--accent)" }) {
-  return (
-    <svg
-      width="32" height="40"
-      viewBox="0 0 32 40"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      {/* File body */}
-      <rect x="1" y="1" width="30" height="38"
-        rx="3" ry="3"
-        fill="var(--bg)" stroke={colour} strokeWidth="1.5"
-      />
-      {/* Folded corner */}
-      <path d="M20 1 L31 12 L20 12 Z"
-        fill={colour} opacity="0.15"
-      />
-      <path d="M20 1 L20 12 L31 12"
-        stroke={colour} strokeWidth="1.5"
-        fill="none"
-      />
-      {/* CSV label */}
-      <text
-        x="16" y="28"
-        textAnchor="middle"
-        fontSize="9"
-        fontWeight="700"
-        fontFamily="ui-monospace, Menlo, Consolas, monospace"
-        fill={colour}
-        letterSpacing="0.5"
-      >
-        CSV
-      </text>
-    </svg>
-  );
+// Decimal KB, because that is what a file manager shows and what a reader will
+// compare against. Below a kilobyte the exact byte count is more use than "0.6 KB".
+function formatBytes(bytes) {
+  if (typeof bytes !== "number" || !isFinite(bytes)) return "";
+  return bytes < 1000 ? `${bytes} bytes` : `${(bytes / 1000).toFixed(1)} KB`;
 }
+
+// The published filename minus its extension and any trailing year, which is how
+// an artefact finds its editorial entry in siteConfig. The assessment aggregate
+// is republished under a new year each refresh; keying on the whole filename
+// would drop its title the moment the year rolled.
+function fileStem(filename) {
+  return String(filename ?? "").replace(/\.csv$/i, "").replace(/_\d{4}(-\d{4})?$/, "");
+}
+
+// The year(s) a single artefact covers.
+//
+// Two shapes, both from the manifest: a file with a year column carries a
+// measured `coverageSpan`; a file whose year lives in its NAME (the assessment
+// aggregate has no year column at all) carries the year there. Neither is
+// invented — the filename is templated by the runner from the data year.
+function artefactYears(artefact) {
+  if (artefact?.coverageSpan) {
+    const { from, to } = artefact.coverageSpan;
+    return [from, to].filter((y) => typeof y === "number");
+  }
+  const inName = /_(\d{4})\.csv$/i.exec(String(artefact?.file ?? ""));
+  return inName ? [Number(inName[1])] : [];
+}
+
+// "2009 to 2026", or "2026" when a span collapses to a single year.
+function describeYears(years) {
+  if (!years.length) return null;
+  const lo = Math.min(...years);
+  const hi = Math.max(...years);
+  return lo === hi ? String(lo) : `${lo} to ${hi}`;
+}
+
+function plural(n, word) {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+// === Page ====================================================================
 
 export default function DownloadPage() {
-  const { downloads } = siteConfig;
-  // Token values per source, resolved from the manifests. null until both load.
-  const [ctx, setCtx] = useState(null);
+  const { org, downloadDatasets } = siteConfig;
+  // null until every manifest has resolved. The page shows nothing half-built:
+  // a stat card that counts up as manifests land would be worse than a wait.
+  const [datasets, setDatasets] = useState(null);
+  const [totals, setTotals] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([loadManifest(), loadPermitManifest()])
-      .then(([pa, bp]) => {
+    Promise.all(SOURCES.map((s) => s.load()))
+      .then((manifests) => {
         if (cancelled) return;
-        const bpY = permitYears(bp);
-        const bpMin = Math.min(...bpY), bpMax = Math.max(...bpY);
-        setCtx({
-          assessment: { year: getDefaultYear(pa, "Edmonton") },
-          permits: {
-            year: permitDefaultYear(bp),
-            span: `${bpMin}–${bpMax}`,
-            // Geocoding lag is a recent-data effect; describe it as the trailing
-            // 3 years (reproduces the old "2024–2026" and rolls forward).
-            recentSpan: `${bpMax - 2}–${bpMax}`,
-            yearCount: bpY.length,
-          },
+
+        const built = SOURCES.map((source, i) => {
+          const manifest = manifests[i];
+          const editorial = downloadDatasets.find((d) => d.id === source.datasetId);
+          const artefacts = source.artefacts(manifest);
+          return {
+            id: source.datasetId,
+            editorial,
+            years: source.years(manifest),
+            files: artefacts.map((artefact) => ({
+              artefact,
+              // An artefact with no editorial entry still renders, titled by its
+              // own filename. A published file that nobody wrote a title for is
+              // still published, and silently hiding it would be the worse bug.
+              text: editorial?.files?.[fileStem(artefact.file)] ?? null,
+            })),
+          };
+        }).filter((d) => d.files.length > 0);
+
+        setDatasets(built);
+        setTotals({
+          datasets: built.length,
+          files: built.reduce((n, d) => n + d.files.length, 0),
+          years: new Set(built.flatMap((d) => d.years)).size,
         });
       })
       .catch((err) => { if (!cancelled) setError(err.message); });
     return () => { cancelled = true; };
-  }, []);
+  }, [downloadDatasets]);
 
-  // `readpage` on the root below is why this page can be scrolled to the bottom.
-  //
-  // The shell is pinned to exactly the viewport (`.shell` is height:100svh,
-  // overflow:hidden) so that a map can fill the space between header and footer
-  // without the window scrolling. Any page taller than that gets CLIPPED, with
-  // no way to reach the rest. This page was: on a 1280x900 window its last two
-  // datasets and its licence were cut off, and at phone width the footer alone
-  // filled the viewport, so the page rendered blank between header and footer.
-  //
-  // `.readpage` is the existing opt-out and this page qualifies — it is a
-  // scrolling document, not a fixed-viewport map. It carries no styling of its
-  // own; it is a marker that two :has() rules in index.css look for, which let
-  // the shell grow with its content so the window scrolls normally.
-  //
-  // Its usual sibling `brand` is deliberately NOT added, though the other read
-  // pages carry it: `brand` redefines --text-muted, which this page uses, so it
-  // would repaint text that this fix has no business touching.
   return (
-    <div className="shell-main readpage">
-      <div style={{ maxWidth: 860, margin: "0 auto" }}>
+    // `readpage` lets the shell grow with the page so the window scrolls; without
+    // it the shell pins to the viewport and clips everything below the fold.
+    // `brand` is the read-page palette, and PearlBand requires it as an ancestor.
+    //
+    // NOTE the class that is NOT here. This root used to also carry `shell-main`,
+    // which is the shell's own <main> class — so the route had two elements
+    // wearing it, one inside the other. That was survivable while the page was a
+    // plain block, but `.shell-main` sets `flex: 1 1 0`, and as a flex item of
+    // the real <main> this root then resolved to ZERO height: the hero rendered
+    // into nothing and the footer painted over the top of the page. Home, About
+    // and Research Competition all use `readpage brand` alone. So does this.
+    <div className="readpage brand">
 
-        {/* Page header */}
-        <p className="eyebrow" style={{ marginTop: "2rem" }}>
-          Open Data
-        </p>
-        <h1 style={{
-          fontSize: "clamp(1.4rem, 3vw, 2rem)",
-          fontWeight: 700,
-          letterSpacing: "-0.02em",
-          lineHeight: 1.2,
-          margin: "0 0 0.5rem",
-        }}>
-          Download datasets
-        </h1>
-        <p style={{
-          fontSize: "0.95rem",
-          color: "var(--text-muted)",
-          lineHeight: 1.6,
-          margin: "0 0 2rem",
-          maxWidth: 560,
-        }}>
-          Cleaned, analysis-ready CSV files derived from City of
-          Edmonton open data. No file contains individual property
-          records.
-        </p>
+      {/* Hero — the home page's own treatment and classes, on a shorter block. */}
+      <section className="hero dl-hero">
+        <PearlBand variant="hero">
+          <div className="wrap">
+            <div className="hero__inner dl-hero__inner">
+              <div className="hero__rule" />
+              <p className="hero__eyebrow">{org} · Open data</p>
+              <h1 className="hero__title">Download datasets</h1>
+              <p className="hero__sub">
+                Cleaned, analysis-ready CSV files derived from City of Edmonton
+                open data. No file contains individual property records.
+              </p>
+            </div>
+          </div>
+        </PearlBand>
+      </section>
 
-        {/* Dataset cards. These ARE a list of datasets, so they are marked up as
-            one — a <ul> of <li>s. A screen reader then announces how many there
-            are and which one the reader is on; a stack of <div>s announces
-            nothing. The loading/error message replaces the whole list rather
-            than sitting inside it, because a <p> is not a valid child of <ul>. */}
-        {!ctx ? (
-          <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
+      {/* Stat card, straddling the hero's bottom edge — the home page's pattern.
+          Unlike the home page's, all three numbers are counted from what
+          actually loaded, so they cannot disagree with the page beneath them. */}
+      {totals && (
+        <div className="wrap">
+          <div className="stats">
+            <div className="stat">
+              <div className="stat__value">{totals.datasets}</div>
+              <div className="stat__label">datasets</div>
+            </div>
+            <div className="stat">
+              <div className="stat__value">{totals.files}</div>
+              <div className="stat__label">files</div>
+            </div>
+            <div className="stat">
+              <div className="stat__value">{totals.years}</div>
+              <div className="stat__label">years covered</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="wrap dl-body">
+        {!datasets ? (
+          <p className="dl-status">
             {error ? `Could not load the dataset catalogue: ${error}` : "Loading…"}
           </p>
         ) : (
-          <ul style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "1rem",
-            listStyle: "none",
-            margin: 0,
-            padding: 0,
-          }}>
-            {downloads.map((d) => {
-              const v = ctx[d.source];
-              // Resolved once: it names the card AND the download link below it.
-              const title = fill(d.label, v);
-              return (
-                <li key={d.id} style={{
-                  display: "flex",
-                  gap: "1.25rem",
-                  alignItems: "flex-start",
-                  padding: "1.25rem 1.5rem",
-                  background: "var(--bg)",
-                  border: "1px solid var(--border-soft)",
-                  borderRadius: "var(--radius-lg)",
-                  boxShadow: "var(--shadow-sm)",
-                }}>
+          datasets.map((dataset) => {
+            const span = describeYears(
+              dataset.files.flatMap(({ artefact }) => artefactYears(artefact))
+            );
+            return (
+              <section className="dl-dataset" key={dataset.id}>
+                <h2 className="dl-ds-title">
+                  {dataset.editorial?.title ?? dataset.id}
+                </h2>
+                {dataset.editorial?.description && (
+                  <p className="dl-ds-desc">{dataset.editorial.description}</p>
+                )}
+                <p className="dl-ds-line">
+                  <b>{plural(dataset.files.length, "file")}</b>
+                  {dataset.editorial?.sectionLabel && ` · ${dataset.editorial.sectionLabel}`}
+                  {span && ` · ${span}`}
+                </p>
 
-                  {/* CSV icon */}
-                  <div style={{ flexShrink: 0, paddingTop: 2 }}>
-                    <CsvIcon />
-                  </div>
+                <h3 className="dl-h3">Files</h3>
+                <ul className="dl-res">
+                  {dataset.files.map(({ artefact, text }) => {
+                    const size = formatBytes(artefact.bytes);
+                    const coverage = describeYears(artefactYears(artefact));
+                    return (
+                      <li className="dl-resource" key={artefact.file}>
+                        <div className="dl-res-head">
+                          <span className="dl-badge">CSV</span>
+                          <div>
+                            <h4 className="dl-res-title">
+                              {text?.title ?? artefact.file}
+                            </h4>
+                            {text?.description && (
+                              <p className="dl-res-desc">{text.description}</p>
+                            )}
+                          </div>
+                        </div>
 
-                  {/* Card body */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    {/* The card's title is a real heading (h2, one level under
-                        the page h1) so the page has an outline a screen reader
-                        can navigate. The inline sizes below are the ones the
-                        <p> carried, restated so the heading LOOKS unchanged —
-                        an h2's browser defaults would otherwise enlarge it. */}
-                    <h2 style={{
-                      fontSize: "1rem",
-                      fontWeight: 600,
-                      color: "var(--text)",
-                      margin: "0 0 0.3rem",
-                      lineHeight: 1.3,
-                    }}>
-                      {title}
-                    </h2>
-                    <p style={{
-                      fontSize: "0.85rem",
-                      color: "var(--text-muted)",
-                      lineHeight: 1.5,
-                      margin: "0 0 0.75rem",
-                    }}>
-                      {fill(d.description, v)}
-                    </p>
+                        {/* The link names its own file. Three links all reading
+                            "Download CSV" are indistinguishable in a screen
+                            reader's link list, and the heading that tells them
+                            apart is not part of the link. */}
+                        <a
+                          className="dl-btn"
+                          href={assetUrl(`/downloads/${artefact.file}`)}
+                          download
+                        >
+                          {artefact.file}
+                          <span className="dl-btn-fmt">{` (CSV, ${size})`}</span>
+                        </a>
 
-                    {/* Metadata pills. Also a list, so also a <ul>.
-                        Each pill shows a bare value ("2026") next to a glyph
-                        that is decorative and hidden from assistive tech — so
-                        on its own a pill announces "2026" and means nothing.
-                        `field` names what the value IS. It rides in aria-label
-                        rather than on screen, because the glyph already tells a
-                        sighted reader which field this is, and printing the word
-                        too would change what the page displays. */}
-                    <ul style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: "0.4rem",
-                      listStyle: "none",
-                      padding: 0,
-                      margin: "0 0 0.875rem",
-                    }}>
-                      {[
-                        { icon: "📁", field: "Size", text: d.size },
-                        { icon: "⊞", field: "Rows", text: fill(d.rows, v) },
-                        { icon: "◎", field: "Section", text: d.section },
-                        { icon: "◷", field: "Year", text: String(v.year) },
-                      ].map(({ icon, field, text }) => (
-                        <li key={text} aria-label={`${field}: ${text}`} style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 4,
-                          fontSize: "0.72rem",
-                          color: "var(--text-muted)",
-                          background: "var(--bg-soft)",
-                          border: "1px solid var(--border-soft)",
-                          borderRadius: 999,
-                          padding: "2px 9px",
-                        }}>
-                          <span aria-hidden="true"
-                            style={{ fontSize: "0.7rem" }}>
-                            {icon}
-                          </span>
-                          {text}
-                        </li>
-                      ))}
-                    </ul>
-
-                    {/* Download button.
-                        The link TEXT names its own file. Three links all reading
-                        "Download CSV" are indistinguishable to anyone who meets
-                        them out of context — a screen-reader link list, or a
-                        keyboard user tabbing through — and the card heading that
-                        disambiguates them is not part of the link. Title, then
-                        format and size in brackets, is the convention UK
-                        government publishing uses for exactly this. The size is
-                        the one already shown on the card; nothing new is claimed
-                        about the file here. */}
-                    <a
-                      href={assetUrl(fill(d.file, v))}
-                      download
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 6,
-                        padding: "6px 16px",
-                        fontSize: "0.82rem",
-                        fontWeight: 600,
-                        fontFamily: "inherit",
-                        color: "var(--accent-dark)",
-                        background: "var(--accent-soft)",
-                        border: "1px solid var(--green-300)",
-                        borderRadius: "var(--radius-md)",
-                        textDecoration: "none",
-                        cursor: "pointer",
-                        transition: "background 150ms, border-color 150ms",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background =
-                          "var(--green-100)";
-                        e.currentTarget.style.borderColor =
-                          "var(--accent)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background =
-                          "var(--accent-soft)";
-                        e.currentTarget.style.borderColor =
-                          "var(--green-300)";
-                      }}
-                    >
-                      {/* Down-arrow download icon (inline SVG) */}
-                      <svg width="13" height="13"
-                        viewBox="0 0 13 13" fill="none"
-                        aria-hidden="true">
-                        <path d="M6.5 1v8M3 6.5l3.5 3.5 3.5-3.5"
-                          stroke="currentColor" strokeWidth="1.6"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path d="M1 11h11"
-                          stroke="currentColor" strokeWidth="1.6"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                      {`${title} (CSV, ${d.size})`}
-                    </a>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                        <h5 className="dl-sub">This file</h5>
+                        <dl className="dl-kv">
+                          <dt>Rows</dt>
+                          <dd>
+                            {artefact.rowUniverse?.rowsPresent ?? artefact.rows}
+                            {text?.unit ? ` ${text.unit}` : ""}
+                          </dd>
+                          <dt>Columns</dt>
+                          <dd>{artefact.columns}</dd>
+                          {coverage && (<><dt>Coverage</dt><dd>{coverage}</dd></>)}
+                          {artefact.builtAt && (
+                            <><dt>Built</dt><dd>{formatIsoDate(artefact.builtAt)}</dd></>
+                          )}
+                        </dl>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            );
+          })
         )}
-
-        {/* Footer note */}
-        <p style={{
-          fontSize: "0.78rem",
-          color: "var(--text-muted)",
-          lineHeight: 1.55,
-          margin: "2rem 0 3rem",
-          padding: "1rem",
-          background: "var(--bg-soft)",
-          borderRadius: "var(--radius-md)",
-          border: "1px solid var(--border-soft)",
-        }}>
-          <strong>Data source:</strong> City of Edmonton Open Data.
-          All files are derived from public records. Cleaning rules
-          and suppression thresholds differ by dataset and are stated
-          with each file above.
-          Raw source data is available at{" "}
-          <a
-            href="https://data.edmonton.ca"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "var(--accent)" }}
-          >
-            data.edmonton.ca
-          </a>.
-        </p>
-
-        {/* Licence.
-            The maps carry the source licence in their attribution panel, but
-            that panel is mounted only by the map components — this route has
-            no map, so until now the page handed out data files while stating
-            no terms at all. Downloading IS the distribution case, so this is
-            the one page that most needs them.
-            The URL is siteConfig's single termsUrl, the same one the map
-            panel and the CSV/GeoJSON export sidecars use — not a second copy
-            to drift out of step. */}
-        <p style={{
-          fontSize: "0.78rem",
-          color: "var(--text-muted)",
-          lineHeight: 1.55,
-          margin: "0 0 3rem",
-          padding: "1rem",
-          background: "var(--bg-soft)",
-          borderRadius: "var(--radius-md)",
-          border: "1px solid var(--border-soft)",
-        }}>
-          These files are derived from City of Edmonton open data. The{" "}
-          <a
-            href={siteConfig.dataSource.termsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "var(--accent)" }}
-          >
-            City of Edmonton Open Data Terms of Use
-          </a>{" "}
-          apply to these files and to any further distribution of them.
-        </p>
-
       </div>
     </div>
   );
