@@ -98,8 +98,25 @@ export default function DownloadPage() {
     return () => { cancelled = true; };
   }, []);
 
+  // `readpage` on the root below is why this page can be scrolled to the bottom.
+  //
+  // The shell is pinned to exactly the viewport (`.shell` is height:100svh,
+  // overflow:hidden) so that a map can fill the space between header and footer
+  // without the window scrolling. Any page taller than that gets CLIPPED, with
+  // no way to reach the rest. This page was: on a 1280x900 window its last two
+  // datasets and its licence were cut off, and at phone width the footer alone
+  // filled the viewport, so the page rendered blank between header and footer.
+  //
+  // `.readpage` is the existing opt-out and this page qualifies — it is a
+  // scrolling document, not a fixed-viewport map. It carries no styling of its
+  // own; it is a marker that two :has() rules in index.css look for, which let
+  // the shell grow with its content so the window scrolls normally.
+  //
+  // Its usual sibling `brand` is deliberately NOT added, though the other read
+  // pages carry it: `brand` redefines --text-muted, which this page uses, so it
+  // would repaint text that this fix has no business touching.
   return (
-    <div className="shell-main">
+    <div className="shell-main readpage">
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
 
         {/* Page header */}
