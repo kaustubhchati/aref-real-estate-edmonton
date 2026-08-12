@@ -67,7 +67,7 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-// "2026-08-12" -> "12 August 2026".
+// An ISO calendar date becomes a readable one: "<yyyy>-08-12" -> "12 August".
 //
 // Parsed by hand rather than with `new Date(iso)`. A bare ISO date is read as
 // UTC midnight, which in Edmonton is the evening BEFORE, so a Date-based format
@@ -109,12 +109,19 @@ function artefactYears(artefact) {
   return inName ? [Number(inName[1])] : [];
 }
 
-// "2009 to 2026", or "2026" when a span collapses to a single year.
+// "<from> to <to>", or a single year where the span collapses to one.
 function describeYears(years) {
   if (!years.length) return null;
   const lo = Math.min(...years);
   const hi = Math.max(...years);
   return lo === hi ? String(lo) : `${lo} to ${hi}`;
+}
+
+// The newest source snapshot behind a dataset's files. Stated once per dataset
+// because a reader asking "how current is this" means the dataset, not a file.
+function newestFetchedAt(files) {
+  const dates = files.map(({ artefact }) => artefact?.fetchedAt).filter(Boolean).sort();
+  return dates.length ? dates[dates.length - 1] : null;
 }
 
 function plural(n, word) {
@@ -177,10 +184,52 @@ function Completeness({ artefact, text, reasons }) {
   );
 }
 
+// === About this dataset ======================================================
+
+// Provenance and treatment, stated once per dataset rather than once per file.
+//
+// The Licence row is identical on both datasets today, and that is deliberate:
+// it belongs to the DATASET, not to the page, so the day a section ships that
+// is not City of Edmonton data its row simply differs, with nothing to restructure.
+function AboutDataset({ editorial, fetchedAt, source }) {
+  if (!editorial) return null;
+  return (
+    <div className="dl-about">
+      <table className="dl-info">
+        <tbody>
+          <tr><th>Source</th><td>{source.name}</td></tr>
+          {fetchedAt && (
+            <tr><th>Source fetched</th><td>{formatIsoDate(fetchedAt)}</td></tr>
+          )}
+          {editorial.processing && (
+            <tr><th>Processing</th><td>{editorial.processing}</td></tr>
+          )}
+          {editorial.suppression && (
+            <tr><th>Suppression</th><td>{editorial.suppression}</td></tr>
+          )}
+          <tr>
+            <th>Licence</th>
+            <td>
+              <a
+                className="dl-inline"
+                href={source.termsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                City of Edmonton Open Data Terms of Use
+              </a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // === Page ====================================================================
 
 export default function DownloadPage() {
-  const { org, downloadDatasets, downloadAbsenceReasons } = siteConfig;
+  const { org, downloadDatasets, downloadAbsenceReasons, dataSource } = siteConfig;
   // null until every manifest has resolved. The page shows nothing half-built:
   // a stat card that counts up as manifests land would be worse than a wait.
   const [datasets, setDatasets] = useState(null);
@@ -355,6 +404,13 @@ export default function DownloadPage() {
                     );
                   })}
                 </ul>
+
+                <h3 className="dl-h3">About this dataset</h3>
+                <AboutDataset
+                  editorial={dataset.editorial}
+                  source={dataSource}
+                  fetchedAt={newestFetchedAt(dataset.files)}
+                />
               </section>
             );
           })

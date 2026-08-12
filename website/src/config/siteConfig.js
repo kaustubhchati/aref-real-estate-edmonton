@@ -220,6 +220,14 @@ export const siteConfig = {
         "Assessed values and lot characteristics for residential " +
         "properties, aggregated to neighbourhood level.",
       sectionLabel: "Properties and land",
+      // Verified against the production scripts before being written, not
+      // assumed: the parking / R1 / R3 rules appear 93 times under
+      // pipeline/yeg/property-assessment/scripts/production/, and the
+      // suppression threshold is 05_aggregate_current.R:162,
+      // `suppressed = n_properties < 100`.
+      processing: "Layer 1a cleaning rules for parking, R1 and R3 classification.",
+      suppression:
+        "Values are withheld where fewer than 100 properties contribute to them.",
       files: {
         "yeg_property-assessment_per_nbhd": {
           title: "Neighbourhood aggregates",
@@ -239,6 +247,16 @@ export const siteConfig = {
       description:
         "Permits issued by the City, summarised by year and by job category.",
       sectionLabel: "Building activity",
+      // Also verified: the same grep over
+      // pipeline/yeg/building-permits/scripts/production/ returns ZERO hits for
+      // the Layer 1a rules, while 01_build_permits.R does geocode
+      // (st_as_sf, :209) and aggregate (group_by/summarise, :176). Neither
+      // published file carries a suppression flag or a neighbourhood column.
+      processing:
+        "Geocoding and aggregation only. The Layer 1a cleaning rules do not " +
+        "apply to this dataset.",
+      suppression:
+        "None. These files contain no neighbourhood-level counts.",
       files: {
         "yeg_building-permits_category_counts": {
           title: "Counts by year and category",

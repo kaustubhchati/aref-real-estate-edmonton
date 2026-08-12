@@ -4620,3 +4620,24 @@ p  { margin: 0 0 0.75rem; }
 .dl-complete     { margin: var(--space-5) 0 0; padding-top: var(--space-5);
                    border-top: 1px solid var(--border);
                    color: var(--text-muted); font-size: var(--t-sm); font-style: italic; }
+
+/* About this dataset: provenance and treatment, once per dataset. A sunken
+   panel so it reads as reference rather than as another file card. */
+.dl-about      { margin-top: var(--space-2); padding: var(--space-5) var(--space-6);
+                 background: var(--surface-soft); border: 1px solid var(--border);
+                 border-radius: var(--radius-card); }
+.dl-info       { border-collapse: collapse; width: 100%; font-size: var(--t-sm); }
+.dl-info th    { width: 1%; padding: var(--space-2) var(--space-6) var(--space-2) 0;
+                 border-bottom: 1px solid var(--border); text-align: left;
+                 vertical-align: top; white-space: nowrap;
+                 color: var(--text-muted); font-weight: 400; }
+.dl-info td    { padding: var(--space-2) 0; border-bottom: 1px solid var(--border);
+                 vertical-align: top; color: var(--text-body); line-height: 1.6; }
+.dl-info tr:last-child th, .dl-info tr:last-child td { border-bottom: 0; }
+.dl-inline     { color: var(--link); text-decoration: underline; text-underline-offset: 3px; }
+.dl-inline:hover { color: var(--link-hover); }
+
+@media (max-width: 760px) {
+  .dl-about   { padding: var(--space-5); }
+  .dl-info th { white-space: normal; }
+}
