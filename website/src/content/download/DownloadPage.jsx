@@ -324,6 +324,37 @@ export default function DownloadPage() {
           </a>.
         </p>
 
+        {/* Licence.
+            The maps carry the source licence in their attribution panel, but
+            that panel is mounted only by the map components — this route has
+            no map, so until now the page handed out data files while stating
+            no terms at all. Downloading IS the distribution case, so this is
+            the one page that most needs them.
+            The URL is siteConfig's single termsUrl, the same one the map
+            panel and the CSV/GeoJSON export sidecars use — not a second copy
+            to drift out of step. */}
+        <p style={{
+          fontSize: "0.78rem",
+          color: "var(--text-muted)",
+          lineHeight: 1.55,
+          margin: "0 0 3rem",
+          padding: "1rem",
+          background: "var(--bg-soft)",
+          borderRadius: "var(--radius-md)",
+          border: "1px solid var(--border-soft)",
+        }}>
+          These files are derived from City of Edmonton open data. The{" "}
+          <a
+            href={siteConfig.dataSource.termsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "var(--accent)" }}
+          >
+            City of Edmonton Open Data Terms of Use
+          </a>{" "}
+          apply to these files and to any further distribution of them.
+        </p>
+
       </div>
     </div>
   );
