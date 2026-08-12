@@ -70,18 +70,49 @@ function gitTrackedFiles(publicDir) {
       stdio: ["ignore", "pipe", "pipe"],
     });
     return new Set(stdout.split("\0").filter(Boolean));
-  } catch {
+  } catch (err) {
+    // BOTH branches below stop the build. The only thing that differs is what the
+    // operator is told, because the two causes have different fixes and a CI log
+    // is often all they get:
+    //
+    //   git is not installed  -> fix the build image
+    //   not a git checkout    -> fix how the source got here
+    //
+    // Node reports a missing binary as ENOENT before git ever runs. If git DID
+    // run and refused, it exits non-zero with its reason on stderr ("fatal: not a
+    // git repository ..."), which is worth passing through verbatim rather than
+    // paraphrasing — it is usually the precise answer.
+    const gitMissing = err?.code === "ENOENT";
+    const gitSaid = String(err?.stderr ?? "").trim();
+
+    const why = gitMissing
+      ? [
+          "Cause: git is not installed, or is not on PATH.",
+          "",
+          "Nothing ran — the git command could not be found at all. This is an",
+          "environment problem, not a problem with the repository. If you are",
+          "seeing this in a CI or hosting build log, that build image has no git;",
+          "use one that does.",
+        ]
+      : [
+          "Cause: git ran, but refused to answer.",
+          ...(gitSaid ? ["", "git said:", ...gitSaid.split("\n").map((l) => `    ${l}`)] : []),
+          "",
+          "The usual reason is that this is not a git checkout — for example a",
+          "downloaded .zip of the source, or a copy of the folder made without",
+          "its .git directory. Clone the repository and build from the clone.",
+        ];
+
     throw new Error(
       [
         "",
         "Build stopped: could not ask git which files in website/public/ are tracked.",
         "",
-        "This check needs to run inside a real git checkout. It refuses to continue",
-        "without that answer, because assuming everything is fine is how unwanted",
-        "files reach the live site in the first place.",
+        ...why,
         "",
-        "If you are building from a downloaded .zip rather than a git clone, clone",
-        "the repository instead and build from that.",
+        "This check refuses to continue without that answer, because assuming",
+        "everything is fine is how unwanted files reach the live site in the first",
+        "place. It will not guess.",
         "",
       ].join("\n")
     );
