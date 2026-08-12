@@ -40,9 +40,11 @@
 //     Contains information licensed under the Open Government Licence –
 //     City of Edmonton.
 //
-// [OPEN] Whether that statement is adopted, and where it sits, is KC's ruling
-// and has not been made. Nothing here asserts a legal conclusion either way —
-// this note records what the two texts say, which is all a code comment can do.
+// KC ruled that statement ADOPTED. It renders on both surfaces that carry the
+// licence: the map attribution panel and the download page's per-dataset table.
+// It is stored once, below, and read from there — never retyped.
+// Nothing here asserts a legal conclusion; this note records what the texts say,
+// which is all a code comment can do.
 //
 // The version is deliberately NOT in the displayed string: the licence names
 // itself without one in the attribution wording above, and the instrument's own
@@ -58,6 +60,11 @@ export const EDMONTON_OPEN_DATA = {
   name:       "City of Edmonton Open Data",
   url:        "https://data.edmonton.ca",
   licence:    "Open Government Licence – City of Edmonton",
+  // Quoted VERBATIM from the instrument. It supplies this wording for providers
+  // that specify none, so it is the licence's own sentence and not ours — do not
+  // reword it, shorten it, or drop the full stop.
+  attributionStatement:
+    "Contains information licensed under the Open Government Licence – City of Edmonton.",
   termsUrl:   "https://data.edmonton.ca/stories/s/City-of-Edmonton-Open-Data-Terms-of-Use/msh8-if28/",
   disclaimer: "These datasets do not represent an official statement of City policy, practice, services, or procedure.",
 };

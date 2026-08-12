@@ -208,6 +208,10 @@ function AboutDataset({ editorial, fetchedAt, source }) {
             <tr><th>Suppression</th><td>{editorial.suppression}</td></tr>
           )}
           <tr>
+            <th>Attribution</th>
+            <td>{source.attributionStatement}</td>
+          </tr>
+          <tr>
             <th>Licence</th>
             <td>
               <a

@@ -111,6 +111,14 @@ export default function AttributionPanel({ open, onClose, dataset = null }) {
         </dd>
       </dl>
 
+      {/* The licence's OWN attribution sentence, which it requires: "You must,
+          where you do any of the above: Acknowledge the source of the Information
+          by including any attribution statement specified by the Information
+          Provider(s)". It leads the disclaimer because it is an obligation, where
+          the disclaimer is a note about what the data is not. Verbatim from
+          siteConfig; never reworded, shortened, or stripped of its full stop. */}
+      <p className="pa-box-ref">{ds.attributionStatement}</p>
+
       {/* §6 honesty label — the disclaimer, in prose. Its home is HERE (moved out of the
           strip); muted tier, never stripped, never compressed. */}
       <p className="pa-box-ref">{ds.disclaimer}</p>
