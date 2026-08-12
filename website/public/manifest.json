@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "generated": "2026-08-11",
-  "last_updated": "2026-08-11",
+  "generated": "2026-08-12",
+  "last_updated": "2026-08-12",
   "cities": {
     "Edmonton": {
       "assessment": {
@@ -161,7 +161,12 @@
       "bytes": 44578,
       "rows": 344,
       "columns": 12,
-      "builtAt": "2026-08-11",
+      "builtAt": "2026-08-12",
+      "valueSuppression": {
+        "flagColumn": "suppressed",
+        "rowsSuppressed": 64,
+        "rowsReported": 280
+      },
       "fetchedAt": "2026-07-15",
       "rowUniverse": {
         "universeSize": 407,

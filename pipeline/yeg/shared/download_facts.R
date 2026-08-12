@@ -8,6 +8,7 @@
 #     rows        data rows, header excluded
 #     columns     column count
 #     coverageSpan {from, to}  ONLY where the data carries a year column
+#     valueSuppression         ONLY where the data carries a suppression flag
 #     fetchedAt   date of the newest source snapshot the section built from
 #     builtAt     when this run produced the artefact
 #
@@ -93,6 +94,51 @@ coverage_span_of <- function(frame) {
   list(from = min(years), to = max(years))
 }
 
+# How many rows carry a masked value, or NULL when the frame has no suppression
+# flag. Case-insensitive, for the same reason coverage_span_of is.
+#
+# WHY THIS IS A SEPARATE BLOCK FROM rowUniverse, and must stay one: a suppressed
+# row is PRESENT in the file, with its measures withheld. An absent row is not in
+# the file at all. In the assessment aggregate today those are 64 rows and 63
+# rows — close enough in size to invite exactly the wrong reading. Reported
+# together they would tell someone that 127 neighbourhoods are missing, when 64
+# of them are right there carrying a name and a property count, and only their
+# values are withheld. Two different facts about the data, so two blocks.
+#
+# WHY NO THRESHOLD IS EMITTED: the rule that decides suppression lives in the
+# producing script (05_aggregate_current.R), not in the artefact. It could only
+# get here by being typed a second time, and a threshold that disagreed with the
+# one that actually ran would be worse than none. So this block says how much is
+# masked, never why. If the page needs the "why", the rule has to travel from the
+# script that owns it — a different change to this one.
+value_suppression_of <- function(frame) {
+  flag_col <- names(frame)[tolower(names(frame)) == "suppressed"]
+  if (length(flag_col) != 1) return(NULL)   # caller omits the key
+  flag <- frame[[flag_col]]
+
+  # Fail closed on both ways this can go wrong. A count is only publishable if
+  # every row answered the question, and answered it TRUE or FALSE.
+  if (!is.logical(flag)) {
+    stop("value_suppression_of: column '", flag_col, "' parsed as ",
+         class(flag)[1], ", not logical. A suppression flag that is not ",
+         "TRUE/FALSE cannot be counted honestly.")
+  }
+  if (anyNA(flag)) {
+    stop("value_suppression_of: column '", flag_col, "' holds ", sum(is.na(flag)),
+         " NA value(s). Every row is either suppressed or it is not; an unknown ",
+         "must not be published as either.")
+  }
+
+  # The two counts are exhaustive by construction (no NA survives the check
+  # above), so they sum to the artefact's own `rows` and the page can state a
+  # share without a second number arriving from anywhere else.
+  list(
+    flagColumn     = flag_col,
+    rowsSuppressed = as.integer(sum(flag)),
+    rowsReported   = as.integer(sum(!flag))
+  )
+}
+
 # Assemble the row-universe block: how many rows the artefact COULD have held,
 # how many it does, and why the rest are missing.
 #
@@ -158,6 +204,9 @@ describe_download_artefact <- function(section, output_rel, raw_dir, snapshot_st
   # placeholdered — the reader of the manifest can tell absence from zero.
   span <- coverage_span_of(frame)
   if (!is.null(span)) facts$coverageSpan <- span
+
+  suppression <- value_suppression_of(frame)
+  if (!is.null(suppression)) facts$valueSuppression <- suppression
 
   fetched <- newest_snapshot_date(raw_dir, snapshot_stems)
   if (!is.null(fetched)) facts$fetchedAt <- fetched
