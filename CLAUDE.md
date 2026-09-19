@@ -38,8 +38,8 @@ Every claim here is treated as authoritative. Editing rules:
 
 ## 1. What this is — and what it is NOT
 
-The current deliverable is a **free-tier, static website** that replicates the public
-*Open Data Centre for Alberta Urban Real Estate* site (`realestatedata.srv.ualberta.ca`) —
+The current deliverable is a **free-tier, static website** that replaces the public
+*Open Data Centre for Alberta Urban Real Estate* site (previously served at `realestatedata.srv.ualberta.ca`) —
 the ~14 Tableau Public dashboards rebuilt as our own maps and pages, plus more later —
 **fed by an R data pipeline.**
 

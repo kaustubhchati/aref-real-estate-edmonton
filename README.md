@@ -1,7 +1,7 @@
 # Open Data Centre for Alberta Urban Real Estate (Dev Build)
 **Live (Edmonton):** Property Assessment · Dwelling Units · Building Permits · Businesses and Industry Specializations · Business Counts · Amenities (Public Transportation · Parks and Recreation · Police Stations · EV Charging) · Neighbourhood Report Card · Download — see **[Now Live](#now-live)** for links.
-A **free-tier, static replication** of the public real-estate data website at
-`realestatedata.srv.ualberta.ca` — the Tableau Public dashboards rebuilt as our own maps and
+A **free-tier, static site** replacing the Tableau Public dashboards previously served at
+`realestatedata.srv.ualberta.ca` — rebuilt as our own maps and
 pages, fed by an R data pipeline. Phase 1 delivers Edmonton property-assessment cleaning
 (Layer 1a row rules) and per-neighbourhood aggregation with spatial join (Layer 2); further
 cities and data domains queue behind it.
@@ -20,22 +20,22 @@ The bar is "researchers and the public can rely on it," not five-nines uptime.
 
 ## Now Live
 
-Deployed on Cloudflare Pages — **[aref-real-estate-edmonton.pages.dev](https://aref-real-estate-edmonton.pages.dev/)** (Edmonton). Twelve sections shipped:
+Deployed at **[www.albertaurbanrealestate.com](https://www.albertaurbanrealestate.com)** (Edmonton). Twelve sections shipped:
 
 | Section | Type | Link |
 | --- | --- | --- |
-| **Property Assessment** | 5-metric choropleth map | [/properties/property-assessment](https://aref-real-estate-edmonton.pages.dev/properties/property-assessment) |
-| **Zoning** | categorical family map (proportional legend strip + two-stage rail) | [/properties/zoning](https://aref-real-estate-edmonton.pages.dev/properties/zoning) |
-| **Dwelling Units** (permit neighbourhoods) | choropleth + analyst Data Console | [/activity/dwelling-units](https://aref-real-estate-edmonton.pages.dev/activity/dwelling-units) |
-| **Building Permits** (Construction & Improvement) | per-year point map (incandescent heat→dots) | [/activity/construction-improvement](https://aref-real-estate-edmonton.pages.dev/activity/construction-improvement) |
-| **Businesses and Industry Specializations** | business points + LCLQ finding (2 views) | [/economy/business-census](https://aref-real-estate-edmonton.pages.dev/economy/business-census) |
-| **Business Counts** | neighbourhood choropleth | [/economy/business-counts](https://aref-real-estate-edmonton.pages.dev/economy/business-counts) |
-| **Public Transportation** | Bus Stops + LRT Network (amenity views) | [/amenities/public-transportation](https://aref-real-estate-edmonton.pages.dev/amenities/public-transportation) |
-| **Parks and Recreation** | four point inventories (amenity views) | [/amenities/parks-and-recreation](https://aref-real-estate-edmonton.pages.dev/amenities/parks-and-recreation) |
-| **Police Stations** | point map | [/amenities/police-stations](https://aref-real-estate-edmonton.pages.dev/amenities/police-stations) |
-| **EV Charging Stations** | point map | [/amenities/ev-charging](https://aref-real-estate-edmonton.pages.dev/amenities/ev-charging) |
-| **Neighbourhood Report Card** | sortable / searchable table | [/report-card](https://aref-real-estate-edmonton.pages.dev/report-card) |
-| **Download** | 3 cleaned CSVs | [/download](https://aref-real-estate-edmonton.pages.dev/download) |
+| **Property Assessment** | 5-metric choropleth map | [/properties/property-assessment](https://www.albertaurbanrealestate.com/properties/property-assessment) |
+| **Zoning** | categorical family map (proportional legend strip + two-stage rail) | [/properties/zoning](https://www.albertaurbanrealestate.com/properties/zoning) |
+| **Dwelling Units** (permit neighbourhoods) | choropleth + analyst Data Console | [/activity/dwelling-units](https://www.albertaurbanrealestate.com/activity/dwelling-units) |
+| **Building Permits** (Construction & Improvement) | per-year point map (incandescent heat→dots) | [/activity/construction-improvement](https://www.albertaurbanrealestate.com/activity/construction-improvement) |
+| **Businesses and Industry Specializations** | business points + LCLQ finding (2 views) | [/economy/business-census](https://www.albertaurbanrealestate.com/economy/business-census) |
+| **Business Counts** | neighbourhood choropleth | [/economy/business-counts](https://www.albertaurbanrealestate.com/economy/business-counts) |
+| **Public Transportation** | Bus Stops + LRT Network (amenity views) | [/amenities/public-transportation](https://www.albertaurbanrealestate.com/amenities/public-transportation) |
+| **Parks and Recreation** | four point inventories (amenity views) | [/amenities/parks-and-recreation](https://www.albertaurbanrealestate.com/amenities/parks-and-recreation) |
+| **Police Stations** | point map | [/amenities/police-stations](https://www.albertaurbanrealestate.com/amenities/police-stations) |
+| **EV Charging Stations** | point map | [/amenities/ev-charging](https://www.albertaurbanrealestate.com/amenities/ev-charging) |
+| **Neighbourhood Report Card** | sortable / searchable table | [/report-card](https://www.albertaurbanrealestate.com/report-card) |
+| **Download** | 3 cleaned CSVs | [/download](https://www.albertaurbanrealestate.com/download) |
 
 Navigation is a single off-canvas drawer (opened by the header hamburger). The three aggregate maps + the Building Permits point map share one hand-ratified home camera (Property Assessment is the standard — CLAUDE.md §12 v1.15); Zoning carries its own whole-city home camera (§12 v1.20). Land Titles, Business Licences, and Labour Market are placeholders pending data.
 
@@ -120,7 +120,7 @@ Cloudflare Pages build settings:
 Note: the output directory is **relative to the root directory** (`website`), so it is
 `dist`, not `website/dist`.
 
-Live: https://aref-real-estate-edmonton.pages.dev/
+Live: https://www.albertaurbanrealestate.com — the custom domain, which resolves to the Cloudflare Pages build origin `aref-real-estate-edmonton.pages.dev`.
 
 A University of Alberta server is the intended long-term home; the Cloudflare deploy is
 the free-tier proof and demo.
