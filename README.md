@@ -1,7 +1,7 @@
 # Open Data Centre for Alberta Urban Real Estate (Dev Build)
 **Live (Edmonton):** Property Assessment · Dwelling Units · Building Permits · Businesses and Industry Specializations · Business Counts · Amenities (Public Transportation · Parks and Recreation · Police Stations · EV Charging) · Neighbourhood Report Card · Download — see **[Now Live](#now-live)** for links.
 A **free-tier, static replication** of the public real-estate data website at
-`realestatedata.srv.ualberta.ca` — the Tableau Public dashboards rebuilt as our own maps and
+`www.albertaurbanrealestate.com` — the Tableau Public dashboards rebuilt as our own maps and
 pages, fed by an R data pipeline. Phase 1 delivers Edmonton property-assessment cleaning
 (Layer 1a row rules) and per-neighbourhood aggregation with spatial join (Layer 2); further
 cities and data domains queue behind it.
